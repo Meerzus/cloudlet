@@ -168,16 +168,21 @@ test('live hosts coalesce a burst for 300 ms, announce the first presentation of
   const afterFirstPresentations = (await speech(page)).length;
   await page.keyboard.press('ArrowLeft');
   await expect(title(page)).toHaveText('Актуальное название');
+  // A slide shown again is spoken once more (the title node is shared, focus does not move); wait for it,
+  // or the resize below races its 300 ms window.
+  await expect.poll(async () => (await speech(page)).length).toBe(afterFirstPresentations + 1);
+  expect((await speech(page)).at(-1)!.text).toContain('Актуальное название');
+  const afterRevisit = afterFirstPresentations + 1;
   await page.setViewportSize({ width: 480, height: 720 });
   await page.waitForTimeout(400);
-  expect((await speech(page)).length).toBe(afterFirstPresentations);
+  expect((await speech(page)).length).toBe(afterRevisit);
   expect(await live(page, 'polite').evaluate((element, previous) => element === previous, politeIdentity)).toBe(true);
   await page.evaluate(() => window.accessibilityFixture!.attach(false));
   await expect(live(page, 'polite')).toHaveCount(0);
   await page.evaluate(() => window.accessibilityFixture!.attach(true));
   await readable(page);
   await page.waitForTimeout(450);
-  expect((await speech(page)).length).toBe(afterFirstPresentations);
+  expect((await speech(page)).length).toBe(afterRevisit);
 
   await page.evaluate(() => window.accessibilityFixture!.reset([{ id: 'urgent', title: 'Явно срочное сообщение', kind: 'info', announcementPriority: 'assertive' }]));
   await readable(page);
