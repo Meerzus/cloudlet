@@ -53,7 +53,7 @@ function afterFirstPaint(task: () => void) {
  */
 export function MotionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<MotionState>(INITIAL);
-  // Reading pages (DOCS.md §7) get native scrolling and no scenes; leaving them re-runs the setup.
+  // Reading pages get native scrolling and no scenes; leaving them re-runs the setup.
   const quiet = isQuietPath(usePathname());
 
   useEffect(() => {

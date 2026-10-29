@@ -25,8 +25,8 @@ export function useMotionOverrides() {
 export const timeScales = ['1', '0.5', '0.25', '0.1'] as const;
 
 /**
- * DESIGN §7 tuning (task 16): every field writes `Toaster motion.overrides` on change and
- * applies to the next transition without a rebuild. JSON carries complete values for task 17.
+ * Motion tuning: every field writes `Toaster motion.overrides` on change and
+ * applies to the next transition without a rebuild. JSON carries complete values.
  */
 export function MotionPanel({ overrides, setOverrides, timeScale, setTimeScale }: {
   overrides: CloudletMotionOverrides; setOverrides: (value: CloudletMotionOverrides) => void;

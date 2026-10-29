@@ -33,7 +33,7 @@ type IntroState = 'idle' | 'playing' | 'done';
 /** The hero's row of demo controls: using it never interrupts the intro (owner decision, 28.10.2026). */
 const CONTROLS_SELECTOR = '.hero-controls';
 
-/** Generic names only: no product names in the interface (LANDING §5). */
+/** Generic names only: no product names in the interface. */
 const DEVICES = {
   laptop: { label: 'Laptop', Icon: Laptop },
   phone: { label: 'Phone', Icon: Smartphone },
@@ -42,7 +42,7 @@ const DEVICES = {
 } as const;
 
 /** Phone visitors (< 48rem, the Toaster's own breakpoint) get no mockup: the page Toaster is the demo. */
-// The hero has no demo chips: trying every kind is the playground's job (owner decision, L02 review).
+// The hero has no demo chips: trying every kind is the playground's job (owner decision).
 const WIDE_QUERY = '(min-width: 48rem)';
 
 const pageToasterHost = () => document.querySelector('.cloudlet-host');
@@ -147,7 +147,7 @@ export function Hero() {
   }, [wide, page, send, startPageIntro]);
 
   // Phones: the intro lives in the page Toaster. Once the hero has left the screen it is
-  // cancelled and cleared, so scene 2 and its puppet own the screen (L03, owner).
+  // cancelled and cleared, so scene 2 and its puppet own the screen.
   useEffect(() => {
     const element = section.current;
     if (wide !== false || !page || !element) return;

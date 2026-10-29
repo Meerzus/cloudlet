@@ -6,7 +6,7 @@ import { DOCS_UI } from '@/lib/docs-ui-strings';
 import { cn } from '@/lib/utils';
 
 /*
- * Search of the documentation (DOCS.md §8). The provider lives in the docs shell only, so the
+ * Search of the documentation. The provider lives in the docs shell only, so the
  * button and the shortcuts exist on `/docs/*` and nowhere else (not on the landing or the
  * Playground). The window is a separate chunk, loaded when it first opens (or when the pointer
  * or focus reaches the button); the index is downloaded by the window on the first query.

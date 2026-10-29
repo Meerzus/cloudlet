@@ -28,7 +28,7 @@ const DIRECTIONS: readonly { value: ToasterSettings['dir']; label: string }[] = 
 ];
 
 /**
- * LANDING §13: every demo of the shared catalog on a button, calling the real
+ * Every demo of the shared catalog on a button, calling the real
  * page-level Toaster. Theme is the site's own; position and direction apply to
  * the page Toaster only while this page is open.
  */

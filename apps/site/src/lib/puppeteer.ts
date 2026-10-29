@@ -15,7 +15,7 @@ import {
 } from './puppet-model';
 
 /**
- * The imperative side of a puppet (LANDING §6): measures the static markup of
+ * The imperative side of a puppet: measures the static markup of
  * `<Puppet>` and writes frames into it. A frame is a pure function of (from, to,
  * time), so any timeline position renders identically when scrubbed either way.
  * The container may be scaled and rotated freely: all measurements are layout
@@ -32,7 +32,7 @@ export interface PuppetStep {
   readonly label?: string;
   /**
    * Interrupt: the transition heads for `via.state` first and is retargeted to `state`
-   * `via.at` seconds in, keeping the shape's speed (DESIGN §7).
+   * `via.at` seconds in, keeping the shape's speed.
    */
   readonly via?: { readonly state: number; readonly at: number };
 }

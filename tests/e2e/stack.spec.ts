@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 import type { MobileFixtureApi } from '../../apps/lab/src/mobile-fixture.js';
 import { drag, finishAudit, geometry, idle, openRoute, screenshot, translateX, translateY } from './shell-audit.js';
 
-// DESIGN §2, §6, §10: the collapsed stack on the production laboratory (`?fixture=mobile`
+// The collapsed stack, its timing and overflow on the production laboratory (`?fixture=mobile`
 // exposes the public snapshot with pauses, remaining time and close reasons).
 
 declare global { interface Window { mobileFixture?: MobileFixtureApi } }
@@ -75,7 +75,7 @@ test('first pill grows in; tails and badge follow the depth; an arrival keeps th
   for (const tail of tailBoxes) expect(tail.bottom).toBeGreaterThan(pillBox.y + pillBox.height - 1);
   await screenshot(page, info, 'stack-four');
 
-  // Hover lifts the tails by 2 px per step and pauses the top record (DESIGN §2).
+  // Hover lifts the tails by 2 px per step and pauses the top record.
   await pill(page).hover();
   await expect.poll(async () => (await record(page, 'four')).pauses).toContain('hover');
   await expect.poll(() => translateY(tails(page).last())).toBeCloseTo(12, 0);
@@ -123,7 +123,7 @@ test('a sideways swipe follows the finger, springs back below the threshold and 
   expect((await record(page, 'B')).pauses).not.toContain('gesture');
 });
 
-test('only the top record spends time; a user-opened slide and an action slide pause; a description-only auto-open keeps counting (DESIGN §6)', async ({ page }, info) => {
+test('only the top record spends time; a user-opened slide and an action slide pause; a description-only auto-open keeps counting', async ({ page }, info) => {
   // `remainingMs` is fixed at each snapshot publication; the proof is which record actually expires.
   await open(page, [{ id: 'a', title: 'A', duration: 900 }, { id: 'b', title: 'B', duration: 1500 }]);
   await page.mouse.move(2, 600);
@@ -146,7 +146,7 @@ test('only the top record spends time; a user-opened slide and an action slide p
   await expect.poll(async () => (await record(page, 'c')).pauses).toContain('island');
   if (info.project.name === 'webkit') {
     // WebKit keeps the stale hover after the hovered pill left the DOM under the pointer until the
-    // pointer enters and leaves the host again (handoff 18, open remark); a user's pointer does that.
+    // pointer enters and leaves the host again; a user's pointer does that.
     await island(page).locator('[data-cloudlet-title]').hover();
     await page.mouse.move(2, 600);
   }

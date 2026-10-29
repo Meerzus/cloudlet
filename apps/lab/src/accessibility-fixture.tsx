@@ -55,8 +55,8 @@ const announcements: AnnouncementFormatters = {
 };
 
 /**
- * `?fixture=accessibility` (tasks 07, 16): keyboard, roles and names of the stack → Island
- * model (DESIGN §9), localization, announcements and the no-auto-dismiss preference.
+ * `?fixture=accessibility`: keyboard, roles and names of the stack → Island
+ * model, localization, announcements and the no-auto-dismiss preference.
  * Data mutations use the public controller API; open/collapse go through the pill and Escape.
  */
 export function AccessibilityFixture() {

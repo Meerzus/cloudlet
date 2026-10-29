@@ -8,7 +8,7 @@ import { findDemo, isCodeLabel, type Demo } from '@/lib/demos';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
 import { cn } from '@/lib/utils';
 
-/** A snippet longer than this many lines starts folded under Show code (DOCS.md §6). */
+/** A snippet longer than this many lines starts folded under Show code. */
 export const DEMO_FOLD_LINES = 8;
 /** The code area's height glides between snippets and when it unfolds. */
 const RESIZE_MS = 280;
@@ -38,7 +38,7 @@ function entries(items: readonly DemoItem[]): Entry[] {
 }
 
 /**
- * The documentation's runnable example (DOCS.md §6), after shadcn's Sonner page: a stage with a
+ * The documentation's runnable example, after shadcn's Sonner page: a stage with a
  * button per demo above the code. A button calls its catalog entry on the site's page-level
  * controller, so the notification lands in the page's own Toaster, and in a group it also
  * selects the snippet shown below. Copy reads the rendered text of the shown `<pre>`. A long

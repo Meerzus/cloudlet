@@ -47,7 +47,7 @@ const ASPECT = new Map<number, number>(CLOUD_SHAPES.map((shape) => [shape.id, sh
 
 /** Width of a puppet's content (the Island), px: actors are scaled to fit beside the text. */
 const ISLAND_WIDTH = 416;
-/** Actors take half the screen opposite the text, up to this scale (LANDING §8, owner, L07 review). */
+/** Actors take half the screen opposite the text, up to this scale. */
 const STAGE_SCALE = 1.25;
 /** Below this scale there is no room beside the text (narrow windows): actors play above it instead. */
 const STAGE_MIN_SCALE = 0.85;
@@ -112,7 +112,7 @@ export function DriftScene() {
 const TITLE = 'Drifting by';
 const LEAD = 'Six reasons it feels this light.';
 
-/** Reduced motion (LANDING §10): no volley, no parallax, no pin — the benefits as still text. */
+/** Reduced motion: no volley, no parallax, no pin — the benefits as still text. */
 function BenefitList() {
   return (
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-24 sm:px-6 sm:pt-32">
@@ -360,7 +360,7 @@ function DriftPinned() {
         layerEl.dataset.volley = state.volley.toFixed(3);
 
         // Text: opacity only, never visibility — every plateau stays in the accessibility tree, in order.
-        // Between benefits the text moves across to the other half and changes on the way (owner, L07 review).
+        // Between benefits the text moves across to the other half and changes on the way.
         plateEls.forEach((element, index) => {
           const w = windows[index]!;
           const into = smooth((t - w.textIn[0]) / (w.textIn[1] - w.textIn[0]));

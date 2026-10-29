@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
 
 /**
- * A Markdown table in a wrapper that scrolls sideways on narrow screens (DOCS.md §7). Only a table
+ * A Markdown table in a wrapper that scrolls sideways on narrow screens. Only a table
  * wider than its column becomes a focusable region, so keyboard users can scroll it (axe
  * `scrollable-region-focusable`) and narrow tables add no tab stop. The region is named by its
  * column headers, which keeps two tables of one page apart.

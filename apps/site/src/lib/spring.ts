@@ -66,7 +66,7 @@ export interface SpringEase {
 
 /**
  * Position `time` seconds after a spring starts at `from` with `velocity` (units per second) towards
- * `to`: a retarget that keeps the current value and speed (DESIGN §7, interruptibility). Pure: it
+ * `to`: a retarget that keeps the current value and speed (interruptibility). Pure: it
  * re-integrates from the start, so a scrubbed timeline gets the same value in either direction.
  */
 export function springAt({ stiffness, damping, mass = 1 }: SpringConfig, from: number, velocity: number, to: number, time: number) {

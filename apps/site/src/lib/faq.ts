@@ -1,6 +1,6 @@
 import { formatKB, PACKAGE_SIZE } from './site';
 
-/** FAQ (LANDING §9): draft copy for the owner's review. Size figures: `PACKAGE_SIZE`, min+gzip. */
+/** FAQ: draft copy for the owner's review. Size figures: `PACKAGE_SIZE`, min+gzip. */
 export const FAQ = [
   {
     id: 'sonner',

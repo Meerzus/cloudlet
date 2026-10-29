@@ -1,24 +1,24 @@
 #!/usr/bin/env node
 /**
- * Walks /toaster/docs in headless Chromium against the static export (DOCS.md §12, D01): every page of
+ * Walks /toaster/docs in headless Chromium against the static export: every page of
  * the sidebar opens with a clean console, the drawer and the table of contents work, Copy copies
- * the example, and axe finds no violations with the drawer closed and open. Getting started (D02):
+ * the example, and axe finds no violations with the drawer closed and open. Getting started:
  * the Installation tabs switch from the keyboard and copy their example, the demo button on Quick
  * start shows the toast on the page Toaster (top on desktop, bottom on phones: `position="auto"`).
- * Guides (D03, D08): every demo button of Notifications, Operations and Positioning shows its own
+ * Guides: every demo button of Notifications, Operations and Positioning shows its own
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
- * under Show code. Guides (D04):
+ * under Show code. Guides:
  * Styling, SSR and Accessibility pass axe, the page never scrolls sideways, and every table wider
- * than the column scrolls inside itself. Style editor (SE03, amendments): the stage frame shows a
+ * than the column scrolls inside itself. Style editor: the stage frame shows a
  * pinned pill and an open Island that stays open while the controls are pressed, the radius control
  * and the morphing color picker change the computed CSS and copied stylesheet for the site theme,
  * Copy link shares the current URL, a new tab restores it, an old `theme=` link is a foreign
  * parameter, Reset preserves foreign parameters, and Back skips intermediate edits. An editor
  * screenshot and axe audit per scenario cover light/dark × desktop/phone.
- * Reference (D05):
+ * Reference:
  * the five pages fit the width (rows of three or more columns are a grid line with the description
  * under it, every row a card on phones), every link to a docs anchor lands on
- * an existing heading, and axe is clean. Search and agents (D06): the search window opens from its
+ * an existing heading, and axe is clean. Search and agents: the search window opens from its
  * button, ⌘K / Ctrl K and `/` (not on the landing or the Playground, `/` stays a character in the
  * field), a word from Accessibility finds the page and Enter opens it, arrows move, there is an
  * empty and a no-result state, Escape closes and gives the focus back, axe is clean with it open;
@@ -132,12 +132,12 @@ async function quickStart(page, base, phone, still, failures) {
   return result;
 }
 
-/** Pages whose every demo button is checked (D03); a fresh load per demo, so each toast is its own. */
+/** Pages whose every demo button is checked; a fresh load per demo, so each toast is its own. */
 const GUIDES = ['notifications', 'operations', 'positioning'];
 
 /**
  * Guides: each demo button shows a notification titled as its snippet; `dismiss-all` empties the
- * stack after `overflow`. Then the demo blocks themselves (D08): in a group every button selects
+ * stack after `overflow`. Then the demo blocks themselves: in a group every button selects
  * its snippet and the page does not jump; a folded snippet unfolds under Show code.
  */
 async function guides(page, base, still, failures) {
@@ -448,7 +448,7 @@ async function reference(page, base, phone, still, failures) {
   return result;
 }
 
-/** The word typed into the search, and the page it must find first (DOCS.md §12). */
+/** The word typed into the search, and the page it must find first. */
 const SEARCH_QUERY = 'reduced motion';
 const SEARCH_PAGE = { name: 'Accessibility', path: '/toaster/docs/accessibility' };
 
@@ -609,7 +609,7 @@ async function run(name, scenario, base, out) {
   const page = await context.newPage();
   const failures = [];
   const console_ = [];
-  // Links to pages of DOCS.md §4 that are not written yet are prefetched and 404 until their task lands:
+  // Links to documentation pages that are not written yet are prefetched and 404 until the page lands:
   // reported, not failed, as long as the page is not in the sidebar.
   const pending = new Set();
   page.on('response', (response) => {

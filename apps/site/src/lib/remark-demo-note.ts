@@ -1,7 +1,7 @@
 import { replaceSource } from 'fumadocs-core/mdx-plugins/stringifier';
 import { DOCS_UI } from './docs-ui-strings';
 
-/** The meta of a runnable fence (DOCS.md §6): ```tsx demo="success" */
+/** The meta of a runnable fence: ```tsx demo="success" */
 export const DEMO_META = /(?:^|\s)demo="([^"]+)"/u;
 /** The word this plugin appends to the meta of the first runnable fence of a page. */
 export const DEMO_NOTE = 'demo-note';
@@ -28,7 +28,7 @@ function demoFences(node: MdNode, found: MdNode[] = []): MdNode[] {
  * snippets assume (`const cloudlet = useCloudlet();`, as on the Playground). Done at build
  * time: the line is in the static HTML and nothing shifts after hydration.
  *
- * The Markdown of the page (`/docs/<slug>.md`, `llms-full.txt`, DOCS.md §9) gets every runnable
+ * The Markdown of the page (`/docs/<slug>.md`, `llms-full.txt`) gets every runnable
  * fence as plain code, the first one after the same sentence: there is no Run button to explain.
  */
 export function remarkDemoNote() {

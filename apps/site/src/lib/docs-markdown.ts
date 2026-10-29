@@ -6,7 +6,7 @@ import { GET_STARTED, type GetStartedTab } from './get-started';
 import { DOCS_PATH, DOCS_URL, SITE_URL } from './site';
 
 /*
- * The documentation for agents (DOCS.md §9), from the same MDX as the pages: `/llms.txt` lists
+ * The documentation for agents, from the same MDX as the pages: `/llms.txt` lists
  * the pages, `/llms-full.txt` holds them all, `/toaster/docs/<slug>.md` is one page. fumadocs-mdx keeps
  * the authored Markdown of each page (`includeProcessedMarkdown`); MDX components come as
  * placeholders and are expanded here into plain text and code, runnable fences are already plain
@@ -42,9 +42,9 @@ const RENDERERS: Record<string, (data: PlaceholderData) => string> = {
     const tab = getStartedTab(text(attributes.tab));
     return fence('tsx', tab.code, tab.file);
   },
-  /** A demo block of several fences (DOCS.md §6): the fences, plain code already. */
+  /** A demo block of several fences: the fences, plain code already. */
   Demos: ({ children }) => children.trim(),
-  /** The shareable editor contract stays useful away from the interactive page (STYLE_EDITOR §8). */
+  /** The shareable editor contract stays useful away from the interactive page. */
   StyleEditor: () => `Style editor at ${DOCS_URL}/styling#style-editor: set the tokens on a live Toaster and copy the CSS. The query string carries the values — one parameter per token name without the \`--cloudlet-\` prefix (\`background\`, \`background-dark\`, \`pill-radius\`, \`font-family\`, …); dark-theme colors use the \`-dark\` suffix, and the preview follows the site theme.`,
 };
 
@@ -65,7 +65,7 @@ export async function pageMarkdown(page: DocsPage): Promise<string> {
   return `${head.filter(Boolean).join('\n\n')}\n\n${absoluteLinks(body).trim()}\n`;
 }
 
-/** The pages in sidebar order, grouped as in the sidebar (DOCS.md §4); links outside the docs are kept as they are. */
+/** The pages in sidebar order, grouped as in the sidebar; links outside the docs are kept as they are. */
 function sidebar() {
   return groupTree(source.getPageTree().children).map((group) => ({
     name: typeof group.name === 'string' ? group.name : null,

@@ -1,7 +1,7 @@
 import { INSTALL_COMMAND, SHADCN_COMMAND } from './site';
 
 /**
- * Get started (LANDING §9). The snippets are copied verbatim from packages/toast/README.md
+ * Get started. The snippets are copied verbatim from packages/toast/README.md
  * and registry/README.md, which `npm run check:docs` typechecks against the public API;
  * tests/unit/site-get-started.test.ts fails when they drift apart.
  */

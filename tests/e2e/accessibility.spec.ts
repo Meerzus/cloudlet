@@ -4,9 +4,9 @@ import type { Page } from '@playwright/test';
 import type { AccessibilityFixtureApi } from '../../apps/lab/src/accessibility-fixture.js';
 import { finishAudit, idle, nativeTab, openRoute, screenshot, speech } from './shell-audit.js';
 
-// DESIGN §9 on the production laboratory (`?fixture=accessibility`, bottom-center, autoDismiss off):
+// Accessibility on the production laboratory (`?fixture=accessibility`, bottom-center, autoDismiss off):
 // roles and names, keyboard and focus hand-offs, native controls, live regions, axe, RTL, 320 px,
-// 200 % text, forced colors and reduced motion. Live-DOM delivery does not prove speech (manual gates).
+// 200 % text, forced colors and reduced motion. Live-DOM delivery does not prove speech; screen readers are checked by hand.
 
 declare global { interface Window { accessibilityFixture?: AccessibilityFixtureApi } }
 

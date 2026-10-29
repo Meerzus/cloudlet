@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * axe on the static export of the landing (LANDING §10, L05): `/`, `/playground` and `/frame`,
+ * axe on the static export of the landing: `/`, `/playground` and `/frame`,
  * desktop 1440×900 and phone 390×844, light and dark, with motion and with reduced motion.
  * Scenes are pinned and fade text in and out, so the home page is checked at every section
  * and at points inside scenes 2 and 3, not only at the top. Text caught mid-fade (opacity
@@ -144,7 +144,7 @@ async function keyboard(page, path) {
   return { stops: stops.length, failures };
 }
 
-/** The still layout under reduced motion (LANDING §10). */
+/** The still layout under reduced motion. */
 const stillLayout = (page) =>
   page.evaluate(() => ({
     lenis: document.documentElement.classList.contains('lenis'),

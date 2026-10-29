@@ -256,7 +256,7 @@ test('timeScale switch slows the morph and is indicated in the lab header', asyn
   await idle(page);
 });
 
-test('motion panel applies springs live, resets to DESIGN, persists, copies and applies JSON', async ({ page, context, browserName }) => {
+test('motion panel applies springs live, resets to the baseline, persists, copies and applies JSON', async ({ page, context, browserName }) => {
   if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await openLab(page);
   const panel = page.getByTestId('motion-panel');
@@ -589,7 +589,7 @@ test('auto-dismiss preference applies to a recreated controller and complete res
   await reset(page);
   await expect(page.getByRole('checkbox', { name: 'Auto-dismiss after reset', exact: true })).toBeChecked();
   await button(page, 'Show notification').click();
-  // Auto-opened only for its description: the slide's TTL keeps running in the Island (DESIGN §6).
+  // Auto-opened only for its description: the slide's TTL keeps running in the Island.
   await page.clock.runFor(1000);
   await expect(host(page)).toHaveAttribute('data-island-reason', 'attention');
   await page.mouse.move(0, 0);

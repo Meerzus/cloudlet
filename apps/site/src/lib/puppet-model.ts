@@ -1,7 +1,7 @@
 import { springAt, springEase, type SpringConfig } from './spring';
 
 /**
- * Puppets (LANDING §6): the state model and the motion of a GSAP-driven lookalike of
+ * Puppets: the state model and the motion of a GSAP-driven lookalike of
  * the Cloudlet toaster. Everything here is pure: a transition between two poses is a
  * function of time, so a scrubbed timeline renders the same frame in either direction.
  */
@@ -48,7 +48,7 @@ export interface PuppetState {
 }
 
 /**
- * Token restyles of the Island for "Fits your stack" (LANDING §8): what a site gets by
+ * Token restyles of the Island for "Fits your stack": what a site gets by
  * overriding `--cloudlet-*` tokens. `accent` replaces every status colour, `tint` mixes
  * it into the background, radii are px.
  */
@@ -67,10 +67,10 @@ export const PUPPET_LOOKS = {
 } as const satisfies Record<string, PuppetLook>;
 export type PuppetLookId = keyof typeof PUPPET_LOOKS;
 
-/** Spring of the shape opening (DESIGN §7 `shapeOpen`); a retarget keeps riding it. */
+/** Spring of the shape opening (`shapeOpen` of the package's MOTION); a retarget keeps riding it. */
 const SHAPE_OPEN: SpringConfig = { stiffness: 900, damping: 60, mass: 2 };
 
-/** DESIGN §7 values (task 17, D47) in seconds; springs become ease functions. */
+/** The package's MOTION values in seconds; springs become ease functions. */
 export const PUPPET_MOTION = {
   /** `enter`: 200 ms, bounce 0.25 → a damping ratio of 0.75 settling in ~200 ms. */
   enter: { ...springEase({ stiffness: 942, damping: 46 }), scale: 0.25, offset: 1, fade: 0.16 },
@@ -234,7 +234,7 @@ const morphOf = (a: Pose, b: Pose): Morph =>
 
 /**
  * Another notification becomes current in an open Island: navigation (the current index moves) or
- * the current one was closed (fewer notifications). Its body slides (DESIGN §3, §7): +1 brings the
+ * the current one was closed (fewer notifications). Its body slides: +1 brings the
  * incoming body from the inline end (towards older ones), like the package's plan. An update of
  * the same slot (same index and count) crossfades instead.
  */
@@ -252,7 +252,7 @@ const highlights = (pose: Pose): Highlights => ({
   close: highlightOf(pose, 'close'),
 });
 
-/** Length of the transition a → b in seconds (DESIGN §7 timings). */
+/** Length of the transition a → b in seconds (the package's timings). */
 export function transitionDuration(a: Pose, b: Pose): number {
   const m = PUPPET_MOTION;
   if (!a.present && !b.present) return 0;
@@ -403,7 +403,7 @@ export function frameBetween(from: Pose, to: Pose, time: number): Frame {
 }
 
 /**
- * The transition a → b interrupted `at` seconds in and retargeted to c (DESIGN §7 invariant:
+ * The transition a → b interrupted `at` seconds in and retargeted to c (the package's invariant:
  * a retarget starts from the current value and speed). Everything but the shape plays a → c;
  * the shape springs on from where a → b had it, with its velocity, towards c.
  */

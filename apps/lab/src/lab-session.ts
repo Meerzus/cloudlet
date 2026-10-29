@@ -149,7 +149,7 @@ export class LabSession {
     this.note('Three notifications in the stack: open the Island, close the current one, collapse.');
   }
 
-  /** Generators: each kind of record DESIGN §5 treats differently, with an explicit `attention`. */
+  /** Generators: each kind of record `attention` treats differently, with an explicit `attention`. */
   generate(kind: 'description' | 'action' | 'plain', attention: Attention, long = false) {
     const n = ++this.generated;
     if (kind === 'description') this.controller.show({ title: `Document updated · ${n}`, kind: 'success', attention,

@@ -31,7 +31,7 @@ declare global {
 const host = () => document.querySelector('.cloudlet-host');
 const run = () => undefined;
 
-/** Records whose `attention` resolves differently (DESIGN §5); the expectation is in the label. */
+/** Records whose `attention` resolves differently; the expectation is in the label. */
 const kinds: Record<Kind, { label: string; expect: string; spec: (n: number) => ReactNotificationSpec }> = {
   'auto-description': { label: 'auto + description', expect: 'opens after the delay, reason attention', spec: n => ({ title: `Description ${n}`, description: { kind: 'text', text: 'Has a description: auto opens the Island.' } }) },
   'auto-action': { label: 'auto + action', expect: 'opens after the delay', spec: n => ({ title: `Action ${n}`, action: { kind: 'command', label: 'Undo', run } }) },

@@ -7,7 +7,7 @@ import type { Generator, SpringOptions } from '../../packages/toast/src/react/ge
 /**
  * E1: Cloudlet's own generators must reproduce Motion 14.3.0 frame
  * for frame, because the values of MOTION were accepted by the owner on the laboratory running
- * Motion (D47). Both implementations are sampled every millisecond until they stop: the values
+ * Motion. Both implementations are sampled every millisecond until they stop: the values
  * and velocities agree to 1e-9 and `done` flips on the same frame. `motion` stays a
  * devDependency of the workspace, pinned to the version the port was taken from, for this test.
  */
@@ -60,7 +60,7 @@ const tweenPair = (from: number, to: number, duration: number, label: string): P
 
 /** Initial speeds in units/s as `createShellMotion` passes them: at rest, a normal swipe, a very fast one. */
 const velocities = { rest: 0, swipe: 600, flick: 5000, reverse: -1200 };
-/** Ranges the channels actually travel (DESIGN §7): granular (|Δ| < 5) and default rest thresholds. */
+/** Ranges the channels actually travel: granular (|Δ| < 5) and default rest thresholds. */
 const physicsRanges = [
   { from: 220, to: 416 }, // width pill → Island
   { from: 416, to: 220 },

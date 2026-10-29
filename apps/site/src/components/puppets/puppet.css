@@ -1,5 +1,5 @@
 /*
- * Puppets (LANDING §6): GSAP-driven lookalikes of the Cloudlet toaster for the scroll
+ * Puppets: GSAP-driven lookalikes of the Cloudlet toaster for the scroll
  * scenes. They never import or mirror the package DOM; they share its tokens and glyphs.
  * Token values are copies of @cloudlet/toast/styles.css; tests/unit/site-puppet.test.ts
  * keeps them equal.

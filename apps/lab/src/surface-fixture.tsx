@@ -32,7 +32,7 @@ const three: readonly ReactNotificationSpec[] = [
 ];
 
 /**
- * `?surface`: the measured shell of the stack → Island model (DESIGN §2–§4, §7) under
+ * `?surface`: the measured shell of the stack → Island model under
  * container width, font size, theme, mount and dispose changes. Mutations go through
  * the public controller; open/collapse go through the pill and Escape like a user.
  */

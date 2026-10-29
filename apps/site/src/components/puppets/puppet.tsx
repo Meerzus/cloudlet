@@ -2,7 +2,7 @@ import type { Ref } from 'react';
 import { puppetCounts, puppetDots, puppetLayers, type PuppetFace, type PuppetKind, type PuppetState } from '@/lib/puppet-model';
 import { cn } from '@/lib/utils';
 
-/** The package's 16 px stroke glyphs (DESIGN §8), drawn here, not imported. */
+/** The package's 16 px stroke glyphs, drawn here, not imported. */
 const GLYPHS: Record<Exclude<PuppetKind, 'loading'>, string> = {
   success: 'M4.5 8.5 7 11l4.5-5.5',
   error: 'm5.5 5.5 5 5m0-5-5 5',
@@ -99,7 +99,7 @@ export interface PuppetProps {
 }
 
 /**
- * A decorative lookalike of the Cloudlet toaster (LANDING §6), drawn with the package
+ * A decorative lookalike of the Cloudlet toaster, drawn with the package
  * tokens and glyphs but never its DOM. Static markup only: the puppeteer measures it
  * and writes every animated value; until then the stack stays hidden.
  */

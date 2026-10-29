@@ -3,7 +3,7 @@ import type { Locator, Page, TestInfo } from '@playwright/test';
 import type { MobileFixtureApi } from '../../apps/lab/src/mobile-fixture.js';
 import { drag, finishAudit, geometry, idle, installShellAudit, screenshot, translateY } from './shell-audit.js';
 
-// DESIGN §2, §3, §7, §9 and the viewport contract (API_CONTRACT §18, §22) on `?fixture=mobile`:
+// The shell, the slider, motion, accessibility and the viewport contract on `?fixture=mobile`:
 // bottom edge, auto placement, safe area + obstruction + VisualViewport, keyboard-sized viewports,
 // gestures with release physics, portals, reduced motion and device emulation. Device presets and
 // the VisualViewport mock are emulation, not physical devices.
@@ -235,7 +235,7 @@ test('bottom edge: the tails peek upwards, the badge sits in the bottom corner, 
   await page.evaluate(() => window.mobileFixture!.open());
   await expect(island(page)).toBeVisible();
   await idle(page);
-  // 32 px commits towards the edge (D44). Start low in the header: Firefox drops a pointer that leaves the viewport.
+  // 32 px commits towards the edge. Start low in the header: Firefox drops a pointer that leaves the viewport.
   const top = (await header(page).boundingBox())!;
   await page.mouse.move(top.x + top.width / 2, top.y + top.height - 6);
   await page.mouse.down();

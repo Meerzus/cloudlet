@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import type { SurfaceFixtureApi } from '../../apps/lab/src/surface-fixture.js';
 import { finishAudit, geometry, idle, openRoute, screenshot } from './shell-audit.js';
 
-// DESIGN §2–§4, §7 (D16): the measured shell on `?surface` under a narrow viewport without a CSS
+// The measured shell on `?surface` under a narrow viewport without a CSS
 // reset, long text, font/container changes, loading → terminal updates, themes and resource release.
 
 declare global { interface Window { surfaceFixture?: SurfaceFixtureApi } }

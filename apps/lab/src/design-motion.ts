@@ -1,7 +1,7 @@
 import type { CloudletMotionConstants, CloudletMotionOverrides } from '@cloudlet/toast';
 
 /**
- * Values of DESIGN §7 (accepted in task 17, D47) as the tuning panel's baseline. The package
+ * The motion values as the tuning panel's baseline. The package
  * keeps the same numbers in `react/motion.ts` (`MOTION`); tests/unit/lab-motion-defaults.test.ts
  * fails when the two drift apart. Change both together.
  */
@@ -45,7 +45,7 @@ const timed = (group: Group): MotionField[] => [
   { path: `${group}.bounce`, label: 'bounce', unit: '', step: 0.05, min: 0 },
 ];
 
-/** Panel layout: the DESIGN §7 table, grouped the way the owner reads it. */
+/** Panel layout: the motion values, grouped by transition. */
 export const motionSections: readonly MotionSection[] = [
   { title: 'Shape: open', note: 'Pill → Island: width, height, radius', fields: spring('shapeOpen') },
   { title: 'Shape: close and resize', note: 'Island → pill, height for a new slide', fields: spring('shapeClose') },
@@ -76,7 +76,7 @@ export function applyOverrides(overrides: CloudletMotionOverrides): CloudletMoti
   return result as unknown as CloudletMotionConstants;
 }
 
-/** Only the fields that differ from DESIGN, in the overrides shape. */
+/** Only the fields that differ from the baseline, in the overrides shape. */
 export function diffFromDesign(values: CloudletMotionConstants): CloudletMotionOverrides {
   const result: Record<string, unknown> = {};
   for (const [group, base] of Object.entries(designMotion) as [string, unknown][]) {
@@ -139,7 +139,7 @@ function valid(key: string, value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && (key === 'stiffness' || key === 'mass' ? value > 0 : value >= 0);
 }
 
-/** The copied JSON: complete values, so task 17 can paste them into MOTION as they are. */
+/** The copied JSON: complete values, so they can be pasted into MOTION as they are. */
 export function tuningJson(timeScale: number, overrides: CloudletMotionOverrides): string {
   return JSON.stringify({ timeScale, motion: applyOverrides(overrides), changed: diffFromDesign(applyOverrides(overrides)) }, null, 2);
 }

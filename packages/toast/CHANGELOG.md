@@ -124,7 +124,7 @@ published.
   Motion 14.3.0 (MIT, attributed in THIRD_PARTY_NOTICES). A reference test samples both
   implementations every millisecond for every `MOTION` configuration, boundary overrides and release
   velocities: values and velocities match bit for bit, `done` flips on the same frame, so the owner's
-  motion (D47) is unchanged. Full consumer delta 34461 → 30690 B gzip; own JS 26089 → 27340 B (the
+  motion is unchanged. Full consumer delta 34461 → 30690 B gzip; own JS 26089 → 27340 B (the
   generators now count as own code); a consumer that already ships Motion pays 29258 → 30514 B.
   `check-package` now asserts that the package declares no runtime dependencies.
 
@@ -138,24 +138,24 @@ published.
 
 ## 1.0.0-rc.1 — 2026-10-22
 
-Local, private release candidate of the stack → Island model (DESIGN.md, tasks 12–18). No compatibility
+Local, private release candidate of the stack → Island model. No compatibility
 with rc.0 is promised: see Migrating from 1.0.0-rc.0 below. Stable release readiness stays
 **not ready**; nothing has been published.
 
-### Verification (task 18)
+### Verification
 
 - The browser end-to-end suites are rewritten for the model: `stack`, `slider`, `accessibility`, `mobile`,
-  `surface`, `harness` beside the task 13 `island` and task 16 `lab` specs (tests/README.md). They cover the
+  `surface`, `harness` beside the `island` and `lab` specs (tests/README.md). They cover the
   stack, opening/collapsing, the slider, swipes and trackpad, `?fixture=attention` auto-opening on a fake
-  clock, the TTL rules of DESIGN §6, overflow, RTL, the bottom edge and mobile viewports, reduced motion, axe,
+  clock, the TTL rules, overflow, RTL, the bottom edge and mobile viewports, reduced motion, axe,
   strict CSP and `timeScale` samples that prove the shell does not move during a slide.
 - Installed-tarball consumers (`fixtures/integration`) and the shadcn registry check drive the pill, the
   Island, the slide, the swipe and the auto-opening action instead of the removed modes and overview.
 - Documentation (package and root README, API contract, QA and release documents) describes rc.1 only.
 
-### Motion (task 17, owner-tuned)
+### Motion (tuned by hand)
 
-- `MOTION` now holds the values accepted on the laboratory (DESIGN §7): the first pill grows from scale 0.25
+- `MOTION` now holds the values accepted on the laboratory: the first pill grows from scale 0.25
   with a 160 ms opacity tween (`enter.fade`), shape springs 900/60/2 (open) and 900/45/1 (close), slide
   1200/60/1, progress tween 1000 ms; tails sit 4 px apart at scale 0.9.
 - A new record arriving on a visible stack keeps the shell: the title blur-swaps and the width springs to the
@@ -237,7 +237,7 @@ styling hooks; `data-position`, `data-theme` and `data-reduced-motion` are uncha
   `position="auto"` follows the 48rem breakpoint live.
 - Island navigation counts as interaction for `attention`: a pending auto-open restarts its delay.
 
-- The look of DESIGN §8: a light toaster on light pages and a dark one on dark pages (`theme` forces
+- The look: a light toaster on light pages and a dark one on dark pages (`theme` forces
   either; a 1 px `color-mix` border and the `--cloudlet-shadow` token keep a forced theme readable),
   `--cloudlet-success`/`-error`/`-info`/`-warning`/`-loading` in oklch, the status icon in a tinted 24 px
   circle with 16 px stroke glyphs or a spinner, a 2 px progress ring around it (pill and Island; the icon is
@@ -248,7 +248,7 @@ styling hooks; `data-position`, `data-theme` and `data-reduced-motion` are uncha
   `data-kind`/`data-current` on the current card and `data-state`, `data-island-reason`, `data-position`,
   `data-edge`, `data-theme`, `data-reduced-motion`, `data-dragging` on the host are stable styling hooks.
 - Debugging channel `ToasterProps.motion.overrides` (`CloudletMotionOverrides`, partial
-  `CloudletMotionConstants`; `CloudletSpring`, `CloudletTimedSpring`): replaces the DESIGN §7 springs and
+  `CloudletMotionConstants`; `CloudletSpring`, `CloudletTimedSpring`): replaces the default springs and
   durations live for transitions started after the change; invalid fields keep their defaults. It exists
   for the laboratory and motion tuning and is not a styling API; do not ship overrides to production.
 

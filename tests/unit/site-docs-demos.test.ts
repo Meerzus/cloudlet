@@ -5,7 +5,7 @@ import { findDemo } from '../../apps/site/src/lib/demos';
 import { DEMO_META, DEMO_NOTE, remarkDemoNote } from '../../apps/site/src/lib/remark-demo-note';
 
 /**
- * Runnable documentation examples (DOCS.md §6): a fence with `demo="<id>"` gets Run, which
+ * Runnable documentation examples: a fence with `demo="<id>"` gets Run, which
  * calls that entry of the demo catalog, so the code the reader sees must be the entry's
  * snippet, character for character. site-demos.test.ts keeps each snippet equal to its run.
  */
@@ -35,7 +35,7 @@ function demoFences(markdown: string, file: string): DemoFence[] {
 }
 
 /**
- * `<Demos>` … `</Demos>` groups fences into one demo block (DOCS.md §6): inside, only `demo=`
+ * `<Demos>` … `</Demos>` groups fences into one demo block: inside, only `demo=`
  * fences and blank lines, at least two of them. Problems carry their file:line.
  */
 function groupProblems(markdown: string, file: string): string[] {
@@ -89,7 +89,7 @@ function problems(fences: readonly DemoFence[]) {
   });
 }
 
-describe('site docs runnable examples (DOCS.md §6)', () => {
+describe('site docs runnable examples', () => {
   const fences = allDemoFences();
 
   it('has runnable examples on the pages', () => {
@@ -175,7 +175,7 @@ describe('site docs runnable examples (DOCS.md §6)', () => {
     expect(metas).toEqual(['title="main.tsx"', `demo="success" ${DEMO_NOTE}`, 'demo="error"', null]);
   });
 
-  it('writes runnable fences as plain code in the Markdown for agents, the first after the note (DOCS.md §9)', () => {
+  it('writes runnable fences as plain code in the Markdown for agents, the first after the note', () => {
     const source = 'Intro\n\n```tsx demo="success"\nshow();\n```\n\n```tsx demo="error" title="x.tsx"\nfail();\n```\n';
     const at = (text: string) => {
       const start = source.indexOf(text);

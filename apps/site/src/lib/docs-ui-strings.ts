@@ -1,5 +1,5 @@
 /**
- * Every string of the documentation chrome in one place (DOCS.md §10): a second language
+ * Every string of the documentation chrome in one place: a second language
  * adds a sibling dictionary and the components keep working. Page content and sidebar
  * group names come from the content folder of that language instead.
  */
@@ -30,7 +30,7 @@ export const DOCS_UI = {
   copied: 'Copied',
   copyCode: 'Copy code',
   copiedCode: 'Copied code',
-  /** Above the first demo block of a page (DOCS.md §6): "Snippets assume `…`." */
+  /** Above the first demo block of a page: "Snippets assume `…`." */
   demoNoteBefore: 'Snippets assume ',
   demoNoteCode: 'const cloudlet = useCloudlet();',
   demoNoteAfter: ' — the buttons call them on this page’s own Toaster.',

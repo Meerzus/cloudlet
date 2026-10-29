@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 import type { AttentionFixtureApi, SliderFixtureApi } from '../../apps/lab/src/scenario-fixtures.js';
 import { drag, finishAudit, geometry, idle, openRoute, screenshot, translateX } from './shell-audit.js';
 
-// DESIGN §1, §3, §5, §7, §9: opening and collapsing, the slider, swipes, RTL, the fixed shell
+// Opening and collapsing, the slider, swipes, RTL, the fixed shell
 // during a slide (`timeScale`) and deterministic auto-opening on the production laboratory.
 
 declare global { interface Window { sliderFixture?: SliderFixtureApi; attentionFixture?: AttentionFixtureApi } }
@@ -309,7 +309,7 @@ test('attention: the auto-open waits for hover and focus, never takes focus, mov
 });
 
 test('attention: a hover pause ends when the hovered card disappears under a still pointer and the pointer then leaves', async ({ page }) => {
-  // Landing L06: no mouseout reaches the host when the card under the pointer goes away.
+  // Found on the landing's playground: no mouseout reaches the host when the card under the pointer goes away.
   await page.setViewportSize({ width: 1024, height: 768 });
   await openRoute(page, '/?fixture=attention&delay=300');
   // The fixture installs its API in an effect after the first render.
