@@ -307,6 +307,25 @@ describe('one semantic announcer on the existing live hosts', () => {
     expect(getRendererBridge(controller).getSnapshot().announcements.notifications[0]?.firstPresentation).toBe(true);
   });
 
+  it('holds the queue until a slow pill is readable, then speaks the pill first and the queue after it', async () => {
+    const geometry = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 0, height: 0, x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, toJSON() {},
+    });
+    const controller = create();
+    controller.show({ title: 'Older', attention: 'stack' });
+    controller.show({ title: 'Newest', attention: 'stack' });
+    const { polite } = mount(controller);
+    await advance(600);
+    // The window has passed, but the queue alone would be heard before the record it belongs to.
+    expect(polite).toBeEmptyDOMElement();
+    geometry.mockReturnValue({
+      width: 352, height: 56, x: 0, y: 0, top: 0, left: 0, right: 352, bottom: 56, toJSON() {},
+    });
+    act(() => window.dispatchEvent(new Event('resize')));
+    await advance(1);
+    expect(polite.textContent).toBe('Newest. 1 notifications queued');
+  });
+
   it('does not leak off records into either live channel, aggregates or remount', async () => {
     const controller = create();
     controller.show({ title: 'Silent current', announcementPriority: 'off' });
