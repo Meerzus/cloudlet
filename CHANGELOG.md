@@ -24,6 +24,9 @@ hand: screen readers beyond VoiceOver on macOS, physical phones and the minimum 
 
 - The Island's background no longer counts as layout shift while it morphs at the bottom edge: it is
   placed with a transform instead of `bottom: 0`. Pixels are unchanged.
+- On a slow first frame, the queue aggregate ("2 notifications queued") was spoken alone before the
+  newest record's title. The announcer now waits until the pill is readable and speaks the title first
+  and the queue after it, as on fast devices.
 
 ### shadcn item
 

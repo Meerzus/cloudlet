@@ -305,6 +305,8 @@ test('motion panel applies springs live, resets to DESIGN, persists, copies and 
 });
 
 test('generators follow attention, retry and loading → success/error through track, overflow and acknowledge', async ({ page }) => {
+  // The longest scenario: 16 s in Chromium, 26–31 s in WebKit on the Linux CI runner.
+  test.slow();
   await openLab(page);
   const attention = page.getByRole('group', { name: 'attention', exact: true });
   await attention.getByRole('radio', { name: 'stack', exact: true }).check();

@@ -32,6 +32,8 @@ export function createAnnouncer(bridge: RendererBridge<ReactNode>, lease: HostLe
   /** The record last presented, and one shown again inside the open Island (a slide back, or the next after a close). */
   let shown: NotificationHandle | null = null;
   let revisit: NotificationHandle | null = null;
+  /** A flush held back until the presented record is readable (see `flush`). */
+  let waiting = false;
   let reinsert: number | undefined;
   const view = doc.defaultView;
   const cancel = () => { view?.clearTimeout(timer); timer = undefined; };
@@ -60,6 +62,11 @@ export function createAnnouncer(bridge: RendererBridge<ReactNode>, lease: HostLe
     timer = undefined;
     if (!mounted || doc.visibilityState === 'hidden' || !polite || !assertive) return;
     const snapshot = bridge.getSnapshot();
+    // The presented record speaks first and the queue after it. While its pill or slide is still
+    // arriving (a slow first frame), sending now would say the queue alone; its `presented` event
+    // flushes instead.
+    if (snapshot.presentation && !snapshot.presentation.readable && !resumed) { waiting = true; return; }
+    waiting = false;
     const acks: AnnouncementAcknowledgement[] = [];
     const messages = { polite: [] as string[], assertive: [] as string[] };
     const queued = { polite: 0, assertive: 0 };
@@ -170,6 +177,8 @@ export function createAnnouncer(bridge: RendererBridge<ReactNode>, lease: HostLe
         if (event.type === 'presented') {
           if (!event.firstPresentation && shown !== null && event.handle !== shown && bridge.getSnapshot().island.open) revisit = event.handle;
           shown = event.handle;
+          // The window already passed while the presentation was pending: deliver right away.
+          if (waiting) { waiting = false; cancel(); timer = view?.setTimeout(flush, 0); return; }
         }
         // Updated includes progress, reflow and ordinary text edits, not a new semantic phase.
         if (event.type !== 'updated' && event.type !== 'diagnostic') schedule();
