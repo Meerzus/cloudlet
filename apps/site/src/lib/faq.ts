@@ -35,7 +35,7 @@ export const FAQ = [
     id: 'stable',
     question: 'Is it stable?',
     answer:
-      'Yes: 1.0.0 is the stable release, and the API follows semantic versioning. Not yet checked by hand: screen readers beyond VoiceOver on macOS, physical phones and the minimum browsers.',
+      'Yes: 1.0.0 is the stable release, and the API follows semantic versioning. Beyond the automated browser suite, screen readers, physical phones and the minimum browsers are checked by hand.',
   },
   {
     id: 'license',

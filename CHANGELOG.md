@@ -3,9 +3,9 @@
 ## 1.0.0 — 2026-10-29
 
 The first stable release, published to npm as `latest` (`npm install @cloudlet/toast`). The API is the
-one of 1.0.0-rc.3 plus one diagnostic code; it follows semantic versioning from here. Not yet checked by
-hand: screen readers beyond VoiceOver on macOS, physical phones and the minimum browser versions
-(listed on the documentation's Accessibility page).
+one of 1.0.0-rc.3 plus one diagnostic code; it follows semantic versioning from here. After the release the
+remaining manual checks passed on this version: VoiceOver on iOS, NVDA, TalkBack, physical phones,
+Windows High Contrast and the minimum browser versions (the documentation's Accessibility page).
 
 ### Performance
 
