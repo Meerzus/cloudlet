@@ -15,48 +15,50 @@ export function isEnvironmentFixtureRoute(value: string | null): value is Enviro
 
 const fixtureCopy: Record<EnvironmentFixtureKind, { title: string; description: string }> = {
   'no-reset': {
-    title: 'Без CSS reset',
-    description: 'На этой странице сохранены стандартные шрифты, отступы и controls браузера. Стили Cloudlet ограничены собственным host. Основной CSS лаборатории здесь не загружается.',
+    title: 'No CSS reset',
+    description: 'This page keeps the browser’s default fonts, margins and controls. Cloudlet’s styles stay inside its own host. The laboratory’s main CSS is not loaded here.',
   },
   hostile: {
-    title: 'Агрессивный глобальный CSS',
-    description: 'Окружение меняет кнопки, заголовки, списки, SVG, отступы и box-sizing глобальными element selectors. Сравните образцы страницы с уведомлением. Намеренные !important overrides не входят в этот пример.',
+    title: 'Hostile global CSS',
+    description: 'The environment restyles buttons, headings, lists, SVG, margins and box-sizing with global element selectors. Compare the page samples with the notification. Deliberate !important overrides are not part of this example.',
   },
   'long-text': {
-    title: 'Русский, العربية и длинный URL',
-    description: 'Три независимых записи в одной стопке: русский текст, арабский с RTL и длинный неразрывный URL. Откройте Island, листайте слайды и проверьте двухстрочный заголовок, прокрутку описания, перенос и доступность controls.',
+    title: 'Cyrillic, العربية and a long URL',
+    description: 'Three independent records in one stack: Russian text, Arabic with RTL and a long unbroken URL. Open the Island, page through the slides and check the two-line title, the description scroll, wrapping and the controls.',
   },
   zoom: {
-    title: 'Увеличенный текст и reflow',
-    description: 'Размер корневого текста увеличен до 200%. Это проверка rem и reflow, а не эмуляция browser zoom. Дополнительно задайте настоящий масштаб браузера 200% или 250% и проверьте Tab, открытие Island, Escape и закрытие.',
+    title: 'Enlarged text and reflow',
+    description: 'The root text size is raised to 200%. This checks rem and reflow; it does not emulate browser zoom. Also set a real browser zoom of 200% or 250% and check Tab, opening the Island, Escape and closing.',
   },
   portal: {
-    title: 'Собственный portal',
-    description: 'Toaster монтируется в отдельный подключённый HTML-контейнер этой страницы. Отключение и подключение создаёт новое attachment; контроллер и принятые уведомления сохраняются.',
+    title: 'Own portal',
+    description: 'The Toaster mounts into a separate, connected HTML container of this page. Detaching and attaching creates a new attachment; the controller and the accepted notifications stay.',
   },
   inset: {
-    title: 'Нижняя навигация и inset',
-    description: 'Фиксированная навигация высотой 76 CSS px передана как дополнительная obstruction.bottom. Safe area добавляется библиотекой отдельно. Поле ввода и вертикальная прокрутка остаются нативными.',
+    title: 'Bottom navigation and inset',
+    description: 'A fixed navigation 76 CSS px high is passed as an extra obstruction.bottom. The library adds the safe area on its own. The text field and vertical scrolling stay native.',
   },
 };
 
+const englishText = 'Changes saved. The workspace has a new version of the document with the team’s notes, a refined plan and the material for the next meeting. Colleagues see the update the next time they open the document. The previous version stays in the change history. '.repeat(5);
+/** A Cyrillic language sample beside the Arabic one: the long-text page checks scripts, not English. */
 const russianText = 'Изменения сохранены. В рабочем пространстве появилась новая версия документа с заметками команды, уточнённым планом и материалами для следующей встречи. Коллеги увидят обновления при следующем открытии документа. Предыдущая версия остаётся доступной в истории изменений. '.repeat(5);
 const arabicText = 'تم حفظ التغييرات بنجاح. يظل هذا الوصف الطويل مقروءًا عند تكبير النص وفي النافذة الضيقة. يمكنك فتح الإشعار وإغلاقه باستخدام لوحة المفاتيح مع الحفاظ على اتجاه القراءة الصحيح. '.repeat(5);
 const longUrl = `https://example.test/collections/${'cloudlet_readable_notifications_'.repeat(12)}?language=ru&direction=rtl`;
 
-const labels: NonNullable<ToasterProps['labels']> = { ...fixtureLabels, region: 'Уведомления fixture' };
+const labels: NonNullable<ToasterProps['labels']> = { ...fixtureLabels, region: 'Fixture notifications' };
 
 function records(fixture: EnvironmentFixtureKind): readonly ReactNotificationSpec[] {
   if (fixture === 'long-text') return [
     { id: 'fixture-russian', title: 'Документ обновлён: новая версия плана с заметками команды и материалами к встрече', description: { kind: 'text', text: russianText }, duration: null, attention: 'stack' },
     { id: 'fixture-arabic', title: 'تم حفظ التغييرات بنجاح', description: { kind: 'text', text: arabicText }, duration: null, attention: 'stack' },
-    { id: 'fixture-url', title: 'Ссылка на коллекцию', description: { kind: 'text', text: longUrl }, duration: null, attention: 'stack' },
+    { id: 'fixture-url', title: 'Link to the collection', description: { kind: 'text', text: longUrl }, duration: null, attention: 'stack' },
   ];
   return [{
-    id: 'fixture-notice', title: 'Изменения сохранены', kind: 'success',
-    description: { kind: 'text', text: fixture === 'zoom' ? russianText : 'Новая версия документа сохранена в рабочем пространстве. Все заметки и вложения доступны команде.' },
+    id: 'fixture-notice', title: 'Changes saved', kind: 'success',
+    description: { kind: 'text', text: fixture === 'zoom' ? englishText : 'The new version of the document is saved in the workspace. Every note and attachment is available to the team.' },
     duration: null, attention: 'stack',
-    action: { kind: 'link', label: 'Открыть документ', href: '#environment-destination' },
+    action: { kind: 'link', label: 'Open document', href: '#environment-destination' },
   }];
 }
 
@@ -80,7 +82,7 @@ export function EnvironmentFixture({ fixture }: { fixture: EnvironmentFixtureKin
     };
   }, [fixture, revision]);
 
-  if (!session || session.fixture !== fixture || session.revision !== revision) return <p>Подготовка окружения…</p>;
+  if (!session || session.fixture !== fixture || session.revision !== revision) return <p>Preparing the environment…</p>;
   return <CloudletProvider controller={session.controller}>
     <FixtureContents key={revision} controller={session.controller} fixture={fixture} onReset={() => setRevision(value => value + 1)} />
   </CloudletProvider>;
@@ -105,62 +107,62 @@ function FixtureContents({ controller, fixture, onReset }: { controller: ReactCl
 
   function showAnother() {
     serial.current += 1;
-    controller.show({ id: `fixture-extra-${serial.current}`, title: `Независимое событие ${serial.current}`, duration: null, attention: 'stack' });
+    controller.show({ id: `fixture-extra-${serial.current}`, title: `Independent event ${serial.current}`, duration: null, attention: 'stack' });
   }
 
   return <>
     <main className="environment-fixture" data-fixture={fixture} data-testid="environment-fixture">
-      <p className="environment-eyebrow">Cloudlet · изолированное окружение</p>
+      <p className="environment-eyebrow">Cloudlet · isolated environment</p>
       <h1>{copy.title}</h1>
       <p>{copy.description}</p>
-      <p><a href="./">Вернуться в лабораторию</a></p>
+      <p><a href="./">Back to the laboratory</a></p>
       <section aria-labelledby="environment-controls-title">
-        <h2 id="environment-controls-title">Управление</h2>
+        <h2 id="environment-controls-title">Controls</h2>
         <div className="environment-controls" data-lab-keep-island="">
-          <button type="button" onClick={refill}>Показать образцы</button>
-          <button type="button" onClick={showAnother}>Добавить событие</button>
-          <button type="button" onClick={() => openIsland(host())} disabled={!attached || snapshot.island.open || snapshot.stack.length === 0}>Открыть Island</button>
-          <button type="button" onClick={() => collapseIsland(host())} disabled={!snapshot.island.open}>Свернуть</button>
-          <button type="button" onClick={() => controller.clear()}>Очистить уведомления</button>
-          <button type="button" onClick={onReset}>Сбросить fixture</button>
-          <button type="button" onClick={() => setAttached(value => !value)}>{attached ? 'Отключить Toaster' : 'Подключить Toaster'}</button>
-          <button type="button" onClick={() => controller.requestFocus()} disabled={!attached || snapshot.notifications.length === 0}>Фокус на уведомления</button>
-          <Choice label="Направление" value={dir} onChange={setDir} options={[["ltr", "LTR"], ["rtl", "RTL"]]} />
-          {fixture === 'inset' && <label><input type="checkbox" checked={inset} onChange={event => setInset(event.target.checked)} /> Учитывать навигацию</label>}
+          <button type="button" onClick={refill}>Show samples</button>
+          <button type="button" onClick={showAnother}>Add event</button>
+          <button type="button" onClick={() => openIsland(host())} disabled={!attached || snapshot.island.open || snapshot.stack.length === 0}>Open Island</button>
+          <button type="button" onClick={() => collapseIsland(host())} disabled={!snapshot.island.open}>Collapse</button>
+          <button type="button" onClick={() => controller.clear()}>Clear notifications</button>
+          <button type="button" onClick={onReset}>Reset fixture</button>
+          <button type="button" onClick={() => setAttached(value => !value)}>{attached ? 'Detach Toaster' : 'Attach Toaster'}</button>
+          <button type="button" onClick={() => controller.requestFocus()} disabled={!attached || snapshot.notifications.length === 0}>Focus notifications</button>
+          <Choice label="Direction" value={dir} onChange={setDir} options={[["ltr", "LTR"], ["rtl", "RTL"]]} />
+          {fixture === 'inset' && <label><input type="checkbox" checked={inset} onChange={event => setInset(event.target.checked)} /> Account for the navigation</label>}
         </div>
-        <p><output data-testid="environment-count" data-state={snapshot.island.open ? 'island' : 'stack'}>Принято: {snapshot.notifications.length}; в стопке: {snapshot.stack.length}; {snapshot.island.open ? 'Island открыт' : 'стопка свёрнута'}.</output> Auto-dismiss отключён.</p>
+        <p><output data-testid="environment-count" data-state={snapshot.island.open ? 'island' : 'stack'}>Accepted: {snapshot.notifications.length}; in stack: {snapshot.stack.length}; {snapshot.island.open ? 'Island open' : 'stack collapsed'}.</output> Auto-dismiss is off.</p>
       </section>
       {fixture === 'hostile' && <section aria-labelledby="hostile-samples-title">
-        <h2 id="hostile-samples-title">Образцы глобальных стилей</h2>
-        <p>Этот текст, список, SVG и кнопки намеренно наследуют агрессивное окружение.</p>
-        <ol><li>Обычный список страницы</li><li>Второй элемент списка</li></ol>
-        <svg viewBox="0 0 24 24" role="img" aria-label="Геометрический образец"><circle cx="12" cy="12" r="8" /></svg>
+        <h2 id="hostile-samples-title">Global style samples</h2>
+        <p>This text, list, SVG and buttons inherit the hostile environment on purpose.</p>
+        <ol><li>A plain page list</li><li>The second list item</li></ol>
+        <svg viewBox="0 0 24 24" role="img" aria-label="Geometric sample"><circle cx="12" cy="12" r="8" /></svg>
       </section>}
       {fixture === 'long-text' && <section aria-labelledby="language-samples-title">
-        <h2 id="language-samples-title">Исходный материал</h2>
+        <h2 id="language-samples-title">Source material</h2>
         <p lang="ru">{russianText.slice(0, 225)}</p>
         <p lang="ar" dir="rtl">{arabicText.slice(0, 220)}</p>
         <p className="environment-long-url">{longUrl}</p>
-        <p>Для арабской записи выберите RTL: слайдер и бэйдж зеркалятся. Каждый язык сохранён отдельным событием; Cloudlet не объединяет независимые записи.</p>
+        <p>Choose RTL for the Arabic record: the slider and the badge mirror. Each language is its own event; Cloudlet does not merge independent records.</p>
       </section>}
       {fixture === 'portal' && <section aria-labelledby="portal-title">
-        <h2 id="portal-title">Портал приложения</h2>
-        <p>Контейнер находится после main, за пределами React-разметки controls, без transform или clipping. Host остаётся фиксированным к viewport.</p>
+        <h2 id="portal-title">Application portal</h2>
+        <p>The container sits after main, outside the React markup of the controls, with no transform or clipping. The host stays fixed to the viewport.</p>
         <p><code>#environment-custom-portal</code></p>
       </section>}
       {fixture === 'inset' && <section aria-labelledby="inset-content-title">
-        <h2 id="inset-content-title">Содержимое мобильной страницы</h2>
-        <label>Нативное текстовое поле <input type="text" autoComplete="off" placeholder="Проверка клавиатуры" /></label>
-        {Array.from({ length: 10 }, (_, index) => <p key={index}>Раздел {index + 1}. Страница прокручивается вертикально. Bottom navigation остаётся на месте, а уведомление учитывает дополнительный нижний отступ.</p>)}
+        <h2 id="inset-content-title">Mobile page content</h2>
+        <label>Native text field <input type="text" autoComplete="off" placeholder="Keyboard check" /></label>
+        {Array.from({ length: 10 }, (_, index) => <p key={index}>Section {index + 1}. The page scrolls vertically. The bottom navigation stays put, and the notification accounts for the extra bottom inset.</p>)}
       </section>}
       {fixture === 'zoom' && <section aria-labelledby="reflow-title">
-        <h2 id="reflow-title">Проверка reflow</h2>
-        <p>Controls переносятся на следующую строку. В Island описание прокручивается внутри доступной высоты; размер текста не уменьшается для размещения в viewport.</p>
+        <h2 id="reflow-title">Reflow check</h2>
+        <p>Controls wrap to the next line. In the Island the description scrolls within the available height; the text never shrinks to fit the viewport.</p>
       </section>}
-      <p id="environment-destination" tabIndex={-1}>Образец назначения нативной ссылки. После перехода клавиатурная навигация продолжается на странице.</p>
+      <p id="environment-destination" tabIndex={-1}>Sample target of a native link. After the jump, keyboard navigation continues on the page.</p>
     </main>
     {fixture === 'portal' && <div id="environment-custom-portal" data-testid="environment-custom-portal" />}
-    {fixture === 'inset' && <nav className="environment-bottom-nav" aria-label="Образец нижней навигации"><a href="#environment-controls-title">Управление</a><a href="#environment-destination">Назначение</a></nav>}
+    {fixture === 'inset' && <nav className="environment-bottom-nav" aria-label="Sample bottom navigation"><a href="#environment-controls-title">Controls</a><a href="#environment-destination">Target</a></nav>}
     {attached && <Toaster dir={dir} theme="light" labels={labels}
       position={fixture === 'inset' ? 'bottom-center' : 'auto'}
       {...(fixture === 'portal' ? { container: () => document.getElementById('environment-custom-portal') } : {})}

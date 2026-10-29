@@ -299,7 +299,7 @@ describe('operation admission and failure isolation', () => {
   ] as const)('isolates a %s mapper that returns %s output and a throwing diagnostic listener', async (status, behavior) => {
     const diagnostics: Diagnostic[] = [];
     const { controller } = harness({
-      messages: { operationSuccess: 'Готово', operationError: 'Ошибка', operationCancelled: 'Отменено' },
+      messages: { operationSuccess: 'Done', operationError: 'Error', operationCancelled: 'Cancelled' },
       onDiagnostic: (diagnostic) => { diagnostics.push(diagnostic); throw new Error('Diagnostic callback'); },
     });
     controller.onEvent((event) => { if (event.type === 'diagnostic') throw new Error('Diagnostic event listener'); });
@@ -321,7 +321,7 @@ describe('operation admission and failure isolation', () => {
     expect(operation.getSnapshot().status).toBe(status);
     expect(record(controller, notification(operation))).toMatchObject({
       kind: status === 'fulfilled' ? 'success' : status === 'cancelled' ? 'warning' : 'error',
-      content: { title: status === 'fulfilled' ? 'Готово' : status === 'cancelled' ? 'Отменено' : 'Ошибка' },
+      content: { title: status === 'fulfilled' ? 'Done' : status === 'cancelled' ? 'Cancelled' : 'Error' },
     });
     expect(mapper).toHaveBeenCalledTimes(1);
     expect(diagnostics.some((diagnostic) => diagnostic.code === 'mapper-error')).toBe(true);

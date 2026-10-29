@@ -1,7 +1,7 @@
 # Cloudlet laboratory
 
 A local consumer of `@cloudlet/toast` that uses only its public API: the stand where the motion was
-tuned and the isolated fixtures the browser tests run on. Its interface is in Russian.
+tuned and the isolated fixtures the browser tests run on.
 
 ## Running
 
@@ -45,7 +45,7 @@ Query routes work on Vite and on the production CSP server without an SPA fallba
 | `?fixture=slider` | `count` notifications (1–12) with the Island open |
 | `?fixture=no-reset` | Native UA defaults, no global reset |
 | `?fixture=hostile` | Global element selectors the shell must not inherit |
-| `?fixture=long-text` | Russian, Arabic and a long URL in one stack; RTL |
+| `?fixture=long-text` | Russian (a Cyrillic sample), Arabic and a long URL in one stack; RTL |
 | `?fixture=zoom` | Root text at 200 % for rem and reflow |
 | `?fixture=portal` | A same-document HTML portal |
 | `?fixture=inset` | A bottom navigation bar, an obstruction and a native input |

@@ -78,7 +78,7 @@ describe('command action attempts', () => {
   it('normalizes synchronous throws as action failures and isolates both error mapper and diagnostic exceptions', async () => {
     const diagnostics: Diagnostic[] = [];
     const { controller, bridge } = harness({
-      messages: { actionError: 'Не удалось выполнить' },
+      messages: { actionError: 'Could not run' },
       onDiagnostic: (diagnostic) => { diagnostics.push(diagnostic); throw new Error('Diagnostic callback failed'); },
     });
     const lease = attach(bridge);
@@ -91,7 +91,7 @@ describe('command action attempts', () => {
     expect(() => bridge.invokeAction(lease, handle)).not.toThrow();
     await flushActions();
     expect(mapper).toHaveBeenCalledWith(businessError);
-    expect(record(controller, handle).action).toMatchObject({ status: 'failed', message: 'Не удалось выполнить' });
+    expect(record(controller, handle).action).toMatchObject({ status: 'failed', message: 'Could not run' });
     expect(record(controller, handle).pauseReasons).not.toContain('action-pending');
     expect(diagnostics.some((diagnostic) => diagnostic.code === 'mapper-error')).toBe(true);
     expect(diagnostics.length).toBeLessThan(5);

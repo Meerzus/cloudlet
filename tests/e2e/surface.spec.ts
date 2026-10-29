@@ -10,7 +10,7 @@ declare global { interface Window { surfaceFixture?: SurfaceFixtureApi } }
 
 const host = (page: Page) => page.locator('.cloudlet-host');
 const shell = (page: Page) => host(page).locator('.cloudlet-stack > .cloudlet-shell');
-const island = (page: Page) => page.getByRole('region', { name: 'Текущие уведомления', exact: true });
+const island = (page: Page) => page.getByRole('region', { name: 'Current notifications', exact: true });
 const title = (page: Page) => shell(page).locator('.cloudlet-clip > .cloudlet-slide [data-cloudlet-title]');
 const body = (page: Page) => island(page).locator('.cloudlet-clip > .cloudlet-slide > .cloudlet-body');
 const state = (page: Page) => page.evaluate(() => window.surfaceFixture!.snapshot());
@@ -41,7 +41,7 @@ test('320 px without a CSS reset: the long title and URL stay inside the viewpor
   await page.setViewportSize({ width: 320, height: 640 });
   await openFixture(page);
   expect(await page.locator('body').evaluate(element => getComputedStyle(element).margin)).toBe('8px');
-  await page.getByRole('button', { name: 'Длинный текст', exact: true }).click();
+  await page.getByRole('button', { name: 'Long text', exact: true }).click();
   await readable(page);
   await idle(page);
   const pill = await geometry(shell(page));
@@ -72,8 +72,8 @@ test('320 px without a CSS reset: the long title and URL stay inside the viewpor
   await expect(island(page)).toBeVisible();
   await expect(body(page)).toBeFocused();
   await screenshot(page, info, 'surface-320-island');
-  await page.getByRole('button', { name: 'Размер шрифта', exact: true }).dispatchEvent('click');
-  await page.getByRole('button', { name: 'Размер контейнера', exact: true }).dispatchEvent('click');
+  await page.getByRole('button', { name: 'Font size', exact: true }).dispatchEvent('click');
+  await page.getByRole('button', { name: 'Container size', exact: true }).dispatchEvent('click');
   await expect.poll(() => host(page).evaluate(element => getComputedStyle(element).fontSize)).toBe('20px');
   await idle(page);
   const resized = await geometry(shell(page));
@@ -98,7 +98,7 @@ test('loading → success keeps the shell node, blur-swaps the heading and cross
   await idle(page);
   await expect.poll(() => island(page).locator('.cloudlet-progress-fill').getAttribute('stroke-dasharray')).toBe('100 100');
   await page.evaluate(() => window.surfaceFixture!.complete('success'));
-  await expect(title(page)).toHaveText('Документ готов');
+  await expect(title(page)).toHaveText('Document ready');
   await expect(shell(page)).toHaveAttribute('data-kind', 'success');
   expect(await shell(page).evaluate((element, previous) => element === previous, shellHandle)).toBe(true);
   await idle(page);
@@ -112,7 +112,7 @@ test('loading → success keeps the shell node, blur-swaps the heading and cross
   await readable(page);
   await page.evaluate(() => window.surfaceFixture!.complete('error'));
   await expect(shell(page)).toHaveAttribute('data-kind', 'error');
-  await expect(title(page)).toHaveText('Ошибка загрузки');
+  await expect(title(page)).toHaveText('Upload error');
   expect(await shell(page).evaluate((element, previous) => element === previous, shellHandle)).toBe(true);
 });
 
@@ -124,7 +124,7 @@ test('reduced motion mount, idle and unmount/dispose release observers and frame
   const idleFrames = await page.evaluate(() => window.__shellAudit.rafScheduled);
   await page.waitForTimeout(250);
   expect(await page.evaluate(() => window.__shellAudit.rafScheduled)).toBe(idleFrames);
-  await page.getByRole('button', { name: 'Размер шрифта', exact: true }).dispatchEvent('click');
+  await page.getByRole('button', { name: 'Font size', exact: true }).dispatchEvent('click');
   await page.getByRole('button', { name: 'Unmount', exact: true }).dispatchEvent('click');
   await expect(host(page)).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => ({ observers: window.__shellAudit.resizeTargets, frames: window.__shellAudit.rafPending }))).toEqual({ observers: 0, frames: 0 });
@@ -139,10 +139,10 @@ test('reduced motion mount, idle and unmount/dispose release observers and frame
 
 test('dark theme follows the tokens on the shell path; a dismissed pill leaves through one exit snapshot and the host goes idle', async ({ page }, info) => {
   await openFixture(page);
-  await page.getByRole('button', { name: 'Тема поверхности', exact: true }).dispatchEvent('click');
+  await page.getByRole('button', { name: 'Surface theme', exact: true }).dispatchEvent('click');
   await expect(host(page)).toHaveAttribute('data-theme', 'dark');
-  await page.evaluate(() => window.surfaceFixture!.reset([{ id: 'dark', title: 'Изменения сохранены', kind: 'success',
-    description: { kind: 'text', text: 'Все документы синхронизированы. Можно продолжать работу на другом устройстве.' } }]));
+  await page.evaluate(() => window.surfaceFixture!.reset([{ id: 'dark', title: 'Changes saved', kind: 'success',
+    description: { kind: 'text', text: 'Every document is synced. You can keep working on another device.' } }]));
   await readable(page);
   await idle(page);
   expect(await shell(page).locator('.cloudlet-bg path').evaluate(element => getComputedStyle(element).fill)).toBe('rgb(28, 28, 30)');

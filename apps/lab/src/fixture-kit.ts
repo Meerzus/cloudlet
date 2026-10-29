@@ -42,11 +42,11 @@ export function toasterQuery(params: URLSearchParams): { theme: NonNullable<Toas
 }
 
 export const fixtureLabels: NonNullable<ToasterProps['labels']> = {
-  region: 'Уведомления', island: 'Текущие уведомления', carousel: 'карусель', slide: 'слайд', close: 'Закрыть уведомление', collapse: 'Escape — свернуть',
-  retry: 'Повторить', cancel: 'Запросить отмену', cancellationRequested: 'Отмена запрошена', acknowledgeOverflow: 'Подтвердить пропущенные',
-  stackSummary: (title, count, missed) => [title, ...(count > 1 ? [`уведомлений: ${count}`] : []), ...(missed ? [`пропущено: ${missed}`] : [])].join(', '),
-  page: (index, total) => `${index} из ${total}`,
-  overflowCount: count => `Пропущено: ${count}`,
+  region: 'Notifications', island: 'Current notifications', carousel: 'carousel', slide: 'slide', close: 'Close notification', collapse: 'Escape to collapse',
+  retry: 'Retry', cancel: 'Request cancellation', cancellationRequested: 'Cancellation requested', acknowledgeOverflow: 'Acknowledge missed',
+  stackSummary: (title, count, missed) => [title, ...(count > 1 ? [`notifications: ${count}`] : []), ...(missed ? [`missed: ${missed}`] : [])].join(', '),
+  page: (index, total) => `${index} of ${total}`,
+  overflowCount: count => `Missed: ${count}`,
 };
 
 export const nonce = () => document.querySelector<HTMLMetaElement>('meta[name="csp-nonce"]')?.content;
