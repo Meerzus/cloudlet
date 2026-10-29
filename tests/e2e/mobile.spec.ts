@@ -428,6 +428,7 @@ test('touch (Chromium): a tap opens the Island, a sideways touch swipe dismisses
       const log = await page.evaluate(() => (window as unknown as { tapLog: string[] }).tapLog);
       throw new Error(`${String(error)}\npill ${JSON.stringify(tapBox)}, under its centre: ${under}, scrollY ${await page.evaluate(() => scrollY)}\nevents:\n${log.join('\n')}`);
     }
+    console.log(`touch events (passed):\n${(await page.evaluate(() => (window as unknown as { tapLog: string[] }).tapLog)).join('\n')}`);
     await expect(island(page)).toBeVisible();
     await idle(page);
     await expectControlsInside(page, { left: 16, top: 16, right: device.viewport.width - 16, bottom: device.viewport.height - 16 });
