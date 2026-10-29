@@ -43,7 +43,7 @@ export const SHADCN_COMMAND = `npx shadcn@latest add ${REGISTRY_ITEM_URL}`;
  * and the whole delta over a React-only app. The landing leads with `start`, always named as
  * JavaScript on first load; tests/unit/site-drift.test.ts holds them to the latest size report.
  */
-export const PACKAGE_SIZE = { version: '1.0.0', start: 8602, lazy: 21204, javascript: 29806, css: 3414, total: 33670 } as const;
+export const PACKAGE_SIZE = { version: '1.0.0', start: 8603, lazy: 21243, javascript: 29846, css: 3414, total: 33711 } as const;
 /** Bytes as the landing prints them: whole kilobytes, one decimal under ten. */
 export function formatKB(bytes: number): string {
   const kb = bytes / 1000;
