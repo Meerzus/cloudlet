@@ -400,8 +400,9 @@ test('touch (Chromium): a tap opens the Island, a sideways touch swipe dismisses
     await page.evaluate(() => scrollTo(0, 0));
     await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
     await idle(page);
-    // Linux CI: the tap after this swipe did not open the Island while the same tap without a swipe
-    // does. Record what reaches the page (capture phase, before the host's own guards), so a failure says why.
+    // Linux CI: the tap after this swipe reached the pill (pointer and touch events) but the browser
+    // produced no click at all, while the same tap without a swipe does. Record what reaches the page, in
+    // the capture phase before the host's own guards, so a failure says why.
     await page.evaluate(() => {
       const log: string[] = [];
       (window as unknown as { tapLog: string[] }).tapLog = log;
@@ -419,6 +420,10 @@ test('touch (Chromium): a tap opens the Island, a sideways touch swipe dismisses
     await expect.poll(async () => (await state(page)).closes).toEqual([{ id: 'C', reason: 'swipe' }]);
     await expect.poll(async () => (await state(page)).current).toBe('B');
     await idle(page);
+    // Headless Chromium on Linux turned a tap about 0.4 s after this swipe into pointer and touch events
+    // without any click (the log above saw none, before any host listener). It is the browser's tap
+    // handling, not the host; a pause like a person's lets the tap through.
+    await page.waitForTimeout(1000);
     const tapBox = (await pill(page).boundingBox())!;
     const under = await page.evaluate(({ x, y }) => { const element = document.elementFromPoint(x, y); return element ? `${element.tagName}.${[...element.classList].join('.')}` : 'none'; }, { x: tapBox.x + tapBox.width / 2, y: tapBox.y + tapBox.height / 2 });
     await pill(page).tap();
@@ -428,7 +433,6 @@ test('touch (Chromium): a tap opens the Island, a sideways touch swipe dismisses
       const log = await page.evaluate(() => (window as unknown as { tapLog: string[] }).tapLog);
       throw new Error(`${String(error)}\npill ${JSON.stringify(tapBox)}, under its centre: ${under}, scrollY ${await page.evaluate(() => scrollY)}\nevents:\n${log.join('\n')}`);
     }
-    console.log(`touch events (passed):\n${(await page.evaluate(() => (window as unknown as { tapLog: string[] }).tapLog)).join('\n')}`);
     await expect(island(page)).toBeVisible();
     await idle(page);
     await expectControlsInside(page, { left: 16, top: 16, right: device.viewport.width - 16, bottom: device.viewport.height - 16 });
