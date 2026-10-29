@@ -390,7 +390,15 @@ test('touch (Chromium): a tap opens the Island, a sideways touch swipe dismisses
     await touch([{ x: cx, y: cy }, { x: cx + 2, y: cy - 40 }, { x: cx + 3, y: cy - 90 }, { x: cx + 3, y: cy - 150 }]);
     await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
     expect((await state(page)).closes).toEqual([]);
+    // The fast pan leaves a fling that keeps scrolling past scrollTo, and a tap during a fling only
+    // stops it (no click). Let it settle first; how long it runs depends on the machine.
+    await expect.poll(async () => {
+      const before = await page.evaluate(() => scrollY);
+      await page.waitForTimeout(100);
+      return before === await page.evaluate(() => scrollY);
+    }).toBe(true);
     await page.evaluate(() => scrollTo(0, 0));
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
     await idle(page);
     box = (await pill(page).boundingBox())!;
     await touch([{ x: cx, y: cy }, { x: cx + 30, y: cy }, { x: cx + 80, y: cy }, { x: cx + 160, y: cy }], 30);
