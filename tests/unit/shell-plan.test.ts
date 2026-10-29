@@ -72,7 +72,7 @@ describe('shell transition plan', () => {
   it('blur-swaps the badge number and the long indicator text only where they are visible', () => {
     expect(planShell(view(['b', 'a'], 'b'), view(['c', 'b', 'a'], 'c'))).toMatchObject({ badge: true });
     expect(planShell(view(['a'], 'a'), view(['b', 'a'], 'b'))).toMatchObject({ badge: false });
-    // Missed notifications count in the badge, even with one record (DESIGN §10).
+    // Missed notifications count in the badge, even with one record.
     expect(planShell(view(['a'], 'a', false, 1), view(['a'], 'a', false, 2))).toMatchObject({ badge: true });
     expect(planShell(view(['b', 'a'], 'b', false, 1), view(['b', 'a'], 'b'))).toMatchObject({ badge: true });
     expect(planShell(view(['a'], 'a', false, 1), view(['a'], 'a'))).toMatchObject({ badge: false });

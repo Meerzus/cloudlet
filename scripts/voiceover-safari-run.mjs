@@ -88,20 +88,20 @@ async function step(scenario, label, action) {
 }
 const note = (scenario, label, value) => appendFile(stepsFile, `${JSON.stringify({ at: new Date().toISOString(), scenario, step: label, value })}\n`);
 
-const clearButton = () => focus('button', 'Очистить уведомления');
+const clearButton = () => focus('button', 'Clear notifications');
 
 const scenarios = {
   arrival: async (name) => {
     await step(name, 'load accessibility fixture', () => go('?fixture=accessibility'));
-    await step(name, 'focus «Очистить уведомления»', clearButton);
-    await step(name, 'first record arrives (focus must stay)', () => js(`window.accessibilityFixture.show({ id: 'a', title: 'Первое уведомление' })`));
-    await step(name, 'second and third arrive', () => js(`window.accessibilityFixture.show({ id: 'b', title: 'Второе уведомление' });
-      window.accessibilityFixture.show({ id: 'c', title: 'Третье уведомление' })`));
+    await step(name, 'focus «Clear notifications»', clearButton);
+    await step(name, 'first record arrives (focus must stay)', () => js(`window.accessibilityFixture.show({ id: 'a', title: 'First notification' })`));
+    await step(name, 'second and third arrive', () => js(`window.accessibilityFixture.show({ id: 'b', title: 'Second notification' });
+      window.accessibilityFixture.show({ id: 'c', title: 'Third notification' })`));
     await step(name, 'focus the pill', () => focus('[data-cloudlet-pill]'));
   },
   'pill-island': async (name) => {
     await step(name, 'load accessibility fixture', () => go('?fixture=accessibility'));
-    await step(name, 'focus «Три уведомления», Enter', async () => { await focus('button', 'Три уведомления'); await press('Enter'); });
+    await step(name, 'focus “Three notifications”, Enter', async () => { await focus('button', 'Three notifications'); await press('Enter'); });
     await step(name, 'focus the pill', () => focus('[data-cloudlet-pill]'));
     await step(name, 'Enter on the pill', () => press('Enter'));
   },
@@ -114,13 +114,13 @@ const scenarios = {
     for (const count of [1, 2, 3]) await step(name, `Enter on close (${count} of 3)`, () => press('Enter'));
   },
   escape: async (name) => {
-    await step(name, 'focus «Три уведомления», Enter', async () => { await focus('button', 'Три уведомления'); await press('Enter'); });
+    await step(name, 'focus “Three notifications”, Enter', async () => { await focus('button', 'Three notifications'); await press('Enter'); });
     await step(name, 'focus the pill, Enter', async () => { await focus('[data-cloudlet-pill]'); await press('Enter'); });
     await step(name, 'Escape', () => press('Escape'));
   },
   attention: async (name) => {
     await step(name, 'load attention fixture', () => go('?fixture=attention&delay=600'));
-    for (const label of ['auto + описание', 'auto + действие', 'open без ничего']) {
+    for (const label of ['auto + description', 'auto + action', 'open, plain']) {
       await step(name, `«${label}», Enter (focus must stay)`, async () => { await focus('button', label); await press('Enter'); });
       await pause(1500);
       await note(name, `after auto-open of «${label}»`, await focused());
@@ -129,51 +129,51 @@ const scenarios = {
   },
   action: async (name) => {
     await step(name, 'load accessibility fixture', () => go('?fixture=accessibility'));
-    await step(name, '«Проверить действие», Enter', async () => { await focus('button', 'Проверить действие'); await press('Enter'); });
+    await step(name, '«Check action», Enter', async () => { await focus('button', 'Check action'); await press('Enter'); });
     await openIsland(name);
-    await step(name, 'focus «Сохранить», Enter (pending)', async () => { await focus('[data-cloudlet-control="action"]'); await press('Enter'); });
+    await step(name, 'focus “Save”, Enter (pending)', async () => { await focus('[data-cloudlet-control="action"]'); await press('Enter'); });
     await step(name, 'action fails', () => js('window.accessibilityFixture.settleAction(false)'));
-    await step(name, 'focus «Сохранить», Enter (retry)', async () => { await focus('[data-cloudlet-control="action"]'); await press('Enter'); });
+    await step(name, 'focus “Save”, Enter (retry)', async () => { await focus('[data-cloudlet-control="action"]'); await press('Enter'); });
     await step(name, 'action succeeds', () => js('window.accessibilityFixture.settleAction(true)'));
   },
   operation: async (name) => {
     await step(name, 'load accessibility fixture', () => go('?fixture=accessibility'));
-    await step(name, '«Проверить операцию», Enter', async () => { await focus('button', 'Проверить операцию'); await press('Enter'); });
+    await step(name, '«Check operation», Enter', async () => { await focus('button', 'Check operation'); await press('Enter'); });
     await openIsland(name);
     await step(name, 'attempt fails', () => js('window.accessibilityFixture.settleOperation(false)'));
-    await step(name, 'focus «Повторить», Enter', async () => { await focus('[data-cloudlet-control="retry"]'); await press('Enter'); });
-    await step(name, 'focus «Запросить отмену», Enter', async () => { await focus('[data-cloudlet-control="cancel"]'); await press('Enter'); });
+    await step(name, 'focus “Retry”, Enter', async () => { await focus('[data-cloudlet-control="retry"]'); await press('Enter'); });
+    await step(name, 'focus «Request cancellation», Enter', async () => { await focus('[data-cloudlet-control="cancel"]'); await press('Enter'); });
     await step(name, 'cancelled attempt settles', () => js('window.accessibilityFixture.settleOperation(false)'));
-    await step(name, 'focus «Повторить», Enter', async () => { await focus('[data-cloudlet-control="retry"]'); await press('Enter'); });
+    await step(name, 'focus “Retry”, Enter', async () => { await focus('[data-cloudlet-control="retry"]'); await press('Enter'); });
     await step(name, 'attempt succeeds', () => js('window.accessibilityFixture.settleOperation(true)'));
     await note(name, 'Retry button after success', await js('return document.querySelector(\'[data-cloudlet-control="retry"]\') ? "present" : "absent"'));
   },
   link: async (name) => {
     await step(name, 'load accessibility fixture', () => go('?fixture=accessibility'));
-    await step(name, 'one record with a link', () => js(`window.accessibilityFixture.reset([{ id: 'link', title: 'Отчёт готов',
-      action: { kind: 'link', label: 'Открыть отчёт', href: '#accessibility-destination' } }])`));
+    await step(name, 'one record with a link', () => js(`window.accessibilityFixture.reset([{ id: 'link', title: 'Report ready',
+      action: { kind: 'link', label: 'Open report', href: '#accessibility-destination' } }])`));
     await openIsland(name);
-    await step(name, 'focus «Открыть отчёт»', () => focus('[data-cloudlet-control="action"]'));
+    await step(name, 'focus “Open report”', () => focus('[data-cloudlet-control="action"]'));
     await step(name, 'Enter on the link', () => press('Enter'));
     await note(name, 'after the link', await js('return { hash: location.hash, records: window.accessibilityFixture.snapshot().stack.length }'));
   },
   overflow: async (name) => {
     await step(name, 'load accessibility fixture', () => go('?fixture=accessibility'));
-    await step(name, 'focus «Очистить уведомления»', clearButton);
-    await step(name, '101 records (one over the cap)', () => js(`for (let i = 0; i < 101; i++) window.accessibilityFixture.show({ id: 'o' + i, title: 'Запись ' + i })`));
+    await step(name, 'focus «Clear notifications»', clearButton);
+    await step(name, '101 records (one over the cap)', () => js(`for (let i = 0; i < 101; i++) window.accessibilityFixture.show({ id: 'o' + i, title: 'Record ' + i })`));
     await step(name, 'focus the pill', () => focus('[data-cloudlet-pill]'));
     await step(name, 'Enter on the pill', () => press('Enter'));
-    await step(name, 'focus «Подтвердить пропущенные», Enter', async () => { await focus('.cloudlet-overflow button'); await press('Enter'); });
+    await step(name, 'focus «Acknowledge missed», Enter', async () => { await focus('.cloudlet-overflow button'); await press('Enter'); });
   },
   hidden: async (name) => {
     await step(name, 'load accessibility fixture', () => go('?fixture=accessibility'));
     await step(name, 'one record, focus the page', async () => {
-      await js(`window.accessibilityFixture.reset([{ id: 'x', title: 'Первое' }])`);
+      await js(`window.accessibilityFixture.reset([{ id: 'x', title: 'First' }])`);
       await clearButton();
     });
     const original = await wd('GET', at('/window'));
     await step(name, 'another tab; a record arrives while this one is hidden', async () => {
-      await js(`setTimeout(() => window.accessibilityFixture.show({ id: 'h', title: 'Пока вкладка скрыта' }), 1500)`);
+      await js(`setTimeout(() => window.accessibilityFixture.show({ id: 'h', title: 'While the tab is hidden' }), 1500)`);
       const { handle } = await wd('POST', at('/window/new'), { type: 'tab' });
       await wd('POST', at('/window'), { handle });
       await pause(4000);
@@ -187,7 +187,7 @@ const scenarios = {
     await wd('POST', at('/window/rect'), { width: 420, height: 820 });
     try {
       await step(name, 'load surface fixture (narrow window)', () => go('?surface'));
-      await step(name, '«Длинный текст», Enter', async () => { await focus('button', 'Длинный текст'); await press('Enter'); });
+      await step(name, '“Long text”, Enter', async () => { await focus('button', 'Long text'); await press('Enter'); });
       await step(name, 'open the Island, focus the title', async () => {
         await js('window.surfaceFixture.open()');
         await pause(800);

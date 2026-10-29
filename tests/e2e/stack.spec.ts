@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 import type { MobileFixtureApi } from '../../apps/lab/src/mobile-fixture.js';
 import { drag, finishAudit, geometry, idle, openRoute, screenshot, translateX, translateY } from './shell-audit.js';
 
-// DESIGN §2, §6, §10: the collapsed stack on the production laboratory (`?fixture=mobile`
+// The collapsed stack, its timing and overflow on the production laboratory (`?fixture=mobile`
 // exposes the public snapshot with pauses, remaining time and close reasons).
 
 declare global { interface Window { mobileFixture?: MobileFixtureApi } }
@@ -14,7 +14,7 @@ const shell = (page: Page) => host(page).locator('.cloudlet-stack > .cloudlet-sh
 const pill = (page: Page) => host(page).locator('.cloudlet-pill');
 const tails = (page: Page) => host(page).locator('.cloudlet-tail');
 const badge = (page: Page) => shell(page).locator('.cloudlet-badge');
-const island = (page: Page) => page.getByRole('region', { name: 'Текущие уведомления', exact: true });
+const island = (page: Page) => page.getByRole('region', { name: 'Current notifications', exact: true });
 const state = (page: Page) => page.evaluate(() => window.mobileFixture!.snapshot());
 const record = async (page: Page, id: string) => (await state(page)).records.find(item => item.id === id)!;
 
@@ -32,10 +32,10 @@ async function readable(page: Page) {
 test.afterEach(async ({ page }, info) => finishAudit(page, info, 'stack-audit'));
 
 test('first pill grows in; tails and badge follow the depth; an arrival keeps the same shell', async ({ page }, info) => {
-  await open(page, [{ id: 'one', title: 'Первое' }]);
+  await open(page, [{ id: 'one', title: 'First' }]);
   await idle(page);
   const shellHandle = await shell(page).elementHandle();
-  await expect(pill(page)).toHaveAccessibleName('Первое');
+  await expect(pill(page)).toHaveAccessibleName('First');
   await expect(pill(page)).toHaveAttribute('aria-expanded', 'false');
   expect(await pill(page).getAttribute('aria-controls')).toBe(await shell(page).getAttribute('id'));
   await expect(tails(page)).toHaveCount(0);
@@ -46,10 +46,10 @@ test('first pill grows in; tails and badge follow the depth; an arrival keeps th
   expect(await shell(page).evaluate(element => getComputedStyle(element).opacity)).toBe('1');
 
   const exitsBefore = (await page.evaluate(() => window.__shellAudit.maxSnapshots))['cloudlet-exit'] ?? 0;
-  await page.evaluate(() => window.mobileFixture!.show({ id: 'two', title: 'Второе уведомление' }));
+  await page.evaluate(() => window.mobileFixture!.show({ id: 'two', title: 'Second notification' }));
   // The arrival blur-swaps the title inside the same shell: no exit snapshot, one heading snapshot at most.
   await expect(host(page).locator('.cloudlet-exit > *')).toHaveCount(0);
-  await expect(pill(page)).toHaveAccessibleName('Второе уведомление, уведомлений: 2');
+  await expect(pill(page)).toHaveAccessibleName('Second notification, notifications: 2');
   await expect(tails(page)).toHaveCount(1);
   await expect(badge(page).locator('> .cloudlet-badge-value')).toHaveText('2');
   await expect.poll(() => badge(page).evaluate(element => getComputedStyle(element).opacity)).toBe('1');
@@ -59,10 +59,10 @@ test('first pill grows in; tails and badge follow the depth; an arrival keeps th
   box = await geometry(shell(page));
   expect(Math.abs(box.svgWidth - box.width)).toBeLessThan(1);
 
-  await page.evaluate(() => { window.mobileFixture!.show({ id: 'three', title: 'Третье' }); window.mobileFixture!.show({ id: 'four', title: 'Четвёртое' }); });
+  await page.evaluate(() => { window.mobileFixture!.show({ id: 'three', title: 'Third' }); window.mobileFixture!.show({ id: 'four', title: 'Fourth' }); });
   await expect(tails(page)).toHaveCount(2);
   await expect(badge(page).locator('> .cloudlet-badge-value')).toHaveText('4');
-  await expect(pill(page)).toHaveAccessibleName('Четвёртое, уведомлений: 4');
+  await expect(pill(page)).toHaveAccessibleName('Fourth, notifications: 4');
   await idle(page);
   // Tails peek out below the pill at the top edge, 4 px per step, as wide as the pill.
   const pillBox = (await shell(page).boundingBox())!;
@@ -75,7 +75,7 @@ test('first pill grows in; tails and badge follow the depth; an arrival keeps th
   for (const tail of tailBoxes) expect(tail.bottom).toBeGreaterThan(pillBox.y + pillBox.height - 1);
   await screenshot(page, info, 'stack-four');
 
-  // Hover lifts the tails by 2 px per step and pauses the top record (DESIGN §2).
+  // Hover lifts the tails by 2 px per step and pauses the top record.
   await pill(page).hover();
   await expect.poll(async () => (await record(page, 'four')).pauses).toContain('hover');
   await expect.poll(() => translateY(tails(page).last())).toBeCloseTo(12, 0);
@@ -109,7 +109,7 @@ test('a sideways swipe follows the finger, springs back below the threshold and 
   await drag(page, pill(page), 220, 0, 8, 15);
   await expect.poll(async () => (await state(page)).closes).toEqual([{ id: 'C', reason: 'swipe' }]);
   await expect.poll(async () => (await state(page)).stack).toEqual(['B', 'A']);
-  await expect(pill(page)).toHaveAccessibleName('Mobile B, уведомлений: 2');
+  await expect(pill(page)).toHaveAccessibleName('Mobile B, notifications: 2');
   await expect(tails(page)).toHaveCount(1);
   await idle(page);
   await expect(host(page).locator('.cloudlet-exit > *')).toHaveCount(0);
@@ -123,7 +123,7 @@ test('a sideways swipe follows the finger, springs back below the threshold and 
   expect((await record(page, 'B')).pauses).not.toContain('gesture');
 });
 
-test('only the top record spends time; a user-opened slide and an action slide pause; a description-only auto-open keeps counting (DESIGN §6)', async ({ page }, info) => {
+test('only the top record spends time; a user-opened slide and an action slide pause; a description-only auto-open keeps counting', async ({ page }, info) => {
   // `remainingMs` is fixed at each snapshot publication; the proof is which record actually expires.
   await open(page, [{ id: 'a', title: 'A', duration: 900 }, { id: 'b', title: 'B', duration: 1500 }]);
   await page.mouse.move(2, 600);
@@ -146,7 +146,7 @@ test('only the top record spends time; a user-opened slide and an action slide p
   await expect.poll(async () => (await record(page, 'c')).pauses).toContain('island');
   if (info.project.name === 'webkit') {
     // WebKit keeps the stale hover after the hovered pill left the DOM under the pointer until the
-    // pointer enters and leaves the host again (handoff 18, open remark); a user's pointer does that.
+    // pointer enters and leaves the host again; a user's pointer does that.
     await island(page).locator('[data-cloudlet-title]').hover();
     await page.mouse.move(2, 600);
   }
@@ -160,7 +160,7 @@ test('only the top record spends time; a user-opened slide and an action slide p
 
   await page.evaluate(() => window.mobileFixture!.reset([{ id: 'older', title: 'Older' }]));
   await readable(page);
-  await page.evaluate(() => window.mobileFixture!.show({ id: 'd', title: 'D', duration: 1500, attention: 'auto', description: { kind: 'text', text: 'Описание открывает Island само' } }));
+  await page.evaluate(() => window.mobileFixture!.show({ id: 'd', title: 'D', duration: 1500, attention: 'auto', description: { kind: 'text', text: 'The description opens the Island by itself' } }));
   await expect(host(page)).toHaveAttribute('data-island-reason', 'attention');
   await expect.poll(async () => (await state(page)).current).toBe('d');
   expect((await record(page, 'd')).pauses).not.toContain('island');
@@ -169,7 +169,7 @@ test('only the top record spends time; a user-opened slide and an action slide p
   await expect.poll(async () => (await state(page)).current).toBe('older');
   await expect(host(page)).toHaveAttribute('data-state', 'island');
 
-  await page.evaluate(() => window.mobileFixture!.show({ id: 'e', title: 'E', duration: 1200, attention: 'auto', action: { kind: 'command', label: 'Готово', run: () => undefined } }));
+  await page.evaluate(() => window.mobileFixture!.show({ id: 'e', title: 'E', duration: 1200, attention: 'auto', action: { kind: 'command', label: 'Done', run: () => undefined } }));
   await expect.poll(async () => (await state(page)).current).toBe('e');
   await expect.poll(async () => (await record(page, 'e')).pauses).toContain('island');
   await page.waitForTimeout(1600);
@@ -180,23 +180,23 @@ test('missed notifications join the badge and the pill name; the Island indicato
   await open(page, Array.from({ length: 101 }, (_, index) => ({ id: `m-${index + 1}`, title: `Mobile ${index + 1}` })));
   await expect.poll(async () => (await state(page)).missed).toBe(1);
   expect((await state(page)).stack).toHaveLength(100);
-  await expect(pill(page)).toHaveAccessibleName('Mobile 100, уведомлений: 100, пропущено: 1');
+  await expect(pill(page)).toHaveAccessibleName('Mobile 100, notifications: 100, missed: 1');
   await expect(badge(page).locator('> .cloudlet-badge-value')).toHaveText('101');
   await page.evaluate(() => window.mobileFixture!.open());
   const overflow = island(page).locator('.cloudlet-overflow');
-  await expect(overflow).toContainText('Пропущено: 1');
-  await expect(island(page).locator('.cloudlet-page-value')).toHaveText('1 из 100');
-  await expect(island(page).getByRole('group', { name: '1 из 100', exact: true })).toBeVisible();
+  await expect(overflow).toContainText('Missed: 1');
+  await expect(island(page).locator('.cloudlet-page-value')).toHaveText('1 of 100');
+  await expect(island(page).getByRole('group', { name: '1 of 100', exact: true })).toBeVisible();
   await idle(page);
   await screenshot(page, info, 'island-overflow');
   expect((await new AxeBuilder({ page }).include('.cloudlet-host').analyze()).violations).toEqual([]);
   // Keyboard activation: WebKit does not focus buttons on click, and the focus hand-off is the point.
-  await overflow.getByRole('button', { name: 'Подтвердить пропущенные', exact: true }).focus();
+  await overflow.getByRole('button', { name: 'Acknowledge missed', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect(overflow).toHaveCount(0);
   await expect.poll(async () => (await state(page)).missed).toBe(0);
   await expect(island(page).locator('[data-cloudlet-title]')).toBeFocused();
   await page.evaluate(() => window.mobileFixture!.collapse());
   await expect(badge(page).locator('> .cloudlet-badge-value')).toHaveText('100');
-  await expect(pill(page)).toHaveAccessibleName('Mobile 100, уведомлений: 100');
+  await expect(pill(page)).toHaveAccessibleName('Mobile 100, notifications: 100');
 });

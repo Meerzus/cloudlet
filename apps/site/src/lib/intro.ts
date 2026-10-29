@@ -2,7 +2,7 @@ import type { OperationHandle, ReactCloudletController } from '@cloudlet/toast';
 import type { IntroEnd } from './frame-protocol';
 
 /**
- * The hero's intro (LANDING §5), looped by the hero: three toasts land one by one and stack
+ * The hero's intro, looped by the hero: three toasts land one by one and stack
  * with a badge → pause → the stack opens into the Island → one slide → collapse.
  * The same runner drives the `/frame` screen and, for phone visitors, the page
  * Toaster. All values in milliseconds.
@@ -29,7 +29,7 @@ const UPLOAD_STEP = 0.06;
 
 /**
  * The package has no imperative open/collapse/navigate API: the Island opens from its
- * pill and collapses with Escape (DESIGN §1). Like the lab's pilot, the intro drives
+ * pill and collapses with Escape. Like the lab's pilot, the intro drives
  * exactly those user paths through public parts (`.cloudlet-pill`, the Island region).
  * Synthetic events are untrusted, so they never count as visitor input.
  */

@@ -14,7 +14,7 @@ import {
 } from './drift-scene';
 
 /**
- * Scene 3's timeline (LANDING §8): lays the title, the six benefits and their stories out on one
+ * Scene 3's timeline: lays the title, the six benefits and their stories out on one
  * line of seconds. Pure — the scene scrubs it with the pin, tests read it. One motion at a time:
  * every beat ends before the next starts and is followed by a rest where nothing moves, so a
  * scroll that stops anywhere mostly rests on a clean frame (the scene has no snap).
@@ -41,13 +41,13 @@ export const STORY_TIMING = {
   prop: 0.6,
   /** Rest after a beat, unless the beat says otherwise. */
   hold: 0.7,
-  /** Puppet transitions get this much more timeline than their real length: ≈ ¼ screen of scroll each (owner, L07 review). */
+  /** Puppet transitions get this much more timeline than their real length: ≈ ¼ screen of scroll each. */
   stretch: 3.6,
   /** A merged actor fades into the stack it lands on, a split one out of it. */
   fade: 0.2,
   /** The crowd steps back this long before a story and forward after it. */
   dim: 0.45,
-  /** Timeline seconds per screen of scroll: the pin is about 22.5 screens long on desktop, 16.7 on phones (LANDING §8). */
+  /** Timeline seconds per screen of scroll: the pin is about 22.5 screens long on desktop, 16.7 on phones. */
   secondsPerScreen: 7,
 } as const;
 

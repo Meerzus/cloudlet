@@ -1,7 +1,7 @@
-/** Public origin of the site: the apex is canonical, `www` redirects to it (launch P01). */
+/** Public origin of the site: the apex is canonical, `www` redirects to it. */
 export const SITE_URL = 'https://cloudlet.dev';
 /**
- * The site is the Toaster's corner of an umbrella (LANDING §1, launch P01): the landing, the
+ * The site is the Toaster's corner of an umbrella: the landing, the
  * documentation and the Playground live under `/toaster`; the root redirects there (vercel.json)
  * until it becomes the umbrella's own page.
  */
@@ -21,19 +21,19 @@ export const METADATA_BASE =
   process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : SITE_URL;
 export const GITHUB_URL = 'https://github.com/Meerzus/cloudlet';
 export const LICENSE_URL = `${GITHUB_URL}/blob/main/LICENSE`;
-/** The package source on GitHub: for links to code, not documentation (DOCS.md §11). */
+/** The package source on GitHub: for links to code, not documentation. */
 export const README_URL = `${GITHUB_URL}/tree/main/packages/toast#readme`;
-/** The documentation section of the site (DOCS.md). */
+/** The documentation section of the site. */
 export const DOCS_PATH = `${TOASTER_PATH}/docs`;
-/** Where the READMEs point for documentation (DOCS.md §11); tests/unit/site-readmes.test.ts holds them to it. */
+/** Where the READMEs point for documentation; tests/unit/site-readmes.test.ts holds them to it. */
 export const DOCS_URL = `${SITE_URL}${DOCS_PATH}`;
-/** Reading pages: no sky, no Lenis, no cloud footer (DOCS.md §7). */
+/** Reading pages: no sky, no Lenis, no cloud footer. */
 export function isQuietPath(pathname: string): boolean {
   return pathname === DOCS_PATH || pathname.startsWith(`${DOCS_PATH}/`);
 }
 /** Stable versions are npm's `latest`; prereleases would go under `next`. */
 export const INSTALL_COMMAND = 'npm install @cloudlet/toast';
-/** The shadcn registry item, served from `public/r/` (LANDING §9, REGISTRY.md). */
+/** The shadcn registry item, served from `public/r/`. */
 export const REGISTRY_ITEM_URL = `${SITE_URL}/r/toaster.json`;
 export const SHADCN_COMMAND = `npx shadcn@latest add ${REGISTRY_ITEM_URL}`;
 /**

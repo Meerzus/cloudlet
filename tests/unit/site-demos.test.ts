@@ -128,7 +128,7 @@ describe('site demo catalog', () => {
     for (const id of ids) expect(findDemo(id)?.id).toBe(id);
   });
 
-  it('covers every playground group of LANDING §13', () => {
+  it('covers every playground group', () => {
     expect(DEMO_GROUPS.map((group) => group.id)).toEqual(['Kinds', 'Content', 'Actions', 'Promises', 'Attention', 'Stack']);
     const counts = Object.fromEntries(DEMO_GROUPS.map((group) => [group.id, demosIn(group.id).length]));
     expect(counts).toEqual({ Kinds: 5, Content: 4, Actions: 3, Promises: 5, Attention: 3, Stack: 3 });

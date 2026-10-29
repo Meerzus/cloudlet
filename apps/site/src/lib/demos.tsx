@@ -2,7 +2,7 @@ import type { ReactCloudletController } from '@cloudlet/toast';
 import { GITHUB_URL } from './site';
 
 /**
- * Shared demo catalog (LANDING §13). One entry = one call through the public API
+ * Shared demo catalog. One entry = one call through the public API
  * plus the snippet a visitor copies; `/playground` renders every group. A unit test runs every snippet and its `run` against a
  * recording controller and requires identical calls, so the two cannot drift.
  *

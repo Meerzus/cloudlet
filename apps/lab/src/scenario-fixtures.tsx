@@ -31,13 +31,13 @@ declare global {
 const host = () => document.querySelector('.cloudlet-host');
 const run = () => undefined;
 
-/** Records whose `attention` resolves differently (DESIGN §5); the expectation is in the label. */
+/** Records whose `attention` resolves differently; the expectation is in the label. */
 const kinds: Record<Kind, { label: string; expect: string; spec: (n: number) => ReactNotificationSpec }> = {
-  'auto-description': { label: 'auto + описание', expect: 'откроется через delay, reason attention', spec: n => ({ title: `Описание ${n}`, description: { kind: 'text', text: 'Есть описание — auto открывает Island.' } }) },
-  'auto-action': { label: 'auto + действие', expect: 'откроется через delay', spec: n => ({ title: `Действие ${n}`, action: { kind: 'command', label: 'Отменить', run } }) },
-  'auto-plain': { label: 'auto без ничего', expect: 'останется в стопке', spec: n => ({ title: `Простое ${n}` }) },
-  'open-plain': { label: 'open без ничего', expect: 'откроется через delay', spec: n => ({ title: `Всегда открыть ${n}`, attention: 'open' }) },
-  'stack-action': { label: 'stack + действие', expect: 'останется в стопке', spec: n => ({ title: `Только стопка ${n}`, attention: 'stack', action: { kind: 'command', label: 'Отменить', run } }) },
+  'auto-description': { label: 'auto + description', expect: 'opens after the delay, reason attention', spec: n => ({ title: `Description ${n}`, description: { kind: 'text', text: 'Has a description: auto opens the Island.' } }) },
+  'auto-action': { label: 'auto + action', expect: 'opens after the delay', spec: n => ({ title: `Action ${n}`, action: { kind: 'command', label: 'Undo', run } }) },
+  'auto-plain': { label: 'auto, plain', expect: 'stays in the stack', spec: n => ({ title: `Plain ${n}` }) },
+  'open-plain': { label: 'open, plain', expect: 'opens after the delay', spec: n => ({ title: `Always open ${n}`, attention: 'open' }) },
+  'stack-action': { label: 'stack + action', expect: 'stays in the stack', spec: n => ({ title: `Stack only ${n}`, attention: 'stack', action: { kind: 'command', label: 'Undo', run } }) },
 };
 
 function useIsland(controller: ReactCloudletController) {
@@ -95,33 +95,33 @@ function AttentionFixture({ controller, delay, query }: { controller: ReactCloud
 
   return <>
     <main>
-      <p className="eyebrow">Задача 16 · DESIGN §5</p>
-      <h1>Автооткрытие</h1>
-      <p>Задержка <code>Toaster attention.delay</code> = <b data-testid="attention-delay">{delay}</b> мс (query <code>delay</code>). Пока курсор над уведомлениями или фокус внутри, автооткрытие ждёт и затем выдерживает задержку заново. Не наводите курсор, чтобы видеть чистое время.</p>
+      <p className="eyebrow">Attention</p>
+      <h1>Auto-open</h1>
+      <p>Delay <code>Toaster attention.delay</code> = <b data-testid="attention-delay">{delay}</b> ms (query <code>delay</code>). While the pointer is over the notifications or focus is inside, the auto-open waits and then sits out the delay again. Keep the pointer away to see the clean timing.</p>
       <table>
-        <thead><tr><th>Кнопка</th><th>Ожидание</th></tr></thead>
+        <thead><tr><th>Button</th><th>Expected</th></tr></thead>
         <tbody>{(Object.keys(kinds) as Kind[]).map(kind => <tr key={kind}><td>
           <button type="button" data-lab-keep-island="" onClick={() => window.attentionFixture?.show(kind)}>{kinds[kind].label}</button></td><td>{kinds[kind].expect}</td></tr>)}
-          <tr><td><button type="button" data-lab-keep-island="" onClick={() => window.attentionFixture?.pair()}>Два кандидата</button></td><td>откроется только на новом («Действие»)</td></tr>
+          <tr><td><button type="button" data-lab-keep-island="" onClick={() => window.attentionFixture?.pair()}>Two candidates</button></td><td>opens on the newer one only (“Action”)</td></tr>
         </tbody>
       </table>
-      <div className="controls"><button type="button" onClick={() => window.attentionFixture?.clear()}>Очистить</button></div>
+      <div className="controls"><button type="button" onClick={() => window.attentionFixture?.clear()}>Clear</button></div>
       <output data-testid="attention-state" data-state={state.state} data-reason={state.reason ?? ''} data-current={state.current ?? ''}>
-        {state.state === 'island' ? `Island · ${state.reason} · ${state.current}` : `Стопка · ${state.stack.length}`}
+        {state.state === 'island' ? `Island · ${state.reason} · ${state.current}` : `Stack · ${state.stack.length}`}
       </output>
-      <ol className="fixture-log" data-testid="attention-log" aria-label="Переходы">{log.map((line, index) => <li key={index}>+{line.at} мс · {line.text}</li>)}</ol>
+      <ol className="fixture-log" data-testid="attention-log" aria-label="Transitions">{log.map((line, index) => <li key={index}>+{line.at} ms · {line.text}</li>)}</ol>
     </main>
     <Toaster position={query.position} theme={query.theme} dir={query.dir} attention={{ delay }} motion={{ timeScale: query.timeScale }} labels={fixtureLabels} {...(nonce() ? { nonce: nonce()! } : {})} />
   </>;
 }
 
 const sliderRecords: readonly ReactNotificationSpec[] = [
-  { id: 'slide-1', title: 'Черновик сохранён', kind: 'success', description: { kind: 'text', text: 'Изменения записаны локально.' } },
-  { id: 'slide-2', title: 'Файл загружен', kind: 'info', description: { kind: 'text', text: 'report.pdf · 2,4 МБ' }, action: { kind: 'command', label: 'Открыть', run } },
-  { id: 'slide-3', title: 'Новый комментарий', description: { kind: 'text', text: 'Анна: «Посмотри, пожалуйста, второй раздел»' } },
-  { id: 'slide-4', title: 'Мало места на диске', kind: 'warning' },
-  { id: 'slide-5', title: 'Платёж не прошёл', kind: 'error', description: { kind: 'text', text: 'Карта отклонена банком.' } },
-  { id: 'slide-6', title: 'Синхронизация', kind: 'loading', progress: { kind: 'determinate', value: 0.4 } },
+  { id: 'slide-1', title: 'Draft saved', kind: 'success', description: { kind: 'text', text: 'Changes are stored locally.' } },
+  { id: 'slide-2', title: 'File uploaded', kind: 'info', description: { kind: 'text', text: 'report.pdf · 2.4 MB' }, action: { kind: 'command', label: 'Open', run } },
+  { id: 'slide-3', title: 'New comment', description: { kind: 'text', text: 'Anna: “Could you look at the second section, please?”' } },
+  { id: 'slide-4', title: 'Low disk space', kind: 'warning' },
+  { id: 'slide-5', title: 'Payment failed', kind: 'error', description: { kind: 'text', text: 'The bank declined the card.' } },
+  { id: 'slide-6', title: 'Syncing', kind: 'loading', progress: { kind: 'determinate', value: 0.4 } },
 ];
 
 /**
@@ -156,7 +156,7 @@ function SliderFixture({ controller, count, query }: { controller: ReactCloudlet
     };
     const api: SliderFixtureApi = {
       reset,
-      add: () => { controller.show({ id: `added-${++added}`, title: `Новое уведомление ${added}`, duration: null, attention: 'stack' }); },
+      add: () => { controller.show({ id: `added-${++added}`, title: `New notification ${added}`, duration: null, attention: 'stack' }); },
       open: () => openIsland(host()),
       closeCurrent: () => closeCurrent(host()),
       collapse: () => collapseIsland(host()),
@@ -169,18 +169,18 @@ function SliderFixture({ controller, count, query }: { controller: ReactCloudlet
 
   return <>
     <main>
-      <p className="eyebrow">Задача 16 · DESIGN §3</p>
-      <h1>Слайдер</h1>
-      <p>{count} уведомлений, Island открыт с пилюли. Листайте ← / → / Home / End, точками или свайпом; «закрыть» переводит к более старому. Кнопки ниже не сворачивают Island.</p>
+      <p className="eyebrow">Slider</p>
+      <h1>Slider</h1>
+      <p>{count} notifications, the Island opened from the pill. Page with ← / → / Home / End, the dots or a swipe; “close” moves to the older one. The buttons below never collapse the Island.</p>
       <div className="controls" data-lab-keep-island="">
-        <button type="button" onClick={() => window.sliderFixture?.add()}>Добавить сверху</button>
-        <button type="button" onClick={() => window.sliderFixture?.closeCurrent()} disabled={state.state !== 'island'}>Закрыть текущее</button>
-        <button type="button" onClick={() => window.sliderFixture?.collapse()} disabled={state.state !== 'island'}>Свернуть</button>
-        <button type="button" onClick={() => window.sliderFixture?.open()} disabled={state.state === 'island' || !state.stack.length}>Открыть</button>
-        <button type="button" onClick={() => window.sliderFixture?.reset()}>Сбросить</button>
+        <button type="button" onClick={() => window.sliderFixture?.add()}>Add on top</button>
+        <button type="button" onClick={() => window.sliderFixture?.closeCurrent()} disabled={state.state !== 'island'}>Close current</button>
+        <button type="button" onClick={() => window.sliderFixture?.collapse()} disabled={state.state !== 'island'}>Collapse</button>
+        <button type="button" onClick={() => window.sliderFixture?.open()} disabled={state.state === 'island' || !state.stack.length}>Open</button>
+        <button type="button" onClick={() => window.sliderFixture?.reset()}>Reset</button>
       </div>
       <output data-testid="slider-state" data-state={state.state} data-current={state.current ?? ''}>
-        {state.state === 'island' ? `Island · ${state.reason} · ${state.current} (${state.stack.indexOf(state.current ?? '') + 1}/${state.stack.length})` : `Стопка · ${state.stack.length}`}
+        {state.state === 'island' ? `Island · ${state.reason} · ${state.current} (${state.stack.indexOf(state.current ?? '') + 1}/${state.stack.length})` : `Stack · ${state.stack.length}`}
       </output>
     </main>
     <Toaster position={query.position} theme={query.theme} dir={query.dir} motion={{ timeScale: query.timeScale }} labels={fixtureLabels} {...(nonce() ? { nonce: nonce()! } : {})} />

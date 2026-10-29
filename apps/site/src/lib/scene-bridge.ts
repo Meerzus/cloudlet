@@ -1,7 +1,7 @@
 import type { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 /**
- * The seam between scene 2 and scene 3 (LANDING §7–§8). Scene 2 publishes its pinned
+ * The seam between scene 2 and scene 3. Scene 2 publishes its pinned
  * timeline and, on every update, how far its last toast has drifted away as a cloud.
  * Scene 3 builds once scene 2 is published (so its pin is measured after scene 2's) and
  * launches its volley from its own trigger after scene 2 ends; the drift feed stays for

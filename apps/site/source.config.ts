@@ -5,7 +5,7 @@ import { remarkReferenceTables } from './src/lib/remark-reference-tables';
 import { SHIKI_THEME } from './src/lib/shiki-theme';
 
 /**
- * Global MDX options of the documentation (DOCS.md §1). Collections are declared with the
+ * Global MDX options of the documentation. Collections are declared with the
  * macro API in `src/lib/docs-source.ts`; this file only tunes the built-in plugins.
  *
  * Code is highlighted at build time by Shiki with one theme on CSS variables: the palette
@@ -15,7 +15,7 @@ import { SHIKI_THEME } from './src/lib/shiki-theme';
  * given under `themes` too, as the default colour, which inlines it once per token.
  *
  * Fence meta: rehype-code keeps `title` (and a few more) as `<pre>` props and Shiki drops the
- * rest, so `demo="<id>"` (DOCS.md §6) is parsed here into `data-demo` for the code block, and
+ * rest, so `demo="<id>"` is parsed here into `data-demo` for the code block, and
  * the first runnable fence of a page (marked by remarkDemoNote) gets `data-demo-note`.
  * Tables of the Reference pages are marked by remarkReferenceTables for their phone layout.
  */

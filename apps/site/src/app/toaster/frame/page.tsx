@@ -18,7 +18,7 @@ export const metadata: Metadata = {
  */
 const FRAME_INIT_SCRIPT = `(function(){try{var q=new URLSearchParams(location.search);var r=document.documentElement;var d=q.get('theme')==='dark';r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';var v=q.get('device');r.setAttribute('data-device',v==='phone'||v==='tablet'||v==='foldable'?v:'laptop');r.setAttribute('data-frame','');document.hasFocus=function(){return true};window.addEventListener('blur',function(e){if(e.target===window)e.stopImmediatePropagation()},true)}catch(e){}})()`;
 
-/** Service route for the hero device screen (LANDING §5); not linked from the site. */
+/** Service route for the hero device screen; not linked from the site. */
 export default function Frame() {
   return (
     <>

@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /**
- * Export coverage of the documentation (DOCS.md §3): every name the package entry exports —
+ * Export coverage of the documentation: every name the package entry exports —
  * values, explicit `export type {…}` and everything `export type *` brings from the contracts —
  * must appear in the site's documentation pages. The names are read from the sources (the
  * installed TypeScript 7 has no compiler API), so there is no second list to maintain.

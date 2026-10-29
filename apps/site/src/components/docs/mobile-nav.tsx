@@ -10,7 +10,7 @@ import { SearchButton } from './search';
 import { SidebarNav } from './sidebar';
 
 /**
- * Phones and tablets (DOCS.md §7): a bar under the site header with the menu, the current page
+ * Phones and tablets: a bar under the site header with the menu, the current page
  * and search; the menu opens the sidebar in a native `<dialog>` (focus trap, Escape and the
  * backdrop come from the platform, no dependency).
  */

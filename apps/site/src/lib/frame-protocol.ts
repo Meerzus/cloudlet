@@ -1,6 +1,6 @@
 /**
- * Typed postMessage protocol between the hero (parent) and the `/toaster/frame` screen
- * (LANDING §5). Both sides are the same site, so every message must come from our
+ * Typed postMessage protocol between the hero (parent) and the `/toaster/frame` screen.
+ * Both sides are the same site, so every message must come from our
  * own origin and from the expected window; anything else is ignored.
  */
 

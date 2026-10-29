@@ -108,11 +108,11 @@ describe('one shell for the pill and the Island', () => {
   it('speaks the carousel and slide roles from labels, so a localized Island has no English role words', () => {
     const instance = controller();
     ['A', 'B'].forEach(title => admit(instance, title));
-    render(tree(instance, { labels: { island: 'Текущие уведомления', carousel: 'карусель', slide: 'слайд', page: (index, total) => `${index} из ${total}` } }));
+    render(tree(instance, { labels: { island: 'Current notifications', carousel: 'carousel', slide: 'slide', page: (index, total) => `${index} of ${total}` } }));
     act(() => pill()!.click());
-    const region = screen.getByRole('region', { name: 'Текущие уведомления' });
-    expect(region).toHaveAttribute('aria-roledescription', 'карусель');
-    expect(within(region).getByRole('group', { name: '1 из 2' })).toHaveAttribute('aria-roledescription', 'слайд');
+    const region = screen.getByRole('region', { name: 'Current notifications' });
+    expect(region).toHaveAttribute('aria-roledescription', 'carousel');
+    expect(within(region).getByRole('group', { name: '1 of 2' })).toHaveAttribute('aria-roledescription', 'slide');
   });
 
   it('opens into the carousel with the same title and icon nodes and removes the tails', () => {

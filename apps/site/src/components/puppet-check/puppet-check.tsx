@@ -8,7 +8,7 @@ import type { PuppetFace, PuppetState } from '@/lib/puppet-model';
 import { Puppeteer } from '@/lib/puppeteer';
 
 /**
- * Accuracy stand (L03, LANDING §6): the real Toaster and a puppet in the same place,
+ * Accuracy stand: the real Toaster and a puppet in the same place,
  * at 1:1, so `scripts/puppet-check.mjs` can compare screenshots of each alone.
  * `/puppet-check?case=pill&theme=dark&show=real|puppet|both`.
  */
@@ -23,7 +23,7 @@ const STORM: PuppetFace = {
 };
 const UPLOAD: PuppetFace = { id: 'upload', kind: 'loading', title: 'Uploading 12 photos…', ring: true };
 const REACHING: PuppetFace = { id: 'reaching', kind: 'loading', title: 'Reaching the sky…' };
-/** Scene 3 (L07): a pending operation that can be cancelled; the stand relabels Cancel like the site. */
+/** Scene 3: a pending operation that can be cancelled; the stand relabels Cancel like the site. */
 const SYNCING: PuppetFace = { id: 'syncing', kind: 'loading', title: 'Syncing 3 files…', cancel: 'Cancel' };
 const LABELS = { cancel: 'Cancel' } as const;
 const FAILED: PuppetFace = {

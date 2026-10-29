@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Lighthouse mobile on the static export of the documentation (DOCS.md §12): `/docs` and one
+ * Lighthouse mobile on the static export of the documentation: `/docs` and one
  * Guides page must reach Performance ≥ 90, Accessibility = 100 and CLS ≈ 0 (< 0.01). Lighthouse
  * runs through `npx` (not a dependency of the workspace) in Playwright's Chromium.
  *

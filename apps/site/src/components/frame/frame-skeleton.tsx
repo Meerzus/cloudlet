@@ -1,5 +1,5 @@
 /**
- * Static, recognizable page skeletons for the hero screens (LANDING §5): theme
+ * Static, recognizable page skeletons for the hero screens: theme
  * colors only, no text and no shimmer. The frame renders all three on the server and
  * CSS shows the one for `html[data-device]` (the foldable by width); the fold
  * animation draws them on the page inside `.fs-root`.

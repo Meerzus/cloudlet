@@ -1,4 +1,4 @@
-/* ----- Style editor (STYLE_EDITOR.md §3–§7, amendments §13): live Toasters of its own ----- */
+/* ----- Style editor: live Toasters of its own ----- */
 .docs-style-editor {
   --docs-style-error: oklch(0.5 0.18 25);
   --docs-style-fill: color-mix(in oklab, var(--foreground) 3%, var(--background));
@@ -55,7 +55,7 @@ html[data-style-stage] body {
 }
 .docs-style-zone[data-zone='pill'] { --docs-style-zone: 6rem; }
 .docs-style-zone .cloudlet-host {
-  /* A percentage stays indefinite in the shell/body's nested max-height (SE02 browser QA). */
+  /* A percentage stays indefinite in the shell/body's nested max-height. */
   --cloudlet-host-height: calc(var(--docs-style-zone) - var(--cloudlet-top) - var(--cloudlet-bottom));
 }
 /* The article's paragraph/heading margins must stop at the live notification. */

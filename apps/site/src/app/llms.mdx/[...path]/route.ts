@@ -3,7 +3,7 @@ import { markdownUrl, pageMarkdown } from '@/lib/docs-markdown';
 import { source } from '@/lib/docs-source';
 
 /**
- * The Markdown of each page (DOCS.md §9) at `/llms.mdx/toaster/docs/<slug>.md`. A route cannot sit
+ * The Markdown of each page at `/llms.mdx/toaster/docs/<slug>.md`. A route cannot sit
  * next to the `/toaster/docs/[[...slug]]` pages, so the export writes the files here and
  * `scripts/llms-output.mjs` moves them to `/toaster/docs/<slug>.md` (and `/toaster/docs.md` for the index)
  * after `next build`.

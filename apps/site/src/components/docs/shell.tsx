@@ -6,9 +6,9 @@ import { SearchButton, SearchProvider } from './search';
 import { SidebarNav } from './sidebar';
 
 /**
- * The quiet shell of `/docs/*` (DOCS.md §7): no sky, no Lenis, no cloud footer. A sticky
+ * The quiet shell of `/docs/*`: no sky, no Lenis, no cloud footer. A sticky
  * sidebar on the left from `lg`, the page in the middle, its table of contents on the right
- * from `xl` (the page renders that column itself), and the one-line footer. Search (§8) and its
+ * from `xl` (the page renders that column itself), and the one-line footer. Search and its
  * shortcuts belong to this shell only.
  */
 export function DocsShell({ tree, children }: { tree: PageTree.Root; children: ReactNode }) {

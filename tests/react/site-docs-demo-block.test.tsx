@@ -5,7 +5,7 @@ import { DEMO_FOLD_LINES, DemoBlock, type DemoItem } from '../../apps/site/src/c
 import { findDemo } from '../../apps/site/src/lib/demos';
 
 /**
- * The documentation's demo block (DOCS.md §6): a stage with a button per demo above the code.
+ * The documentation's demo block: a stage with a button per demo above the code.
  * The page-level controller and the clipboard are the site's own hooks, stubbed here: the block
  * is about which entry runs, which snippet is shown and copied, and when a long one folds.
  */
@@ -48,7 +48,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('docs demo block (DOCS.md §6)', () => {
+describe('docs demo block', () => {
   it('runs the entry on the page controller and, in a group, selects its snippet', () => {
     render(<DemoBlock items={[item('success'), item('warning')]} />);
     const buttons = screen.getAllByRole('button', { name: /Success|Warning/ });

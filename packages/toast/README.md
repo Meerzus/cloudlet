@@ -6,9 +6,9 @@ over every notification. Activating the pill opens the Island; a notification th
 opens it on its own after a short delay, without moving keyboard focus. The same controller follows
 promises from pending to success or failure, with retry and cooperative cancellation.
 
-**Status.** `1.0.0` is the first stable release; the API follows semantic versioning from here. The
-checks not yet done by hand (screen readers beyond VoiceOver on macOS, physical phones, the minimum
-browser versions) are listed under
+**Status.** `1.0.0` is the first stable release; the API follows semantic versioning from here.
+Screen readers, physical phones and the minimum browser versions are checked by hand on top of the
+automated suite; see
 [What is tested](https://cloudlet.dev/toaster/docs/accessibility#what-is-tested).
 
 ## Installation

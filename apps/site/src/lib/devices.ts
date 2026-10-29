@@ -8,7 +8,7 @@
  * geometry is our own measurement of the 16" MacBook Pro with PROLED XDR Display (see `MBP`).
  * Their per-device DOM is replaced here by one set of numbers per shape, so any
  * two devices can morph into each other. All lengths are the source's natural px.
- * No logos, no product names in the interface (LANDING §5).
+ * No logos, no product names in the interface.
  */
 
 export type DeviceId = 'laptop' | 'phone' | 'foldable' | 'tablet';

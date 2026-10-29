@@ -55,7 +55,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('docs style editor (SE02–SE03, amendments)', () => {
+describe('docs style editor', () => {
   it('hydrates the default static HTML before applying the URL without a mismatch', () => {
     window.history.replaceState(null, '', '/docs/styling?pill-radius=12px');
     const container = document.createElement('div');

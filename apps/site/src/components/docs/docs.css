@@ -1,6 +1,6 @@
 @import './style-editor/style-editor.css';
 
-/* ---------- Documentation (DOCS.md §7): the quiet reading pages under /docs ---------- */
+/* ---------- Documentation: the quiet reading pages under /docs ---------- */
 
 /* Code palette for Shiki's CSS-variables theme: the Get started token colours, per theme. */
 :root {
@@ -310,7 +310,7 @@ html:has(.docs-shell) { background: var(--background); }
   .docs-nav-link, .docs-search, .docs-code-button, .docs-toc-item, .docs-toc-thumb, .docs-page-nav-link, .docs-heading-anchor, .docs-toc-mobile summary svg { transition: none; }
 }
 
-/* ----- Runnable examples: the demo block, a stage above the code (DOCS.md §6) ----- */
+/* ----- Runnable examples: the demo block, a stage above the code ----- */
 .docs-prose .docs-demo-note { margin-bottom: -0.5rem; font-size: 0.875rem; color: var(--muted-foreground); }
 .docs-prose .docs-demo-note code { color: var(--foreground); }
 .docs-demo {
@@ -364,7 +364,7 @@ html:has(.docs-shell) { background: var(--background); }
 .docs-tabs-panel { margin-top: 1.25rem; }
 .docs-tabs-panel > :first-child { margin-top: 0; }
 
-/* ----- Search window (DOCS.md §8) ----- */
+/* ----- Search window ----- */
 .docs-search-dialog { margin-top: min(12vh, 7rem); max-width: 40rem; max-height: min(36rem, calc(100dvh - 2 * min(12vh, 7rem))); }
 /* The window itself scrolls, with the field and the key hints sticky: the scrolling region holds
    the focusable field (the options are reached with aria-activedescendant, never focused). */

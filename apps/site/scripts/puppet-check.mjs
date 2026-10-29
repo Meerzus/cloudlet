@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Puppet accuracy check (L03, LANDING §6): screenshots the real Toaster and the puppet
+ * Puppet accuracy check: screenshots the real Toaster and the puppet
  * alone on /puppet-check at 1:1, diffs them in a canvas and writes contact sheets.
  *
- * The stand is a service page, not in the production export (L05): build it in or use `next dev`.
+ * The stand is a service page, not in the production export: build it in or use `next dev`.
  *
  *   npm run build && SITE_SERVICE_PAGES=1 npm run build:site
  *   node apps/site/scripts/puppet-check.mjs <out-dir> [--base http://127.0.0.1:3000] [case ...]

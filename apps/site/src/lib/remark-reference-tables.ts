@@ -10,7 +10,7 @@ interface MdFile {
   history?: string[];
 }
 
-/** Reference pages live in `content/docs/<lang>/api/` (DOCS.md §4). */
+/** Reference pages live in `content/docs/<lang>/api/`. */
 const REFERENCE_PAGE = /[\\/]api[\\/][^\\/]+\.mdx$/u;
 
 const text = (node: MdNode): string => node.value ?? (node.children ?? []).map(text).join('');
@@ -28,8 +28,8 @@ function visitTables(node: MdNode, visit: (table: MdNode) => void) {
  * Marks the tables of the Reference pages so that they fit the article: every table gets
  * `data-reference`, a table of three or more columns also `data-grid` (its column count), and
  * every body cell gets its column name as `data-label` (and `data-empty` when it is just "—").
- * `docs.css` lays a grid row out as its first columns on one aligned line (Prop · Type · Default
- * of DOCS.md §5) with the last column, the description, under it; below 40rem every row becomes a
+ * `docs.css` lays a grid row out as its first columns on one aligned line (Prop · Type · Default)
+ * with the last column, the description, under it; below 40rem every row becomes a
  * card that labels its middle columns and leaves out empty ones. No table scrolls sideways.
  */
 export function remarkReferenceTables() {

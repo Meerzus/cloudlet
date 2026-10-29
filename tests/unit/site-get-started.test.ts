@@ -18,7 +18,7 @@ describe('site Get started', () => {
     }
   });
 
-  it('uses the install commands of LANDING §9', () => {
+  it('uses the npm and shadcn install commands', () => {
     expect(GET_STARTED.map((tab) => tab.command)).toEqual([INSTALL_COMMAND, SHADCN_COMMAND]);
     expect(INSTALL_COMMAND).toBe('npm install @cloudlet/toast');
     expect(SHADCN_COMMAND).toBe(`npx shadcn@latest add ${SITE_URL}/r/toaster.json`);

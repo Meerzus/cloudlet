@@ -21,7 +21,7 @@ const PHONE = DRIFT_PUPPETS.filter((puppet) => puppet.phone);
 const byId = new Map(DRIFT_PUPPETS.map((puppet) => [puppet.id, puppet]));
 
 describe('site scene 3: the crowd', () => {
-  it('flies 12 puppets on desktop and 6 of them on phones (LANDING §8)', () => {
+  it('flies 12 puppets on desktop and 6 of them on phones', () => {
     expect(DRIFT_PUPPETS).toHaveLength(12);
     expect(PHONE).toHaveLength(6);
     expect(DRIFT_PHONE_LAYERS.length).toBeLessThan(DRIFT_LAYERS.length);
@@ -63,7 +63,7 @@ describe('site scene 3: the crowd', () => {
   });
 });
 
-describe('site scene 3: casting (LANDING §8.4)', () => {
+describe('site scene 3: casting', () => {
   const casts = (stories: readonly Story[]) => stories.map(storyCast);
 
   it('tells one story per benefit, in order', () => {
@@ -188,7 +188,7 @@ describe('site scene 3: the timeline', () => {
 });
 
 describe('site scene 3: benefits and FAQ', () => {
-  it('lists the six benefits of LANDING §8 in order', () => {
+  it('lists the six benefits in order', () => {
     expect(BENEFITS.map((benefit) => benefit.title)).toEqual([
       'Springs, not keyframes',
       'Stack → Island',
@@ -199,7 +199,7 @@ describe('site scene 3: benefits and FAQ', () => {
     ]);
   });
 
-  it('answers 5–7 questions and names Sonner only once (LANDING §2, §9)', () => {
+  it('answers 5–7 questions and names Sonner only once', () => {
     expect(FAQ.length).toBeGreaterThanOrEqual(5);
     expect(FAQ.length).toBeLessThanOrEqual(7);
     const mentions = FAQ.filter((item) => /sonner/i.test(`${item.question} ${item.answer}`));

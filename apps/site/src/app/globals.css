@@ -9,7 +9,7 @@
 :root {
   --radius: 1rem;
 
-  /* Day: azure sky, white clouds. Text is dark enough for 4.5:1 on the top of the sky (L05). */
+  /* Day: azure sky, white clouds. Text is dark enough for 4.5:1 on the top of the sky. */
   --background: oklch(0.985 0.008 240);
   --foreground: oklch(0.13 0.04 258);
   --muted-foreground: oklch(0.2 0.05 255);
@@ -1094,9 +1094,9 @@ html[data-show="puppet"] .cloudlet-host { visibility: hidden; }
 
 
 @layer components {
-/* ---------- Scene 2: Life of a notification (LANDING §7) ---------- */
+/* ---------- Scene 2: Life of a notification ---------- */
 .life-pin { position: relative; height: 100svh; overflow: hidden; }
-/* The pin tucks under the section title, so the first caption follows it closely (owner, L04 review):
+/* The pin tucks under the section title, so the first caption follows it closely:
    the caption column is centred at 50svh - 4.5rem; this leaves 7rem below the lead. */
 .life-pin { margin-top: calc(11.5rem - 50svh); }
 .life-frame {
@@ -1146,7 +1146,7 @@ html[data-show="puppet"] .cloudlet-host { visibility: hidden; }
 }
 
 @layer components {
-/* ---------- Scene 3: Drifting by (LANDING §8) ---------- */
+/* ---------- Scene 3: Drifting by ---------- */
 /* The volley lives in a fixed layer between the sky and the page: it launches inside scene 2's pin. */
 .drift-layer {
   position: fixed; inset: 0; z-index: -5; overflow: hidden; pointer-events: none; visibility: hidden; contain: strict;
@@ -1159,7 +1159,7 @@ html[data-show="puppet"] .cloudlet-host { visibility: hidden; }
 .drift-cloud :is(picture, img) { display: block; width: 100%; height: 100%; }
 .drift-cloud img { user-select: none; filter: blur(calc((1 - var(--depth)) * 1.5px)); }
 .drift-cloud[data-flip] picture { transform: scaleX(-1); }
-/* Story hints (LANDING §8): a key beside the actor, a search field with a caret, the live region's words. */
+/* Story hints: a key beside the actor, a search field with a caret, the live region's words. */
 .drift-key {
   position: absolute; top: 0; left: 0; z-index: 11; min-width: 2.25rem; padding: 0.35rem 0.6rem; translate: -50% -100%;
   border-radius: 0.6rem; border: 1px solid color-mix(in oklab, var(--foreground) 16%, transparent);
@@ -1186,7 +1186,7 @@ html[data-show="puppet"] .cloudlet-host { visibility: hidden; }
 
 .drift-pin { position: relative; height: 100svh; overflow: hidden; }
 /* Scene 2's frame is empty once its pin ends (the last caption leaves with the cloud), so scene 3 rides up
-   over its exit: the pin's top crosses DRIFT_VOLLEY_START (20%) exactly as scene 2 unpins (owner, L07). */
+   over its exit: the pin's top crosses DRIFT_VOLLEY_START (20%) exactly as scene 2 unpins. */
 .drift-pin { margin-top: -80svh; }
 .benefits { position: relative; height: 100%; }
 .benefit-plates { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; }
@@ -1204,7 +1204,7 @@ html[data-show="puppet"] .cloudlet-host { visibility: hidden; }
 }
 /* The title keeps its size and stays centred. */
 .benefit-intro h2 { font-size: clamp(2.75rem, 7.4vw, 7rem); }
-/* Benefits take one half of the column, alternating, and the actors the other (LANDING §8). */
+/* Benefits take one half of the column, alternating, and the actors the other. */
 .drift-pin:not([data-compact]) .benefit-plates .benefit { align-items: flex-start; text-align: start; padding-inline: 1.5rem calc(50% + 1.5rem); }
 .drift-pin:not([data-compact]) .benefit-plates .benefit[data-side="right"] { padding-inline: calc(50% + 1.5rem) 1.5rem; }
 .drift-pin:not([data-compact]) .benefit-plates .benefit h3 { max-width: 12ch; font-size: clamp(2.5rem, 5vw, 5rem); }
@@ -1220,7 +1220,7 @@ html[data-show="puppet"] .cloudlet-host { visibility: hidden; }
 }
 
 @layer components {
-/* ---------- Get started (LANDING §9) ---------- */
+/* ---------- Get started ---------- */
 .gs-steps { display: grid; gap: 3rem; margin: 0; padding: 0; list-style: none; }
 .gs-step { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: 1.25rem; }
 .gs-step-number {

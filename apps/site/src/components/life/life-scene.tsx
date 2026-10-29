@@ -48,7 +48,7 @@ export function LifeScene() {
   );
 }
 
-/** Reduced motion (LANDING §10): no pin, no scrub — the ten plateaus as a still sequence. */
+/** Reduced motion: no pin, no scrub — the ten plateaus as a still sequence. */
 function LifeSequence() {
   return (
     <ol className="life-sequence mx-auto max-w-6xl px-4 pb-24 sm:px-6">
@@ -162,7 +162,7 @@ function LifePinned() {
       const scale = lerp(a.scale, b.scale, k);
       const h = lerp(a.h, b.h, k);
 
-      // Finale: the stack rises, softens and hands over to a cloud (LANDING §7, state 10).
+      // Finale: the stack rises, softens and hands over to a cloud (state 10).
       const drift = clamp01((t - script.duration) / LIFE_DRIFT);
       const rise = smooth(drift);
       const lift = -rise * view.height * 0.42;

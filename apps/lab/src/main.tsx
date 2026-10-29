@@ -33,7 +33,7 @@ async function mount() {
   } else if (fixture === 'mobile' || fixture === 'accessibility' || params.has('surface')) {
     await import('./fixture-styles.css');
     if (!active) return;
-    const controller = createCloudlet(fixture === 'accessibility' ? { autoDismiss: false, messages: { cancellationRequested: 'Отмена запрошена' } } : undefined);
+    const controller = createCloudlet(fixture === 'accessibility' ? { autoDismiss: false, messages: { cancellationRequested: 'Cancellation requested' } } : undefined);
     cleanup = () => controller.dispose();
     const Fixture = fixture === 'mobile' ? (await import('./mobile-fixture.js')).MobileFixture
       : fixture === 'accessibility' ? (await import('./accessibility-fixture.js')).AccessibilityFixture

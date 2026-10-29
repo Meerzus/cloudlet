@@ -106,7 +106,7 @@ export function MobileFixture() {
 
   return <>
     <main>
-      <p className="eyebrow">Задачи 08–16 · Mobile acceptance</p>
+      <p className="eyebrow">Mobile acceptance</p>
       <h1>Viewport and gestures</h1>
       <p>Swipe the pill sideways to dismiss the top record. Open the Island, swipe between records, swipe its header towards the screen edge to collapse. Page scrolling and a real text input remain native.</p>
       <div className="controls" data-lab-keep-island="">
