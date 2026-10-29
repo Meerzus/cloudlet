@@ -162,14 +162,23 @@ async function idle(page: Page) {
 async function currentIds(page: Page) {
   return currentRow(page).evaluateAll(elements => elements.map(element => element.getAttribute('data-notification-id')));
 }
-/** Share of the opening morph done `ms` after a click on the pill: 0 = pill width, 1 = Island width. */
+/**
+ * Share of the opening morph done `ms` after a click on the pill: 0 = pill width, 1 = Island width.
+ * Read in the first frame `ms` after the click: the sampler writes the SVG only in frames, and on a busy
+ * runner a timer can fire after skipped frames and read a width written long before.
+ */
 async function openProgress(page: Page, ms: number) {
   return page.evaluate(async delay => {
     const root = document.querySelector('.lab-main-host')!;
     const svg = root.querySelector('.cloudlet-bg')!;
     const from = Number(svg.getAttribute('width'));
+    const clicked = performance.now();
     root.querySelector<HTMLButtonElement>('.cloudlet-pill')!.click();
-    await new Promise(resolve => setTimeout(resolve, delay));
+    // A task queued from a frame callback runs after every callback of that frame, the sampler's included.
+    await new Promise<void>(resolve => {
+      const frame = (time: number) => { if (time - clicked >= delay) setTimeout(resolve); else requestAnimationFrame(frame); };
+      requestAnimationFrame(frame);
+    });
     const target = root.querySelector('.cloudlet-stack > .cloudlet-shell')!.getBoundingClientRect().width;
     return (Number(svg.getAttribute('width')) - from) / (target - from);
   }, ms);
