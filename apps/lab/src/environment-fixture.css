@@ -1,0 +1,48 @@
+/* Deliberately separate from the laboratory reset. The no-reset route uses UA defaults. */
+.environment-fixture { overflow-wrap: anywhere; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 6rem clamp(1rem, 5vw, 4rem) 4rem;
+  font: 400 1rem/1.65 ui-sans-serif, system-ui, sans-serif;
+  color: #26372f;
+}
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) h1 { font-size: clamp(1.75rem, 4vw, 3rem); line-height: 1.15; letter-spacing: -.035em; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) h2 { font-size: 1.15rem; line-height: 1.4; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) section { margin-block: 2rem; border-top: 1px solid #d8e0d7; padding-block-start: 1rem; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) .environment-eyebrow { font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) .environment-controls { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) .environment-controls > * { min-width: 0; max-width: 100%; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) :where(button,select,input) { font: inherit; max-width: 100%; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) :where(button,select,input[type="text"]) { box-sizing: border-box; min-height: 44px; border: 1px solid #a6b7a8; border-radius: .5rem; padding: .5rem .75rem; background: #f4f7f0; color: #26372f; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) button { cursor: pointer; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) button:disabled { opacity: .55; cursor: default; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) :where(a,button,input,select):focus-visible { outline: 3px solid #356b4f; outline-offset: 3px; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) a { color: #24553e; }
+.environment-fixture:not([data-fixture="no-reset"], [data-fixture="hostile"]) .environment-controls label { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.environment-fixture .environment-long-url { overflow-wrap: anywhere; }
+.environment-fixture:not([data-fixture="no-reset"]) .lab-choice { margin: 0; padding: .5rem .75rem; border: 1px solid #a6b7a8; min-width: 0; }
+.environment-fixture:not([data-fixture="no-reset"]) .lab-choice > div { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+.environment-fixture:not([data-fixture="no-reset"]) .lab-choice label { min-height: 44px; display: inline-flex; align-items: center; gap: .5rem; }
+.environment-fixture:not([data-fixture="no-reset"]) input[type="radio"] { accent-color: #356b4f; }
+.environment-fixture[data-fixture="inset"] { padding-bottom: 9rem; }
+.environment-bottom-nav { position: fixed; inset: auto 0 0; box-sizing: border-box; height: 76px; display: flex; align-items: center; justify-content: center; gap: 2rem; background: #27392f; border-top: 1px solid #6e8474; z-index: 10; font: 500 1rem/1.4 ui-sans-serif, system-ui, sans-serif; }
+.environment-bottom-nav a { display: inline-flex; align-items: center; min-height: 44px; padding-inline: .5rem; color: #fff; }
+.environment-bottom-nav a:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* Test text zoom without global styles shared with the normal laboratory. */
+html[data-cloudlet-environment="zoom"] { font-size: 200%; }
+
+/* Low-specificity global selectors intentionally challenge the package's local reset. */
+:where(html[data-cloudlet-environment="hostile"]) * { box-sizing: content-box; }
+:where(html[data-cloudlet-environment="hostile"]) body { background: #fff4df; color: #5d1d36; font-family: Georgia, serif; }
+:where(html[data-cloudlet-environment="hostile"]) button { background: #832943; color: #fff4df; border: 5px double currentColor; padding: 1rem 2rem; border-radius: 0; text-transform: uppercase; font: 700 1.2rem/1.8 Georgia, serif; letter-spacing: .1em; }
+:where(html[data-cloudlet-environment="hostile"]) h2 { margin: 2rem 0; padding: 1rem; font: italic 1.8rem/2 Georgia, serif; }
+:where(html[data-cloudlet-environment="hostile"]) p { margin: 2rem 0; }
+:where(html[data-cloudlet-environment="hostile"]) ol { padding: 2rem 4rem; list-style: upper-roman; }
+:where(html[data-cloudlet-environment="hostile"]) svg { width: 90px; height: 90px; fill: #a44d2b; stroke: #5d1d36; stroke-width: 3px; }
+
+.environment-fixture[data-fixture="hostile"] { max-width: 68rem; margin: 0 auto; padding: 5rem 1rem 3rem; }
+.environment-fixture[data-fixture="hostile"] .environment-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.environment-fixture[data-fixture="hostile"] .environment-controls > * { box-sizing: border-box; min-width: 0; max-width: 100%; }
+.environment-fixture[data-fixture="hostile"] .environment-controls label { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }

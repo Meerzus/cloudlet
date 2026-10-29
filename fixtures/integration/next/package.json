@@ -1,0 +1,22 @@
+{
+  "name": "cloudlet-tarball-next",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build --webpack",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudlet/toast": "file:./cloudlet-toast.tgz",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "next": "16.4.2"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2"
+  }
+}

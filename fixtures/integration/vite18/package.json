@@ -1,0 +1,22 @@
+{
+  "name": "cloudlet-tarball-vite18",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudlet/toast": "file:./cloudlet-toast.tgz",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}

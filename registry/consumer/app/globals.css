@@ -1,0 +1,29 @@
+:root {
+  --background: #fafafa;
+  --foreground: #171717;
+  --popover: #f0f7ff;
+  --popover-foreground: #122844;
+  --muted-foreground: #455d7b;
+  --border: #8babc9;
+  --ring: #245cdb;
+  --accent: #d9eaff;
+  --font-sans: system-ui, sans-serif;
+  color-scheme: light;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+:root.dark {
+  --background: #111318;
+  --foreground: #f9faff;
+  --popover: #202b3b;
+  --popover-foreground: #e7f0ff;
+  --muted-foreground: #a8bad4;
+  --border: #647e9e;
+  --ring: #93b4ff;
+  --accent: #384e69;
+  color-scheme: dark;
+}
+body { margin: 0; }
+main { max-width: 44rem; margin: 4rem auto; padding: 1rem; }
+button { font: inherit; padding: .75rem; }

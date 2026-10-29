@@ -1,0 +1,19 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "---Getting started---",
+    "index",
+    "installation",
+    "quick-start",
+    "[Playground](/toaster/playground)",
+    "---Guides---",
+    "notifications",
+    "operations",
+    "positioning",
+    "styling",
+    "ssr",
+    "accessibility",
+    "---Reference---",
+    "...api"
+  ]
+}

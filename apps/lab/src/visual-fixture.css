@@ -1,0 +1,6 @@
+/* `?fixture=visual`: a plain light or dark page; the Toaster theme is chosen independently. */
+:root { color-scheme: light; background: #f4f4f6; color: #111113; font: 16px/1.5 system-ui, sans-serif; }
+:root[data-visual-page="dark"] { color-scheme: dark; background: #0e0e10; color: #f5f5f7; }
+body { margin: 0; }
+.visual-page { max-width: 40rem; margin: 0 auto; padding: 120px 24px; }
+.visual-page h1 { margin: 0 0 8px; font-size: 1.25rem; }

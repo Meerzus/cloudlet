@@ -1,0 +1,3 @@
+/* The acceptance page must also reflow when its root font size is doubled. */
+main.accessibility-fixture { overflow-wrap: anywhere; }
+main.accessibility-fixture .controls > * { max-width: 100%; min-width: 0; }

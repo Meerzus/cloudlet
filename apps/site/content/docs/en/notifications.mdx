@@ -1,0 +1,228 @@
+---
+title: Notifications & time
+description: Show, update and dismiss notifications, what the stack holds, and how long each one stays.
+---
+
+This page covers the notification itself: what `show` returns, the five kinds, the content a notification can carry, how to change or close it later, what happens when the stack is full, and how Cloudlet decides when a notification has been on screen long enough.
+
+## Show a notification
+
+`show` takes a spec with a required `title` and returns an `AdmissionResult` right away. It never throws for bad input and never queues the request for later:
+
+- `created { handle }`: a new record is in the stack.
+- `deduplicated { handle, occurrences }`: an identical live record was found by its `dedupeKey`; nothing new was added.
+- `rejected { reason, issues? }`: nothing was added. `reason` is `invalid-input` (with `issues` listing the path and message of each problem), `id-conflict`, `capacity` or `disposed`.
+
+```tsx title="save.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+const admission = cloudlet.show({ title: 'Synced to the cloud', kind: 'success' });
+
+if (admission.status === 'rejected') {
+  console.warn('Notification not shown:', admission.reason, admission.issues ?? []);
+}
+```
+
+A handle belongs to its controller and to one existence of the record. It is not a serializable ID: keep it in memory to update or dismiss that notification, and do not build one yourself.
+
+## Kinds
+
+`kind` sets the icon, the colour and the default time on screen. It defaults to `info`.
+
+| Kind | Default time | Use it for |
+|---|---|---|
+| `success` | 6 seconds | Something finished as expected |
+| `info` | 6 seconds | A neutral notice |
+| `warning` | Stays until closed | Something the user should look at |
+| `error` | Stays until closed | Something failed |
+| `loading` | Stays until closed | Work in progress; [operations](/toaster/docs/operations) set it for you |
+
+<Demos>
+
+```tsx demo="success"
+cloudlet.show({ title: 'Synced to the cloud', kind: 'success' });
+```
+
+```tsx demo="info"
+cloudlet.show({ title: 'Light breeze from the west', kind: 'info' });
+```
+
+```tsx demo="warning"
+cloudlet.show({ title: 'Clouds are gathering', kind: 'warning' });
+```
+
+```tsx demo="error"
+cloudlet.show({ title: 'Sync got lost in the fog', kind: 'error' });
+```
+
+```tsx demo="loading"
+cloudlet.show({ title: 'Gathering clouds…', kind: 'loading' });
+```
+
+</Demos>
+
+An `error` is not announced assertively on its own; set `announcementPriority: 'assertive'` when a failure must interrupt a screen reader.
+
+## Content
+
+A title is always a plain string; Cloudlet renders it as text, never as HTML.
+
+```tsx demo="title-only"
+cloudlet.show({ title: 'A small cloud drifted by' });
+```
+
+A **description** is either text or rich content. Text is `{ kind: 'text', text }`:
+
+```tsx demo="description"
+cloudlet.show({
+  title: 'Forecast updated',
+  description: { kind: 'text', text: 'Sunny above the clouds, light drizzle below.' },
+});
+```
+
+Rich content is a React node with a separate plain-text `announcement`: screen readers hear the announcement, never text extracted from the node. Rich content must not be interactive; buttons and links belong in the [action](/toaster/docs/operations#actions).
+
+```tsx demo="rich-description"
+cloudlet.show({
+  title: 'Cruising altitude reached',
+  description: {
+    kind: 'rich',
+    content: <>Above the clouds at <strong>10,000 m</strong>, the sky is <em>perfectly</em> clear.</>,
+    announcement: 'Above the clouds at 10,000 m, the sky is perfectly clear.',
+  },
+});
+```
+
+An **icon** replaces the kind's icon with your own node. It is decorative: it never replaces the title or the announcement, so mark an SVG `aria-hidden`.
+
+```tsx demo="custom-icon"
+cloudlet.show({
+  title: 'Spotted a cloud shaped like a cat',
+  icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M7 19a5 5 0 0 1-.6-9.96 6.5 6.5 0 0 1 12.3 1.7A4.2 4.2 0 0 1 17.8 19z" />
+    </svg>
+  ),
+});
+```
+
+**Progress** is `{ kind: 'indeterminate' }` or `{ kind: 'determinate', value, label? }` with `value` a finite number from 0 to 1. An out-of-range value is rejected as `invalid-input`, not clamped. Progress updates are not announced frame by frame; the optional `label` is what assistive technology reads.
+
+## Update, dismiss, clear
+
+`update(handle, patch)` changes a live notification in place. It never creates a record: a stale handle returns `rejected` with `stale-handle`. In a `NotificationPatch` an omitted field keeps its value and `null` removes `description`, `icon`, `progress` or `action`. A notification's `id` and `dedupeKey` cannot change.
+
+```tsx demo="update-loading"
+const packing = cloudlet.show({ title: 'Packing the clouds…', kind: 'loading' });
+setTimeout(() => {
+  if (packing.status === 'created') {
+    cloudlet.update(packing.handle, { title: 'Clouds packed', kind: 'success' });
+  }
+}, 1500);
+```
+
+The update and dismiss calls return a `MutationResult`: `applied`, `unchanged` (an empty patch, or nothing to do) or `rejected` with a reason.
+
+- `dismiss(handle)` closes one notification immediately. A late result or a finishing animation cannot bring it back.
+- `clear()` closes every notification and returns `{ status: 'cleared', count }`, including a count of 0.
+- `getHandle(id)` looks up the live record with an explicit `id`, or returns `undefined`. It never creates or selects anything.
+
+```tsx title="upload-status.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+// An explicit id lets another part of the application find the record later.
+cloudlet.show({ id: 'upload', title: 'Uploading photos…', kind: 'loading' });
+
+const upload = cloudlet.getHandle('upload');
+if (upload) cloudlet.update(upload, { title: 'Photos uploaded', kind: 'success' });
+
+// The same dedupeKey on a live record counts an occurrence instead of adding a card.
+cloudlet.show({ title: 'You are offline', kind: 'warning', dedupeKey: 'offline' });
+cloudlet.show({ title: 'You are offline', kind: 'warning', dedupeKey: 'offline' }); // occurrences: 2
+```
+
+An explicit `id` that is already live is an `id-conflict`, even when the `dedupeKey` matches. Deduplication keeps the existing record as it was: its content, its place in the stack and its remaining time do not change. Once a record is closed, its `id` can be used again and the new record goes to the top.
+
+`onClose` on the spec is called once with the handle and the reason: `timeout`, `programmatic`, `close-button`, `swipe`, `action-success`, `navigation`, `clear` or `dispose`.
+
+## The stack and the Island
+
+Every accepted notification goes straight into the stack, newest on top. At rest the stack is one pill: the top notification, tails for the ones behind it and a badge with the total. `priority` is kept on the record but does not reorder the stack.
+
+Activating the pill opens the Island on the top notification. A notification that arrives while the Island is open joins the top of the stack without taking over the slide you are reading. Closing the current slide moves to the next older notification, then to a newer one, and collapses the Island after the last. Some notifications open the Island on their own, or bring an open Island to themselves after a short delay; [Positioning & offsets](/toaster/docs/positioning#attention) explains when.
+
+```tsx demo="burst"
+for (const name of ['Cumulus', 'Stratus', 'Cirrus', 'Nimbus', 'Altocumulus']) {
+  cloudlet.show({ title: `${name} drifted by` });
+}
+```
+
+`getSnapshot()` describes the same state for your own UI: `notifications` in admission order, `stack` with the same handles newest first (`stack[0]` is the pill), `island` with `open`, `reason` and `current`, and `overflow`. `subscribe` tells you when it changed.
+
+## Capacity and overflow
+
+The stack holds 100 open notifications. Admission checks an explicit `id` conflict first, then deduplication, then capacity, so a duplicate of a live record never counts against it. When the stack is full, the new notification is rejected with `capacity`; an older one is never pushed out. Cloudlet counts what was missed instead: the badge and the pill's name include the count, and the Island shows it with a button to acknowledge it.
+
+```tsx demo="overflow"
+// The stack holds 100 notifications; the rest are counted as missed.
+for (let cloud = 1; cloud <= 105; cloud += 1) {
+  cloudlet.show({ title: `Cloud #${cloud} on the horizon` });
+}
+```
+
+The missed count survives `clear()` and lasts until `acknowledgeOverflow()`:
+
+```tsx demo="dismiss-all"
+cloudlet.clear();
+cloudlet.acknowledgeOverflow(); // the missed count survives clear()
+```
+
+To log overflow or report it elsewhere, pass `onOverflow` when you create the controller. It receives the current `{ count, pending }`, not the rejected notification, which is not kept.
+
+```tsx title="cloudlet.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+export const cloudlet = createCloudlet({
+  onOverflow: ({ count }) => console.warn(`${count} notifications did not fit in the stack`),
+});
+```
+
+## Time on screen
+
+A passive `info` or `success` without an action gets 6 seconds of readable time. `loading`, `warning`, `error` and any notification with an action stay until they are closed. Set `duration` in milliseconds to change that for one notification, or `null` to keep it until closed.
+
+Time is spent only by the notification on screen: the top pill while the stack is collapsed, the current slide while the Island is open. The others wait with their remaining time intact. The clock also stops while:
+
+- the pointer is over the notifications, or focus is inside them;
+- a swipe is in progress, or a slide is changing;
+- the tab is hidden or the window lost focus;
+- the Toaster is unmounted;
+- a command action is running;
+- the user opened the Island, or the current slide asks for action: it has an action, a failed operation to retry, or `attention: 'open'`.
+
+A slide that opened the Island only because of its description keeps counting unless it is hovered or focused, then closes and moves on to the next one.
+
+Updating the title, description or progress does not reset the time. Changing `kind` or `action` recalculates the default, and setting `duration` in a patch always starts a new budget, even with the same number.
+
+```tsx title="notifications.tsx"
+import { Toaster } from '@cloudlet/toast';
+
+declare function usePreference(name: 'persistent-notifications'): boolean;
+
+export function Notifications() {
+  // While the user keeps notifications, none closes on a timer,
+  // including notifications with an explicit duration.
+  const persistent = usePreference('persistent-notifications');
+  return <Toaster autoDismiss={!persistent} />;
+}
+```
+
+`autoDismiss` applies as soon as it changes: switching it off stops every timer, switching it back on starts each notification's timer from its full duration. Without the prop, the controller's `autoDismiss` option decides; `createCloudlet({ autoDismiss: false })` makes a controller persistent from the start.
+
+## Next steps
+
+- [Operations & cancellation](/toaster/docs/operations): notifications that follow a promise, retry it and cancel it.

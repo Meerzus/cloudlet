@@ -1,0 +1,227 @@
+---
+title: Operations & cancellation
+description: Follow a promise to its result, retry or cancel it, and attach actions to a notification.
+---
+
+A notification often stands for work: a save, an upload, a request that may fail. This page shows how `track` follows that work in one notification, how retries and cooperative cancellation work, and how command and link actions behave. Throughout, the business operation and its notification stay separate: what happens to one never silently changes the other.
+
+## Track an operation
+
+`track(source, options)` shows a `loading` notification with the `pending` content, then replaces it with `success` or `error` when the source settles. The source is either a promise you already have or a **factory**: a function Cloudlet calls to start each attempt.
+
+```tsx demo="track-resolve"
+cloudlet.track(new Promise((resolve) => setTimeout(resolve, 1500)), {
+  pending: { title: 'Condensing water vapour…' },
+  success: { title: 'A fresh cloud formed' },
+  error: { title: 'The cloud evaporated' },
+});
+```
+
+Prefer a factory when the work can be started again. It receives an `OperationContext` with the attempt number and an `AbortSignal` for that attempt, so only a factory can be retried and cancelled through the signal. `success`, `error` and `cancelled` are either content or a function that maps the value, the error or the cancellation reason to content.
+
+```tsx title="save-forecast.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+export function saveForecast() {
+  return cloudlet.track(async ({ signal }) => {
+    const response = await fetch('/api/forecast', { method: 'POST', signal });
+    if (!response.ok) throw new Error(`Forecast service answered ${response.status}`);
+    return (await response.json()) as { readonly photos: number };
+  }, {
+    pending: { title: 'Saving the forecast…' },
+    success: ({ photos }) => ({ title: `Forecast saved with ${photos} photos` }),
+    error: { title: 'Forecast not saved' },
+  });
+}
+```
+
+The pending notification is always `loading` and has no timer. The result is `success`, `error` or, for a confirmed cancellation, `warning`; each gets the default time of its kind unless its content sets `duration`. While the operation is tracked, its `kind` belongs to Cloudlet: `update` may change the title or progress, but changing `kind` is rejected with `operation-owned`. Tracked operations never deduplicate.
+
+## Admission and result
+
+`track` returns an `OperationHandle` with two independent parts:
+
+- `admission` is the notification's admission result, the same union `show` returns (without `deduplicated`).
+- `result` is the business promise: it resolves with the value or rejects with the original error.
+
+The business operation runs even when the notification was not admitted, for example when the stack is full. A mapping function that throws, or returns invalid content, produces a safe fallback notification and a diagnostic; it never changes `result`.
+
+```tsx title="checkout.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+declare function submitOrder(signal: AbortSignal): Promise<{ readonly id: string }>;
+
+export async function checkout() {
+  const order = cloudlet.track(({ signal }) => submitOrder(signal), {
+    pending: { title: 'Placing your order…' },
+    success: { title: 'Order placed' },
+    error: { title: 'Order not placed' },
+  });
+
+  // No notification (the stack was full, say) does not mean no order.
+  if (order.admission.status === 'rejected') console.warn('Order notice skipped:', order.admission.reason);
+
+  // The business outcome comes from result, never from the notification.
+  return order.result;
+}
+```
+
+Cloudlet handles the rejections of the promises it owns, so ignoring a handle does not cause an unhandled rejection. `await handle.result` still rejects, and promise chains you build from `result` are yours to handle.
+
+## Retry and attempts
+
+When an attempt of a factory fails or is cancelled, the notification offers **Retry**. Retrying calls the factory again with `attempt` increased by one and a fresh signal, in the same notification. There are no automatic retries. A successful attempt shows no Retry button, although `retry()` on the handle still starts a new attempt.
+
+```tsx demo="error-retry"
+cloudlet.track(async ({ attempt }) => {
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  if (attempt === 1) throw new Error('No signal above the clouds');
+}, {
+  pending: { title: 'Reaching the sky…' },
+  success: { title: 'Back in the sky' },
+  error: {
+    title: "Couldn't reach the sky",
+    description: { kind: 'text', text: 'Thick clouds in the way. The second try gets through.' },
+  },
+});
+```
+
+Your code can do the same through the handle:
+
+- `retry()` starts a new attempt once the current one has settled. It returns `started` with the new attempt and its own `result`, or `rejected` with `already-pending`, `not-retryable` (the source was a promise) or `disposed`.
+- `restart()` also works while an attempt is pending: it detaches the pending attempt, requests its abort and starts a new one. The notification has no restart button; it is a command of your application.
+- `handle.result` always describes the first attempt. Each retry and restart returns the `result` of its own attempt.
+
+## Cancellation
+
+Cancellation is cooperative. Cancel in the notification, or `handle.cancel(reason?)` in your code, sets `cancelRequested` and aborts the attempt's `AbortSignal`. What cancelling means is up to the operation: pass the signal to `fetch`, check it between steps, or ignore it. While the request is pending the notification says that cancellation was requested.
+
+```tsx demo="track-cancel"
+cloudlet.track(async ({ signal }) => {
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, 8000);
+    signal.addEventListener('abort', () => { clearTimeout(timer); reject(signal.reason); }, { once: true });
+  });
+}, {
+  pending: {
+    title: 'Drifting to the coast…',
+    description: { kind: 'text', text: 'A long flight. Cancel lands it early.' },
+  },
+  success: { title: 'Landed on the coast' },
+  error: { title: 'Lost the wind' },
+  cancelled: { title: 'Landed early' },
+});
+```
+
+A request is not a confirmation:
+
+- An operation that fulfils after cancel was requested is a success, and shows `success`.
+- By default a cancellation is confirmed only when the attempt that was asked to cancel rejects with an error named `AbortError`; the signal's default reason is one. Then the notification shows `cancelled` as a warning, or a localizable "Cancelled" fallback without it.
+- Even a confirmed cancellation leaves `result` rejecting with the original reason.
+
+`cancel()` returns `requested`, `unchanged` (`already-requested`, or `settled` when the attempt already finished) or `rejected` (`not-cancellable`, `disposed`). When your cancellation protocol does not throw `AbortError`, classify it with `isCancellation`:
+
+```tsx title="upload.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+declare function uploadAlbum(signal: AbortSignal): Promise<void>;
+
+cloudlet.track(({ signal }) => uploadAlbum(signal), {
+  pending: { title: 'Uploading the album…' },
+  success: { title: 'Album uploaded' },
+  error: { title: 'Upload failed' },
+  cancelled: { title: 'Upload cancelled' },
+  // The upload SDK rejects with its own error when the signal aborts.
+  isCancellation: (error) => error instanceof Error && error.name === 'UploadCancelled',
+});
+```
+
+With `isCancellation` the answer is yours alone: a rejection it classifies as a cancellation shows `cancelled` even when nobody called `cancel()`, for example when the user stopped the upload in the SDK's own interface.
+
+## Progress
+
+Progress is content like any other: set it in `pending` and change it with `update` while the attempt runs. For a promise you already created, a `cancel` callback in the options makes it cancellable; with a factory, use the signal instead. Passing both is `invalid-input`: no notification appears, but the factory still runs, because an operation never depends on its notification.
+
+```tsx demo="promise-progress"
+const abort = new AbortController();
+const upload = cloudlet.track(uploadPhotos(), {
+  pending: { title: 'Uploading 12 photos…', progress: { kind: 'determinate', value: 0 } },
+  success: { title: '12 photos are in the cloud' },
+  error: { title: 'Upload drifted off' },
+  cancel: () => abort.abort(),
+});
+
+async function uploadPhotos() {
+  for (let photo = 1; photo <= 12; photo += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    abort.signal.throwIfAborted();
+    if (upload.admission.status === 'created') {
+      cloudlet.update(upload.admission.handle, {
+        progress: { kind: 'determinate', value: photo / 12, label: `${photo} of 12` },
+      });
+    }
+  }
+}
+```
+
+The final content replaces the pending one as a whole: a progress bar, description or action that the `success` content does not repeat is gone.
+
+## Actions
+
+A notification can carry one primary action. A **command** is `{ kind: 'command', label, run, errorMessage? }`. Cloudlet runs it, blocks a second run while it is pending and pauses the notification's time meanwhile. When `run` returns or resolves, that notification closes.
+
+```tsx demo="action-command"
+cloudlet.show({
+  title: 'Photo moved to the archive',
+  action: {
+    kind: 'command',
+    label: 'Undo',
+    run: () => {
+      cloudlet.show({ title: 'Photo is back in the sky', kind: 'success' });
+    },
+  },
+});
+```
+
+When `run` throws or rejects, the notification stays, shows the message from `errorMessage(error)` (or a localizable fallback) and lets the user run the command again. Error details are never shown on their own.
+
+```tsx demo="action-retry"
+let tries = 0;
+cloudlet.show({
+  title: 'Album ready to share',
+  action: {
+    kind: 'command',
+    label: 'Share',
+    errorMessage: () => 'A gust blew it away. Try again?',
+    run: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      tries += 1;
+      if (tries === 1) throw new Error('Gust of wind');
+      cloudlet.show({ title: 'Album shared with the sky', kind: 'success' });
+    },
+  },
+});
+```
+
+A **link** is `{ kind: 'link', label, href, target?, rel? }` and renders a real anchor: modifier keys, middle click and "open in new tab" work as anywhere else. After the browser follows it, the notification closes. `href` may be relative, a fragment, `http(s)`, `mailto` or `tel`; other schemes are rejected. `target: '_blank'` always gets `noopener`, added to your own `rel`.
+
+```tsx demo="action-link"
+cloudlet.show({
+  title: 'These clouds are open source',
+  action: { kind: 'link', label: 'GitHub', href: 'https://github.com/Meerzus/cloudlet', target: '_blank', rel: 'noreferrer' },
+});
+```
+
+While a command is pending, an `update` that replaces the action is rejected with `action-pending`; title and progress still update.
+
+## Closing is not cancelling
+
+`dismiss`, `clear`, a swipe, the close button and even `dispose()` detach the notification from the operation. They never abort it and never change its `result`: the upload keeps uploading, and only its notification is gone. After a dismiss, `retry()` and `restart()` on a saved handle still start new attempts, without bringing the notification back; call `track` again for a new one. To stop the work itself, call `cancel()` on the handle.
+
+## Next steps
+
+- [Positioning & offsets](/toaster/docs/positioning): where the stack sits, safe areas, offsets and when the Island opens on its own.

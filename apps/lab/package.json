@@ -1,0 +1,8 @@
+{
+  "name": "@cloudlet/lab",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "vite --host 127.0.0.1", "build": "vite build" },
+  "dependencies": { "@cloudlet/toast": "1.0.0", "react": "19.3.1", "react-dom": "19.3.1" }
+}

@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "phase": "foundation-contract-only",
+  "runtimeExports": [],
+  "budgets": {
+    "status": "not-proven-runtime-not-implemented",
+    "ownJsLimitBytes": 12288,
+    "cssLimitBytes": 3072,
+    "fullDeltaLimitBytes": 46080
+  },
+  "toolchain": {
+    "node": "24.17.0",
+    "npm": "11.12.1",
+    "vite": "8.3.4",
+    "react": "19.3.1",
+    "reactDom": "19.3.1",
+    "motion": "14.3.0",
+    "zlib": "1.3.1-e00f703"
+  },
+  "package": {
+    "name": "@cloudlet/toast",
+    "version": "0.0.0"
+  },
+  "lockfileSha256": "e908052d3627b483751b8c5fb62ff9d58cf4163ad0eaef94ea0b8791b1aa8871",
+  "methodology": {
+    "mode": "production",
+    "target": [
+      "chrome111",
+      "edge111",
+      "firefox114",
+      "safari16.4",
+      "ios16.4"
+    ],
+    "jsMinifier": "oxc",
+    "cssMinifier": "lightningcss",
+    "compression": "gzip-level-9-per-file",
+    "input": "npm-pack-tarball",
+    "cloudletUsage": "observable-root-namespace-and-explicit-css",
+    "motionUsage": "LazyMotion + m.div + domAnimation"
+  },
+  "ownJavaScript": {
+    "files": [
+      {
+        "file": "cloudlet.js",
+        "kind": "js",
+        "bytes": 0,
+        "gzipBytes": 20
+      }
+    ],
+    "jsGzipBytes": 20,
+    "cssGzipBytes": 0,
+    "totalGzipBytes": 20
+  },
+  "packedCss": {
+    "gzipBytes": 204
+  },
+  "scenarios": {
+    "react": {
+      "files": [
+        {
+          "file": "bundle.js",
+          "kind": "js",
+          "bytes": 218513,
+          "gzipBytes": 67288
+        }
+      ],
+      "jsGzipBytes": 67288,
+      "cssGzipBytes": 0,
+      "totalGzipBytes": 67288
+    },
+    "reactMotion": {
+      "files": [
+        {
+          "file": "bundle.js",
+          "kind": "js",
+          "bytes": 303156,
+          "gzipBytes": 96550
+        }
+      ],
+      "jsGzipBytes": 96550,
+      "cssGzipBytes": 0,
+      "totalGzipBytes": 96550
+    },
+    "reactCloudlet": {
+      "files": [
+        {
+          "file": "bundle.js",
+          "kind": "js",
+          "bytes": 218696,
+          "gzipBytes": 67394
+        },
+        {
+          "file": "cloudlet.css",
+          "kind": "css",
+          "bytes": 392,
+          "gzipBytes": 204
+        }
+      ],
+      "jsGzipBytes": 67394,
+      "cssGzipBytes": 204,
+      "totalGzipBytes": 67598
+    },
+    "reactMotionCloudlet": {
+      "files": [
+        {
+          "file": "bundle.js",
+          "kind": "js",
+          "bytes": 303326,
+          "gzipBytes": 96619
+        },
+        {
+          "file": "motion-cloudlet.css",
+          "kind": "css",
+          "bytes": 392,
+          "gzipBytes": 204
+        }
+      ],
+      "jsGzipBytes": 96619,
+      "cssGzipBytes": 204,
+      "totalGzipBytes": 96823
+    }
+  },
+  "deltas": {
+    "fullConsumerGzipBytes": 310,
+    "alreadyMotionGzipBytes": 273
+  }
+}

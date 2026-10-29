@@ -1,0 +1,135 @@
+---
+title: Positioning & offsets
+description: Where the stack sits, how it avoids notches, navigation bars and the keyboard, and when the Island opens on its own.
+---
+
+The stack takes one spot at the top or bottom centre of the viewport. This page explains how that spot is chosen, how Cloudlet keeps it clear of safe areas, your own navigation and the on-screen keyboard, and how a notification decides whether to open the Island without being asked.
+
+## Position
+
+`<Toaster position>` is `auto` by default:
+
+- `auto` puts the stack at the top centre on viewports 48rem wide and wider, and at the bottom centre below that, where a thumb reaches it. The edge is re-evaluated when the viewport crosses the threshold.
+- `top-center` and `bottom-center` fix the edge regardless of width.
+
+At the bottom edge everything is mirrored vertically: the Island grows upwards, the tails peek above the pill, and notifications enter and leave from the bottom. The threshold is in `rem`, so it follows the user's font size rather than device pixels.
+
+[Try Top, Bottom and RTL in the Playground](/toaster/playground): its toggles change the page's Toaster live. `dir="rtl"` on the Toaster mirrors the badge, the slider and the arrow keys.
+
+## Safe area
+
+The stack stays inside the safe area on all four sides: notches, rounded corners and home indicators are never covered. Browsers report a safe area only for pages that extend under them, so an edge-to-edge application needs `viewport-fit=cover` in its viewport meta:
+
+```html title="index.html"
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+```
+
+In the Next.js App Router the same is `export const viewport = { viewportFit: 'cover' }` in the root layout. Cloudlet never disables zoom and does not counter pinch zoom with an inverse scale: text keeps the size the user chose.
+
+## Offsets
+
+`offsets` adds space on each physical edge (`top`, `right`, `bottom`, `left`), in CSS pixels. Each edge is the sum of three parts:
+
+```text
+safe area inset + gutter + obstruction
+```
+
+- **`gutter`** is the gap between the stack and the edge. An omitted edge uses the `--cloudlet-viewport-gutter` token, 16px by default.
+- **`obstruction`** is your own interface on that edge beyond the safe area: a tab bar, a bottom navigation, a sticky header. An omitted edge is 0.
+
+The safe area is already counted, so an obstruction never includes it again. A bottom navigation that is 80px tall *including* the 34px home-indicator area obstructs 46px beyond the safe area:
+
+```tsx title="notifications.tsx"
+import type { ReactNode } from 'react';
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+export function Notifications({ children }: { children: ReactNode }) {
+  return (
+    <CloudletProvider controller={cloudlet}>
+      {children}
+      {/* 80px navigation, of which 34px is safe area: pass 46, not 80. */}
+      <Toaster offsets={{ obstruction: { bottom: 46 } }} />
+    </CloudletProvider>
+  );
+}
+```
+
+Values must be finite and not negative. Offsets apply on every edge whichever edge the stack sits on, so an obstruction at the bottom also limits how tall an Island at the top may grow.
+
+## Keyboard and visual viewport
+
+Cloudlet places the stack inside the visual viewport, the part of the page actually visible. When the on-screen keyboard opens, or a browser toolbar slides in, the available area shrinks and the stack moves with it. Do not add the keyboard's height to `offsets`: it would be counted twice.
+
+When the available height is short, the Island scrolls inside itself and its controls stay reachable. There is no limit on how many notifications fit by height; the [capacity](/toaster/docs/notifications#capacity-and-overflow) is a count.
+
+## Attention
+
+Every notification has an `attention` rule that decides whether it opens the Island on its own:
+
+- `auto`, the default, opens it when the notification has an action, a description, or is a failed operation that can be retried.
+- `open` always opens it.
+- `stack` never does; the notification waits in the stack.
+
+<Demos>
+
+```tsx demo="attention-auto"
+cloudlet.show({
+  title: 'Wind is picking up',
+  description: { kind: 'text', text: 'Gusts up to 40 km/h this afternoon.' },
+  attention: 'auto',
+});
+```
+
+```tsx demo="attention-upgrade"
+cloudlet.show({
+  title: 'Storm ahead: storage almost full',
+  kind: 'warning',
+  description: { kind: 'text', text: 'Only 3% of your sky is left.' },
+  action: {
+    kind: 'command',
+    label: 'Upgrade',
+    run: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      cloudlet.show({ title: 'Clear skies: storage doubled', kind: 'success' });
+    },
+  },
+  attention: 'open',
+});
+```
+
+```tsx demo="attention-stack"
+cloudlet.show({
+  title: 'Drizzle expected tonight',
+  kind: 'warning',
+  description: { kind: 'text', text: 'Keep an umbrella by the door.' },
+  attention: 'stack',
+});
+```
+
+</Demos>
+
+The Island opens 600ms after admission. While the user hovers, focuses, swipes or moves between the notifications, the candidate waits, and the delay starts again once they stop. There is one candidate at a time: the newest one wins, and dismissing it, or an `update` after which its rule no longer holds, cancels the opening. If the Island is already open, it moves to the candidate. A notification whose operation fails and becomes retryable is a candidate again at that moment.
+
+Opening for attention never moves keyboard focus. Set the delay for a controller, or override it for one Toaster while it is mounted:
+
+```tsx title="attention.tsx"
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+
+// A calmer default for every Toaster of this controller.
+const cloudlet = createCloudlet({ attentionDelay: 1200 });
+
+export function Notifications() {
+  return (
+    <CloudletProvider controller={cloudlet}>
+      {/* While this Toaster is mounted, its own delay wins. */}
+      <Toaster attention={{ delay: 300 }} />
+    </CloudletProvider>
+  );
+}
+```
+
+## Next steps
+
+- [Notifications & time](/toaster/docs/notifications): what pauses a notification's time while the Island is open.

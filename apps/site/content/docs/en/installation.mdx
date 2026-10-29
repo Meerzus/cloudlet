@@ -1,0 +1,50 @@
+---
+title: Installation
+description: Add Cloudlet from npm or the shadcn registry, check the peers, and import the CSS once.
+---
+
+Cloudlet installs as one package, `@cloudlet/toast`, or as a shadcn registry item that adds a small wrapper you own on top of the same package; pick the one that matches how your project manages components.
+
+## Install
+
+<GetStartedTabs />
+
+## Requirements
+
+- **React and React DOM** `^18.2.0 || ^19.0.0` are peer dependencies. Use a matching pair: the same version of `react` and `react-dom`.
+- **ESM only.** The package ships ES modules with TypeScript declarations; there is no CommonJS or UMD build. Deep imports into its internals are closed on purpose: everything public comes from `@cloudlet/toast`.
+- **No runtime dependencies.** The springs and tweens that move the stack and the Island are Cloudlet's own.
+- **No Tailwind or shadcn/ui requirement.** The npm package styles itself with plain CSS and custom properties; the shadcn item only bridges them to your tokens.
+- **Browsers.** Chromium and Edge 111, Firefox 114, Safari and iOS 16.4 or newer. The automated suite runs on current versions; [What is tested](/toaster/docs/accessibility#what-is-tested) lists what is still open.
+- **TypeScript.** The declarations work with `strict` and `exactOptionalPropertyTypes`; with the latter, leave an optional field out rather than passing `undefined`.
+
+## Import the styles
+
+Cloudlet's CSS is one explicit file. Import it once, where your application imports its global CSS: the client entry of a single-page app, or the root layout of a Next.js App Router project.
+
+```tsx title="app/layout.tsx"
+import '@cloudlet/toast/styles.css';
+```
+
+In the Next.js Pages Router, global CSS must come from the custom App, so the import goes into `pages/_app.tsx`. The stylesheet does not need a build plugin; under a strict Content Security Policy keep it external, as described in [Styling & strict CSP](/toaster/docs/styling#strict-csp).
+
+## The shadcn registry item
+
+The `toaster` item copies two files into your project and adds `@cloudlet/toast` as a dependency:
+
+- **`components/ui/toaster.tsx`**: a thin `"use client"` adapter that renders the Provider and the Toaster for a controller you pass in. Every public Toaster option passes through unchanged.
+- **`components/ui/toaster.css`**: a theme bridge that maps your shadcn tokens (`--popover`, `--popover-foreground`, `--muted-foreground`, `--border`, `--ring`, `--accent`, `--font-sans`) to Cloudlet's tokens.
+
+Both files are yours to edit. The notification runtime itself stays in the package: the item copies no controller, renderer or animation code.
+
+The wrapper deliberately does not create a controller: a client component owns it, as `notification-owner.tsx` in the shadcn tab above does, for the reasons in [SSR & Next.js](/toaster/docs/ssr#nextjs-app-router).
+
+A few details of the bridge:
+
+- The wrapper imports `@cloudlet/toast/styles.css` and then `./toaster.css`; keep that order. In the Pages Router, move both imports into `pages/_app.tsx` in the same order and remove them from the wrapper.
+- Define light tokens on `:root` and dark tokens on your `.dark` root, then pass the matching `theme="light"` or `theme="dark"` to the Toaster so the native `color-scheme` agrees.
+- The tokens must be inherited by the portal container. A wrapper element around your React tree does not theme the default portal on `document.body`.
+
+## Next steps
+
+- [Quick start](/toaster/docs/quick-start): create the controller, mount the Toaster and show the first notification.

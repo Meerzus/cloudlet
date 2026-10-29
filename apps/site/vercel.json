@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "cd ../.. && npm install --global npm@11.12.1 && npm ci",
+  "buildCommand": "cd ../.. && npm run build && npm run build:site",
+  "outputDirectory": "out",
+  "cleanUrls": true,
+  "redirects": [
+    { "source": "/:path*", "has": [{ "type": "host", "value": "cloudlet-five.vercel.app" }], "destination": "https://cloudlet.dev/:path*", "permanent": true },
+    { "source": "/:path*", "has": [{ "type": "host", "value": "cloudlet-meerzus-projects.vercel.app" }], "destination": "https://cloudlet.dev/:path*", "permanent": true },
+    { "source": "/:path*", "has": [{ "type": "host", "value": "cloudlet-git-prod-meerzus-projects.vercel.app" }], "destination": "https://cloudlet.dev/:path*", "permanent": true },
+    { "source": "/", "destination": "/toaster", "permanent": false },
+    { "source": "/docs", "destination": "/toaster/docs", "permanent": true },
+    { "source": "/docs/:path*", "destination": "/toaster/docs/:path*", "permanent": true },
+    { "source": "/playground", "destination": "/toaster/playground", "permanent": true }
+  ]
+}

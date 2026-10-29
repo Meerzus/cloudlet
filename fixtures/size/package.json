@@ -1,0 +1,7 @@
+{
+  "name": "@cloudlet/size-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": { "react": "19.3.1", "react-dom": "19.3.1", "motion": "14.3.0" }
+}

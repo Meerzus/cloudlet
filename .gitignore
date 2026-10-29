@@ -1,0 +1,23 @@
+node_modules/
+dist/
+artifacts/
+coverage/
+playwright-report/
+test-results/
+*.tgz
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Internal planning and design documents stay local.
+/docs/
+
+# Next.js site (apps/site)
+.next/
+/apps/site/out/
+/apps/site/next-env.d.ts
+*.tsbuildinfo
+
+# fumadocs-mdx cache of the documentation collections (apps/site)
+/apps/site/.source/

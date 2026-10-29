@@ -1,0 +1,5 @@
+body { font-family: system-ui, sans-serif; color: #17201c; background: #f8faf8; }
+main { max-width: 48rem; margin: 2rem auto; }
+main > button { padding: 0.8rem; margin: 0.2rem; }
+#consumer-portal .cloudlet-host[data-theme='light'] { --cloudlet-background: #f2faf5; --cloudlet-foreground: #10251a; }
+#consumer-portal .cloudlet-host[data-theme='dark'] { --cloudlet-background: #10251a; --cloudlet-foreground: #f2faf5; }

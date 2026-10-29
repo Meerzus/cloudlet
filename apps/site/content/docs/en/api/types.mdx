@@ -1,0 +1,204 @@
+---
+title: Types
+description: Every other public type, grouped as the contracts define them, with the page that uses it.
+---
+
+The package exports its TypeScript contracts from the root: `import type { … } from '@cloudlet/toast'`. The types of the factory, the controller and the Toaster are on their own pages; this page covers the rest, grouped as in the contracts, and links each type to the page where it is used. Core types take a `Slot` parameter for rich content; the `React…` aliases at the end fix it to `ReactNode`.
+
+## Identity
+
+Handles and tokens are capabilities minted by the controller. They are never built by hand, compared across controllers or stored across reloads.
+
+| Type | Definition | Description |
+|---|---|---|
+| `NotificationHandle` | `{ id, controller, generation }` | One appearance of a notification, returned by `show` and `track`. Pass it to [`update`](/toaster/docs/api/controller#update) and [`dismiss`](/toaster/docs/api/controller#dismiss). Not a serializable ID: keep the `id` string for that. |
+| `ControllerIdentity` | opaque `string` | Which controller minted a handle; `ControllerSnapshot.controller`. |
+| `Generation` | opaque `string` | Which appearance of an ID a handle belongs to; a reused ID gets a new generation. |
+| `OperationAttemptToken` | opaque `string` | One attempt of a tracked operation; see [`track`](/toaster/docs/api/controller#track). |
+| `ActionAttemptToken` | opaque `string` | One run of a command action; see [PrimaryAction](#primaryaction). |
+| `Unsubscribe` | `() => void` | Returned by `subscribe` and `onEvent`. Calling it again is harmless. |
+| `HandleRejection` | `'invalid-handle' \| 'foreign-controller' \| 'stale-handle'` | Why a handle was refused; part of [`MutationRejection`](/toaster/docs/api/controller#mutationresult) and `FocusResult`. |
+| `InputIssue` | `{ path: string; message: string }` | One invalid field of a rejected `show`, `update` or `track`. |
+
+## Notifications
+
+| Type | Definition | Used on |
+|---|---|---|
+| `NotificationKind` | `'info' \| 'success' \| 'loading' \| 'warning' \| 'error'` | [`show`](/toaster/docs/api/controller#show), [Notifications & time](/toaster/docs/notifications#kinds) |
+| `Priority` | `'normal' \| 'high'` | `show`, `track`: record metadata that does not reorder the stack. |
+| `AnnouncementPriority` | `'polite' \| 'assertive' \| 'off'` | `show`, [Labels & announcements](/toaster/docs/api/labels#announcementformatters) |
+| `Duration` | `number \| null` | `show`: readable milliseconds ≥ 0, or `null` to stay until closed. |
+| `Attention` | `'auto' \| 'open' \| 'stack'` | `show`, [Positioning & offsets](/toaster/docs/positioning#attention) |
+| `NotificationContent` | `title`, `description?`, `icon?`, `progress?`, `action?`, `announcementPriority?`, `duration?`, `attention?` | What a notification shows; the content of `track`'s `pending`, `success`, `error` and `cancelled`. |
+| `NotificationSpec` | `NotificationContent` and `id?`, `kind?`, `priority?`, `dedupeKey?`, `onClose?` | [`show`](/toaster/docs/api/controller#show) |
+| `NotificationPatch` | the changeable fields, `null` removes | [`update`](/toaster/docs/api/controller#update) |
+| `AdmissionResult`, `AdmissionRejection` | `created`, `deduplicated` or `rejected` | [`show`](/toaster/docs/api/controller#admissionresult) |
+| `OperationAdmissionResult` | `AdmissionResult` without `deduplicated` | [`OperationHandle.admission`](/toaster/docs/api/controller#operationhandle) |
+| `OverflowSnapshot` | `{ count, pending }` | [`onOverflow`](/toaster/docs/api/create-cloudlet#onoverflow), `ControllerSnapshot.overflow` |
+
+### Description
+
+`Description<Slot>`, the text under the title:
+
+| Variant | Fields | Description |
+|---|---|---|
+| `{ kind: 'text' }` | `text: string` | Plain text; may be empty. |
+| `{ kind: 'rich' }` | `content: Slot`, `announcement: string` | Your own non-interactive content (a `ReactNode`), and the non-empty text screen readers hear instead of it. Buttons and links belong in the `action`. |
+
+### Progress
+
+`Progress`, a ring around the icon:
+
+| Variant | Fields | Description |
+|---|---|---|
+| `{ kind: 'indeterminate' }` | `label?: string` | Work of unknown length. |
+| `{ kind: 'determinate' }` | `value: number`, `label?: string` | `value` is finite, from 0 to 1; out-of-range values are rejected, not clamped. `label` names the progress for assistive technology. |
+
+### PrimaryAction
+
+`PrimaryAction` is a `CommandAction` or a `NavigationAction`; a notification has at most one. [Operations & cancellation](/toaster/docs/operations#actions) shows both.
+
+`CommandAction` runs your function:
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `'command'` | — | Required. |
+| `label` | `string` | — | Required, non-empty. The button text. |
+| `run` | `(context: ActionContext) => unknown` | — | Required. May return a value, nothing or a promise. While it runs the button is pending and a second press is refused; success closes the notification (`action-success`), failure keeps it with a message and allows another try. |
+| `errorMessage` | `(error: unknown) => string` | `messages.actionError` | Turns a failure into the message shown on the card. |
+
+`ActionContext` is passed to `run`: `handle`, the notification's `NotificationHandle`, and `token`, the `ActionAttemptToken` of this run.
+
+`NavigationAction` is a real link:
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `'link'` | — | Required. |
+| `label` | `string` | — | Required, non-empty. The link text. |
+| `href` | `string` | — | Required. Relative and fragment URLs, `http:`, `https:`, `mailto:` and `tel:`; other schemes are rejected. |
+| `target` | `'_self' \| '_blank' \| '_parent' \| '_top'` | — | Where it opens. `_blank` always gets `noopener`. |
+| `rel` | `string` | — | Your `rel`; `noopener` is added to it, never replacing it. |
+
+Following the link closes the notification with the reason `navigation`; modifier keys and new tabs behave as for any link.
+
+### CloseReason
+
+`CloseNotice` is what `onClose` receives: `handle` and `reason`, a `CloseReason`:
+
+| Reason | Closed by |
+|---|---|
+| `'timeout'` | Its readable time ran out. |
+| `'programmatic'` | `dismiss(handle)`. |
+| `'close-button'` | The user pressed close. |
+| `'swipe'` | The user swiped the pill away. |
+| `'action-success'` | Its command action succeeded. |
+| `'navigation'` | Its link was followed. |
+| `'clear'` | `clear()`. |
+| `'dispose'` | `dispose()`. |
+
+## Operations
+
+| Type | Definition | Used on |
+|---|---|---|
+| `OperationSource<T>` | `PromiseLike<T> \| OperationFactory<T>` | [`track`](/toaster/docs/api/controller#track) |
+| `OperationFactory<T, Signal>` | `(context: OperationContext<Signal>) => T \| PromiseLike<T>` | `track`: called once per attempt. |
+| `OperationContext<Signal>` | `{ signal, token, attempt }` | The factory's argument: this attempt's signal, its `OperationAttemptToken` and its number from 1. |
+| `OperationStatus` | `'pending' \| 'fulfilled' \| 'rejected' \| 'cancelled'` | [`OperationSnapshot`](/toaster/docs/api/controller#operationsnapshot) |
+| `OperationSnapshot` | the current attempt's state | [`OperationHandle.getSnapshot`](/toaster/docs/api/controller#operationsnapshot) |
+| `OperationAttempt<T>` | `{ token, attempt, result }` | Returned for each new attempt by `retry` and `restart`. |
+| `OperationHandle<T>` | the first attempt plus commands | [`track`](/toaster/docs/api/controller#operationhandle) |
+| `AttemptStartResult<T>`, `CancelResult` | results of `retry`/`restart` and `cancel` | [`OperationHandle`](/toaster/docs/api/controller#operationhandle) |
+| `TrackOptions<T, Slot, Signal>` | the options of `track` | [`track`](/toaster/docs/api/controller#track) |
+
+`CancellationSignal` is the minimal abort port the core needs, so it runs without the DOM. A native `AbortSignal` implements it, and the React controller gives factories a real `AbortSignal`.
+
+| Member | Type | Description |
+|---|---|---|
+| `aborted` | `boolean` | Cancellation was requested. |
+| `reason` | `unknown` | The reason passed to `cancel`. |
+| `throwIfAborted` | `() => void` | Throws the reason if aborted. |
+| `addEventListener` | `(type: 'abort', listener, options?) => void` | Listens for the request; `{ once: true }` is supported. |
+| `removeEventListener` | `(type: 'abort', listener) => void` | Stops listening. |
+
+## Snapshots
+
+| Type | Definition | Used on |
+|---|---|---|
+| `ControllerSnapshot` | the whole state | [`getSnapshot`](/toaster/docs/api/controller#getsnapshot-and-getserversnapshot) |
+| `IslandSnapshot` | `{ open, reason, current }` | `ControllerSnapshot.island`; `reason` and `current` are `null` exactly when closed. |
+| `IslandReason` | `'user' \| 'attention'` | Whether the user opened the Island or a notification needing attention did. |
+| `NotificationLocation` | `'stack' \| 'current'` | `current` is the one presented notification: the pill, or the Island's slide. |
+
+### NotificationSnapshot
+
+One notification in `ControllerSnapshot.notifications`, also passed to the [announcement formatters](/toaster/docs/api/labels#announcementformatters).
+
+| Field | Type | Description |
+|---|---|---|
+| `handle` | `NotificationHandle` | Its handle. |
+| `kind` | `NotificationKind` | Its current kind. |
+| `content` | `NotificationContent` | What it shows. |
+| `priority` | `Priority` | Its metadata priority. |
+| `occurrences` | `number` | 1, plus each deduplicated repeat. |
+| `location` | `NotificationLocation` | `'current'` when presented, otherwise `'stack'`. |
+| `remainingMs` | `number \| null` | Readable time left when the snapshot was taken (it does not tick); `null` when it stays until closed. |
+| `pauseReasons` | `readonly PauseReason[]` | Why its time is not running; empty while it runs. |
+| `operation` | `OperationSnapshot \| null` | The tracked operation, or `null` for a plain notification. |
+| `action` | `ActionSnapshot` | The state of its command action. |
+
+`ActionSnapshot` is `{ status: 'idle' }`, `{ status: 'pending', token }` while a command runs, or `{ status: 'failed', token, message }` after it failed.
+
+`PauseReason`, the reasons a notification's time stands still; time runs only when there are none:
+
+| Reason | Meaning |
+|---|---|
+| `'inactive'` | It is not the presented notification. |
+| `'no-host'` | No Toaster is attached. |
+| `'presentation-pending'` | It is about to be shown and is not readable yet. |
+| `'hover'` | The pointer is over the notifications. |
+| `'focus'` | Keyboard focus is inside the notifications. |
+| `'gesture'` | A swipe is in progress. |
+| `'action-pending'` | Its command action is running. |
+| `'content-transition'` | Its content is being swapped on screen. |
+| `'island'` | It is the Island's slide and the user opened the Island, or it asks for action. |
+| `'document-hidden'` | The tab is hidden. |
+| `'window-blur'` | The window lost focus. |
+
+## Events
+
+| Type | Definition | Used on |
+|---|---|---|
+| `SemanticEvent` | `EventBase` and one variant per `type` | [`onEvent`](/toaster/docs/api/controller#subscribe-and-onevent) |
+| `EventBase` | `{ controller, sequence, at }` | The fields every event has. |
+| `Diagnostic` | `{ code, source, message, handle?, error? }` | [`onDiagnostic`](/toaster/docs/api/create-cloudlet#ondiagnostic), the `diagnostic` event |
+| `DiagnosticCode` | `'invalid-input' \| 'second-host' \| …` | [`onDiagnostic`](/toaster/docs/api/create-cloudlet#ondiagnostic) |
+
+## Controller
+
+| Type | Used on |
+|---|---|
+| `CloudletController<Slot, Signal>` | [Controller](/toaster/docs/api/controller): the generic controller. |
+| `NotificationController<Slot>` | [Controller](/toaster/docs/api/controller#notificationcontroller): the controller without `track`. |
+| `ControllerOptions`, `FallbackMessages` | [createCloudlet](/toaster/docs/api/create-cloudlet#options) |
+| `MutationResult`, `MutationRejection` | [`update`, `dismiss`, `acknowledgeOverflow`](/toaster/docs/api/controller#mutationresult) |
+| `ClearResult` | [`clear`](/toaster/docs/api/controller#clear) |
+| `FocusTarget`, `FocusResult` | [`requestFocus`](/toaster/docs/api/controller#requestfocus) |
+
+## React
+
+The React entry fixes `Slot` to `ReactNode` and `Signal` to `AbortSignal`:
+
+| Type | Equals | Used on |
+|---|---|---|
+| `ReactCloudletController` | `CloudletController<ReactNode, AbortSignal>` | [createCloudlet](/toaster/docs/api/create-cloudlet), [`useCloudlet`](/toaster/docs/api/toaster#usecloudlet), [`useOptionalCloudlet`](/toaster/docs/api/toaster#useoptionalcloudlet) |
+| `ReactNotificationSpec` | `NotificationSpec<ReactNode>` | [`show`](/toaster/docs/api/controller#show) |
+| `ReactNotificationPatch` | `NotificationPatch<ReactNode>` | [`update`](/toaster/docs/api/controller#update) |
+| `ReactTrackOptions<T>` | `TrackOptions<T, ReactNode, AbortSignal>` | [`track`](/toaster/docs/api/controller#track) |
+| `ReactOperationFactory<T>` | `OperationFactory<T, AbortSignal>` | [`track`](/toaster/docs/api/controller#track) |
+| `ReactOperationContext` | `OperationContext<AbortSignal>` | [`track`](/toaster/docs/api/controller#track) |
+| `CreateCloudlet` | `(options?: ControllerOptions) => ReactCloudletController` | [createCloudlet](/toaster/docs/api/create-cloudlet) |
+| `CloudletProviderComponent`, `UseCloudlet`, `UseOptionalCloudlet`, `ToasterComponent` | the signatures of the two components and the two hooks | [Toaster props](/toaster/docs/api/toaster) |
+| `ToasterProps`, `ToasterOffsets`, `EdgeInsets`, `ToasterAttention`, `ToasterMotion`, `CloudletPart` | the Toaster's props | [Toaster props](/toaster/docs/api/toaster#props) |
+| `CloudletMotionConstants`, `CloudletMotionOverrides`, `CloudletSpring`, `CloudletTimedSpring` | the motion debugging channel | [`ToasterMotion`](/toaster/docs/api/toaster#toastermotion) |
+| `CloudletLabels`, `AnnouncementFormatters` | the Toaster's texts | [Labels & announcements](/toaster/docs/api/labels) |
+| `CloudletProviderProps` | the provider's props | [CloudletProvider](/toaster/docs/api/toaster#cloudletprovider) |

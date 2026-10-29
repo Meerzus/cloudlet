@@ -1,0 +1,323 @@
+---
+title: Controller
+description: Every method of the controller, what it accepts and the exact result it returns.
+---
+
+The controller is what `createCloudlet()` and `useCloudlet()` return. Its type is `ReactCloudletController`, that is `CloudletController<ReactNode, AbortSignal>`. Every method has a stable reference, so you can pass `cloudlet.show` around or hand `subscribe` to React directly. Expected refusals are returned as results, never thrown: check `status` instead of wrapping calls in `try`.
+
+| Method | Returns | Description |
+|---|---|---|
+| `show(spec)` | `AdmissionResult` | Adds a notification to the stack. |
+| `update(handle, patch)` | `MutationResult` | Changes a live notification; never creates one. |
+| `getHandle(id)` | `NotificationHandle \| undefined` | Finds the live notification with this ID. |
+| `track(source, options)` | `OperationHandle<T>` | Follows an operation in one notification. |
+| `dismiss(handle)` | `MutationResult` | Closes a notification. |
+| `clear()` | `ClearResult` | Closes every notification. |
+| `requestFocus(target?)` | `FocusResult` | Moves keyboard focus into the notifications. |
+| `acknowledgeOverflow()` | `MutationResult` | Resets the missed-notifications count. |
+| `getSnapshot()` | `ControllerSnapshot` | The current state, cached until it changes. |
+| `getServerSnapshot()` | `ControllerSnapshot` | The stable empty state for server rendering. |
+| `subscribe(listener)` | `Unsubscribe` | Calls `listener` after every state change. |
+| `onEvent(listener)` | `Unsubscribe` | Calls `listener` with each `SemanticEvent`. |
+| `dispose()` | `void` | Ends the controller for good. |
+
+## show
+
+`show(spec: ReactNotificationSpec): AdmissionResult`
+
+`ReactNotificationSpec` is `NotificationSpec<ReactNode>`: the content of a notification plus its identity. Only `title` is required. A new notification goes on top of the stack; [Notifications & time](/toaster/docs/notifications) shows each field in use.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `title` | `string` | — | Required, non-empty. Always plain text, never markup. |
+| `id` | `string` | generated | Your own ID, unique among the live notifications of this controller. A taken ID is rejected with `id-conflict`. |
+| `kind` | `NotificationKind` | `'info'` | `'info'`, `'success'`, `'loading'`, `'warning'` or `'error'`: the icon, the colour and the default time. |
+| `description` | `Description<ReactNode>` | — | Text under the title: `{ kind: 'text', text }` or `{ kind: 'rich', content, announcement }`. See [Types](/toaster/docs/api/types#description). |
+| `icon` | `ReactNode` | the glyph of `kind` | A decorative icon that replaces the status glyph. |
+| `progress` | `Progress` | — | A ring around the icon, indeterminate or with a `value` from 0 to 1. See [Types](/toaster/docs/api/types#progress). |
+| `action` | `PrimaryAction` | — | One command or link button. See [Types](/toaster/docs/api/types#primaryaction). |
+| `priority` | `Priority` | `'normal'` | `'normal'` or `'high'`. Stored with the record; it does not reorder the stack. |
+| `announcementPriority` | `AnnouncementPriority` | `'polite'` | `'polite'`, `'assertive'` or `'off'`. An error does not become assertive on its own. |
+| `duration` | `Duration` | by kind | Readable milliseconds ≥ 0, or `null` to stay until closed. By default passive `info` and `success` get 6000 ms; `loading`, `warning`, `error` and any notification with an action stay. |
+| `attention` | `Attention` | `'auto'` | Whether it opens the Island: `'auto'` for an action, a failed retryable operation or a description; `'open'` always; `'stack'` never. |
+| `dedupeKey` | `string` | — | Another live notification with the same key is not added again: its `occurrences` grows instead. |
+| `onClose` | `(notice: CloseNotice) => void` | — | Called once when the notification closes, with the reason. |
+
+With `exactOptionalPropertyTypes`, leave a field out rather than passing `undefined`.
+
+### AdmissionResult
+
+| Status | Fields | Meaning |
+|---|---|---|
+| `'created'` | `handle` | The notification was added. |
+| `'deduplicated'` | `handle`, `occurrences` | A live notification with the same `dedupeKey` exists; its handle is returned and its count grew. Nothing else about it changed. |
+| `'rejected'` | `reason`, `issues?` | Nothing was added. `issues` is present only for `invalid-input`. |
+
+`AdmissionRejection`, checked in this order:
+
+| Reason | When |
+|---|---|
+| `'disposed'` | The controller was disposed. |
+| `'invalid-input'` | A field is invalid. `issues` lists each problem as an `InputIssue` with a `path` and a `message`; nothing is partially applied. |
+| `'id-conflict'` | The explicit `id` belongs to a live notification, even if the `dedupeKey` also matches. |
+| `'capacity'` | 100 notifications are already open. The missed count grows and `onOverflow` is called; no older notification is evicted. |
+
+Deduplication happens before the capacity check, so a duplicate is still counted when the stack is full.
+
+## update
+
+`update(handle: NotificationHandle, patch: ReactNotificationPatch): MutationResult`
+
+`ReactNotificationPatch` is `NotificationPatch<ReactNode>`. A field you leave out keeps its value; `null` removes optional content. `id` and `dedupeKey` cannot change.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `title` | `string` | unchanged | A new title. Does not restart the timer. |
+| `kind` | `NotificationKind` | unchanged | A new kind; recalculates the default time. Rejected with `operation-owned` on a tracked operation. |
+| `description` | `Description<ReactNode> \| null` | unchanged | New text, or `null` to remove it. |
+| `icon` | `ReactNode \| null` | unchanged | A new icon, or `null` for the glyph of the kind. |
+| `progress` | `Progress \| null` | unchanged | New progress, or `null` to remove the ring. Progress updates are not announced. |
+| `action` | `PrimaryAction \| null` | unchanged | A new action, or `null` to remove it. Rejected with `action-pending` while the current command runs. |
+| `priority` | `Priority` | unchanged | New record metadata. |
+| `announcementPriority` | `AnnouncementPriority` | unchanged | New urgency for later announcements. |
+| `duration` | `Duration` | unchanged | Sets a new time budget, even with the same number; `null` makes it stay. Rejected with `operation-owned` while an operation is pending. |
+| `attention` | `Attention` | unchanged | A new auto-open rule. `null` is invalid. |
+
+A rejected patch changes nothing, not even its valid fields. A patch that changes nothing returns `unchanged`.
+
+### MutationResult
+
+`update`, `dismiss` and `acknowledgeOverflow` return the same union.
+
+| Status | Fields | Meaning |
+|---|---|---|
+| `'applied'` | — | The change was made. |
+| `'unchanged'` | — | There was nothing to change. |
+| `'rejected'` | `reason`, `issues?` | Nothing changed. `issues` is present only for `invalid-input`. |
+
+`MutationRejection`. A handle is checked in this order: controller disposed, a real handle, this controller's handle, still alive.
+
+| Reason | When |
+|---|---|
+| `'disposed'` | The controller was disposed. |
+| `'invalid-handle'` | The value is not a handle minted by Cloudlet. |
+| `'foreign-controller'` | The handle belongs to another controller. |
+| `'stale-handle'` | The notification has closed. A closed notification is never reported as success. |
+| `'invalid-input'` | The patch has an invalid field. |
+| `'action-pending'` | The patch replaces an action while its command is running. |
+| `'operation-owned'` | The patch changes `kind` of a tracked operation, or `duration` while it is pending. |
+
+The first three handle reasons are also exported together as `HandleRejection`.
+
+## getHandle
+
+`getHandle(id: string): NotificationHandle | undefined`
+
+Returns the handle of the live notification with this ID, or `undefined`: for an unknown, empty or non-string ID, and always after `dispose()`. It never creates or opens anything. A handle is tied to one appearance of a notification: after it closes, the same ID can be used again and gets a new handle.
+
+## track
+
+`track<T>(source: PromiseLike<T> | ReactOperationFactory<T>, options: ReactTrackOptions<T>): OperationHandle<T>`
+
+Shows a `loading` notification with the `pending` content, then replaces it with the result. The source is a promise you already have, or a factory `(context) => T | PromiseLike<T>` that Cloudlet calls once per attempt with a `ReactOperationContext`: `signal` (an `AbortSignal`), `token` and `attempt` (1, 2, …). Only a factory can be retried. A source that is neither a function nor a thenable throws a `TypeError`. [Operations & cancellation](/toaster/docs/operations) walks through it.
+
+`ReactTrackOptions<T>` is `TrackOptions<T, ReactNode, AbortSignal>`:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `pending` | `NotificationContent` without `duration` | — | Required. Content while the operation runs; always `loading` and without a timer. |
+| `success` | `NotificationContent \| ((value: T) => NotificationContent)` | — | Required. Content, or a function of the value, shown as `success`. |
+| `error` | `NotificationContent \| ((error: unknown) => NotificationContent)` | — | Required. Content, or a function of the error, shown as `error`. |
+| `cancelled` | `NotificationContent \| ((reason: unknown) => NotificationContent)` | `messages.operationCancelled` | Content of a confirmed cancellation, shown as `warning`. |
+| `cancel` | `(reason: unknown) => void` | — | Makes an already-created promise cancellable. Not allowed with a factory, which cancels through its signal. |
+| `isCancellation` | `(error: unknown, context: ReactOperationContext) => boolean` | `AbortError` after a request | Decides whether a rejection is a cancellation. `true` counts as cancelled even without a local request. |
+| `id` | `string` | generated | The notification's ID. |
+| `priority` | `Priority` | `'normal'` | Record metadata, as in `show`. |
+| `onClose` | `(notice: CloseNotice) => void` | — | Called when the notification closes. Closing never cancels the operation. |
+
+`NotificationContent` is the part of a spec that describes what is shown: `title`, `description`, `icon`, `progress`, `action`, `announcementPriority`, `duration` and `attention`, with the meaning they have in `show`. Tracked operations cannot have a `dedupeKey`.
+
+A mapping function that throws or returns invalid content gives a safe fallback title from [`messages`](/toaster/docs/api/create-cloudlet#messages) and a `mapper-error` diagnostic. The business operation runs even when the notification is rejected, and nothing about the notification ever changes its result.
+
+### OperationHandle
+
+The handle is itself the first attempt: its `token`, `attempt` and `result` never change.
+
+| Member | Type | Description |
+|---|---|---|
+| `admission` | `OperationAdmissionResult` | The notification's admission: `created` or `rejected`, as in `show` (tracked operations never deduplicate). Fixed at creation. |
+| `result` | `Promise<T>` | The business promise of the first attempt: its value, or its original rejection, cancellation included. |
+| `token` | `OperationAttemptToken` | The first attempt's token. |
+| `attempt` | `number` | Always `1`. |
+| `getSnapshot` | `() => OperationSnapshot` | The state of the current attempt. |
+| `subscribe` | `(listener: () => void) => Unsubscribe` | Calls `listener` when the current attempt's state changes. |
+| `cancel` | `(reason?: unknown) => CancelResult` | Requests cooperative cancellation of the current attempt. The default reason is an `Error` named `AbortError`. |
+| `retry` | `() => AttemptStartResult<T>` | Starts a new attempt after the current one settled. Factory only. |
+| `restart` | `() => AttemptStartResult<T>` | Like `retry`, and while pending it abandons the current attempt and requests its abort. Factory only. |
+
+Each new attempt returns its own `OperationAttempt<T>`: `token`, `attempt` and `result`. Retrying never creates a new notification; after the notification closed, the attempt runs without one.
+
+`AttemptStartResult<T>`:
+
+| Status | Fields | Meaning |
+|---|---|---|
+| `'started'` | `attempt` | The new attempt and its `result`. |
+| `'rejected'` | `reason` | `'disposed'`; `'not-retryable'` for a promise source; `'already-pending'` when `retry` is called while an attempt runs. |
+
+`CancelResult`:
+
+| Status | Fields | Meaning |
+|---|---|---|
+| `'requested'` | — | The signal was aborted (or `cancel` called). A request is not a confirmation: a late success stays a success. |
+| `'unchanged'` | `reason` | `'already-requested'`, or `'settled'` when the attempt already finished. |
+| `'rejected'` | `reason` | `'disposed'`, or `'not-cancellable'` for a promise without a `cancel` option. |
+
+### OperationSnapshot
+
+| Field | Type | Description |
+|---|---|---|
+| `token` | `OperationAttemptToken` | The current attempt. |
+| `attempt` | `number` | Its number, from 1. |
+| `status` | `OperationStatus` | `'pending'`, `'fulfilled'`, `'rejected'` or `'cancelled'`. |
+| `cancelRequested` | `boolean` | Cancellation was requested for this attempt. Not a final state. |
+| `canCancel` | `boolean` | `cancel()` would be accepted now. |
+| `canRetry` | `boolean` | `retry()` would be accepted now. The Retry button shows only while this is `true` and the attempt did not succeed. |
+| `notification` | `NotificationHandle \| null` | The notification showing it, or `null` once there is none. |
+
+## dismiss
+
+`dismiss(handle: NotificationHandle): MutationResult`
+
+Closes the notification at once, with the close reason `programmatic`. A late result or animation can never bring it back. Dismissing a tracked operation's notification does not cancel the operation.
+
+## clear
+
+`clear(): ClearResult`
+
+Closes every notification (close reason `clear`) and collapses the Island. The missed count stays until `acknowledgeOverflow()`.
+
+| Status | Fields | Meaning |
+|---|---|---|
+| `'cleared'` | `count` | How many notifications were closed, including `0`. |
+| `'rejected'` | `reason` | `'disposed'`. |
+
+## requestFocus
+
+`requestFocus(target?: FocusTarget): FocusResult`
+
+Arrival and auto-open never move focus; this is the explicit way to do it, for example from a keyboard shortcut. `requested` means the command was accepted: the renderer moves focus after its next commit, not synchronously.
+
+`FocusTarget`, default `{ kind: 'anchor' }`:
+
+| Target | Fields | Focuses |
+|---|---|---|
+| `{ kind: 'anchor' }` | — | The notifications region itself. |
+| `{ kind: 'notification' }` | `handle`, `control?` | The presented notification: its title in the Island or the pill. With `control: 'action'` or `'close'`, that button; these exist only in the open Island. |
+| `{ kind: 'overflow' }` | — | The button that acknowledges missed notifications. |
+
+`FocusResult`:
+
+| Status | Fields | Meaning |
+|---|---|---|
+| `'requested'` | — | Focus will move. |
+| `'rejected'` | `reason` | A handle reason (`invalid-handle`, `foreign-controller`, `stale-handle`); `'disposed'`; `'no-host'` without a mounted Toaster; `'not-visible'` for a notification deeper in the stack, or for a `control` while the Island is collapsed (the Island does not open for either); `'unavailable'` when the requested control does not exist. |
+
+## acknowledgeOverflow
+
+`acknowledgeOverflow(): MutationResult`
+
+Resets the missed count shown on the badge and in the Island: `applied`, `unchanged` when there was nothing to acknowledge, or `rejected` with `disposed`. It does not touch the notifications.
+
+## getSnapshot and getServerSnapshot
+
+`getSnapshot(): ControllerSnapshot<ReactNode>`
+
+`getServerSnapshot(): ControllerSnapshot<ReactNode>`
+
+`getSnapshot` returns the same readonly object until something observable changes, so it can feed `useSyncExternalStore` directly. `getServerSnapshot` always returns one stable empty snapshot, for the server render and the first hydration render.
+
+```tsx title="notification-count.tsx"
+import { useSyncExternalStore } from 'react';
+import { useCloudlet } from '@cloudlet/toast';
+
+export function NotificationCount() {
+  const cloudlet = useCloudlet();
+  const snapshot = useSyncExternalStore(cloudlet.subscribe, cloudlet.getSnapshot, cloudlet.getServerSnapshot);
+  return <span>{snapshot.notifications.length} open</span>;
+}
+```
+
+`ControllerSnapshot`:
+
+| Field | Type | Description |
+|---|---|---|
+| `controller` | `ControllerIdentity \| null` | The controller's identity; `null` in the server snapshot. |
+| `revision` | `number` | Grows with every change. |
+| `disposed` | `boolean` | `true` after `dispose()`; the snapshot is then empty. |
+| `notifications` | `readonly NotificationSnapshot[]` | Every open notification in admission order, oldest first. |
+| `stack` | `readonly NotificationHandle[]` | The same notifications newest first; `stack[0]` is the collapsed pill. |
+| `island` | `IslandSnapshot` | `{ open, reason, current }`: `reason` is `'user'` or `'attention'` and `current` the visible slide, both `null` while collapsed. |
+| `overflow` | `OverflowSnapshot` | The missed count and whether it is unacknowledged. |
+
+Each `NotificationSnapshot` is described on [Types](/toaster/docs/api/types#notificationsnapshot).
+
+## subscribe and onEvent
+
+`subscribe(listener: () => void): Unsubscribe`
+
+`onEvent(listener: (event: SemanticEvent) => void): Unsubscribe`
+
+`subscribe` is called after every committed change; read the new state with `getSnapshot()`. `onEvent` receives what happened, in order, after the snapshot listeners. Neither replays the past: read the snapshot when you subscribe. Calling the returned `Unsubscribe` twice is harmless. A listener that throws becomes a `listener-error` diagnostic and the others still run.
+
+```ts title="analytics.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+const stop = cloudlet.onEvent((event) => {
+  if (event.type === 'closed') console.info(event.handle.id, event.reason);
+});
+```
+
+Every `SemanticEvent` has the `EventBase` fields `controller`, `sequence` (a growing local number) and `at` (monotonic milliseconds, not wall-clock time), plus:
+
+| `type` | Fields | When |
+|---|---|---|
+| `'admitted'` | `handle` | `show` or `track` added a notification. |
+| `'deduplicated'` | `handle`, `occurrences` | A `show` matched a live `dedupeKey`. |
+| `'updated'` | `handle` | The content changed. |
+| `'closed'` | `handle`, `reason` | A notification closed; `reason` is a `CloseReason`. |
+| `'presented'` | `handle`, `firstPresentation` | A notification became readable on screen; `firstPresentation` is `true` once per appearance. |
+| `'operation-started'` | `handle`, `token`, `attempt` | An attempt started; `handle` is `null` without a notification. |
+| `'operation-settled'` | `handle`, `token`, `status`, `uiApplied` | An attempt finished; `uiApplied` says whether the notification showed this result. |
+| `'cancellation-requested'` | `handle`, `token` | Cancellation of an attempt was requested. |
+| `'action-started'` | `handle`, `token` | A command action started. |
+| `'action-failed'` | `handle`, `token`, `message` | A command action failed; the card stays and can be retried. |
+| `'overflow'` | `count` | A notification was rejected because the stack was full. |
+| `'overflow-acknowledged'` | `count` | The missed count was acknowledged. |
+| `'diagnostic'` | `diagnostic` | A contained problem; see [`onDiagnostic`](/toaster/docs/api/create-cloudlet#ondiagnostic). |
+| `'disposed'` | — | The last event of the controller. |
+
+Events carry no business values or errors. Opening and collapsing the Island is not an event: read `snapshot.island`.
+
+## dispose
+
+`dispose(): void`
+
+Ends the controller. Every open notification closes with the reason `dispose` (its `onClose` runs), the `disposed` event is delivered, then all listeners are released. Afterwards `show`, `update`, `clear` and the other commands return `disposed`, and `getSnapshot()` returns a stable empty snapshot with `disposed: true`. Calling it again does nothing. Running operations are not aborted: their `result` still settles.
+
+## NotificationController
+
+`NotificationController` is the controller without `track`, for code that only shows notifications. Any controller can be passed where it is expected.
+
+```ts title="notify.ts"
+import type { ReactNode } from 'react';
+import { createCloudlet, type NotificationController } from '@cloudlet/toast';
+
+export function notifySaved(notifications: NotificationController<ReactNode>) {
+  return notifications.show({ title: 'Saved', kind: 'success' });
+}
+
+notifySaved(createCloudlet());
+```
+
+The generic form is `CloudletController<Slot, Signal>`: `Slot` is the type of rich content (`ReactNode` here) and `Signal` the abort signal operations receive (`AbortSignal` here).

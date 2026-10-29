@@ -1,0 +1,7 @@
+{
+  "name": "cloudlet-registry-tools",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "node ../../scripts/registry-build.mjs" },
+  "devDependencies": { "ajv": "8.20.0", "shadcn": "4.21.5" }
+}

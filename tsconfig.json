@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node", "vitest/globals", "vite/client"],
+    "paths": { "@cloudlet/toast": ["./packages/toast/src/index.ts"], "@/*": ["./apps/site/src/*"] }
+  },
+  "include": ["packages/*/src", "packages/*/vite.config.ts", "apps/*/src", "apps/*/vite.config.ts", "tests", "vitest.config.ts", "playwright.config.ts"],
+  "exclude": ["node_modules", "**/dist", "artifacts", "apps/site"]
+}

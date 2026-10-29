@@ -1,0 +1,30 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "cloudlet",
+  "homepage": "https://cloudlet.dev/toaster",
+  "items": [
+    {
+      "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+      "name": "toaster",
+      "title": "Cloudlet Toaster",
+      "description": "Client Provider/Toaster adapter with shadcn theme tokens. The application explicitly owns its @cloudlet/toast controller.",
+      "dependencies": [
+        "@cloudlet/toast@1.0.0"
+      ],
+      "files": [
+        {
+          "path": "registry/cloudlet/toaster.tsx",
+          "content": "\"use client\";\n\nimport {\n  CloudletProvider,\n  Toaster as CloudletToaster,\n  type ReactCloudletController,\n  type ToasterProps as CloudletToasterProps,\n} from \"@cloudlet/toast\";\nimport type { ReactNode } from \"react\";\nimport \"@cloudlet/toast/styles.css\";\nimport \"./toaster.css\";\n\nexport interface ToasterProps extends CloudletToasterProps {\n  /**\n   * The application owns this instance and disposes it when its owner unmounts.\n   * `null` until the owner creates it: children render, the Toaster waits.\n   */\n  controller: ReactCloudletController | null;\n  children?: ReactNode;\n}\n\n/** A local theme adapter. All notification behavior stays in @cloudlet/toast. */\nexport function Toaster({ controller, children, ...options }: ToasterProps) {\n  return (\n    <CloudletProvider controller={controller}>\n      {children}\n      <CloudletToaster {...options} />\n    </CloudletProvider>\n  );\n}\n",
+          "type": "registry:ui"
+        },
+        {
+          "path": "registry/cloudlet/toaster.css",
+          "content": "/* Load after @cloudlet/toast/styles.css. Modern shadcn tokens are full colors. */\n/* Both body portals and custom containers inherit tokens from their ancestors. */\n@media (forced-colors: none) {\n  .cloudlet-host[data-theme] {\n    --cloudlet-background: var(--popover, var(--background, #fff));\n    --cloudlet-foreground: var(--popover-foreground, var(--foreground, #171717));\n    --cloudlet-muted: var(--muted-foreground, #61616a);\n    --cloudlet-border: var(--border, #dedee3);\n    --cloudlet-focus: var(--ring, #245cdb);\n    --cloudlet-action-background: var(--accent, #ededf0);\n    --cloudlet-font-family: var(--font-sans, system-ui, sans-serif);\n  }\n}\n",
+          "type": "registry:ui"
+        }
+      ],
+      "docs": "Import Toaster into a client owner and pass its controller. Import @cloudlet/toast/styles.css once before the local toaster.css (the wrapper already imports both). The owner creates/disposes its controller; do not share one across requests. See https://cloudlet.dev/toaster/docs for lifecycle, theme and SSR. @cloudlet/toast@1.0.0 is a release candidate published under the next dist-tag.",
+      "type": "registry:ui"
+    }
+  ]
+}

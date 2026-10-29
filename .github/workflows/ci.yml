@@ -1,0 +1,104 @@
+name: package-and-integration
+# Branch flow: dev → PR into main (checked here before merging) → main (staging) → prod (the site).
+# Pushes to other branches do not run CI; main runs again after each merge; manual runs stay possible.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: verification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:tooling
+      - run: npm run check:docs
+      - run: npm run pack:local
+      - run: npm run check:package -- --tarball artifacts/integration/cloudlet-toast-1.0.0.tgz
+      # The landing consumes the built package dist, so it builds after pack:local.
+      - run: npm run build:site
+      - run: npm run notices && git diff --exit-code -- packages/toast/LICENSE packages/toast/THIRD_PARTY_NOTICES.md
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:e2e -- --workers=3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-and-package
+          retention-days: 7
+          path: |
+            artifacts/integration/*.tgz
+            artifacts/integration/*evidence*.json
+            artifacts/integration/npm-pack.json
+            playwright-report/
+  consumers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      - run: npm run pack:local
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:consumers
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installed-tarball-consumers
+          retention-days: 7
+          path: artifacts/integration/
+  registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      - run: npm ci --prefix registry/tooling --ignore-scripts --no-audit --no-fund
+      - run: npm run pack:local
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:registry
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shadcn-registry
+          retention-days: 7
+          path: artifacts/integration/registry/
+  size:
+    # Size comparisons remain informational; build/measurement errors still fail.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      - run: npm run pack:local
+      - run: node scripts/measure-size.mjs --tarball artifacts/integration/cloudlet-toast-1.0.0.tgz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: size-evidence
+          retention-days: 7
+          path: artifacts/size/

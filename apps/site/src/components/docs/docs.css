@@ -1,0 +1,416 @@
+@import './style-editor/style-editor.css';
+
+/* ---------- Documentation (DOCS.md §7): the quiet reading pages under /docs ---------- */
+
+/* Code palette for Shiki's CSS-variables theme: the Get started token colours, per theme. */
+:root {
+  --shiki-foreground: var(--foreground);
+  --shiki-background: transparent;
+  --shiki-token-keyword: oklch(0.5 0.2 300);
+  --shiki-token-string: oklch(0.52 0.14 155);
+  --shiki-token-string-expression: oklch(0.52 0.14 155);
+  --shiki-token-constant: oklch(0.55 0.15 50);
+  --shiki-token-function: oklch(0.5 0.16 260);
+  --shiki-token-parameter: oklch(0.45 0.08 255);
+  /* Comments and punctuation sit darker than on the landing's glass panel: 4.5:1 on the flat block. */
+  --shiki-token-comment: oklch(0.46 0.03 255);
+  --shiki-token-punctuation: oklch(0.46 0.04 255);
+  --shiki-token-link: oklch(0.52 0.17 250);
+  --shiki-token-inserted: oklch(0.52 0.14 155);
+  --shiki-token-deleted: oklch(0.55 0.2 25);
+  --shiki-token-changed: oklch(0.55 0.15 50);
+}
+.dark {
+  --shiki-token-keyword: oklch(0.78 0.13 305);
+  --shiki-token-string: oklch(0.8 0.12 155);
+  --shiki-token-string-expression: oklch(0.8 0.12 155);
+  --shiki-token-constant: oklch(0.82 0.11 70);
+  --shiki-token-function: oklch(0.8 0.1 260);
+  --shiki-token-parameter: oklch(0.85 0.04 255);
+  --shiki-token-comment: oklch(0.68 0.03 255);
+  --shiki-token-punctuation: oklch(0.75 0.03 255);
+  --shiki-token-link: oklch(0.8 0.11 240);
+  --shiki-token-inserted: oklch(0.8 0.12 155);
+  --shiki-token-deleted: oklch(0.75 0.15 25);
+  --shiki-token-changed: oklch(0.82 0.11 70);
+}
+
+/* The shell: a flat page colour instead of the sky, also behind overscroll. */
+html:has(.docs-shell) { background: var(--background); }
+.docs-shell { min-height: 100svh; background: var(--background); color: var(--foreground); }
+.docs-grid { display: block; }
+@media (min-width: 64rem) {
+  .docs-grid { display: grid; grid-template-columns: 15rem minmax(0, 1fr); column-gap: 3rem; }
+}
+@media (min-width: 80rem) {
+  .docs-grid { grid-template-columns: 15rem minmax(0, 1fr) 13rem; column-gap: 3.5rem; }
+}
+
+/* ----- Sidebar ----- */
+.docs-sidebar {
+  position: sticky; top: 3.5rem; align-self: start;
+  max-height: calc(100svh - 3.5rem); overflow-y: auto; overscroll-behavior: contain;
+  padding: 2.5rem 0.25rem 3rem 0; scrollbar-width: thin;
+}
+.docs-nav-group + .docs-nav-group { margin-top: 1.5rem; }
+.docs-nav-heading {
+  margin: 0 0 0.375rem 0.75rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--muted-foreground);
+}
+.docs-nav ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.125rem; }
+.docs-nav-link {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  min-height: 2.125rem; padding: 0.375rem 0.75rem; border-radius: 9999px;
+  font-size: 0.875rem; color: var(--muted-foreground); outline: none;
+  transition: color 150ms, background-color 150ms;
+}
+.docs-nav-link:hover { color: var(--foreground); background: color-mix(in oklab, var(--foreground) 5%, transparent); }
+.docs-nav-link:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.docs-nav-link-active {
+  color: var(--foreground); font-weight: 500;
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+/* The search entry, shared by the sidebar, the drawer and the phone bar. */
+.docs-search {
+  display: inline-flex; align-items: center; gap: 0.625rem; width: 100%; height: 2.375rem;
+  padding: 0 0.625rem 0 0.875rem; border: 1px solid var(--border); border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 3%, transparent);
+  font-size: 0.875rem; color: var(--muted-foreground); outline: none; transition: color 150ms, background-color 150ms;
+}
+.docs-search:hover { color: var(--foreground); background: color-mix(in oklab, var(--foreground) 6%, transparent); }
+.docs-search:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+/* System sans, not Geist Mono: the mono subset has no ⌘, and the fallback glyph came out smaller than the K. */
+.docs-search kbd {
+  padding: 0.125rem 0.375rem; border: 1px solid var(--border); border-radius: 0.375rem;
+  font: 500 0.75rem/1.2 system-ui, -apple-system, sans-serif; letter-spacing: 0.04em; color: var(--muted-foreground);
+}
+.docs-search-compact { width: 2.25rem; height: 2.25rem; padding: 0; justify-content: center; }
+
+/* ----- Phone bar and drawer ----- */
+.docs-mobile-bar {
+  position: sticky; top: 3.5rem; z-index: 30; border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--background) 85%, transparent); backdrop-filter: blur(12px);
+}
+.docs-mobile-menu {
+  display: inline-flex; align-items: center; gap: 0.375rem; height: 2.25rem; padding: 0 0.75rem;
+  border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: var(--foreground); outline: none;
+  transition: background-color 150ms;
+}
+.docs-mobile-menu:hover { background: color-mix(in oklab, var(--foreground) 6%, transparent); }
+.docs-mobile-menu:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.docs-drawer {
+  position: fixed; inset: 0 auto 0 0; margin: 0; width: min(20rem, 86vw); max-width: none; height: 100dvh; max-height: none;
+  border: 0; border-right: 1px solid var(--border); padding: 0; background: var(--background); color: var(--foreground);
+  box-shadow: 0 24px 60px -32px rgb(15 30 70 / 0.35);
+}
+.docs-drawer::backdrop { background: color-mix(in oklab, var(--foreground) 35%, transparent); backdrop-filter: blur(4px); }
+.docs-drawer-panel { padding: 1rem 1rem 2rem; max-height: 100dvh; overflow-y: auto; overscroll-behavior: contain; }
+.docs-drawer[open] { animation: docs-drawer-in 220ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+@keyframes docs-drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .docs-drawer[open] { animation: none; } }
+
+/* ----- Article ----- */
+.docs-main { min-width: 0; }
+.docs-article { min-width: 0; max-width: 46rem; padding: 2.5rem 0 4rem; }
+@media (min-width: 64rem) { .docs-article { padding-top: 3rem; } }
+.docs-article-header h1 {
+  font-size: clamp(2.25rem, 1.6rem + 2.5vw, 3.25rem); line-height: 1.08; font-weight: 600; letter-spacing: -0.035em; text-wrap: balance;
+}
+.docs-article-header p { margin-top: 0.875rem; font-size: 1.125rem; line-height: 1.6; color: var(--muted-foreground); text-wrap: pretty; }
+
+/* Reading typography on the site's tokens (no typography plugin). */
+.docs-prose { margin-top: 2rem; font-size: 1rem; line-height: 1.75; }
+.docs-prose > :first-child { margin-top: 0; }
+.docs-prose p { margin: 1.125rem 0; text-wrap: pretty; }
+.docs-prose h2, .docs-prose h3, .docs-prose h4 {
+  position: relative; scroll-margin-top: 7.5rem; font-weight: 600; letter-spacing: -0.02em; text-wrap: balance;
+}
+.docs-prose h2 { margin: 3rem 0 1rem; font-size: 1.625rem; line-height: 1.25; }
+.docs-prose h3 { margin: 2.25rem 0 0.75rem; font-size: 1.25rem; line-height: 1.35; }
+.docs-prose h4 { margin: 1.75rem 0 0.5rem; font-size: 1.0625rem; line-height: 1.4; }
+.docs-prose h2 + h3 { margin-top: 1.25rem; }
+.docs-heading-anchor {
+  position: absolute; top: 50%; left: -1.5rem; display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem;
+  margin-top: -0.625rem; border-radius: 0.375rem; color: var(--muted-foreground); opacity: 0; outline: none; transition: opacity 150ms;
+}
+.docs-heading-anchor svg { width: 0.875rem; height: 0.875rem; }
+.docs-prose :is(h2, h3, h4):hover .docs-heading-anchor, .docs-heading-anchor:focus-visible { opacity: 1; }
+.docs-heading-anchor:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+@media (max-width: 64rem) { .docs-heading-anchor { position: static; margin: 0 0 0 0.375rem; vertical-align: middle; } }
+.docs-prose a:not(.docs-heading-anchor) {
+  color: var(--foreground); text-decoration: underline; text-decoration-color: color-mix(in oklab, var(--foreground) 35%, transparent);
+  text-underline-offset: 0.2em; border-radius: 0.125rem; outline: none; transition: text-decoration-color 150ms;
+}
+.docs-prose a:not(.docs-heading-anchor):hover { text-decoration-color: currentColor; }
+.docs-prose a:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.docs-prose strong { font-weight: 600; }
+.docs-prose ul, .docs-prose ol { margin: 1.125rem 0; padding-left: 1.5rem; }
+.docs-prose ul { list-style: disc; }
+.docs-prose ol { list-style: decimal; }
+.docs-prose li { margin: 0.375rem 0; padding-left: 0.25rem; }
+.docs-prose li::marker { color: var(--muted-foreground); }
+.docs-prose hr { margin: 2.5rem 0; border: 0; border-top: 1px solid var(--border); }
+.docs-prose blockquote {
+  margin: 1.25rem 0; padding: 0.125rem 0 0.125rem 1rem; border-left: 2px solid var(--border); color: var(--muted-foreground);
+}
+.docs-prose :not(pre) > code {
+  padding: 0.125rem 0.375rem; border-radius: 0.375rem; background: color-mix(in oklab, var(--foreground) 7%, transparent);
+  font: 500 0.875em/1.4 var(--font-geist-mono), ui-monospace, monospace;
+}
+.docs-prose a > code { text-decoration: inherit; }
+
+/* Tables scroll sideways on narrow screens instead of breaking the column. */
+.docs-table { margin: 1.5rem 0; overflow-x: auto; border: 1px solid var(--border); border-radius: 1rem; }
+.docs-table table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+.docs-table th, .docs-table td { padding: 0.625rem 0.875rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.docs-table th { font-weight: 600; font-size: 0.8125rem; color: var(--muted-foreground); background: color-mix(in oklab, var(--foreground) 3%, transparent); }
+.docs-table tr:last-child td { border-bottom: 0; }
+.docs-table:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.docs-table td code { white-space: nowrap; }
+
+/* Reference tables (remark-reference-tables). Code wraps at spaces only, so names stay whole. A
+   table of three or more columns (data-grid) is a grid: its first columns share one line, aligned
+   across rows by subgrid, and the last one (the description) runs under them, because four
+   columns of types do not fit the article. Below 40rem every row is a card. */
+.docs-table table[data-reference] :is(th, td) { padding-inline: 0.75rem; }
+.docs-table table[data-reference] td code { white-space: normal; overflow-wrap: break-word; }
+@media (width >= 40rem) {
+  .docs-table table[data-grid] { display: grid; grid-template-columns: fit-content(13rem) minmax(0, 1fr); column-gap: 1rem; }
+  .docs-table table[data-grid="4"] { grid-template-columns: fit-content(13rem) minmax(0, 1fr) fit-content(7.5rem); }
+  .docs-table table[data-grid] :is(thead, tbody) { display: contents; }
+  .docs-table table[data-grid] tr {
+    display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; padding-block: 0.625rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .docs-table table[data-grid] thead tr { background: color-mix(in oklab, var(--foreground) 3%, transparent); }
+  .docs-table table[data-grid] tbody tr:last-child { border-bottom: 0; }
+  .docs-table table[data-grid] :is(th, td) { padding: 0; border: 0; background: none; }
+  .docs-table table[data-grid] :is(th, td):first-child { padding-left: 0.875rem; }
+  .docs-table table[data-grid] :is(th, td):nth-last-child(2) { padding-right: 0.875rem; }
+  .docs-table table[data-grid] td:last-child { grid-column: 1 / -1; margin-top: 0.375rem; padding-inline: 0.875rem; }
+  .docs-table table[data-grid] th:last-child {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+}
+@media (width < 40rem) {
+  .docs-table table[data-reference], .docs-table table[data-reference] tbody,
+  .docs-table table[data-reference] tr, .docs-table table[data-reference] td { display: block; }
+  .docs-table table[data-reference] thead {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .docs-table table[data-reference] tr { padding: 0.75rem 0.875rem; border-bottom: 1px solid var(--border); }
+  .docs-table table[data-reference] tr:last-child { border-bottom: 0; }
+  .docs-table table[data-reference] td { padding: 0; border: 0; }
+  .docs-table table[data-reference] td + td { margin-top: 0.375rem; }
+  .docs-table table[data-reference] td:first-child { font-weight: 600; }
+  .docs-table table[data-reference] td[data-empty]:not(:first-child) { display: none; }
+  .docs-table table[data-reference] td:not(:first-child):not(:last-child)::before {
+    content: attr(data-label) ' '; font-size: 0.8125rem; font-weight: 600; color: var(--muted-foreground);
+  }
+}
+
+/* ----- Callouts ----- */
+.docs-callout {
+  --callout: var(--ring);
+  display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 0.75rem; margin: 1.5rem 0;
+  padding: 0.875rem 1rem; border: 1px solid color-mix(in oklab, var(--callout) 30%, var(--border));
+  border-radius: 1rem; background: color-mix(in oklab, var(--callout) 7%, transparent);
+}
+.docs-callout[data-type='tip'] { --callout: oklch(0.6 0.14 155); }
+.docs-callout[data-type='warning'] { --callout: oklch(0.7 0.16 60); }
+.docs-callout-icon { width: 1.25rem; height: 1.25rem; margin-top: 0.125rem; color: var(--callout); }
+/* .docs-prose p sets a paragraph margin; the title sits level with the icon. */
+.docs-prose .docs-callout-title, .docs-callout-title { margin: 0; font-weight: 600; font-size: 0.9375rem; }
+.docs-callout-content { font-size: 0.9375rem; }
+.docs-callout-content > :first-child { margin-top: 0.25rem; }
+.docs-callout-content > :last-child { margin-bottom: 0; }
+
+/* ----- Code blocks ----- */
+.docs-code {
+  margin: 1.5rem 0; overflow: hidden; border: 1px solid var(--border); border-radius: 1.25rem;
+  background: color-mix(in oklab, var(--foreground) 3%, var(--background));
+}
+.dark .docs-code { background: color-mix(in oklab, var(--foreground) 4%, var(--background)); }
+.docs-code-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 2.75rem;
+  padding: 0.375rem 0.5rem 0.375rem 1.125rem; border-bottom: 1px solid var(--border);
+}
+.docs-code-title { font: 400 0.75rem/1 var(--font-geist-mono), ui-monospace, monospace; color: var(--muted-foreground); }
+.docs-code-actions { display: inline-flex; gap: 0.25rem; }
+.docs-code-button {
+  display: inline-flex; align-items: center; gap: 0.375rem; height: 2rem; padding-inline: 0.75rem; border-radius: 9999px;
+  font-size: 0.8125rem; color: var(--muted-foreground); outline: none; transition: color 150ms, background-color 150ms;
+}
+.docs-code-button:hover { color: var(--foreground); background: color-mix(in oklab, var(--foreground) 6%, transparent); }
+.docs-code-button:focus-visible, .docs-code-pre:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.docs-code-pre {
+  margin: 0; padding: 1rem 0 1.125rem; overflow-x: auto; outline: none;
+  font: 400 0.8125rem/1.7 var(--font-geist-mono), ui-monospace, monospace; tab-size: 2;
+  background: transparent !important; color: var(--foreground) !important;
+}
+@media (min-width: 40rem) { .docs-code-pre { font-size: 0.875rem; } }
+.docs-code-pre code { display: block; min-width: max-content; }
+.docs-code-pre .line { display: inline-block; width: 100%; padding: 0 1.125rem; }
+/* Shiki notations: // [!code highlight], ++ / --, focus. */
+.docs-code-pre .line.highlighted { background: color-mix(in oklab, var(--ring) 10%, transparent); box-shadow: inset 2px 0 0 var(--ring); }
+.docs-code-pre .line.diff.add { background: color-mix(in oklab, var(--shiki-token-inserted) 12%, transparent); }
+.docs-code-pre .line.diff.remove { background: color-mix(in oklab, var(--shiki-token-deleted) 12%, transparent); }
+.docs-code-pre .highlighted-word { padding: 0.0625rem 0.1875rem; border-radius: 0.25rem; background: color-mix(in oklab, var(--ring) 14%, transparent); }
+.docs-code-pre.has-focused .line:not(.focused) { opacity: 0.45; filter: blur(0.5px); transition: opacity 200ms, filter 200ms; }
+.docs-code-pre.has-focused:hover .line:not(.focused) { opacity: 1; filter: none; }
+
+/* ----- Table of contents ----- */
+.docs-toc { position: sticky; top: 3.5rem; align-self: start; max-height: calc(100svh - 3.5rem); overflow-y: auto; padding: 3rem 0 3rem 0.25rem; }
+.docs-toc-title { margin: 0 0 0.625rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); }
+.docs-toc-list { position: relative; margin: 0; padding: 0; list-style: none; display: grid; gap: 0.125rem; border-left: 1px solid var(--border); }
+.docs-toc-thumb {
+  position: absolute; left: -1px; top: 0; width: 1px; height: var(--docs-toc-thumb-height, 0px); background: var(--foreground);
+  transform: translateY(var(--docs-toc-thumb-top, 0px)); opacity: 0; pointer-events: none;
+  transition: transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1), height 260ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 150ms;
+}
+.docs-toc-thumb[data-visible='true'] { opacity: 1; }
+.docs-toc-item {
+  display: block; padding: 0.3125rem 0 0.3125rem 0.875rem;
+  font-size: 0.8125rem; line-height: 1.4; color: var(--muted-foreground); outline: none; transition: color 150ms;
+}
+.docs-toc-list li[data-depth='3'] .docs-toc-item { padding-left: 1.75rem; }
+.docs-toc-item:hover { color: var(--foreground); }
+.docs-toc-item:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); border-radius: 0.25rem; }
+.docs-toc-item[data-active='true'] { color: var(--foreground); }
+.docs-toc-mobile { margin: 1.5rem 0 0; border: 1px solid var(--border); border-radius: 1rem; }
+.docs-toc-mobile summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 1rem;
+  font-size: 0.875rem; font-weight: 500; cursor: pointer; list-style: none; border-radius: 1rem; outline: none;
+}
+.docs-toc-mobile summary::-webkit-details-marker { display: none; }
+.docs-toc-mobile summary:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.docs-toc-mobile[open] summary svg { transform: rotate(180deg); }
+.docs-toc-mobile summary svg { transition: transform 200ms; }
+.docs-toc-mobile .docs-toc-list { margin: 0 1rem 0.75rem 1rem; }
+
+/* ----- Previous / Next ----- */
+.docs-page-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 3.5rem; }
+.docs-page-nav-link {
+  display: grid; gap: 0.25rem; padding: 0.875rem 1rem; border: 1px solid var(--border); border-radius: 1rem;
+  outline: none; transition: background-color 150ms, border-color 150ms;
+}
+.docs-page-nav-link:hover { background: color-mix(in oklab, var(--foreground) 4%, transparent); }
+.docs-page-nav-link:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.docs-page-nav-next { text-align: right; }
+.docs-page-nav-label { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; color: var(--muted-foreground); }
+.docs-page-nav-next .docs-page-nav-label { justify-content: flex-end; }
+.docs-page-nav-name { font-size: 0.9375rem; font-weight: 500; }
+@media (max-width: 40rem) { .docs-page-nav { grid-template-columns: 1fr; } .docs-page-nav > span:empty { display: none; } }
+
+/* ----- Footer ----- */
+.docs-footer { border-top: 1px solid var(--border); }
+
+@media (prefers-reduced-motion: reduce) {
+  .docs-nav-link, .docs-search, .docs-code-button, .docs-toc-item, .docs-toc-thumb, .docs-page-nav-link, .docs-heading-anchor, .docs-toc-mobile summary svg { transition: none; }
+}
+
+/* ----- Runnable examples: the demo block, a stage above the code (DOCS.md §6) ----- */
+.docs-prose .docs-demo-note { margin-bottom: -0.5rem; font-size: 0.875rem; color: var(--muted-foreground); }
+.docs-prose .docs-demo-note code { color: var(--foreground); }
+.docs-demo {
+  --docs-demo-fill: color-mix(in oklab, var(--foreground) 3%, var(--background));
+  margin: 1.5rem 0; overflow: hidden; border: 1px solid var(--border); border-radius: 1.25rem; background: var(--docs-demo-fill);
+}
+.dark .docs-demo { --docs-demo-fill: color-mix(in oklab, var(--foreground) 4%, var(--background)); }
+/* The stage: the page colour with a faint dot grid, so it reads as a surface rather than more code. */
+.docs-demo-stage {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem;
+  min-height: 7rem; padding: 1.25rem; background-color: var(--background);
+  background-image: radial-gradient(color-mix(in oklab, var(--foreground) 10%, transparent) 1px, transparent 1px);
+  background-size: 16px 16px; background-position: center;
+}
+@media (min-width: 40rem) { .docs-demo-stage { min-height: 9rem; padding: 1.5rem; } }
+.docs-demo-trigger {
+  display: inline-flex; align-items: center; height: 2.5rem; padding-inline: 1.25rem; border: 1px solid var(--border); border-radius: 9999px;
+  background: color-mix(in oklab, var(--background) 70%, transparent); color: var(--foreground);
+  font-size: 0.875rem; font-weight: 500; outline: none; transition: color 150ms, background-color 150ms, border-color 150ms;
+}
+.docs-demo-trigger-code { font-family: var(--font-geist-mono), ui-monospace, monospace; font-weight: 400; }
+.docs-demo-trigger:hover { background: color-mix(in oklab, var(--foreground) 8%, var(--background)); }
+.docs-demo-trigger:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.docs-demo-trigger[aria-current='true'] { background: var(--foreground); color: var(--background); border-color: transparent; }
+.docs-demo-trigger:disabled { cursor: not-allowed; opacity: 0.55; }
+.docs-demo .docs-code-bar { border-top: 1px solid var(--border); }
+/* The code area: its height glides between snippets (demo-block.tsx sets it inline while it moves). */
+.docs-demo-code { position: relative; overflow: hidden; }
+.docs-demo-code .docs-code-pre { animation: docs-demo-in 220ms ease-out; }
+@keyframes docs-demo-in { from { opacity: 0; } }
+/* A long snippet starts folded: the first lines, a fade into the block and Show code. */
+.docs-demo-code[data-folded] .docs-code-pre { max-height: 10.5rem; overflow: hidden; }
+.docs-demo-code[data-folded]::after {
+  content: ''; position: absolute; inset: auto 0 0 0; height: 5rem; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--docs-demo-fill) 85%);
+}
+.docs-demo-fold {
+  display: block; margin: 0 auto 1rem; height: 2rem; padding-inline: 0.875rem; border: 1px solid var(--border); border-radius: 9999px;
+  background: var(--background); color: var(--foreground); font-size: 0.8125rem; font-weight: 500; outline: none; transition: background-color 150ms;
+}
+.docs-demo-fold:hover { background: color-mix(in oklab, var(--foreground) 8%, var(--background)); }
+.docs-demo-fold:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.docs-demo-code[data-folded] .docs-demo-fold { position: absolute; left: 50%; bottom: 1rem; z-index: 1; margin: 0; transform: translateX(-50%); }
+@media (prefers-reduced-motion: reduce) {
+  .docs-demo-trigger, .docs-demo-fold { transition: none; }
+  .docs-demo-code .docs-code-pre { animation: none; }
+}
+.docs-tabs { margin: 1.5rem 0; }
+/* The shared tablist is drawn as glass; on the flat page its rim is the plain hairline. */
+.docs-tabs [role='tablist'] { border-color: var(--border); }
+.docs-tabs-panel { margin-top: 1.25rem; }
+.docs-tabs-panel > :first-child { margin-top: 0; }
+
+/* ----- Search window (DOCS.md §8) ----- */
+.docs-search-dialog { margin-top: min(12vh, 7rem); max-width: 40rem; max-height: min(36rem, calc(100dvh - 2 * min(12vh, 7rem))); }
+/* The window itself scrolls, with the field and the key hints sticky: the scrolling region holds
+   the focusable field (the options are reached with aria-activedescendant, never focused). */
+.docs-search-dialog { overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 40rem) {
+  .docs-search-dialog { margin-top: 0.75rem; max-height: calc(100dvh - 1.5rem); }
+}
+.docs-search-field {
+  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 0.625rem; padding: 0 0.625rem 0 1rem; height: 3.25rem;
+  border-bottom: 1px solid var(--border); background: var(--popover); color: var(--muted-foreground);
+}
+.docs-search-field input {
+  flex: 1; min-width: 0; height: 100%; background: transparent; outline: none;
+  font-size: 1rem; color: var(--foreground);
+}
+.docs-search-field input::placeholder { color: var(--muted-foreground); }
+.docs-search-close {
+  display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 9999px;
+  color: var(--muted-foreground); outline: none; transition: color 150ms, background-color 150ms;
+}
+.docs-search-close:hover { color: var(--foreground); background: color-mix(in oklab, var(--foreground) 6%, transparent); }
+.docs-search-close:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.docs-search-body { padding: 0.5rem; }
+.docs-search-status { display: grid; gap: 0.25rem; padding: 1.75rem 1rem; text-align: center; font-size: 0.875rem; color: var(--muted-foreground); text-wrap: pretty; }
+.docs-search-group + .docs-search-group { margin-top: 0.375rem; padding-top: 0.375rem; border-top: 1px solid var(--border); }
+.docs-search-option {
+  display: flex; align-items: baseline; gap: 0.625rem; padding: 0.5rem 0.75rem; border-radius: 0.75rem;
+  font-size: 0.875rem; line-height: 1.45; color: var(--muted-foreground); cursor: pointer; scroll-margin: 3.75rem 0 3rem;
+}
+.docs-search-option[aria-selected='true'] { color: var(--foreground); background: color-mix(in oklab, var(--foreground) 7%, transparent); }
+.docs-search-option-nested { padding-left: 1.75rem; }
+.docs-search-icon { flex: none; width: 0.9375rem; height: 0.9375rem; transform: translateY(0.125rem); opacity: 0.75; }
+.docs-search-page { font-weight: 500; color: var(--foreground); }
+.docs-search-crumbs { margin-left: auto; padding-left: 0.5rem; font-size: 0.75rem; color: var(--muted-foreground); white-space: nowrap; }
+.docs-search-text { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.docs-search-text code { font: 0.8125rem var(--font-geist-mono), ui-monospace, monospace; color: var(--foreground); }
+::highlight(fd-search) { background: color-mix(in oklab, var(--ring) 28%, transparent); color: var(--foreground); }
+.docs-search-footer {
+  position: sticky; bottom: 0; display: flex; gap: 1rem; padding: 0.625rem 1rem; border-top: 1px solid var(--border);
+  background: var(--popover); font-size: 0.75rem; color: var(--muted-foreground);
+}
+.docs-search-footer span { display: inline-flex; align-items: center; gap: 0.25rem; }
+.docs-search-footer kbd, .docs-search-field kbd {
+  min-width: 1.25rem; padding: 0.0625rem 0.3125rem; border: 1px solid var(--border); border-radius: 0.375rem; text-align: center;
+  font: 500 0.6875rem/1.3 var(--font-geist-mono), ui-monospace, monospace;
+}
+/* No keyboard hints where there is usually no keyboard. */
+@media (hover: none) and (pointer: coarse) { .docs-search-footer { display: none; } }
+@media (prefers-reduced-motion: reduce) { .docs-search-close { transition: none; } }

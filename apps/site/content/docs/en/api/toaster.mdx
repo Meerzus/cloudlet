@@ -1,0 +1,184 @@
+---
+title: Toaster props
+description: Every prop of the Toaster component, when it is read, and the provider and hook around it.
+---
+
+`<Toaster>` renders the stack and the Island of the controller its `<CloudletProvider>` supplies. It has no controller prop. This page lists every prop and says when it is read: on every render, or once when the Toaster attaches to the controller after mount. A prop read on attach changes only after a remount, for example with a new `key`.
+
+```tsx title="app.tsx"
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+export function App({ nonce }: { nonce: string }) {
+  return (
+    <CloudletProvider controller={cloudlet}>
+      <Toaster position="auto" theme="system" nonce={nonce} />
+    </CloudletProvider>
+  );
+}
+```
+
+## Props
+
+`ToasterProps`, every prop optional.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `position` | `'auto' \| 'top-center' \| 'bottom-center'` | `'auto'` | Which edge the stack sits on. `auto` is the top from a 48rem wide viewport and the bottom below it, following resizes. Every render. |
+| `theme` | `'system' \| 'light' \| 'dark'` | `'system'` | Colour scheme of the notifications; `system` follows the user's preference. Every render. |
+| `dir` | `'ltr' \| 'rtl'` | the document's `dir` | Text direction; `rtl` mirrors the layout and the swipes. Every render. |
+| `container` | `Element \| (() => Element \| null) \| null` | `document.body` | Where the portal goes: a connected HTML element of the same document, outside Shadow DOM, or a function returning one. On attach; an invalid one shows nothing and reports `invalid-container`. |
+| `offsets` | `ToasterOffsets` | — | Extra distance from the screen edges, see [below](#toasteroffsets). Every render. |
+| `nonce` | `string` | — | Nonce for the style blocks Cloudlet creates, for a strict Content Security Policy. Pass the current response's nonce. Every render. |
+| `labels` | `Partial<CloudletLabels>` | English labels | Names of the controls and regions, see [Labels & announcements](/toaster/docs/api/labels#cloudletlabels). Every render. |
+| `announcements` | `Partial<AnnouncementFormatters>` | English texts | What screen readers hear, see [Labels & announcements](/toaster/docs/api/labels#announcementformatters). Read for each announcement. |
+| `attention` | `ToasterAttention` | — | Auto-open delay for this Toaster, see [below](#toasterattention). On attach. |
+| `autoDismiss` | `boolean` | the controller's `autoDismiss` | `false` keeps every notification until it is closed, `true` closes them on their timers; leaving the prop out restores the controller's option. Switching it off stops every timer, switching it on starts each one from its full duration. Every render, without a remount. |
+| `motion` | `ToasterMotion` | — | Debugging aid for the animation, see [below](#toastermotion). Every render. |
+| `classNames` | `Partial<Record<CloudletPart, string>>` | — | Your classes per part, added to the own `cloudlet-*` classes, see [below](#classnames). Every render. |
+
+The Toaster attaches after mount, so the server render and the first hydration render are empty. Unmounting it detaches: visible time pauses and every notification and operation stays with the controller, ready for the next Toaster. One controller is shown by one Toaster at a time.
+
+### ToasterOffsets
+
+Extra distance on physical edges, in CSS pixels: `left` stays left in RTL. How the fields add up with the safe area is in [Offsets](/toaster/docs/positioning#offsets).
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `gutter` | `EdgeInsets` | `--cloudlet-viewport-gutter` (16px) | Breathing room outside the safe area. An edge you leave out uses the CSS token. |
+| `obstruction` | `EdgeInsets` | `0` | Your own UI over the edge, such as a tab bar, **beyond** the safe area. |
+
+`EdgeInsets`:
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `top` | `number` | per field above | Finite, ≥ 0, CSS pixels. |
+| `right` | `number` | per field above | Finite, ≥ 0, CSS pixels. |
+| `bottom` | `number` | per field above | Finite, ≥ 0, CSS pixels. |
+| `left` | `number` | per field above | Finite, ≥ 0, CSS pixels. |
+
+Do not add the keyboard's height: the stack already stays inside the visual viewport.
+
+### ToasterAttention
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `delay` | `number` | the controller's `attentionDelay` (600) | Milliseconds from admission before a notification that needs attention opens the Island. An invalid value is ignored with an `invalid-input` diagnostic; the Toaster still attaches. |
+
+### ToasterMotion
+
+<Callout type="warning" title="Debugging only">
+`motion` exists for debugging and for tuning the animation in a laboratory. The names and values of the motion constants may change between releases: do not ship `overrides` to production, and do not use them for styling.
+Do not ship `timeScale` to production either.
+</Callout>
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `timeScale` | `number` | `1` | Slows every transition: `0.5` is twice as slow. A non-finite or non-positive value means `1`. |
+| `overrides` | `CloudletMotionOverrides` | — | Replaces motion constants live, for transitions that start after the change. A field that is not a finite number in range (stiffness and mass > 0, the rest ≥ 0) keeps its default. |
+
+`CloudletMotionOverrides` is a partial `CloudletMotionConstants`, and a nested spring may be partial too: `{ slide: { damping: 30 } }`. A new object is read again; the same object is not. The current values live in `packages/toast/src/react/motion.ts`.
+
+<details>
+<summary>Motion constants</summary>
+
+`CloudletSpring` is a physical spring, `CloudletTimedSpring` a spring defined by time:
+
+| Field | Type | Description |
+|---|---|---|
+| `stiffness` | `number` | `CloudletSpring`: spring stiffness. |
+| `damping` | `number` | `CloudletSpring`: resistance. |
+| `mass` | `number` | `CloudletSpring`: moving mass. |
+| `duration` | `number` | `CloudletTimedSpring`: settles in about this many milliseconds. |
+| `bounce` | `number` | `CloudletTimedSpring`: overshoot; `0` has none. |
+
+`CloudletMotionConstants`: durations in milliseconds at `timeScale: 1`, offsets and blur in CSS pixels.
+
+| Field | Type | Description |
+|---|---|---|
+| `enter` | `CloudletTimedSpring & { scale, offset, fade }` | A new pill appearing: starting scale, offset in px and opacity fade in ms. |
+| `exit` | `CloudletTimedSpring` | The last notification, or a dismissed top pill, leaving. |
+| `shapeOpen` | `CloudletSpring` | The pill's shape opening into the Island. |
+| `shapeClose` | `CloudletSpring` | The shape collapsing into the pill or adjusting to new content. |
+| `slide` | `CloudletSpring` | Moving between notifications in the Island; swipes release with it. |
+| `badge` | `CloudletTimedSpring & { scale }` | The badge appearing; `scale` is its hidden scale. |
+| `tails` | `number` | The stack's tails retracting on open and returning on collapse. |
+| `chromeDelay`, `chromeIn`, `chromeOut`, `chromeOffset` | `number` | Close button, body and indicator: delay, fade in, fade out on collapse, rise in px. |
+| `headerOut`, `headerIn`, `blur` | `number` | Title and icon blur swap: outgoing, incoming, blur radius in px. |
+| `bodyOut`, `bodyIn`, `bodyOffset` | `number` | Body crossfade: outgoing, incoming, rise of the incoming body in px. |
+| `bodyQuiet` | `number` | A body update sooner than this after the previous one changes the text in place, without a crossfade. |
+| `countSwap` | `number` | Badge number and indicator text swap. |
+| `progress` | `number` | Progress ring value tween. |
+| `hover`, `hoverLift` | `number` | Hover: duration, and the extra tail spread per step in px. |
+| `reduced` | `number` | With reduced motion, every transition becomes an opacity change of this length. |
+
+</details>
+
+### classNames
+
+`classNames` adds your classes next to the own `cloudlet-*` class of each part; it never replaces it. Empty and non-string values are ignored. How to write rules that win over Cloudlet's own is in [Class names](/toaster/docs/styling#class-names).
+
+| `CloudletPart` | Element |
+|---|---|
+| `host` | The fixed notifications region that holds the stack and the Island, `div.cloudlet-host`. |
+| `stack` | The stack: the pill, its tails and the badge, `div.cloudlet-stack`. |
+| `pill` | The collapsed stack's button, `button.cloudlet-pill`. |
+| `tail` | Each of up to two tails behind the pill, `div.cloudlet-tail`. |
+| `badge` | The count on the pill, `span.cloudlet-badge`. |
+| `island` | The shell shared by the pill and the Island, `div.cloudlet-shell`. |
+| `header` | The row with the icon, the title and the close button, `div.cloudlet-header`. |
+| `icon` | The status icon and its progress ring, `div.cloudlet-icon`. |
+| `title` | The title of the current notification, `h2.cloudlet-title`. |
+| `close` | The close button of the Island, `button.cloudlet-close`. |
+| `body` | The scrollable area under the header, `div.cloudlet-body`. |
+| `description` | The description text or rich content, `div.cloudlet-description`. |
+| `actions` | The row of actions, retry and cancel, `div.cloudlet-actions`. |
+| `action` | Every button or link in that row: the primary action, retry and cancel. |
+| `indicator` | The page dots or counter under the body, `div.cloudlet-indicator`. |
+| `overflow` | The missed-notifications line in the indicator, `div.cloudlet-overflow`. |
+
+## CloudletProvider
+
+`<CloudletProvider controller={cloudlet}>` makes a controller available to `useCloudlet`, `useOptionalCloudlet` and `<Toaster>` below it. It only supplies the instance: it never creates a controller and never disposes it.
+
+The controller may be `null` while it does not exist yet, for example when an effect creates it: the server render and the first client render then have no controller. Under a `null` controller `<Toaster>` renders nothing and `useOptionalCloudlet()` returns `null`, so your children can render on the server. See [SSR & Next.js](/toaster/docs/ssr).
+
+`CloudletProviderProps`:
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `controller` | `ReactCloudletController \| null` | — | Required. The controller you created and own, or `null` until it exists. |
+| `children` | `ReactNode` | — | Your application, including the `<Toaster>`. |
+
+## useCloudlet
+
+`useCloudlet()` returns the `ReactCloudletController` of the nearest `CloudletProvider`. Outside a provider, or while the provider's controller is `null`, it throws an `Error` that says so.
+
+```tsx title="save-button.tsx"
+import { useCloudlet } from '@cloudlet/toast';
+
+export function SaveButton() {
+  const cloudlet = useCloudlet();
+  return <button onClick={() => cloudlet.show({ title: 'Saved', kind: 'success' })}>Save</button>;
+}
+```
+
+## useOptionalCloudlet
+
+`useOptionalCloudlet()` returns the controller of the nearest `CloudletProvider`, or `null` outside a provider and while its controller is `null`. Use it in components that also render before the controller exists, such as on the server.
+
+```tsx title="save-button.tsx"
+import { useOptionalCloudlet } from '@cloudlet/toast';
+
+export function SaveButton() {
+  const cloudlet = useOptionalCloudlet();
+  return (
+    <button disabled={!cloudlet} onClick={() => cloudlet?.show({ title: 'Saved', kind: 'success' })}>
+      Save
+    </button>
+  );
+}
+```
+
+The signatures of the React exports are also exported as types: `CloudletProviderComponent`, `UseCloudlet`, `UseOptionalCloudlet` and `ToasterComponent`.

@@ -1,0 +1,244 @@
+/* Explicit import. Tokens and reset are scoped to Cloudlet, independent of host CSS. */
+.cloudlet-host {
+  /* Geometry. */
+  --cloudlet-pill-height: 44px;
+  --cloudlet-pill-radius: 9999px;
+  --cloudlet-pill-max-width: 22rem;
+  --cloudlet-island-radius: 24px;
+  --cloudlet-island-max-width: 26rem;
+  --cloudlet-tail-offset: 4px;
+  --cloudlet-tail-scale: .9;
+  --cloudlet-control-min-size: 44px;
+  --cloudlet-viewport-gutter: 16px;
+  --cloudlet-font-family: system-ui, sans-serif;
+  --cloudlet-font-size: .875rem;
+  /* Light theme; the dark values follow `data-theme` below. Border and neutral controls derive from the foreground. */
+  --cloudlet-background: #ffffff;
+  --cloudlet-foreground: #111113;
+  --cloudlet-muted: #6e6e76;
+  --cloudlet-border: color-mix(in oklab, var(--cloudlet-foreground) 10%, transparent);
+  --cloudlet-action-background: color-mix(in oklab, var(--cloudlet-foreground) 8%, transparent);
+  --cloudlet-shadow: 0 10px 30px -12px rgb(0 0 0 / .25), 0 1px 2px rgb(0 0 0 / .08);
+  --cloudlet-tail-background: var(--cloudlet-background);
+  --cloudlet-tail-border: var(--cloudlet-border);
+  --cloudlet-focus: #245cdb;
+  --cloudlet-success: oklch(0.723 0.219 142.136);
+  --cloudlet-error: oklch(0.637 0.237 25.331);
+  --cloudlet-info: oklch(0.685 0.169 237.323);
+  --cloudlet-warning: oklch(0.795 0.184 86.047);
+  --cloudlet-loading: oklch(0.556 0 0);
+  --cloudlet-badge: #ff3b30;
+  --cloudlet-badge-foreground: #fff;
+  --cloudlet-z-index: 1000;
+  --cloudlet-safe-top: env(safe-area-inset-top, 0px);
+  --cloudlet-safe-right: env(safe-area-inset-right, 0px);
+  --cloudlet-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --cloudlet-safe-left: env(safe-area-inset-left, 0px);
+  --cloudlet-top: calc(var(--cloudlet-safe-top) + var(--cloudlet-gutter-top, var(--cloudlet-viewport-gutter)) + var(--cloudlet-obstruction-top, 0px));
+  --cloudlet-bottom: calc(var(--cloudlet-safe-bottom) + var(--cloudlet-gutter-bottom, var(--cloudlet-viewport-gutter)) + var(--cloudlet-obstruction-bottom, 0px));
+  --cloudlet-left: calc(var(--cloudlet-safe-left) + var(--cloudlet-gutter-left, var(--cloudlet-viewport-gutter)) + var(--cloudlet-obstruction-left, 0px));
+  --cloudlet-right: calc(var(--cloudlet-safe-right) + var(--cloudlet-gutter-right, var(--cloudlet-viewport-gutter)) + var(--cloudlet-obstruction-right, 0px));
+  --cloudlet-host-height: max(0px, calc(var(--cloudlet-viewport-height, 100dvh) - var(--cloudlet-top) - var(--cloudlet-bottom)));
+  --cloudlet-available-height: max(0px, calc(var(--cloudlet-host-height) - var(--cloudlet-reserved-height, 0px)));
+  position: fixed; z-index: var(--cloudlet-z-index);
+  left: calc(var(--cloudlet-viewport-left, 0px) + var(--cloudlet-left));
+  right: calc(var(--cloudlet-viewport-right, 0px) + var(--cloudlet-right));
+  bottom: calc(var(--cloudlet-viewport-bottom, 0px) + var(--cloudlet-bottom));
+  max-width: var(--cloudlet-island-max-width);
+  max-height: var(--cloudlet-host-height);
+  margin-inline: auto; color: var(--cloudlet-foreground);
+  display: flex; flex-direction: column;
+  font: 400 var(--cloudlet-font-size)/1.43 var(--cloudlet-font-family);
+  text-align: start; color-scheme: light; pointer-events: none; isolation: isolate;
+  --cloudlet-status: var(--cloudlet-loading);
+}
+.cloudlet-host, .cloudlet-host *, .cloudlet-host *::before, .cloudlet-host *::after { box-sizing: border-box; }
+.cloudlet-host :where(h2,p,ol,li) { margin: 0; padding: 0; }
+.cloudlet-host :where(button,a) {
+  font: inherit; color: inherit; line-height: inherit; letter-spacing: inherit; text-transform: none;
+  min-width: var(--cloudlet-control-min-size); min-height: var(--cloudlet-control-min-size);
+  touch-action: manipulation;
+}
+.cloudlet-host button {
+  appearance: none; display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; border-radius: 24px; padding: 10px; margin: 0; cursor: pointer;
+}
+.cloudlet-host button[aria-disabled="true"] { color: var(--cloudlet-muted); cursor: progress; }
+.cloudlet-host a { display: inline-flex; align-items: center; padding: 10px 16px; text-decoration: underline; border-radius: 24px; }
+.cloudlet-host :focus-visible { outline: 2px solid var(--cloudlet-focus); outline-offset: 2px; }
+.cloudlet-host:focus-visible { outline: 2px solid var(--cloudlet-focus); outline-offset: -2px; }
+.cloudlet-host [hidden] { display: none !important; }
+/* The status colour of a record: every element carrying `data-kind` re-derives it. */
+.cloudlet-host [data-kind="success"] { --cloudlet-status: var(--cloudlet-success); }
+.cloudlet-host [data-kind="error"] { --cloudlet-status: var(--cloudlet-error); }
+.cloudlet-host [data-kind="info"] { --cloudlet-status: var(--cloudlet-info); }
+.cloudlet-host [data-kind="warning"] { --cloudlet-status: var(--cloudlet-warning); }
+.cloudlet-host [data-kind="loading"] { --cloudlet-status: var(--cloudlet-loading); }
+/*
+ * One shell for the pill and the Island. HTML is laid out at the target size and
+ * measured; the SVG path and the clip-path follow animated geometry written by the
+ * host sampler through CSSOM rules (including the SVG box radius for the shadow).
+ */
+.cloudlet-host .cloudlet-stack { position: relative; align-self: center; width: fit-content; max-width: 100%; flex: none; }
+.cloudlet-host[data-state="island"] .cloudlet-stack { width: 100%; }
+.cloudlet-host .cloudlet-shell { position: relative; transform-origin: 50% 0; z-index: 1; }
+.cloudlet-host[data-edge="bottom"] .cloudlet-shell { transform-origin: 50% 100%; }
+.cloudlet-host .cloudlet-bg {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%); overflow: visible; pointer-events: none;
+  box-shadow: var(--cloudlet-shadow);
+}
+.cloudlet-host .cloudlet-bg path { fill: var(--cloudlet-background); stroke: var(--cloudlet-border); stroke-width: 1px; }
+.cloudlet-host :is(.cloudlet-tail, .cloudlet-exit) { position: absolute; top: 0; left: 50%; pointer-events: none; }
+.cloudlet-host .cloudlet-tail {
+  z-index: 0; border-radius: var(--cloudlet-pill-radius); background: var(--cloudlet-tail-background);
+  border: 1px solid var(--cloudlet-tail-border); box-shadow: var(--cloudlet-shadow); transform-origin: 50% 100%; opacity: 0;
+}
+/* The farther tail lies behind the near one, a step closer to the pill surface: depth reads on dark pages too. */
+.cloudlet-host .cloudlet-tail[data-cloudlet-tail="2"] { z-index: -1; background: color-mix(in oklab, var(--cloudlet-tail-background) 60%, var(--cloudlet-background)); }
+.cloudlet-host .cloudlet-exit { z-index: 2; transform-origin: 50% 0; }
+/* Bottom edge: the silhouette, tails, badge and exit snapshot are anchored to the bottom and grow upwards. */
+.cloudlet-host[data-edge="bottom"] :is(.cloudlet-bg, .cloudlet-tail, .cloudlet-exit, .cloudlet-badge) { top: auto; bottom: 0; }
+.cloudlet-host[data-edge="bottom"] .cloudlet-tail { transform-origin: 50% 0; }
+.cloudlet-host[data-edge="bottom"] .cloudlet-exit { transform-origin: 50% 100%; }
+.cloudlet-host .cloudlet-exit:empty { display: none; }
+.cloudlet-host .cloudlet-clip {
+  position: relative; pointer-events: auto; color: var(--cloudlet-foreground); overflow-wrap: anywhere;
+  display: flex; flex-direction: column; min-width: 0;
+  width: fit-content; max-width: min(100%, var(--cloudlet-pill-max-width)); min-height: var(--cloudlet-pill-height);
+  border-radius: var(--cloudlet-pill-radius);
+}
+.cloudlet-host .cloudlet-shell[data-state="island"] > .cloudlet-clip {
+  width: 100%; max-width: 100%; max-height: var(--cloudlet-available-height); border-radius: var(--cloudlet-island-radius);
+}
+.cloudlet-host :is(.cloudlet-slide-out, .cloudlet-chrome-out) { position: absolute; top: 0; left: 0; pointer-events: none; }
+.cloudlet-host :is(.cloudlet-slide-out, .cloudlet-chrome-out):empty { display: none; }
+.cloudlet-host .cloudlet-chrome-out .cloudlet-clip { width: 100%; max-width: none; }
+.cloudlet-host .cloudlet-ghost { visibility: hidden; }
+.cloudlet-host .cloudlet-slide { position: relative; display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; }
+.cloudlet-host .cloudlet-header { position: relative; display: flex; min-width: 0; flex: none; }
+.cloudlet-host .cloudlet-heading { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; min-height: var(--cloudlet-pill-height); padding-block: 6px; padding-inline: 10px 16px; }
+.cloudlet-host .cloudlet-shell[data-state="island"] .cloudlet-heading { padding-block: 10px 6px; padding-inline: 14px 52px; }
+.cloudlet-host .cloudlet-heading-out { position: absolute; inset: 0; pointer-events: none; display: flex; }
+.cloudlet-host .cloudlet-heading-out:empty { display: none; }
+.cloudlet-host .cloudlet-title { font: inherit; font-weight: 500; text-transform: none; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloudlet-host .cloudlet-shell[data-state="island"] .cloudlet-title {
+  white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+}
+.cloudlet-host .cloudlet-title:focus { outline: none; }
+.cloudlet-host .cloudlet-title:focus-visible { outline: 2px solid var(--cloudlet-focus); outline-offset: 2px; border-radius: 4px; }
+.cloudlet-host .cloudlet-pill { position: absolute; inset: 0; z-index: 1; pointer-events: auto; width: 100%; height: 100%; padding: 0; border-radius: var(--cloudlet-pill-radius); }
+/*
+ * Swipes: the pill and the Island content own horizontal travel and leave vertical
+ * page/body scrolling to the browser; the Island header owns both axes (collapse).
+ */
+.cloudlet-host .cloudlet-pill, .cloudlet-host .cloudlet-shell[data-state="island"] > .cloudlet-clip,
+.cloudlet-host .cloudlet-shell[data-state="island"] .cloudlet-body { touch-action: pan-y; }
+.cloudlet-host .cloudlet-shell[data-state="island"] > .cloudlet-clip > .cloudlet-slide > .cloudlet-header { touch-action: none; }
+.cloudlet-host[data-dragging] { -webkit-user-select: none; user-select: none; }
+.cloudlet-host .cloudlet-peek { position: absolute; top: 0; left: 0; pointer-events: none; }
+.cloudlet-host .cloudlet-badge {
+  position: absolute; top: 0; left: 50%; z-index: 2; min-width: 20px; height: 20px; padding-inline: 6px; border-radius: 9999px;
+  background: var(--cloudlet-badge); color: var(--cloudlet-badge-foreground); box-shadow: 0 0 0 2px var(--cloudlet-background);
+  font: 600 .6875rem/20px var(--cloudlet-font-family); font-variant-numeric: tabular-nums;
+  text-align: center; pointer-events: none; opacity: 0; display: grid;
+}
+.cloudlet-host .cloudlet-badge > * { grid-area: 1 / 1; }
+/* Status icon: a tinted 24 px circle, a 16 px stroke glyph (or the record's own icon) and the 2 px progress ring. */
+.cloudlet-host .cloudlet-icon {
+  position: relative; display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%;
+  color: var(--cloudlet-status); background: color-mix(in oklab, var(--cloudlet-status) 18%, transparent);
+}
+.cloudlet-host .cloudlet-glyph { display: grid; place-items: center; width: 16px; height: 16px; overflow: hidden; }
+.cloudlet-host .cloudlet-glyph > .cloudlet-slot { display: grid; place-items: center; width: 100%; height: 100%; }
+.cloudlet-host .cloudlet-glyph :is(svg,img) { display: block; max-width: 100%; max-height: 100%; }
+.cloudlet-host :is(svg.cloudlet-glyph, button > svg) { display: block; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.cloudlet-host .cloudlet-ring { position: absolute; inset: -4px; width: 32px; height: 32px; overflow: visible; fill: none; stroke-width: 2; }
+.cloudlet-host .cloudlet-ring-track { stroke: color-mix(in oklab, var(--cloudlet-status) 18%, transparent); }
+.cloudlet-host .cloudlet-progress-fill { stroke: color-mix(in oklab, var(--cloudlet-status) 75%, var(--cloudlet-foreground)); stroke-linecap: round; }
+/* Island close: a 32 px circle with a 44 px touch target. */
+.cloudlet-host .cloudlet-close {
+  position: absolute; top: 8px; inset-inline-end: 8px; z-index: 1; width: 32px; height: 32px; min-width: 0; min-height: 0; padding: 0;
+  border-radius: 50%; color: var(--cloudlet-muted); background: var(--cloudlet-action-background);
+}
+.cloudlet-host .cloudlet-close > svg { width: 16px; height: 16px; }
+.cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-overflow button)::before {
+  content: ""; position: absolute; inset-block: calc((var(--cloudlet-control-min-size) - 32px) / -2); inset-inline: 0;
+}
+.cloudlet-host button.cloudlet-close::before { inset-inline: calc((var(--cloudlet-control-min-size) - 32px) / -2); border-radius: 50%; }
+.cloudlet-host .cloudlet-body {
+  position: relative; display: flex; flex-direction: column; min-height: 0; overflow: auto; overscroll-behavior: contain;
+  max-height: min(calc(var(--cloudlet-available-height) * .6), 24rem); padding-block: 0 10px; padding-inline: 48px 16px;
+}
+/* A title-only Island: the empty body only evens the header's 10/6 padding, so the row stays centred. */
+.cloudlet-host .cloudlet-body:not(:has(> :not(.cloudlet-actions:empty))) { padding-bottom: 4px; }
+.cloudlet-host .cloudlet-body-out { position: absolute; left: 0; right: 0; pointer-events: none; }
+.cloudlet-host .cloudlet-body-out:empty { display: none; }
+.cloudlet-host .cloudlet-description { color: var(--cloudlet-muted); font-size: .8125rem; line-height: 1.45; padding-block: 0 4px; }
+.cloudlet-host .cloudlet-actions { display: flex; flex-wrap: wrap; gap: 12px 8px; flex: none; }
+.cloudlet-host .cloudlet-actions:empty { display: none; }
+.cloudlet-host .cloudlet-actions:not(:empty) { margin-block: 8px 2px; }
+/* Action pills: neutral retry/cancel; the primary action is tinted with the status colour. */
+.cloudlet-host :is(.cloudlet-action, .cloudlet-overflow button) {
+  position: relative; max-width: 100%; min-width: 0; min-height: 32px; padding: 6px 14px; border-radius: 9999px;
+  font-size: .8125rem; font-weight: 500; line-height: 1.5; text-decoration: none; overflow-wrap: anywhere;
+  color: var(--cloudlet-foreground); background: var(--cloudlet-action-background);
+}
+.cloudlet-host .cloudlet-action.cloudlet-primary {
+  color: color-mix(in oklab, var(--cloudlet-status) 55%, var(--cloudlet-foreground));
+  background: color-mix(in oklab, var(--cloudlet-status) 12%, transparent);
+}
+.cloudlet-host :is(.cloudlet-action, .cloudlet-overflow button)[aria-disabled="true"] { color: var(--cloudlet-muted); }
+@media (hover: hover) {
+  .cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-overflow button):hover { background: color-mix(in oklab, var(--cloudlet-foreground) 13%, transparent); }
+  .cloudlet-host .cloudlet-close:hover { color: var(--cloudlet-foreground); }
+  .cloudlet-host .cloudlet-action.cloudlet-primary:hover { background: color-mix(in oklab, var(--cloudlet-status) 20%, transparent); }
+}
+.cloudlet-host .cloudlet-action-error { padding-block: 4px; color: var(--cloudlet-muted); font-size: .8125rem; }
+.cloudlet-host .cloudlet-indicator { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 8px; color: var(--cloudlet-muted); font-size: .75rem; padding-bottom: 6px; flex: none; }
+.cloudlet-host .cloudlet-indicator .cloudlet-dot-button { min-width: 24px; min-height: 24px; padding: 8px; }
+.cloudlet-host .cloudlet-dot { display: block; width: 6px; height: 6px; border-radius: 50%; background: color-mix(in oklab, var(--cloudlet-foreground) 25%, transparent); }
+.cloudlet-host .cloudlet-indicator [aria-current="true"] .cloudlet-dot { background: var(--cloudlet-foreground); }
+.cloudlet-host .cloudlet-page { display: grid; padding: 8px; font-variant-numeric: tabular-nums; }
+.cloudlet-host .cloudlet-page > * { grid-area: 1 / 1; }
+/* Missed notifications: the end of the indicator row. */
+.cloudlet-host .cloudlet-overflow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; min-width: 0; }
+.cloudlet-host .cloudlet-overflow button { font-size: .75rem; }
+.cloudlet-host .cloudlet-live { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* The announcer's live regions, inserted beside the host; visually hidden and out of the page flow. */
+.cloudlet-announcer { position: fixed; top: 0; left: 0; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; pointer-events: none; }
+.cloudlet-host[data-position="top-center"] { top: calc(var(--cloudlet-viewport-top, 0px) + var(--cloudlet-top)); bottom: auto; }
+@media (min-width: 48rem) { .cloudlet-host[data-position="auto"] { top: calc(var(--cloudlet-viewport-top, 0px) + var(--cloudlet-top)); bottom: auto; } }
+/* Dark theme: forced, or `system` on a dark page. Border and neutral controls follow the foreground. */
+.cloudlet-host[data-theme="dark"] {
+  --cloudlet-background: #1c1c1e; --cloudlet-foreground: #f5f5f7; --cloudlet-muted: #a1a1aa; --cloudlet-focus: #93b4ff;
+  --cloudlet-shadow: 0 12px 32px -12px rgb(0 0 0 / .6); color-scheme: dark;
+  --cloudlet-tail-background: color-mix(in oklab, var(--cloudlet-foreground) 14%, var(--cloudlet-background)); --cloudlet-tail-border: color-mix(in oklab, var(--cloudlet-foreground) 18%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  .cloudlet-host[data-theme="system"] {
+    --cloudlet-background: #1c1c1e; --cloudlet-foreground: #f5f5f7; --cloudlet-muted: #a1a1aa; --cloudlet-focus: #93b4ff;
+    --cloudlet-shadow: 0 12px 32px -12px rgb(0 0 0 / .6); color-scheme: dark;
+    --cloudlet-tail-background: color-mix(in oklab, var(--cloudlet-foreground) 14%, var(--cloudlet-background)); --cloudlet-tail-border: color-mix(in oklab, var(--cloudlet-foreground) 18%, transparent);
+  }
+}
+@keyframes cloudlet-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: no-preference) {
+  .cloudlet-host .cloudlet-spinner { animation: cloudlet-spin .8s linear infinite; }
+  .cloudlet-host .cloudlet-ring[data-progress="indeterminate"] { animation: cloudlet-spin 1s linear infinite; }
+  .cloudlet-host[data-reduced-motion="true"] :is(.cloudlet-spinner, .cloudlet-ring) { animation: none; }
+}
+/* Forced colours: system colours only; the badge, icon, ring and dots opt out of adjustment to stay visible. */
+@media (forced-colors: active) {
+  .cloudlet-host[data-theme] {
+    --cloudlet-background: Canvas; --cloudlet-foreground: CanvasText; --cloudlet-muted: CanvasText; --cloudlet-border: CanvasText;
+    --cloudlet-focus: Highlight; --cloudlet-action-background: Canvas; --cloudlet-status: CanvasText; --cloudlet-success: CanvasText;
+    --cloudlet-error: CanvasText; --cloudlet-info: CanvasText; --cloudlet-warning: CanvasText; --cloudlet-loading: CanvasText;
+    --cloudlet-badge: Highlight; --cloudlet-badge-foreground: HighlightText;
+  }
+  .cloudlet-host :is(.cloudlet-bg, .cloudlet-icon, .cloudlet-badge, .cloudlet-dot) { forced-color-adjust: none; }
+  .cloudlet-host .cloudlet-icon { background: Canvas; outline: 1px solid CanvasText; outline-offset: -1px; }
+  .cloudlet-host .cloudlet-ring-track { stroke: GrayText; }
+  .cloudlet-host .cloudlet-dot { background: Canvas; outline: 1px solid CanvasText; }
+  .cloudlet-host .cloudlet-indicator [aria-current="true"] .cloudlet-dot { background: CanvasText; }
+  .cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-overflow button) { border: 1px solid ButtonText; }
+}

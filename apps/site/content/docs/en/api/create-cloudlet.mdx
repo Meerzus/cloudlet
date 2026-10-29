@@ -1,0 +1,104 @@
+---
+title: createCloudlet
+description: Create a controller, the object that owns every notification, its timing and its operations.
+---
+
+`createCloudlet` is the package's only factory. It returns the controller your application keeps for a session: the object behind every `show`, `track` and `dismiss`. This page lists its options; the methods are on [Controller](/toaster/docs/api/controller).
+
+```ts title="signature"
+import type { ControllerOptions, ReactCloudletController } from '@cloudlet/toast';
+
+declare function createCloudlet(options?: ControllerOptions): ReactCloudletController;
+```
+
+The same signature is exported as the type `CreateCloudlet`, for code that receives the factory as a parameter.
+
+```tsx title="notifications.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+export const cloudlet = createCloudlet({
+  autoDismiss: true,
+  attentionDelay: 600,
+  messages: { operationError: 'That did not work' },
+  onOverflow: ({ count }) => console.warn(`${count} notifications were missed`),
+  onDiagnostic: (diagnostic) => console.debug(diagnostic.code, diagnostic.message),
+});
+```
+
+## What creating does
+
+- **Nothing outside the object.** Creating or importing a controller touches no `window` or `document`, starts no timer, adds no listener and runs no operation. It is safe in a module, in a server render and in a test.
+- **One controller, one host.** A controller is shown by exactly one `<Toaster>` at a time. A second Toaster of the same controller does not attach and reports a `second-host` diagnostic. Separate controllers are fully independent, even with the same notification IDs.
+- **A controller lives for a session.** One per browser session or server request, disposed only when it is finished for good: see [When to dispose](/toaster/docs/quick-start#when-to-dispose).
+- **Wrong options throw.** An options object of the wrong shape, or a callback that is not a function, throws a `TypeError`; an out-of-range number throws a `RangeError`. These are programming errors, so they are the only failures of the API that throw instead of returning a result.
+
+The result type is `ReactCloudletController`, which is `CloudletController<ReactNode, AbortSignal>`: slots (rich descriptions, icons) are React nodes, and operations get a native `AbortSignal`.
+
+## Options
+
+`ControllerOptions`, every field optional.
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `autoDismiss` | `boolean` | `true` | `false` turns off every timer of this controller, including an explicit `duration`: notifications stay until closed. Read once, when the controller is created; `<Toaster autoDismiss>` overrides it live. |
+| `attentionDelay` | `number` | `600` | Milliseconds from admission before a notification that needs attention opens the Island. A finite number ≥ 0; `<Toaster attention={{ delay }}>` overrides it for that Toaster. |
+| `messages` | `Partial<FallbackMessages>` | English texts below | Texts the controller writes itself, when your content is missing or failed. |
+| `onOverflow` | `(overflow: OverflowSnapshot) => void` | — | Called when the stack is full (100 records) and a new notification is rejected. Receives the current missed count, never the rejected payload. |
+| `onDiagnostic` | `(diagnostic: Diagnostic) => void` | — | Called for problems Cloudlet handled on its own, such as a mapping function that threw. Local data only; nothing is logged or sent anywhere. |
+
+A user preference such as "do not close notifications on a timer" can change while the application runs: pass it to [`<Toaster autoDismiss>`](/toaster/docs/api/toaster#props), which applies it without a new controller. The option here is the default when the prop is left out.
+
+### messages
+
+`FallbackMessages`: the texts the controller puts on a notification when there is nothing else to show. Pass the fields you want to change; the rest keep their English default. Labels of the controls and spoken texts are localized elsewhere, see [Labels & announcements](/toaster/docs/api/labels).
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `operationSuccess` | `string` | `'Completed'` | Title of a tracked operation that succeeded when its `success` content threw or was invalid. |
+| `operationError` | `string` | `'Something went wrong'` | Title of a failed operation when its `error` content threw or was invalid. Error details are never shown automatically. |
+| `operationCancelled` | `string` | `'Cancelled'` | Title of a confirmed cancellation without `cancelled` content, or when that content failed. |
+| `cancellationRequested` | `string` | `'Cancellation requested'` | Title that replaces a pending operation's title once cancellation is requested, until it settles. |
+| `actionError` | `string` | `'Action failed'` | Message of a failed command action that has no `errorMessage`, or whose `errorMessage` threw. |
+| `renderError` | `string` | `'Content unavailable'` | Shown in place of a rich description or icon that failed to render or was interactive. |
+
+### onOverflow
+
+`OverflowSnapshot` is the aggregate the user sees on the badge and in the Island's indicator line.
+
+| Field | Type | Description |
+|---|---|---|
+| `count` | `number` | Notifications rejected because the stack was full, since the last acknowledgement; `0` at first. |
+| `pending` | `boolean` | `true` while there is a count the user has not acknowledged. |
+
+[Capacity and overflow](/toaster/docs/notifications#capacity-and-overflow) explains when the count grows and resets. If `onOverflow` throws, the error becomes a `callback-error` diagnostic.
+
+### onDiagnostic
+
+A `Diagnostic` describes something that went wrong in your callbacks or content and was contained: the notification fell back to safe content and the business result did not change. Diagnostics also arrive as `diagnostic` events through `onEvent`. If `onDiagnostic` itself throws, the error is swallowed, without another diagnostic.
+
+| Field | Type | Description |
+|---|---|---|
+| `code` | `DiagnosticCode` | What happened, from the table below. |
+| `source` | `string` | Where it happened, such as `track.success`, `onEvent` or `Toaster.labels`. |
+| `message` | `string` | A developer-facing English sentence. |
+| `handle` | `NotificationHandle` | Optional. The notification concerned, when there is one. |
+| `error` | `unknown` | Optional. The thrown value, when there is one. |
+
+| `DiagnosticCode` | Reported when |
+|---|---|
+| `invalid-input` | `show`, `update` or `track` received invalid content (the call also returns `invalid-input`), or `<Toaster attention>` had an invalid delay. |
+| `second-host` | A second `<Toaster>` tried to show a controller that already has one. |
+| `stale-host` | Reserved for a renderer that outlived its attachment; this version does not report it. |
+| `mapper-error` | A `success`, `error` or `cancelled` mapping function, or an action's `errorMessage`, threw or returned invalid content. |
+| `callback-error` | `onClose`, `onOverflow` or another callback threw. |
+| `listener-error` | A `subscribe` or `onEvent` listener threw; the other listeners still run. |
+| `cancellation-error` | A `cancel` callback or `isCancellation` threw. |
+| `slot-error` | A rich description or icon failed to render, or contained interactive elements. |
+| `formatter-error` | A function of `labels` or `announcements` threw; the default text is used (reported once per function). |
+| `invalid-container` | The Toaster `container` was not a connected HTML element of the page, or its resolver threw. |
+| `renderer-load-error` | The Toaster's renderer chunk failed to load, for example offline; notifications wait in the controller and the next Toaster mount loads it again. |
+
+## Next steps
+
+- [Controller](/toaster/docs/api/controller): every method and its result.
+- [Toaster props](/toaster/docs/api/toaster): the component that shows this controller.

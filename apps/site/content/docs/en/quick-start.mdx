@@ -1,0 +1,71 @@
+---
+title: Quick start
+description: Create one controller, mount a Provider and a Toaster, and show the first notification.
+---
+
+By the end of this page your application has one controller, a Toaster on screen and a first notification in the stack. It assumes the package and its CSS are installed as described in [Installation](/toaster/docs/installation).
+
+## Create the controller
+
+The controller owns every notification, its time and its announcements. Create it once per browser session, where your application starts, not inside a component that renders again. Creating it allocates no timers, listeners or DOM, so doing it at module scope of the client entry is cheap.
+
+```tsx title="main.tsx"
+import '@cloudlet/toast/styles.css';
+import { createRoot } from 'react-dom/client';
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+import { App } from './app';
+
+// Once, when the browser application starts.
+const cloudlet = createCloudlet();
+
+createRoot(document.getElementById('root')!).render(
+  <CloudletProvider controller={cloudlet}>
+    <App />
+    <Toaster />
+  </CloudletProvider>,
+);
+```
+
+`CloudletProvider` only hands the controller to the tree below it; `Toaster` finds it in context and renders the stack and the Island. Mount one Toaster per controller; it portals into the document after mount, so it can sit anywhere under the Provider.
+
+In a Next.js App Router project a client component owns the controller instead of the module; [SSR & Next.js](/toaster/docs/ssr#nextjs-app-router) has the setup.
+
+## Show a notification
+
+Any component under the Provider gets the controller with `useCloudlet()` and calls `show` from an event. The call returns an admission result right away: the record was created, merged into an identical one, or rejected, with the reason.
+
+```tsx title="app.tsx"
+import { useCloudlet } from '@cloudlet/toast';
+
+export function App() {
+  const cloudlet = useCloudlet();
+  return <button onClick={() => cloudlet.show({ title: 'Synced to the cloud', kind: 'success' })}>Sync</button>;
+}
+```
+
+The same call, on the page's own Toaster:
+
+```tsx demo="success"
+cloudlet.show({ title: 'Synced to the cloud', kind: 'success' });
+```
+
+A success notification without an action stays for six seconds of time on screen. Hovering it, focusing it or switching to another tab pauses that time; it never disappears while someone is reading it.
+
+## When to dispose
+
+`dispose()` is final: it closes every notification, releases the controller's timers and subscriptions, and every later call returns `disposed`. Business operations you tracked keep running to their own result. Call it only when the session the controller belongs to is over: a test that finished, a micro-frontend removed for good, a server request that has been answered. A single-page application usually never calls it; the controller lives as long as the page.
+
+Unmounting the Toaster is not the end of the controller. It pauses visible time and keeps every record and every tracked operation; mounting a Toaster again resumes the same queue.
+
+Under React Strict Mode, an effect that creates a controller disposes exactly that instance in its cleanup; [React Strict Mode](/toaster/docs/ssr#react-strict-mode) explains why.
+
+## What not to do
+
+- **Calling `show` during render.** Render runs again on every state change, and twice in Strict Mode. Call `show` from an event: a click, a finished request, a message from the server.
+- **Creating the controller in a component body.** Every render would create a new controller with an empty stack. Create it in the bootstrap or in an effect of a client owner.
+- **Sharing a server controller between users.** On the server a controller belongs to one request.
+
+## Next steps
+
+- [Try it in the Playground](/toaster/playground): every kind, action and operation on a button, with the exact call to copy.
+- [Notifications & time](/toaster/docs/notifications): `show`, `update` and `dismiss`, descriptions and icons, the stack and how time is spent.

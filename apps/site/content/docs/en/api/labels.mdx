@@ -1,0 +1,135 @@
+---
+title: Labels & announcements
+description: Every text Cloudlet writes itself, where to localize it, and a complete translation.
+---
+
+Cloudlet ships English texts for its controls, for what screen readers hear and for the few titles it writes itself. Each group is replaced in its own place, without an i18n dependency. Your notifications' own content (titles, descriptions, action labels) is yours: pass it already translated to `show` and `track`.
+
+| What | Where | Type |
+|---|---|---|
+| Names of controls and regions | `<Toaster labels>` | `CloudletLabels` |
+| What screen readers hear | `<Toaster announcements>` | `AnnouncementFormatters` |
+| Titles the controller writes when your content is missing or failed | `createCloudlet({ messages })` | `FallbackMessages` |
+| Text direction | `<Toaster dir>` | `'ltr' \| 'rtl'` |
+| Notification titles, descriptions, action labels | your `show` and `track` calls | `string` |
+
+Each takes a partial object: pass only what you change, and the rest keeps its English default. A function that throws falls back to the default text and reports one `formatter-error` diagnostic per function.
+
+## CloudletLabels
+
+Read on every render of the Toaster.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `region` | `string` | `'Notifications'` | Accessible name of the notifications region. |
+| `island` | `string` | `'Current notifications'` | Accessible name of the opened Island, a carousel region. |
+| `carousel` | `string` | `'carousel'` | How screen readers name the opened Island's role (`aria-roledescription`). Translate it with the rest. |
+| `slide` | `string` | `'slide'` | How screen readers name each slide's role in the Island (`aria-roledescription`). |
+| `close` | `string` | `'Close notification'` | Name of the close button. |
+| `retry` | `string` | `'Retry'` | Text of the retry button of a failed operation. |
+| `cancel` | `string` | `'Request cancellation'` | Text of the cancel button of a pending operation. |
+| `cancellationRequested` | `string` | `'Cancellation requested'` | Text of that button once cancellation was requested. |
+| `acknowledgeOverflow` | `string` | `'Acknowledge missed notifications'` | Name of the button that resets the missed count. |
+| `collapse` | `string` | `'Press Escape to collapse'` | Hidden hint in the Island that Escape collapses it. |
+| `stackSummary` | `(title: string, count: number, missed: number) => string` | `'Saved, 3 notifications, 2 missed'` | Name of the collapsed pill: the top title, how many notifications the stack holds and how many were missed. The default leaves out a count of 1 and a missed count of 0. |
+| `page` | `(index: number, total: number) => string` | `'2 of 5'` | Name of the Island's current slide; `index` starts at 1. |
+| `overflowCount` | `(count: number) => string` | `'4 missed notifications'` | The missed-notifications line in the Island. |
+
+## AnnouncementFormatters
+
+Cloudlet speaks through two permanent live regions, polite and assertive, chosen per notification by `announcementPriority`; `'off'` silences a notification's automatic text but not its controls. Announcements within 300 ms are spoken together. Progress updates, reflows and seeing a notification again are never announced. The formatters are read when an announcement is made, so the latest props apply.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `notification` | `(notification: NotificationSnapshot) => string` | title and description | A notification shown for the first time. The default speaks the title, then the text description or the `announcement` of a rich one. |
+| `queued` | `(count: number) => string` | `'2 notifications queued'` | Notifications that arrived behind the presented one, counted together. |
+| `occurrences` | `(notification: NotificationSnapshot) => string` | `'Saved. 3 occurrences'` | A deduplicated notification repeated; read `notification.occurrences`. |
+| `overflow` | `(count: number) => string` | `'4 missed notifications'` | Notifications rejected because the stack was full. |
+| `operation` | `(notification: NotificationSnapshot, phase) => string` | title and description | A tracked operation changed phase: `'started'`, `'fulfilled'`, `'rejected'`, `'cancelled'` or `'cancel-requested'`. Each phase of an attempt is spoken once. |
+| `actionError` | `(notification: NotificationSnapshot, message: string) => string` | `'Upload failed. Action failed'` | A command action failed; `message` is its `errorMessage` or `messages.actionError`. |
+| `actionPending` | `(notification: NotificationSnapshot) => string` | `'Upload failed. Retry. In progress'` | Optional. A command action is running: title, action label, state. |
+| `resumed` | `(count: number) => string` | `'3 current notifications'` | Optional. The user returned to a hidden tab: the current count, without replaying what happened meanwhile. |
+
+`actionPending` and `resumed` are optional in the type itself, so an object written for an older version that lacks them stays complete.
+
+## Controller messages
+
+Titles the controller writes itself, when a mapping function fails, a cancellation has no content of its own, or a rich slot cannot render. They are part of the notification, so they are set where the controller is created: see [`messages` on createCloudlet](/toaster/docs/api/create-cloudlet#messages) for the six fields and their defaults.
+
+## A complete translation
+
+Typing the objects as the full `CloudletLabels`, `Required<AnnouncementFormatters>` and `FallbackMessages`, instead of their partial forms, makes TypeScript point out a text you forgot.
+
+```tsx title="notifications-de.tsx"
+import type { ReactNode } from 'react';
+import {
+  CloudletProvider,
+  createCloudlet,
+  Toaster,
+  type AnnouncementFormatters,
+  type CloudletLabels,
+  type FallbackMessages,
+  type NotificationSnapshot,
+} from '@cloudlet/toast';
+
+const count = (value: number, one: string, other: string) => `${value} ${value === 1 ? one : other}`;
+
+const labels: CloudletLabels = {
+  region: 'Benachrichtigungen',
+  island: 'Aktuelle Benachrichtigungen',
+  carousel: 'Karussell',
+  slide: 'Folie',
+  close: 'Benachrichtigung schließen',
+  retry: 'Erneut versuchen',
+  cancel: 'Abbruch anfordern',
+  cancellationRequested: 'Abbruch angefordert',
+  acknowledgeOverflow: 'Verpasste Benachrichtigungen bestätigen',
+  collapse: 'Mit Escape einklappen',
+  stackSummary: (title, total, missed) => [
+    title,
+    ...(total > 1 ? [count(total, 'Benachrichtigung', 'Benachrichtigungen')] : []),
+    ...(missed > 0 ? [`${missed} verpasst`] : []),
+  ].join(', '),
+  page: (index, total) => `${index} von ${total}`,
+  overflowCount: (missed) => count(missed, 'verpasste Benachrichtigung', 'verpasste Benachrichtigungen'),
+};
+
+/** Title, then the description: a text, or the spoken alternative of a rich one. */
+function spoken({ content }: NotificationSnapshot<ReactNode>) {
+  const description = content.description?.kind === 'rich' ? content.description.announcement : content.description?.text;
+  return description ? `${content.title}. ${description}` : content.title;
+}
+
+const announcements: Required<AnnouncementFormatters> = {
+  notification: spoken,
+  queued: (queued) => `${count(queued, 'weitere Benachrichtigung', 'weitere Benachrichtigungen')}`,
+  occurrences: (notification) => `${notification.content.title}. ${notification.occurrences}-mal`,
+  overflow: (missed) => count(missed, 'verpasste Benachrichtigung', 'verpasste Benachrichtigungen'),
+  operation: spoken,
+  actionError: (notification, message) => `${notification.content.title}. ${message}`,
+  actionPending: (notification) => `${notification.content.title}. ${notification.content.action?.label ?? ''}. Läuft`,
+  resumed: (current) => count(current, 'aktuelle Benachrichtigung', 'aktuelle Benachrichtigungen'),
+};
+
+const messages: FallbackMessages = {
+  operationSuccess: 'Erledigt',
+  operationError: 'Etwas ist schiefgelaufen',
+  operationCancelled: 'Abgebrochen',
+  cancellationRequested: 'Abbruch angefordert',
+  actionError: 'Aktion fehlgeschlagen',
+  renderError: 'Inhalt nicht verfügbar',
+};
+
+const cloudlet = createCloudlet({ messages });
+
+export function Notifications({ children }: { children: ReactNode }) {
+  return (
+    <CloudletProvider controller={cloudlet}>
+      {children}
+      <Toaster labels={labels} announcements={announcements} dir="ltr" />
+    </CloudletProvider>
+  );
+}
+```
+
+Keep `labels` and `announcements` outside the component, or memoize them, so a render does not create new functions for nothing. For a right-to-left language, pass `dir="rtl"` as well: direction is not inferred from the texts.

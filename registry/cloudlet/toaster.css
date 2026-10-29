@@ -1,0 +1,13 @@
+/* Load after @cloudlet/toast/styles.css. Modern shadcn tokens are full colors. */
+/* Both body portals and custom containers inherit tokens from their ancestors. */
+@media (forced-colors: none) {
+  .cloudlet-host[data-theme] {
+    --cloudlet-background: var(--popover, var(--background, #fff));
+    --cloudlet-foreground: var(--popover-foreground, var(--foreground, #171717));
+    --cloudlet-muted: var(--muted-foreground, #61616a);
+    --cloudlet-border: var(--border, #dedee3);
+    --cloudlet-focus: var(--ring, #245cdb);
+    --cloudlet-action-background: var(--accent, #ededf0);
+    --cloudlet-font-family: var(--font-sans, system-ui, sans-serif);
+  }
+}

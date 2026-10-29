@@ -1,0 +1,194 @@
+---
+title: Accessibility
+description: How the pill and the Island are named, announced and focused, and what is tested and what stays with you.
+---
+
+Cloudlet is built so that a notification reaches everyone without taking anything away from them: the stack is reachable from the keyboard, its content is announced once, and nothing moves focus unless the user asks. This page describes the semantics you get, how to localize them, what has been verified, and what remains your application's job.
+
+## The pill
+
+The collapsed stack is one native `<button>`. Its accessible name comes from `labels.stackSummary(title, count, missed)`: the title of the top notification, how many notifications are in the stack and how many were missed, such as "Synced to the cloud, 3 notifications, 1 missed". It has `aria-expanded="false"` and controls the Island. The tails and the badge are decorative and hidden from assistive technology; the count they show is already part of the name.
+
+The host around it is a region named by `labels.region` ("Notifications"). It is not in the tab order, but it is the anchor that [`requestFocus()`](#moving-focus-on-request) moves focus to.
+
+## The Island
+
+Activating the pill opens the Island in place of it. The Island is a region with the role description "carousel", named by `labels.island` ("Current notifications") and described by a hidden hint, `labels.collapse` ("Press Escape to collapse").
+
+- Only the current notification is in the DOM, as a group with the role description "slide", named by `labels.page(index, total)`: "2 of 5".
+- Its title is a heading. Opening the Island from the keyboard moves focus to it.
+- Close, actions, retry and cancel are native buttons and links. Close is 32px wide with a 44px touch target.
+- With more than one notification, page dots appear: buttons named like the slides, with `aria-current` on the current one. Above five notifications a text counter replaces them; it is hidden from assistive technology, because the slide's name already says where you are.
+- Missed notifications appear as a line, `labels.overflowCount(count)`, with a button named `labels.acknowledgeOverflow`.
+- A notification with progress exposes a `progressbar` in the Island, named by its progress `label` or its title.
+
+## Keyboard and gestures
+
+| Input | Result |
+|---|---|
+| `Tab` | Reaches the pill like any other button. In the Island, from the title: the body when its text scrolls, the actions, close, the dots, then the overflow button. |
+| `Enter` or `Space` on the pill | Opens the Island and moves focus to the title. |
+| `←` `→` | Previous and next notification; mirrored when `dir="rtl"`. |
+| `Home` `End` | Newest and oldest notification. On a focused body that scrolls, its top and bottom instead. |
+| `Escape` | Collapses the Island and returns focus to the pill. |
+| `Enter` on close | Closes the current notification. Focus stays on close, now for the next one; after the last, it returns to where it was before the stack. |
+| Horizontal swipe on the pill | Dismisses the top notification. |
+| Horizontal swipe in the Island | Moves between notifications, like the arrow keys. |
+| Vertical swipe on the Island's header towards the edge | Collapses the Island, like `Escape`. |
+
+Every gesture has a key or a button that does the same. Vertical movement on the pill, the body and the page always scrolls natively, and a swipe never starts on a button or a link.
+
+## Announcements
+
+Cloudlet keeps two permanent live regions, one polite and one assertive, next to the host from the moment it mounts. Cloudlet collects what happened in 300ms windows and speaks each window once:
+
+- A new notification is announced by its title and description. A rich description is not read from its markup; it carries its own `announcement` text.
+- Notifications behind the presented one are announced only as a count: "2 notifications queued".
+- A repeated notification merged by `dedupeKey` announces its occurrences: "Synced to the cloud. 3 occurrences".
+- Progress updates are silent; the end of an operation is announced once.
+- Moving back to a notification already shown in the open Island (arrow keys, the dots, a swipe, or the next one after closing) reads it again, once. The title stays the same element across slides, so a screen reader would otherwise hear nothing.
+- Reflow or remounting the Toaster repeats nothing. Returning to a hidden tab announces the current count, not the events that were missed.
+
+Urgency is explicit. Every notification is polite unless you set `announcementPriority`; `error` alone does not interrupt. Use `assertive` for what the user must hear right now, and `off` for notifications that only confirm what the interface already shows:
+
+```tsx title="announcements.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+// Interrupts the screen reader: the user is about to lose work.
+cloudlet.show({
+  title: 'Connection lost: changes are not saved',
+  kind: 'error',
+  announcementPriority: 'assertive',
+});
+
+// The list already shows the new item; speaking it again would be noise.
+cloudlet.show({ title: 'Cloud added to the forecast', kind: 'success', announcementPriority: 'off' });
+```
+
+## Focus
+
+Cloudlet never takes focus on its own:
+
+- A new notification arriving, and the Island opening for [attention](/toaster/docs/positioning#attention), leave focus where it is.
+- Focus enters the stack only when the user moves it there: with `Tab`, a click, or a shortcut your application provides.
+- When a focused control disappears, focus moves before it is hidden: to close of the next notification, to the title after retry or cancel, to the pill on `Escape`, and back to the element focused before the stack after the last notification closes.
+
+While a notification has focus or the pointer, its time on screen is paused, so it cannot close while someone is reading or operating it. See [Time on screen](/toaster/docs/notifications#time-on-screen).
+
+### Moving focus on request
+
+`requestFocus(target?)` moves focus into the stack when the user asks for it, for example from a keyboard shortcut:
+
+```tsx title="shortcut.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+// Alt+N: jump to the notifications. Tab then reaches the pill.
+document.addEventListener('keydown', (event) => {
+  if (event.altKey && event.code === 'KeyN') {
+    event.preventDefault();
+    cloudlet.requestFocus();
+  }
+});
+```
+
+| Target | Moves focus to |
+|---|---|
+| `{ kind: 'anchor' }` (the default) | The host region. |
+| `{ kind: 'notification', handle }` | The title of the presented notification, or the pill when the Island is closed. |
+| `{ kind: 'notification', handle, control }` | Its `'action'` or `'close'` button. |
+| `{ kind: 'overflow' }` | The button that acknowledges missed notifications, or the pill. |
+
+The result is `{ status: 'requested' }`, or `rejected` with a reason: `no-host` when no Toaster is mounted, `not-visible` when the notification is not the presented one, `unavailable` when the target does not exist (no action, no overflow), `disposed`, or a reason why the handle is not valid. Do not call it when a notification arrives: moving focus without the user asking is exactly what the focus policy avoids.
+
+## Reduced motion
+
+When the user prefers reduced motion, every transition of the stack and the Island becomes a short crossfade: no movement, no scaling, no slide. Spinners stop, and swipes are turned off; the keyboard and the buttons still do everything. Cloudlet follows `prefers-reduced-motion` live, without a remount, and marks the host with `data-reduced-motion="true"`.
+
+In forced-colours mode Cloudlet uses system colours with visible borders and a solid focus ring. See [Theme](/toaster/docs/styling#theme).
+
+## Localization
+
+Everything Cloudlet says comes from three places, and each one is yours to translate:
+
+- **`labels`** on the Toaster: names of the controls and regions.
+- **`announcements`** on the Toaster: the text spoken in the live regions.
+- **`messages`** of the controller: titles of fallback notifications, such as an operation that failed without a mapped error.
+
+Each is partial: whatever you leave out keeps its English default.
+
+```tsx title="notifications.tsx"
+import {
+  CloudletProvider,
+  createCloudlet,
+  Toaster,
+  type AnnouncementFormatters,
+  type CloudletLabels,
+} from '@cloudlet/toast';
+
+const labels: Partial<CloudletLabels> = {
+  region: 'Notifications',
+  island: 'Notifications en cours',
+  close: 'Fermer la notification',
+  retry: 'Réessayer',
+  cancel: "Demander l'annulation",
+  collapse: 'Appuyez sur Échap pour réduire',
+  stackSummary: (title, count, missed) =>
+    [title, count > 1 ? `${count} notifications` : '', missed > 0 ? `${missed} manquées` : '']
+      .filter(Boolean)
+      .join(', '),
+  page: (index, total) => `${index} sur ${total}`,
+};
+
+const announcements: Partial<AnnouncementFormatters> = {
+  queued: (count) => `${count} notifications en attente`,
+  occurrences: (notification) => `${notification.content.title}. ${notification.occurrences} fois`,
+};
+
+const cloudlet = createCloudlet({
+  messages: { operationSuccess: 'Terminé', operationError: 'Échec', operationCancelled: 'Annulé' },
+});
+
+export function Notifications() {
+  return (
+    <CloudletProvider controller={cloudlet}>
+      <Toaster labels={labels} announcements={announcements} />
+    </CloudletProvider>
+  );
+}
+```
+
+A formatter that throws or returns an empty string falls back to the default and is reported to `onDiagnostic`. The full lists are in [Labels & announcements](/toaster/docs/api/labels).
+
+## What is tested
+
+Cloudlet's accessibility suite runs on production builds under the strict CSP of [Styling & strict CSP](/toaster/docs/styling#strict-csp), in Playwright with Chromium, Firefox and WebKit:
+
+- focus order, `Escape`, focus after close, retry, cancel and actions, and that arrival and auto-opening never move focus;
+- the live regions: what is said, when, once, and that progress stays silent;
+- 320px viewports with 200% text and right-to-left content, without horizontal page scrolling and with 44px targets;
+- axe (WCAG 2.x rules) on the stack, the Island, overflow, right-to-left and the dark theme, with no violations;
+- forced colours and reduced motion, emulated, and touch gestures on emulated phones.
+
+Automation checks the DOM, not speech. Not yet checked by hand:
+
+- VoiceOver on macOS with Safari was run against `1.0.0-rc.3`; VoiceOver on iOS, NVDA on Windows and TalkBack on Android have not been run.
+- Physical phones, real Windows High Contrast, operating-system keyboards and pinch zoom are untested; so are the minimum browser versions from [Requirements](/toaster/docs/installation#requirements).
+- The number on the badge measures 3.55:1 against its red disc, below 4.5:1. The same count is in the pill's accessible name.
+
+## What stays with your application
+
+- **Keep important results in your interface.** A notification is a notice and can be missed, dismissed or closed by time. Anything the user must not lose also lives on the page.
+- **Translate** `labels`, `announcements` and `messages` with the rest of your interface.
+- **Choose the urgency**: `assertive` only for what cannot wait, `off` for what the page already shows.
+- **Keep rich content simple.** A rich description is text and inline formatting with its own `announcement`; interactive controls belong in `action`, not inside the description.
+- **Keep contrast** when you override colour tokens: 4.5:1 for text and 3:1 for the focus ring against the surface.
+- **Test with the screen readers your users have.** Delivery to a live region does not prove that it was spoken.
+
+## Next steps
+
+- [Labels & announcements](/toaster/docs/api/labels): every label and formatter with its default.
+- [Toaster props](/toaster/docs/api/toaster): `labels`, `announcements`, `dir` and the rest.

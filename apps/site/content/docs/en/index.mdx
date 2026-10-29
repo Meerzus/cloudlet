@@ -1,0 +1,77 @@
+---
+title: Introduction
+description: What Cloudlet is, how a notification lives in it, and what your application keeps deciding.
+---
+
+Cloudlet is a notification library for React and the web. It keeps every notification in one stack, newest first, collapsed to a single pill at rest. Activating the pill opens the **Island**: one surface with a slider over every notification, where you read, retry, cancel or close. Notifications that need attention open the Island on their own after a short delay, without moving keyboard focus.
+
+Everything that moves runs on springs, and every frame can be interrupted: a new notification arriving mid-animation, a swipe released early, a theme switched while the Island is open. The package is ESM only, has no runtime dependencies and ships its CSS as one explicit import.
+
+<Callout type="note" title="Release status">
+  Cloudlet `1.0.0` is stable: `npm install @cloudlet/toast`. [Accessibility](/toaster/docs/accessibility#what-is-tested) lists what has not been checked by hand yet.
+</Callout>
+
+## One stack, one Island
+
+Most toast libraries show each notification as its own card and let them pile up. Cloudlet shows the **stack**: the top notification as a pill, the ones behind it as tails, and a badge with how many are waiting. The stack takes one small spot at the top or bottom of the viewport, so five notifications cost the same space as one.
+
+Opening the stack turns the pill into the Island. Inside it, one notification is on screen at a time; the slider moves between them with a swipe, the arrow keys or the trackpad. Closing a notification slides the next one in; closing the last one collapses the Island; pressing Escape collapses it with every notification kept.
+
+Time is spent only by what is on screen and pauses while someone is looking at it; [Time on screen](/toaster/docs/notifications#time-on-screen) has the rules.
+
+## Controller, Provider, Toaster
+
+Cloudlet splits into a core that knows nothing about the DOM and a React shell that renders it.
+
+- **`createCloudlet()`** returns a **controller**: the owner of notifications, their time, operations and announcements. Creating it allocates no timers and touches no DOM.
+- **`CloudletProvider`** hands the controller to a React tree. It does not render anything itself.
+- **`useCloudlet()`** returns the controller to any component under the Provider, so a save button can call `show` without prop drilling.
+- **`Toaster`** renders the stack and the Island for the controller it finds in context, in a portal after mount. Unmounting it pauses visible time and keeps every record; mounting it again resumes the same queue.
+
+```tsx title="notifications.ts"
+import { createCloudlet } from '@cloudlet/toast';
+
+// One controller per browser session, created by the application bootstrap.
+const cloudlet = createCloudlet();
+
+const admission = cloudlet.show({
+  title: 'Synced to the cloud',
+  kind: 'success',
+  description: { kind: 'text', text: '12 photos, 4 seconds.' },
+});
+
+// Admission is explicit: a record was created, merged into an identical one, or rejected.
+if (admission.status === 'created') {
+  cloudlet.dismiss(admission.handle);
+}
+```
+
+Every call returns a value you can act on rather than a promise that is silently dropped: `show` tells you whether a record was created, deduplicated or rejected and why; `dismiss` and `update` report a stale handle instead of doing nothing.
+
+## Operations, not just messages
+
+A notification often stands for work in progress: an upload, a sync, a request that may fail. Cloudlet tracks that work as an **operation**. You pass a promise or a factory to `track`, and the controller shows the pending state, switches to the result, and offers **Retry** when a factory is available. Cancellation is cooperative: Cloudlet gives the operation an `AbortSignal` and asks; your code decides what cancelling means. Closing or clearing a notification detaches the UI and never cancels the business operation behind it.
+
+Actions work the same way. A **command** runs through Cloudlet, stays blocked while it is pending and closes the notification only after it succeeded; a failed command reports its error inside the notification and offers to try again. A **link** is a real link.
+
+## Attention
+
+Not every notification deserves the Island. Each one declares how much attention it wants: `auto`, the default, opens the Island only when the notification has an action, a description or a failed operation that can be retried; `open` always opens it; `stack` never does. [Attention](/toaster/docs/positioning#attention) has the delay and the rest of the rules.
+
+Opening the Island for attention never steals keyboard focus. Screen readers get one polite or assertive announcement per event; notifications deep in the stack are announced as a count, and returning to a hidden tab does not replay what was missed.
+
+## What stays with your application
+
+Cloudlet owns the stack, its time and its accessibility. A few things stay yours by design:
+
+- **The controller's lifetime.** One controller per browser session or server request, disposed only when it ends: see [Create the controller](/toaster/docs/quick-start#create-the-controller) and [SSR](/toaster/docs/ssr#one-controller-per-session-or-request).
+- **Important data.** A notification is a notice, not a record: anything the user must not lose also lives in your main interface.
+- **Words.** Every label, announcement and fallback message is a string or a formatter you can replace, so the Toaster speaks your product's language.
+- **Styling.** Cloudlet ships CSS tokens for colour, radius and spacing and adds your class names per part; it does not require Tailwind or shadcn/ui.
+
+## Next steps
+
+- [Installation](/toaster/docs/installation): npm or the shadcn registry, peers, the CSS import.
+- [Quick start](/toaster/docs/quick-start): a Provider, a Toaster and the first `show`.
+- [Playground](/toaster/playground): every kind of notification on a button, with the exact call to copy.
+- [llms.txt](https://cloudlet.dev/llms.txt): these pages as an index for agents. Every page also has a Markdown version at its address plus `.md`.

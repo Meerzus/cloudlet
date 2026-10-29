@@ -1,0 +1,24 @@
+/* Shared by ?surface, ?fixture=mobile|accessibility|attention|slider; never by the main lab. */
+:root { font-family: system-ui, sans-serif; color: #171717; background: #fafafa; font-synthesis: none; }
+main { max-width: 48rem; margin: 5rem auto; padding: 1.5rem; line-height: 1.6; }
+main h1 { margin: 0 0 1rem; font-size: clamp(2.5rem, 8vw, 4rem); line-height: 1.1; letter-spacing: -0.04em; }
+main h2 { font-size: 1.15rem; }
+main section { padding-block: 1rem; border-block-start: 1px solid #d5d5d5; }
+main .eyebrow, main .note { color: #505050; }
+main .eyebrow { font-size: 0.875rem; }
+main .controls { display: flex; flex-wrap: wrap; align-items: end; gap: 0.75rem; }
+main button, main select { min-height: 44px; padding: 0.65rem 0.9rem; border: 1px solid #9a9a9a; border-radius: 0.5rem; color: inherit; background: white; font: inherit; }
+main button { cursor: pointer; }
+main button:hover { background: #f0f0f0; }
+main button:disabled { color: #666; cursor: default; }
+main label { display: grid; gap: 0.3rem; }
+main :focus-visible { outline: 3px solid #2755c4; outline-offset: 3px; }
+@media (max-width: 32rem) { main { margin-block: 2rem 10rem; padding: 1rem; } }
+main output { display: block; margin-block: 1rem; overflow-wrap: anywhere; }
+body[data-surface-narrow="true"] .cloudlet-host { max-width: 248px; }
+body[data-surface-font="large"] .cloudlet-host { --cloudlet-font-family: Georgia, serif; --cloudlet-font-size: 20px; }
+body[data-surface-hidden="true"] .cloudlet-host { display: none; }
+main ol.fixture-log { max-height: 14rem; overflow: auto; padding-inline-start: 1.5rem; font: 0.8125rem/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: #404040; }
+main table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+main th, main td { padding: 0.4rem 0.5rem; border-block-end: 1px solid #e0e0e0; text-align: start; vertical-align: top; }
+main code { font: 0.8125rem ui-monospace, SFMono-Regular, Menlo, monospace; }
