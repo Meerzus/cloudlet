@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Walks /playground group by group in headless Chromium against the static export and
- * records it (LANDING §13, L06): every button must present a visible notification in the
+ * records it: every button must present a visible notification in the
  * page Toaster, Copy code must copy the catalog snippet, the console must stay clean and
  * axe must find no violations.
  *
@@ -133,7 +133,7 @@ async function interactions(page, still, failures) {
   await page.locator('label', { hasText: /^System$/ }).click();
 
   // Last: the failing command. Its card changes under a still pointer, which used to leave the
-  // host's hover pause set (handoff 06; fixed in the package, PR #40): the next auto-open is reported.
+  // host's hover pause set (fixed in the package): the next auto-open is reported.
   await dismissAll(page);
   await page.getByRole('button', { name: 'Share fails → Retry', exact: true }).click();
   await wait(page, 1200);

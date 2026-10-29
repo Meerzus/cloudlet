@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const page = source.getPage(slug);
   if (!page) notFound();
   const title = `${page.data.title} — Cloudlet Docs`;
-  // Agents and crawlers: the canonical address and the page's own Markdown (DOCS.md §9).
+  // Agents and crawlers: the canonical address and the page's own Markdown.
   return {
     title,
     description: page.data.description,

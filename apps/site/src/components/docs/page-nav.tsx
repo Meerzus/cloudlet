@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
 
-/** Previous / Next at the end of a page, in sidebar order (DOCS.md §4). */
+/** Previous / Next at the end of a page, in sidebar order. */
 export function PageNav({ previous, next }: { previous?: PageTree.Item | undefined; next?: PageTree.Item | undefined }) {
   if (!previous && !next) return null;
   return (

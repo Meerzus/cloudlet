@@ -76,7 +76,7 @@ function TocList({ toc }: { toc: TOCItemType[] }) {
   );
 }
 
-/** The right column from `xl` up (DOCS.md §7). */
+/** The right column from `xl` up. */
 export function DesktopToc({ toc }: { toc: TOCItemType[] }) {
   if (toc.length === 0) return <div className="hidden xl:block" aria-hidden="true" />;
   return (

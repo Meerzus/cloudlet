@@ -3,7 +3,7 @@ import type { Locator, Page, TestInfo } from '@playwright/test';
 import type { MobileFixtureApi } from '../../apps/lab/src/mobile-fixture.js';
 import { drag, finishAudit, geometry, idle, installShellAudit, screenshot, translateY } from './shell-audit.js';
 
-// DESIGN §2, §3, §7, §9 and the viewport contract (API_CONTRACT §18, §22) on `?fixture=mobile`:
+// The shell, the slider, motion, accessibility and the viewport contract on `?fixture=mobile`:
 // bottom edge, auto placement, safe area + obstruction + VisualViewport, keyboard-sized viewports,
 // gestures with release physics, portals, reduced motion and device emulation. Device presets and
 // the VisualViewport mock are emulation, not physical devices.
@@ -19,7 +19,7 @@ declare global {
 const host = (page: Page) => page.locator('.cloudlet-host');
 const shell = (page: Page) => host(page).locator('.cloudlet-stack > .cloudlet-shell');
 const pill = (page: Page) => host(page).locator('.cloudlet-pill');
-const island = (page: Page) => page.getByRole('region', { name: 'Текущие уведомления', exact: true });
+const island = (page: Page) => page.getByRole('region', { name: 'Current notifications', exact: true });
 const header = (page: Page) => island(page).locator('.cloudlet-clip > .cloudlet-slide > .cloudlet-header');
 const body = (page: Page) => island(page).locator('.cloudlet-clip > .cloudlet-slide > .cloudlet-body');
 const state = (page: Page) => page.evaluate(() => window.mobileFixture!.snapshot());
@@ -188,7 +188,7 @@ test('a keyboard-sized viewport keeps the action and close reachable while the l
   await page.keyboard.press('Enter');
   expect((await state(page)).actionAttempts).toBe(1);
   await screenshot(page, info, 'mobile-keyboard-viewport-controls');
-  await island(page).getByRole('button', { name: 'Закрыть уведомление', exact: true }).click();
+  await island(page).getByRole('button', { name: 'Close notification', exact: true }).click();
   await expect.poll(async () => (await state(page)).current).toBe('successor');
   await page.evaluate(() => window.__mobileViewport.set({ height: 844, offsetTop: 0 }));
   await settle(host(page));
@@ -235,7 +235,7 @@ test('bottom edge: the tails peek upwards, the badge sits in the bottom corner, 
   await page.evaluate(() => window.mobileFixture!.open());
   await expect(island(page)).toBeVisible();
   await idle(page);
-  // 32 px commits towards the edge (D44). Start low in the header: Firefox drops a pointer that leaves the viewport.
+  // 32 px commits towards the edge. Start low in the header: Firefox drops a pointer that leaves the viewport.
   const top = (await header(page).boundingBox())!;
   await page.mouse.move(top.x + top.width / 2, top.y + top.height - 6);
   await page.mouse.down();
@@ -333,7 +333,7 @@ test('cancel, lost capture, a second pointer, orientation, a new top record, unm
   await pill(page).focus();
   await page.keyboard.press('Enter');
   await expect(island(page)).toBeVisible();
-  await island(page).getByRole('button', { name: 'Закрыть уведомление', exact: true }).focus();
+  await island(page).getByRole('button', { name: 'Close notification', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect.poll(async () => (await state(page)).current).toBe('B');
   expect((await state(page)).closes).toEqual([{ id: 'C', reason: 'close-button' }]);
@@ -349,7 +349,7 @@ test('custom container and application dialog retain explicit controls in the sa
     await expect(island(page)).toBeVisible();
     await idle(page);
     await expectControlsInside(page, { left: 16, top: 16, right: 374, bottom: 828 });
-    await island(page).getByRole('button', { name: 'Закрыть уведомление', exact: true }).click();
+    await island(page).getByRole('button', { name: 'Close notification', exact: true }).click();
     await expect.poll(async () => (await state(page)).current).toBe('B');
     await page.evaluate(() => window.mobileFixture!.reset());
     await readable(page);
@@ -457,7 +457,7 @@ test('named mobile device emulation keeps the Island controls after a tap, typin
     await page.evaluate(() => window.dispatchEvent(new Event('orientationchange')));
     await settle(host(page));
     await expectControlsInside(page, { left: 16, top: 16, right: device.viewport.height - 16, bottom: device.viewport.width - 16 });
-    await island(page).getByRole('button', { name: 'Закрыть уведомление', exact: true }).tap();
+    await island(page).getByRole('button', { name: 'Close notification', exact: true }).tap();
     await expect.poll(async () => (await state(page)).current).toBe('B');
     await attachEnvironment(page, info);
     await finishAudit(page, info, 'mobile-device-audit');

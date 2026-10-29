@@ -12,10 +12,10 @@ const open = (page: Page, query = '/') => openRoute(page, query);
 
 test.afterEach(async ({ page }, info) => finishAudit(page, info, 'island-audit'));
 
-const host = (page: Page) => page.locator('.cloudlet-host[aria-label="Уведомления"]');
+const host = (page: Page) => page.locator('.cloudlet-host[aria-label="Notifications"]');
 const pill = (page: Page) => host(page).locator('[data-cloudlet-pill]');
 const shell = (page: Page) => host(page).locator('.cloudlet-stack > .cloudlet-shell');
-const island = (page: Page) => page.getByRole('region', { name: 'Текущие уведомления' });
+const island = (page: Page) => page.getByRole('region', { name: 'Current notifications' });
 
 /** Keyboard focus inside the Island; WebKit does not focus buttons on click. */
 async function focusTitle(page: Page) {
@@ -24,8 +24,8 @@ async function focusTitle(page: Page) {
 
 test('3 notifications → open → navigate → close current → Escape → close the last', async ({ page }, info) => {
   await open(page);
-  await page.getByRole('button', { name: '3 уведомления', exact: true }).click();
-  await expect(pill(page)).toHaveAccessibleName('Новый комментарий, уведомлений: 3');
+  await page.getByRole('button', { name: '3 notifications', exact: true }).click();
+  await expect(pill(page)).toHaveAccessibleName('New comment, notifications: 3');
   await expect(pill(page)).toHaveAttribute('aria-expanded', 'false');
   await expect(host(page).locator('[data-cloudlet-tail]')).toHaveCount(2);
   await idle(page);
@@ -40,7 +40,7 @@ test('3 notifications → open → navigate → close current → Escape → clo
 
   await pill(page).click();
   await expect(host(page)).toHaveAttribute('data-state', 'island');
-  await expect(island(page)).toHaveAttribute('aria-roledescription', 'карусель');
+  await expect(island(page)).toHaveAttribute('aria-roledescription', 'carousel');
   // The title and icon are the same DOM nodes in the pill and in the Island.
   expect(await titleNode!.evaluate(node => node.isConnected && node.closest('[role="region"]') !== null)).toBe(true);
   await expect(host(page).locator('[data-cloudlet-tail]')).toHaveCount(0);
@@ -52,7 +52,7 @@ test('3 notifications → open → navigate → close current → Escape → clo
 
   await focusTitle(page);
   await page.keyboard.press('ArrowRight');
-  await expect(island(page).getByRole('group', { name: '2 из 3' })).toHaveAttribute('aria-roledescription', 'слайд');
+  await expect(island(page).getByRole('group', { name: '2 of 3' })).toHaveAttribute('aria-roledescription', 'slide');
   // The shell never moves or changes width while the content slides.
   const sliding = await geometry(shell(page));
   expect(sliding.x).toBe(opened.x);
@@ -61,11 +61,11 @@ test('3 notifications → open → navigate → close current → Escape → clo
   await idle(page);
   await expect(host(page).locator('.cloudlet-slide-out > *')).toHaveCount(0);
 
-  const close = island(page).getByRole('button', { name: 'Закрыть уведомление' });
+  const close = island(page).getByRole('button', { name: 'Close notification' });
   await close.focus();
   await page.keyboard.press('Enter');
-  await expect(island(page).getByRole('group', { name: '2 из 2' })).toBeVisible();
-  await expect(island(page).getByRole('heading', { name: 'Черновик сохранён' })).toBeVisible();
+  await expect(island(page).getByRole('group', { name: '2 of 2' })).toBeVisible();
+  await expect(island(page).getByRole('heading', { name: 'Draft saved' })).toBeVisible();
   // Close stays the same element during the slide: focus does not drop.
   await expect(close).toBeFocused();
   const closed = await geometry(shell(page));
@@ -76,7 +76,7 @@ test('3 notifications → open → navigate → close current → Escape → clo
   await page.keyboard.press('Escape');
   await expect(host(page)).toHaveAttribute('data-state', 'stack');
   await expect(pill(page)).toBeFocused();
-  await expect(pill(page)).toHaveAccessibleName('Новый комментарий, уведомлений: 2');
+  await expect(pill(page)).toHaveAccessibleName('New comment, notifications: 2');
   await idle(page);
   const collapsed = await geometry(shell(page));
   expect(Math.abs(collapsed.svgWidth - collapsed.width)).toBeLessThan(1);
@@ -85,7 +85,7 @@ test('3 notifications → open → navigate → close current → Escape → clo
   await page.keyboard.press('Enter');
   await expect(island(page).locator('[data-cloudlet-title]')).toBeFocused();
   for (const _ of [0, 1]) {
-    await island(page).getByRole('button', { name: 'Закрыть уведомление' }).focus();
+    await island(page).getByRole('button', { name: 'Close notification' }).focus();
     await page.keyboard.press('Enter');
   }
   await expect(shell(page)).toBeHidden();
@@ -101,12 +101,12 @@ test('3 notifications → open → navigate → close current → Escape → clo
 
 test('rapid navigation during the morph keeps one snapshot per layer and settles on the measured shape', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: '3 уведомления', exact: true }).click();
+  await page.getByRole('button', { name: '3 notifications', exact: true }).click();
   await idle(page);
   await pill(page).click();
   await focusTitle(page);
   for (const key of ['ArrowRight', 'ArrowRight', 'Home', 'End', 'ArrowLeft']) await page.keyboard.press(key);
-  await expect(island(page).getByRole('group', { name: '2 из 3' })).toBeVisible();
+  await expect(island(page).getByRole('group', { name: '2 of 3' })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.keyboard.press('Enter');
   await idle(page);
@@ -117,7 +117,7 @@ test('rapid navigation during the morph keeps one snapshot per layer and settles
 
 test('timeScale slows every transition and reduced motion changes the shape at once', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: '3 уведомления', exact: true }).click();
+  await page.getByRole('button', { name: '3 notifications', exact: true }).click();
   await idle(page);
   await page.getByRole('radio', { name: '0.1', exact: true }).check();
   const before = await geometry(shell(page));

@@ -12,14 +12,14 @@ export interface CodeBlockProps extends ComponentProps<'pre'> {
   readonly title?: string | undefined;
   /** `"false"` for a ```noCopy fence. */
   readonly allowCopy?: string | undefined;
-  /** The demo catalog id of a runnable example (DOCS.md §6): rendered as a demo block. */
+  /** The demo catalog id of a runnable example: rendered as a demo block. */
   readonly 'data-demo'?: string | undefined;
   /** Set on the first runnable example of a page (remark-demo-note.ts). */
   readonly 'data-demo-note'?: string | undefined;
 }
 
 /**
- * The documentation's code block (DOCS.md §6, §7): the highlighted `<pre>` from Shiki inside a
+ * The documentation's code block: the highlighted `<pre>` from Shiki inside a
  * figure with the file name and Copy → Copied. Copy reads the rendered text, so there is no
  * second copy of the source to keep in sync. A fence with `demo="<id>"` is a runnable example
  * and renders as a demo block of one entry instead; `<Demos>` groups several (mdx-components.tsx).

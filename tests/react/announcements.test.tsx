@@ -213,13 +213,13 @@ describe('one semantic announcer on the existing live hosts', () => {
   it('keeps action pending/failure separate from operation result and dedupes failure across remount', async () => {
     const controller = create(); const deferred = createDeferred<void>();
     controller.show({ title: 'Permission', kind: 'success', action: { kind: 'command', label: 'Confirm', run: () => deferred.promise, errorMessage: () => 'Try again' } });
-    const props: ToasterProps = { announcements: { actionPending: () => 'Действие выполняется', actionError: (_item, error) => `Ошибка действия: ${error}` } };
+    const props: ToasterProps = { announcements: { actionPending: () => 'Action running', actionError: (_item, error) => `Action failed: ${error}` } };
     const mounted = mount(controller, props); await advance();
     fireEvent.click(document.querySelector('[data-cloudlet-pill]')!);
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' })); await advance();
-    expect(mounted.polite.textContent).toBe('Действие выполняется');
+    expect(mounted.polite.textContent).toBe('Action running');
     await act(async () => { deferred.reject(new Error('private failure')); }); await advance();
-    expect(mounted.polite.textContent).toBe('Ошибка действия: Try again');
+    expect(mounted.polite.textContent).toBe('Action failed: Try again');
     mounted.unmount();
     const next = mount(controller, props); await advance();
     expect(next.polite).toBeEmptyDOMElement();
@@ -228,7 +228,7 @@ describe('one semantic announcer on the existing live hosts', () => {
   it('clears pending hidden speech and resumes with one current aggregate, never stale states', async () => {
     const controller = create(); const deferred = createDeferred<void>();
     controller.track(deferred.promise, { pending: { title: 'Hidden pending' }, success: { title: 'Hidden finished' }, error: { title: 'Hidden failed' } });
-    const { polite, assertive } = mount(controller, { announcements: { resumed: count => `Сейчас уведомлений: ${count}` } });
+    const { polite, assertive } = mount(controller, { announcements: { resumed: count => `Now showing: ${count}` } });
     await advance(100); visibility('hidden');
     const temporary = controller.show({ title: 'Removed while hidden', announcementPriority: 'assertive' });
     const queued = controller.show({ title: 'Queued obsolete', announcementPriority: 'polite' });
@@ -237,7 +237,7 @@ describe('one semantic announcer on the existing live hosts', () => {
     await advance(2000);
     expect(polite).toBeEmptyDOMElement(); expect(assertive).toBeEmptyDOMElement();
     visibility('visible'); await advance();
-    expect(polite.textContent).toBe('Сейчас уведомлений: 2');
+    expect(polite.textContent).toBe('Now showing: 2');
     expect(assertive).toBeEmptyDOMElement();
     // The stacked operation is presented for the first time with its current phase only.
     act(() => { controller.dismiss(queued.handle); }); await advance(600);

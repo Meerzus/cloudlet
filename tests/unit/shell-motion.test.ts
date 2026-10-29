@@ -59,14 +59,14 @@ describe('host shell sampler', () => {
     expect(pending.size).toBe(0);
   });
 
-  it('opens slower than it collapses and adjusts (DESIGN §7: shapeOpen is the softer spring)', () => {
+  it('opens slower than it collapses and adjusts (shapeOpen is the softer spring)', () => {
     const open = harness();
     const close = harness();
     open.motion.setShape(pill, 'instant'); open.motion.setShape(island, 'open');
     close.motion.setShape(pill, 'instant'); close.motion.setShape(island, 'close');
     open.step(80); close.step(80);
     expect(open.last().width).toBeLessThan(close.last().width);
-    // The relationship, not the numbers: the values themselves are the owner's (D47) and live only in MOTION.
+    // The relationship, not the numbers: the values themselves are the owner's and live only in MOTION.
     expect(MOTION.shapeOpen.stiffness / MOTION.shapeOpen.mass).toBeLessThan(MOTION.shapeClose.stiffness / MOTION.shapeClose.mass);
   });
 

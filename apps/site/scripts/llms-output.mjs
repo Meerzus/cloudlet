@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * After `next build` (DOCS.md §9): moves the Markdown of each page from `out/llms.mdx/` to its
+ * After `next build`: moves the Markdown of each page from `out/llms.mdx/` to its
  * address next to the page (`out/toaster/docs.md`, `out/toaster/docs/<slug>.md`) — a route handler cannot live
  * beside the `/docs/[[...slug]]` pages — and checks the output for agents: every page of
  * `content/docs/en` has its `.md`, is listed in `llms.txt` and is in `llms-full.txt`; no runnable
  * meta, MDX component or placeholder is left. Styling explains the live editor and its URL
- * parameters in both Markdown outputs (STYLE_EDITOR §8). Exits 1 with the list of problems.
+ * parameters in both Markdown outputs. Exits 1 with the list of problems.
  */
 import { cpSync, existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';

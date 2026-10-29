@@ -1,6 +1,6 @@
 import { llmsIndex } from '@/lib/docs-markdown';
 
-/** `/llms.txt` (DOCS.md §9), a static file of the export. */
+/** `/llms.txt`, a static file of the export. */
 export const revalidate = false;
 
 export function GET() {

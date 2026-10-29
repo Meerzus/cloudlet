@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { MOTION, resolveMotion } from '../../packages/toast/src/react/motion.js';
-// The one lab module tests read: its DESIGN §7 copy must match the package (task 16).
+// The one lab module tests read: its copy of the motion values must match the package.
 import { applyOverrides, designMotion, diffFromDesign, motionSections, parseTuning, readField, setField, tuningJson } from '../../apps/lab/src/design-motion.js';
 
 describe('laboratory motion baseline', () => {
-  it('matches MOTION of the package field by field (task 17 changes both)', () => {
+  it('matches MOTION of the package field by field (a tuning changes both)', () => {
     const { swipe: _swipe, ...tunable } = MOTION;
     expect(designMotion).toEqual(tunable);
     expect(resolveMotion({})).toEqual(designMotion);

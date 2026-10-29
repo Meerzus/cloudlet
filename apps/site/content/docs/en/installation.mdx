@@ -15,7 +15,7 @@ Cloudlet installs as one package, `@cloudlet/toast`, or as a shadcn registry ite
 - **ESM only.** The package ships ES modules with TypeScript declarations; there is no CommonJS or UMD build. Deep imports into its internals are closed on purpose: everything public comes from `@cloudlet/toast`.
 - **No runtime dependencies.** The springs and tweens that move the stack and the Island are Cloudlet's own.
 - **No Tailwind or shadcn/ui requirement.** The npm package styles itself with plain CSS and custom properties; the shadcn item only bridges them to your tokens.
-- **Browsers.** Chromium and Edge 111, Firefox 114, Safari and iOS 16.4 or newer. The automated suite runs on current versions; [What is tested](/toaster/docs/accessibility#what-is-tested) lists what is still open.
+- **Browsers.** Chromium and Edge 111, Firefox 114, Safari and iOS 16.4 or newer. The automated suite runs on current versions, and the minimum versions are checked by hand ([What is tested](/toaster/docs/accessibility#what-is-tested)).
 - **TypeScript.** The declarations work with `strict` and `exactOptionalPropertyTypes`; with the latter, leave an optional field out rather than passing `undefined`.
 
 ## Import the styles

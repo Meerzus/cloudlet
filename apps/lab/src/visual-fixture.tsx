@@ -25,29 +25,29 @@ export function createVisualFixture(params: URLSearchParams) {
   const scenario = params.get('scenario') ?? 'mix';
   const show = (spec: Parameters<ReactCloudletController['show']>[0]) => controller.show({ duration: null, attention: 'stack', ...spec });
   if (scenario === 'mix') {
-    show({ title: 'Файл загружен', kind: 'info' });
-    show({ title: 'Не удалось синхронизировать', kind: 'error', description: { kind: 'text', text: 'Проверьте соединение и повторите.' } });
-    show({ title: 'Изменения сохранены', kind: 'success', description: { kind: 'text', text: 'Документ сохранён в общей папке «Отчёты».' },
-      action: { kind: 'command', label: 'Отменить', run } });
+    show({ title: 'File uploaded', kind: 'info' });
+    show({ title: 'Could not sync', kind: 'error', description: { kind: 'text', text: 'Check the connection and retry.' } });
+    show({ title: 'Changes saved', kind: 'success', description: { kind: 'text', text: 'The document is saved to the shared “Reports” folder.' },
+      action: { kind: 'command', label: 'Undo', run } });
   } else if (scenario === 'progress') {
-    show({ title: 'Ожидание сервера', kind: 'loading', progress: { kind: 'indeterminate' } });
-    show({ title: 'Загрузка отчёта', kind: 'loading', progress: { kind: 'determinate', value: 0.62 },
-      description: { kind: 'text', text: '12 из 19 файлов' }, action: { kind: 'command', label: 'Скрыть', run } });
+    show({ title: 'Waiting for the server', kind: 'loading', progress: { kind: 'indeterminate' } });
+    show({ title: 'Downloading report', kind: 'loading', progress: { kind: 'determinate', value: 0.62 },
+      description: { kind: 'text', text: '12 of 19 files' }, action: { kind: 'command', label: 'Hide', run } });
   } else if (scenario === 'kinds') {
     for (const kind of ['loading', 'info', 'warning', 'error', 'success'] as const) {
-      show({ title: { loading: 'Синхронизация', info: 'Доступно обновление', warning: 'Мало места на диске', error: 'Ошибка оплаты', success: 'Платёж принят' }[kind],
-        kind, description: { kind: 'text', text: 'Описание уведомления второй строкой.' }, action: { kind: 'command', label: 'Подробнее', run } });
+      show({ title: { loading: 'Syncing', info: 'Update available', warning: 'Low disk space', error: 'Payment error', success: 'Payment accepted' }[kind],
+        kind, description: { kind: 'text', text: 'The notification’s description on a second line.' }, action: { kind: 'command', label: 'Details', run } });
     }
   } else if (scenario === 'overflow') {
-    for (let index = 0; index < 101; index++) show({ title: `Событие ${index + 1}`, kind: 'info' });
+    for (let index = 0; index < 101; index++) show({ title: `Event ${index + 1}`, kind: 'info' });
   }
-  const options: ToasterProps = { theme, dir, position, labels: { region: 'Уведомления', island: 'Текущие уведомления', carousel: 'карусель', slide: 'слайд', close: 'Закрыть',
-    stackSummary: (title, count, missed) => [title, ...(count > 1 ? [`${count} уведомления`] : []), ...(missed ? [`пропущено: ${missed}`] : [])].join(', '),
-    page: (index, total) => `${index} из ${total}`, overflowCount: count => `Не принято: ${count}`, acknowledgeOverflow: 'Подтвердить пропущенные' } };
+  const options: ToasterProps = { theme, dir, position, labels: { region: 'Notifications', island: 'Current notifications', carousel: 'carousel', slide: 'slide', close: 'Close',
+    stackSummary: (title, count, missed) => [title, ...(count > 1 ? [`${count} notifications`] : []), ...(missed ? [`missed: ${missed}`] : [])].join(', '),
+    page: (index, total) => `${index} of ${total}`, overflowCount: count => `Not accepted: ${count}`, acknowledgeOverflow: 'Acknowledge missed' } };
   const element = <CloudletProvider controller={controller}>
     <main className="visual-page">
-      <h1>Cloudlet · облик</h1>
-      <p>Страница {page === 'dark' ? 'тёмная' : 'светлая'}, тема тостера — {theme}.</p>
+      <h1>Cloudlet · look</h1>
+      <p>The page is {page === 'dark' ? 'dark' : 'light'}, the toaster theme is {theme}.</p>
     </main>
     <Toaster {...options} />
   </CloudletProvider>;

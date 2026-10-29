@@ -14,7 +14,7 @@ import { StyleEditor } from './style-editor/style-editor';
 type LinkProps = ComponentProps<typeof Link>;
 type HeadingTag = 'h2' | 'h3' | 'h4';
 
-/** Headings get their `id` from remark-heading; this adds the hover anchor (DOCS.md §7). */
+/** Headings get their `id` from remark-heading; this adds the hover anchor. */
 function heading(Tag: HeadingTag) {
   return function Heading({ id, children, ...rest }: ComponentProps<HeadingTag>) {
     return (
@@ -54,7 +54,7 @@ function flatten(children: ReactNode): ReactNode[] {
 }
 
 /**
- * `<Demos>` … `</Demos>` around several ```tsx demo="…" fences (DOCS.md §6): one demo block with a
+ * `<Demos>` … `</Demos>` around several ```tsx demo="…" fences: one demo block with a
  * button per fence. Anything else inside is an authoring mistake and fails the build.
  */
 function Demos({ children }: { children: ReactNode }) {
@@ -63,7 +63,7 @@ function Demos({ children }: { children: ReactNode }) {
   for (const child of flatten(children)) {
     if (typeof child === 'string' && child.trim() === '') continue;
     const fence = isValidElement<CodeBlockProps>(child) && child.type === CodeBlock ? child.props : undefined;
-    if (fence?.['data-demo'] === undefined) throw new Error('<Demos> may only contain ```tsx demo="<id>" fences (DOCS.md §6)');
+    if (fence?.['data-demo'] === undefined) throw new Error('<Demos> may only contain ```tsx demo="<id>" fences');
     items.push({ id: fence['data-demo'], code: fence.children, className: fence.className });
     if (fence['data-demo-note'] !== undefined) note = true;
   }
@@ -71,7 +71,7 @@ function Demos({ children }: { children: ReactNode }) {
   return <DemoBlock items={items} note={note} />;
 }
 
-/** The components every MDX page renders with (DOCS.md §5–§7). */
+/** The components every MDX page renders with. */
 export function getMDXComponents(): MDXComponents {
   return {
     h2: heading('h2'),

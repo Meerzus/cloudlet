@@ -5,7 +5,7 @@ import { CloudletIcon } from './icons';
 const LINK =
   'rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/60';
 
-/** The one-line footer of reading pages (DOCS.md §7); the landing keeps its cloud wordmark footer. */
+/** The one-line footer of reading pages; the landing keeps its cloud wordmark footer. */
 export function FooterSlim() {
   return (
     <footer className="docs-footer">

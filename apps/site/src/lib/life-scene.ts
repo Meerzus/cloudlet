@@ -2,7 +2,7 @@ import type { PuppetFace, PuppetState } from './puppet-model';
 import type { PuppetStep } from './puppeteer';
 
 /**
- * Scene 2, "Life of a notification" (LANDING §7): one notification lives through ten
+ * Scene 2, "Life of a notification": one notification lives through ten
  * plateaus on a pinned, scrubbed timeline. Timeline units are seconds of the puppet
  * script; the scroll length maps onto them.
  */
@@ -58,7 +58,7 @@ export interface LifeCaption {
   readonly text: string;
 }
 
-/** One caption per plateau, in order (LANDING §7). */
+/** One caption per plateau, in order. */
 export const LIFE_CAPTIONS: readonly LifeCaption[] = [
   { id: 'arrive', title: 'Arrives softly', text: 'A pill grows out of thin air, on a spring.' },
   { id: 'stack', title: 'Stacks, never piles', text: 'Newcomers land on top. The rest wait behind, counted.' },
@@ -97,7 +97,7 @@ export const LIFE_PIN_SCREENS = 8;
 /** Desktop camera: the puppet is shown at this scale of its 1:1 size (pills a little closer). */
 export const LIFE_CAMERA = { island: 1.5, pill: 1.8, minWidth: 768 } as const;
 
-/** Snap to plateau centres after scrolling stops (picked by the owner on a trackpad, L03: variant A). */
+/** Snap to plateau centres after scrolling stops (picked by the owner on a trackpad, variant A). */
 export const LIFE_SNAP = {
   /** Seconds after the last scroll event. */
   delay: 0.15,
@@ -106,5 +106,5 @@ export const LIFE_SNAP = {
   ease: 'power2.inOut',
 } as const;
 
-/** Scroll smoothing of the scrubbed timeline, seconds (owner, L03). */
+/** Scroll smoothing of the scrubbed timeline, seconds. */
 export const LIFE_SCRUB = 0.6;

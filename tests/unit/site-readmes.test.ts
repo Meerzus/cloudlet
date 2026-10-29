@@ -4,7 +4,7 @@ import { DOCS_URL } from '../../apps/site/src/lib/site';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
-/** The English, public face of the repository (DOCS.md §3); internal docs/*.md stay Russian. */
+/** The English, public face of the repository. */
 const PUBLIC = ['README.md', 'packages/toast/README.md', 'CHANGELOG.md', 'packages/toast/CHANGELOG.md'];
 
 describe('READMEs and changelog', () => {

@@ -173,11 +173,14 @@ Cloudlet's accessibility suite runs on production builds under the strict CSP of
 - axe (WCAG 2.x rules) on the stack, the Island, overflow, right-to-left and the dark theme, with no violations;
 - forced colours and reduced motion, emulated, and touch gestures on emulated phones.
 
-Automation checks the DOM, not speech. Not yet checked by hand:
+Automation checks the DOM, not speech, so the rest is checked by hand:
 
-- VoiceOver on macOS with Safari was run against `1.0.0-rc.3`; VoiceOver on iOS, NVDA on Windows and TalkBack on Android have not been run.
-- Physical phones, real Windows High Contrast, operating-system keyboards and pinch zoom are untested; so are the minimum browser versions from [Requirements](/toaster/docs/installation#requirements).
-- The number on the badge measures 3.55:1 against its red disc, below 4.5:1. The same count is in the pill's accessible name.
+- screen readers: VoiceOver on macOS and iOS, NVDA on Windows and TalkBack on Android;
+- physical iOS and Android phones: touch gestures, the operating-system keyboard and pinch zoom;
+- real Windows High Contrast;
+- the minimum browser versions from [Requirements](/toaster/docs/installation#requirements).
+
+One known gap: the number on the badge measures 3.55:1 against its red disc, below 4.5:1. The same count is in the pill's accessible name.
 
 ## What stays with your application
 

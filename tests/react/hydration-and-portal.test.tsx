@@ -151,7 +151,7 @@ describe('empty SSR and hydration-safe portals', () => {
   it('plumbs per-instance labels, direction, theme and nonce without changing document attributes', () => {
     const first = controller();
     const second = controller();
-    first.show({ title: 'Первое', duration: null });
+    first.show({ title: 'First', duration: null });
     second.show({ title: 'Second', duration: null });
     const firstContainer = container();
     const secondContainer = container();
@@ -159,16 +159,16 @@ describe('empty SSR and hydration-safe portals', () => {
     const documentAttributes = document.documentElement.getAttributeNames().map((name) => [name, document.documentElement.getAttribute(name)]);
     render(<>
       <CloudletProvider controller={first}>
-        <Toaster container={firstContainer} theme="dark" dir="rtl" nonce="first-nonce" offsets={{ gutter: { top: 12 } }} labels={{ region: 'Оповещения', close: 'Закрыть', stackSummary: title => `Открыть: ${title}` }} />
+        <Toaster container={firstContainer} theme="dark" dir="rtl" nonce="first-nonce" offsets={{ gutter: { top: 12 } }} labels={{ region: 'Alerts', close: 'Close', stackSummary: title => `Open: ${title}` }} />
       </CloudletProvider>
       <CloudletProvider controller={second}>
         <Toaster container={secondContainer} theme="light" dir="ltr" nonce="second-nonce" offsets={{ gutter: { top: 24 } }} />
       </CloudletProvider>
     </>);
-    expect(within(firstContainer).getByRole('region', { name: 'Оповещения' })).toBeInTheDocument();
-    const pill = within(firstContainer).getByRole('button', { name: 'Открыть: Первое' });
+    expect(within(firstContainer).getByRole('region', { name: 'Alerts' })).toBeInTheDocument();
+    const pill = within(firstContainer).getByRole('button', { name: 'Open: First' });
     act(() => pill.click());
-    expect(within(firstContainer).getByRole('button', { name: 'Закрыть' })).toBeInTheDocument();
+    expect(within(firstContainer).getByRole('button', { name: 'Close' })).toBeInTheDocument();
     expect(within(secondContainer).getByRole('region', { name: 'Notifications' })).toBeInTheDocument();
     expect(firstContainer.querySelector('[dir="rtl"]')).not.toBeNull();
     expect(secondContainer.querySelector('[dir="ltr"]')).not.toBeNull();

@@ -1,4 +1,4 @@
-"""Render the landing's cloud layers in Blender (LANDING §3, option C).
+"""Render the landing's cloud layers in Blender.
 
 Each shape is built once from seeded puffs -> Mesh to Volume -> Volume Displace,
 then rendered twice with transparent film: day (sun) and night (moonlight). The

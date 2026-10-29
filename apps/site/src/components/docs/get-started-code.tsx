@@ -6,9 +6,9 @@ import { SHIKI_THEME } from '@/lib/shiki-theme';
 import { CodeBlock } from './code-block';
 
 /**
- * Get started of the landing, on documentation pages (DOCS.md §3): the commands and examples
+ * Get started of the landing, on documentation pages: the commands and examples
  * come from `GET_STARTED`, which site-get-started.test.ts keeps equal to the package README
- * and REGISTRY.md, so the pages carry no copy of them. Highlighted on the server with the
+ * and the registry README, so the pages carry no copy of them. Highlighted on the server with the
  * same Shiki theme as the MDX fences and rendered in the same code block.
  */
 async function Code({ code, lang, title }: { code: string; lang: 'sh' | 'tsx'; title: string }) {

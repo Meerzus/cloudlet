@@ -2,13 +2,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The documentation's page tree follows DOCS.md §4: `meta.json` lists the pages in that order,
+ * The documentation's page tree: `meta.json` lists the pages in that order,
  * every written page is listed, and every listed page is either written or still pending.
  * A page that lands must leave PENDING, so the list below is the honest state of the series.
  */
 const CONTENT = new URL('../../apps/site/content/docs/en/', import.meta.url);
 
-/** DOCS.md §4 in sidebar order; `...api` inlines the Reference folder. */
+/** The pages in sidebar order; `...api` inlines the Reference folder. */
 const SPEC_ORDER = [
   '---Getting started---',
   'index',
@@ -28,7 +28,7 @@ const SPEC_ORDER = [
 
 const REFERENCE_PAGES = ['create-cloudlet', 'controller', 'toaster', 'labels', 'types'];
 
-/** Pages of §4 not written yet: none since D04 and D05. A new page of §4 starts here. */
+/** Pages not written yet: none at the moment. A new page starts here. */
 const PENDING = new Set<string>();
 
 const isPage = (entry: string) => !entry.startsWith('---') && !entry.startsWith('[') && !entry.startsWith('...');
@@ -52,17 +52,17 @@ function frontmatter(page: string) {
   return { fields, body: text.slice(block?.[0].length ?? 0) };
 }
 
-describe('site docs tree (DOCS.md §4)', () => {
+describe('site docs tree', () => {
   const meta = JSON.parse(readFileSync(new URL('meta.json', CONTENT), 'utf8')) as { pages: string[] };
   const written = writtenPages();
 
-  it('lists the pages of §4 in sidebar order', () => {
+  it('lists the pages in sidebar order', () => {
     expect(meta.pages).toEqual(SPEC_ORDER);
   });
 
   it('has every written page in the tree, and every pending page still unwritten', () => {
     const listed = new Set([...meta.pages.filter(isPage), ...REFERENCE_PAGES.map((page) => `api/${page}`)]);
-    for (const page of written) expect(listed.has(page), `${page}.mdx is not part of §4`).toBe(true);
+    for (const page of written) expect(listed.has(page), `${page}.mdx is not in the page tree`).toBe(true);
     for (const page of listed) {
       if (written.includes(page)) expect(PENDING.has(page), `${page} is written: remove it from PENDING`).toBe(false);
       else expect(PENDING.has(page), `${page} is missing and not marked pending`).toBe(true);
@@ -77,7 +77,7 @@ describe('site docs tree (DOCS.md §4)', () => {
     }
   });
 
-  it('has the whole Getting started group written (D02)', () => {
+  it('has the whole Getting started group written', () => {
     const group = meta.pages.slice(meta.pages.indexOf('---Getting started---') + 1, meta.pages.indexOf('---Guides---'));
     expect(group).toEqual(['index', 'installation', 'quick-start', '[Playground](/toaster/playground)']);
     for (const page of group.filter(isPage)) {
@@ -86,8 +86,8 @@ describe('site docs tree (DOCS.md §4)', () => {
     }
   });
 
-  it('has the Guides of D03 written, with Run blocks', () => {
-    /** The demo catalog groups each page runs (D03): every one of its entries is on the page. */
+  it('has the notification Guides written, with Run blocks', () => {
+    /** The demo catalog groups each page runs: every one of its entries is on the page. */
     const RUNS: Record<string, readonly string[]> = {
       notifications: ['success', 'info', 'warning', 'error', 'loading', 'title-only', 'description', 'rich-description', 'custom-icon', 'update-loading', 'burst', 'overflow', 'dismiss-all'],
       operations: ['track-resolve', 'error-retry', 'track-cancel', 'promise-progress', 'action-command', 'action-retry', 'action-link'],
@@ -102,7 +102,7 @@ describe('site docs tree (DOCS.md §4)', () => {
     }
   });
 
-  it('sends readers to the Playground from Introduction and Quick start only (launch P03)', () => {
+  it('sends readers to the Playground from Introduction and Quick start only', () => {
     const nextSteps = (page: string) => frontmatter(page).body.split('## Next steps')[1] ?? '';
     for (const page of ['index', 'quick-start']) expect(nextSteps(page), page).toContain('](/toaster/playground)');
     for (const page of ['installation', 'notifications', 'operations', 'positioning', 'styling', 'ssr', 'accessibility']) {
@@ -110,7 +110,7 @@ describe('site docs tree (DOCS.md §4)', () => {
     }
   });
 
-  it('has the Guides of D04 written, with typechecked examples and links to the Reference', () => {
+  it('has the integration Guides written, with typechecked examples and links to the Reference', () => {
     /** Integration guides configure the Toaster rather than show a notification: no Run blocks. */
     const LINKS: Record<string, readonly string[]> = {
       styling: ['/toaster/docs/api/toaster'],
@@ -127,8 +127,8 @@ describe('site docs tree (DOCS.md §4)', () => {
     }
   });
 
-  it('has the Reference of D05 written in order, each page with a §5 table', () => {
-    /** Sidebar names come from the titles (DOCS.md §4). */
+  it('has the Reference written in order, each page with a reference table', () => {
+    /** Sidebar names come from the titles. */
     const TITLES: Record<string, string> = {
       'create-cloudlet': 'createCloudlet',
       controller: 'Controller',
@@ -144,7 +144,7 @@ describe('site docs tree (DOCS.md §4)', () => {
       expect(PENDING.has(page), `${page} is pending`).toBe(false);
       const { fields, body } = frontmatter(page);
       expect(fields['title'], `${page}: title`).toBe(TITLES[slug]);
-      // §5: Prop / Option · Type · Default · Description, the first column named after what it lists.
+      // Prop / Option · Type · Default · Description, the first column named after what it lists.
       expect(body, `${page}: a Prop · Type · Default · Description table`).toMatch(/^\| (?:Prop|Option|Field) \| Type \| Default \| Description \|$/mu);
       expect(body, `${page}: Run blocks belong to the Guides`).not.toMatch(/^```\w+ demo=/mu);
     }

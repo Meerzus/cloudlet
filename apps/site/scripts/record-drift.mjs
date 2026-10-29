@@ -3,7 +3,7 @@
  * Records the seam of scene 2 → scene 3 ("Drifting by") in headless Chromium: from scene 2's
  * last plateau, trackpad-like flicks forward through the volley, the title, all six benefits and
  * their stories into Get started, then back until the volley has unwound. Scene 2 snaps, so its
- * stops must rest on a label; scene 3 has no snap (LANDING §8), so its stops should land in a
+ * stops must rest on a label; scene 3 has no snap, so its stops should land in a
  * rest of its timeline (`data-rests`, nothing moves there) — the report gives the share.
  * Frame intervals (rAF) and long tasks are collected while scrolling; `--no-video` measures
  * without the recorder's own load. `--frames` instead shoots scene 3 at every rest and between

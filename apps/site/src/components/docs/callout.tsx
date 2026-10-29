@@ -6,7 +6,7 @@ export type CalloutType = 'note' | 'tip' | 'warning';
 
 const ICONS: Record<CalloutType, typeof Info> = { note: Info, tip: Lightbulb, warning: TriangleAlert };
 
-/** Three kinds of aside (DOCS.md §5): note, tip, warning. `title` defaults to the kind's label. */
+/** Three kinds of aside: note, tip, warning. `title` defaults to the kind's label. */
 export function Callout({ type = 'note', title, children }: { type?: CalloutType; title?: ReactNode; children: ReactNode }) {
   const Icon = ICONS[type];
   return (

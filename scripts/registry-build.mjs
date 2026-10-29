@@ -37,7 +37,7 @@ assert(css.content.includes('var(--popover'));
 const catalog = { ...source, items: [{ ...item }] };
 assert(validateCatalog(catalog), JSON.stringify(validateCatalog.errors));
 await writeFile(resolve(root, 'registry/r/registry.json'), JSON.stringify(catalog, null, 2) + '\n');
-// The site serves the built catalog at `/r/*.json` (LANDING §9, launch P01); tests/unit/site-registry.test.ts keeps the copies equal.
+// The site serves the built catalog at `/r/*.json`; tests/unit/site-registry.test.ts keeps the copies equal.
 await mkdir(resolve(root, 'apps/site/public/r'), { recursive: true });
 for (const name of ['registry.json', 'toaster.json']) await copyFile(resolve(root, `registry/r/${name}`), resolve(root, `apps/site/public/r/${name}`));
 const evidence = {

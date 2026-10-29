@@ -5,7 +5,7 @@ import { REGISTRY_ITEM_URL, SITE_URL, TOASTER_PATH } from '../../apps/site/src/l
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
 /**
- * The shadcn registry served by the site (LANDING §9, launch P01): `registry:build` writes
+ * The shadcn registry served by the site: `registry:build` writes
  * `registry/r/*.json` and copies them to `apps/site/public/r/`, so `${SITE_URL}/r/toaster.json`
  * is exactly the built item.
  */

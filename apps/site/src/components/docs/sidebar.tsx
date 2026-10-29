@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { groupTree, normalizePath } from './nav';
 
 /**
- * Sidebar links from the page tree (DOCS.md §7): groups by separator, the current page marked
+ * Sidebar links from the page tree: groups by separator, the current page marked
  * with `aria-current`. The same list renders in the desktop column and in the phone drawer.
  */
 export function SidebarNav({ tree, onNavigate, className }: { tree: PageTree.Root; onNavigate?: () => void; className?: string }) {

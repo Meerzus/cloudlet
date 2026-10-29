@@ -21,18 +21,18 @@ declare global {
   interface Window { surfaceFixture?: SurfaceFixtureApi; }
 }
 
-export const longTitle = 'Очень длинное русское уведомление о готовности всех изменений и синхронизации документов между устройствами';
-export const longDescription = 'Описание остаётся читаемым даже в узком окне. '.repeat(10)
-  + 'https://example.com/очень-длинный-путь-без-пробелов/abcdefghijklmnopqrstuvwxyz0123456789'.repeat(4);
+export const longTitle = 'A very long notification saying that every change is ready and the documents are synced between devices';
+export const longDescription = 'The description stays readable even in a narrow window. '.repeat(10)
+  + 'https://example.com/a-very-long-path-without-any-spaces/abcdefghijklmnopqrstuvwxyz0123456789'.repeat(4);
 
 const three: readonly ReactNotificationSpec[] = [
-  { id: 'C', title: 'Черновик сохранён', kind: 'success', description: { kind: 'text', text: 'Изменения записаны локально.' } },
-  { id: 'B', title: 'Файл загружен', kind: 'info', action: { kind: 'command', label: 'Открыть', run: () => undefined } },
-  { id: 'A', title: 'Новый комментарий' },
+  { id: 'C', title: 'Draft saved', kind: 'success', description: { kind: 'text', text: 'Changes are stored locally.' } },
+  { id: 'B', title: 'File uploaded', kind: 'info', action: { kind: 'command', label: 'Open', run: () => undefined } },
+  { id: 'A', title: 'New comment' },
 ];
 
 /**
- * `?surface`: the measured shell of the stack → Island model (DESIGN §2–§4, §7) under
+ * `?surface`: the measured shell of the stack → Island model under
  * container width, font size, theme, mount and dispose changes. Mutations go through
  * the public controller; open/collapse go through the pill and Escape like a user.
  */
@@ -56,7 +56,7 @@ export function SurfaceFixture() {
       return found;
     };
     const api: SurfaceFixtureApi = {
-      reset: (records = [{ id: 'A', title: 'Сохранено', description: { kind: 'text', text: longDescription } }]) => {
+      reset: (records = [{ id: 'A', title: 'Saved', description: { kind: 'text', text: longDescription } }]) => {
         controller.clear();
         controller.acknowledgeOverflow();
         // Oldest first: the last record is the top pill.
@@ -72,9 +72,9 @@ export function SurfaceFixture() {
         const promise = new Promise<void>((resolve, reject) => { finish = success => { if (success) resolve(); else reject(new Error('Fixture failure')); }; });
         const operation = controller.track(promise, {
           id: 'operation',
-          pending: { title: 'Загружаем документ', description: { kind: 'text', text: longDescription }, progress: { kind: 'indeterminate' }, attention: 'stack' },
-          success: { title: 'Документ готов', description: { kind: 'text', text: 'Загрузка завершена без пересоздания оболочки.' }, duration: null },
-          error: { title: 'Ошибка загрузки', description: { kind: 'text', text: 'Соединение прервано.' }, duration: null },
+          pending: { title: 'Uploading document', description: { kind: 'text', text: longDescription }, progress: { kind: 'indeterminate' }, attention: 'stack' },
+          success: { title: 'Document ready', description: { kind: 'text', text: 'The upload finished without recreating the shell.' }, duration: null },
+          error: { title: 'Upload error', description: { kind: 'text', text: 'The connection dropped.' }, duration: null },
         });
         void operation.result.catch(() => undefined);
       },
@@ -97,23 +97,23 @@ export function SurfaceFixture() {
 
   return <>
     <main>
-      <p className="eyebrow">Задачи 13–16 · Проверка оболочки</p>
+      <p className="eyebrow">Shell check</p>
       <h1>Cloudlet surface</h1>
-      <p>Пилюля, морфинг в Island, смены содержимого и прогресса при изменении ширины, шрифта, темы, монтирования. Страница сохраняет стандартный browser margin и не использует глобальный reset.</p>
+      <p>The pill, the morph into the Island, content and progress changes while the width, font, theme and mounting change. The page keeps the default browser margin and uses no global reset.</p>
       <div className="controls" data-lab-keep-island="">
-        <button type="button" onClick={() => window.surfaceFixture?.reset()}>Короткий заголовок</button>
-        <button type="button" onClick={() => window.surfaceFixture?.reset([{ id: 'long', title: longTitle, description: { kind: 'text', text: longDescription }, action: { kind: 'command', label: 'Подтвердить', run: () => Promise.resolve() } }])}>Длинный текст</button>
-        <button type="button" onClick={() => window.surfaceFixture?.reset(three)}>Три записи</button>
-        <button type="button" onClick={() => window.surfaceFixture?.open()} disabled={state.state === 'island' || !state.stack.length}>Открыть Island</button>
-        <button type="button" onClick={() => window.surfaceFixture?.collapse()} disabled={state.state !== 'island'}>Свернуть</button>
+        <button type="button" onClick={() => window.surfaceFixture?.reset()}>Short title</button>
+        <button type="button" onClick={() => window.surfaceFixture?.reset([{ id: 'long', title: longTitle, description: { kind: 'text', text: longDescription }, action: { kind: 'command', label: 'Confirm', run: () => Promise.resolve() } }])}>Long text</button>
+        <button type="button" onClick={() => window.surfaceFixture?.reset(three)}>Three records</button>
+        <button type="button" onClick={() => window.surfaceFixture?.open()} disabled={state.state === 'island' || !state.stack.length}>Open Island</button>
+        <button type="button" onClick={() => window.surfaceFixture?.collapse()} disabled={state.state !== 'island'}>Collapse</button>
         <button type="button" onClick={() => window.surfaceFixture?.loading()}>Loading</button>
         <button type="button" onClick={() => window.surfaceFixture?.complete('success')}>→ success</button>
         <button type="button" onClick={() => window.surfaceFixture?.complete('error')}>→ error</button>
       </div>
       <div className="controls">
-        <button type="button" onClick={() => setNarrow(value => !value)}>Размер контейнера</button>
-        <button type="button" onClick={() => setLargeFont(value => !value)}>Размер шрифта</button>
-        <button type="button" onClick={() => setTheme(value => value === 'light' ? 'dark' : 'light')}>Тема поверхности</button>
+        <button type="button" onClick={() => setNarrow(value => !value)}>Container size</button>
+        <button type="button" onClick={() => setLargeFont(value => !value)}>Font size</button>
+        <button type="button" onClick={() => setTheme(value => value === 'light' ? 'dark' : 'light')}>Surface theme</button>
         <button type="button" onClick={() => setAttached(value => !value)} disabled={disposed}>{attached ? 'Unmount' : 'Mount'}</button>
         <button type="button" onClick={() => { controller.dispose(); setDisposed(true); }}>Dispose</button>
       </div>

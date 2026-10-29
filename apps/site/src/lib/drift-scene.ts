@@ -2,7 +2,7 @@ import type { PuppetFace, PuppetState } from './puppet-model';
 import { formatKB, PACKAGE_SIZE } from './site';
 
 /**
- * Scene 3, "Drifting by" (LANDING §8, revision of 2026-10-24): a volley of puppets flies in from
+ * Scene 3, "Drifting by": a volley of puppets flies in from
  * the edges as the visitor scrolls, settles into parallax layers of depth and drifts behind six
  * benefits, one per screen. On each benefit, actors step out of that crowd and act its story.
  * Positions are in viewport units so the same volley fits every screen; phones fly a smaller
@@ -37,7 +37,7 @@ export const DRIFT_PHONE_RECEDE = 0.35;
 /**
  * While a story plays, the crowd steps back: its opacity loses `opacity`; puppets drifting behind
  * the text lose another `text` so it stays readable. Opacity only: a haze on twelve large puppets
- * cost frames on desktop (L07 recordings, p95 33 ms).
+ * cost frames on desktop (recorded p95 33 ms).
  */
 export const DRIFT_CROWD_DIM = { opacity: 0.3, text: 0.6 } as const;
 
@@ -68,8 +68,8 @@ export interface DriftPuppet {
 const pill = (face: PuppetFace, count = 1): PuppetState => ({ face, mode: 'pill', count });
 const island = (face: PuppetFace, extra: Partial<PuppetState> = {}): PuppetState => ({ face, mode: 'island', ...extra });
 
-/* Own faces of the crowd, cast for their parts (LANDING §8: the story starts from the actor's own face). */
-/** Side of the text on each benefit, in order; actors play on the other half (LANDING §8, owner, L07 review). */
+/* Own faces of the crowd, cast for their parts (the story starts from the actor's own face). */
+/** Side of the text on each benefit, in order; actors play on the other half. */
 export const BENEFIT_TEXT_SIDES: readonly DriftSide[] = ['left', 'right', 'left', 'right', 'left', 'right'];
 const READY: PuppetFace = { id: 'ready', kind: 'info', title: '12 photos ready to upload', description: 'Holiday album · 48 MB', action: 'Upload' };
 const SYNCED: PuppetFace = { id: 'synced', kind: 'success', title: 'Synced to the cloud' };
@@ -93,9 +93,9 @@ const BACKED_AR: PuppetFace = { id: 'backed-ar', kind: 'info', title: 'تم نس
 const THEMED: PuppetFace = { id: 'themed', kind: 'info', title: 'A fresh coat of sky', description: 'Tokens and classNames, no forks.', action: 'Apply' };
 
 /**
- * 12 puppets on desktop, 6 of them on phones (LANDING §8). Paint order: far to near. The text
+ * 12 puppets on desktop, 6 of them on phones. Paint order: far to near. The text
  * alternates sides and the actors play on the other half (benefits 1, 3, 5 on the right, 2, 4, 6
- * on the left), so each benefit's cast rests on its stage's half. All follow the page theme (owner, L07).
+ * on the left), so each benefit's cast rests on its stage's half. All follow the page theme.
  */
 export const DRIFT_PUPPETS: readonly DriftPuppet[] = [
   // Far: small, pale, hazy; only these cross towards the centre column.
@@ -155,7 +155,7 @@ export interface Benefit {
   readonly text: string;
 }
 
-/** The six benefits (LANDING §8), one per screen, after the scene title. Draft copy for the owner's review. */
+/** The six benefits, one per screen, after the scene title. Draft copy for the owner's review. */
 export const BENEFITS: readonly Benefit[] = [
   { id: 'springs', title: 'Springs, not keyframes', text: 'Every motion rides a spring. Interrupt it anywhere and it carries on from its current speed.' },
   { id: 'island', title: 'Stack → Island', text: 'One shell that stacks, opens and slides. Swipe it, flick it on a trackpad, or use the arrow keys.' },
@@ -165,7 +165,7 @@ export const BENEFITS: readonly Benefit[] = [
   { id: 'stack', title: 'Fits your stack', text: `A shadcn registry item, tokens and classNames, SSR and Next.js, strict CSP. ${formatKB(PACKAGE_SIZE.start)} of JavaScript on first load.` },
 ];
 
-/* ---------- Stories (LANDING §8.5): one per benefit, acted by puppets of the crowd ---------- */
+/* ---------- Stories: one per benefit, acted by puppets of the crowd ---------- */
 
 export type DriftKey = 'Tab' | 'Esc' | '→' | '←';
 export type DriftProp = 'field' | 'announce';
@@ -214,7 +214,7 @@ export const DRIFT_STORIES: readonly Story[] = [
     beats: [
       { kind: 'come', actor: 'ready' },
       // Opening is interrupted by a newcomer: the shape carries on from its speed to the taller
-      // Island (the current notification stays, a second dot appears — DESIGN §3).
+      // Island (the current notification stays, a second dot appears).
       { kind: 'merge', actor: 'synced', into: 'ready', via: island(READY), at: 0.18, state: island(READY, { count: 2, current: 1 }), hold: 0.7 },
       { kind: 'state', actor: 'ready', state: pill(SYNCED, 2) },
       { kind: 'split', actor: 'synced', from: 'ready', state: pill(READY) },
@@ -232,7 +232,7 @@ export const DRIFT_STORIES: readonly Story[] = [
       { kind: 'state', actor: 'invite', state: island(INVITE, { count: 3, current: 2 }), key: '→' },
       { kind: 'state', actor: 'invite', state: island(SAVED, { count: 3, current: 1 }), key: '←' },
       { kind: 'state', actor: 'invite', state: island(SAVED, { count: 3, current: 1, highlight: 1, focus: 'close' }), hold: 0.3 },
-      // Closing the current one slides to the next older (DESIGN §3); its actor is gone from the stack.
+      // Closing the current one slides to the next older; its actor is gone from the stack.
       { kind: 'state', actor: 'invite', state: island(INVITE, { count: 2, current: 1 }) },
       { kind: 'state', actor: 'invite', state: pill(FORECAST, 2) },
       { kind: 'split', actor: 'forecast', from: 'invite', state: pill(INVITE) },

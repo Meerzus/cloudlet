@@ -28,7 +28,7 @@ function crowded() {
 const host = () => screen.getByRole('region', { name: 'Notifications' });
 const pill = () => document.querySelector<HTMLButtonElement>('[data-cloudlet-pill]')!;
 
-/** Part → own class of the element it lands on (DESIGN §8, handoff 15). */
+/** Part → own class of the element it lands on. */
 const own: Record<CloudletPart, string> = {
   host: 'cloudlet-host', stack: 'cloudlet-stack', pill: 'cloudlet-pill', tail: 'cloudlet-tail', badge: 'cloudlet-badge',
   island: 'cloudlet-shell', header: 'cloudlet-header', icon: 'cloudlet-icon', title: 'cloudlet-title', close: 'cloudlet-close',

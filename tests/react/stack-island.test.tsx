@@ -76,7 +76,7 @@ describe('collapsed stack', () => {
     controllers.push(instance);
     for (let index = 0; index < 101; index++) instance.show({ title: `Item ${index}`, duration: null, attention: 'stack' });
     render(tree(instance));
-    // DESIGN §10: no separate card; the badge is 100 records + 1 missed.
+    // No separate overflow card; the badge is 100 records + 1 missed.
     expect(document.querySelector('.cloudlet-host > .cloudlet-overflow')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Acknowledge missed notifications' })).toBeNull();
     expect(document.querySelector('.cloudlet-badge-value')).toHaveTextContent('101');

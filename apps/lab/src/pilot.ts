@@ -1,6 +1,6 @@
 /**
  * The public package has no imperative open/collapse API: the Island opens from its
- * pill and collapses with Escape or a press outside (DESIGN §1). Lab buttons drive
+ * pill and collapses with Escape or a press outside. Lab buttons drive
  * exactly those user paths through the public parts (`classNames` hooks `.cloudlet-pill`,
  * `.cloudlet-close`, the Island region) — no internals.
  */

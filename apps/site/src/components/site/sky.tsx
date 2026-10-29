@@ -67,14 +67,14 @@ export function CloudImage({ shape, theme, w }: { shape: ShapeId; theme: 'day' |
   );
 }
 
-/** Pages whose sky is a still backdrop (LANDING §13: the playground has no scroll effects). */
+/** Pages whose sky is a still backdrop (the playground has no scroll effects). */
 const STILL_PATHS = [PLAYGROUND_PATH];
 
 export function Sky() {
   const root = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const still = STILL_PATHS.some((path) => pathname.startsWith(path));
-  // Reading pages have no sky at all (DOCS.md §7); the hooks below still run so their order is stable.
+  // Reading pages have no sky at all; the hooks below still run so their order is stable.
   const quiet = isQuietPath(pathname);
 
   useScrollScene(root, () => {

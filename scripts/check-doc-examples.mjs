@@ -6,13 +6,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-/** The site's documentation pages (DOCS.md §3): every ```ts / ```tsx fence of content/docs is checked too. */
+/** The site's documentation pages: every ```ts / ```tsx fence of content/docs is checked too. */
 const DOCS_CONTENT = 'apps/site/content/docs';
 const mdxPages = (await readdir(resolve(root, DOCS_CONTENT), { recursive: true }))
   .filter((entry) => entry.endsWith('.mdx'))
   .map((entry) => `${DOCS_CONTENT}/${entry.replaceAll('\\', '/')}`)
   .sort();
-// The root README carries no code (DOCS.md §3): it points to the package README and the site.
+// The root README carries no code: it points to the package README and the site.
 const documents = ['packages/toast/README.md', 'registry/README.md', ...mdxPages];
 const output = resolve(root, 'artifacts/docs-examples');
 assert.equal(process.argv.length, 2, 'Usage: node scripts/check-doc-examples.mjs');
@@ -67,7 +67,7 @@ try {
     sourceHashes[document] = createHash('sha256').update(markdown).digest('hex');
     const titles = new Map();
     for (const example of extractExamples(markdown, document)) {
-      // A runnable documentation example (DOCS.md §6, `demo="<id>"`) is a demo catalog
+      // A runnable documentation example (`demo="<id>"`) is a demo catalog
       // snippet, which assumes `const cloudlet = useCloudlet();` as the page says above it.
       // Only supply that context; the fenced snippet stays unchanged.
       const scaffold = document.endsWith('.mdx') && /(?:^|\s)demo="[^"]+"/u.test(example.meta)

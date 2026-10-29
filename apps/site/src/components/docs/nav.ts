@@ -12,7 +12,7 @@ export interface NavGroup {
 }
 
 /**
- * The sidebar's reading of the page tree (DOCS.md §4): separators start groups, folders are
+ * The sidebar's reading of the page tree: separators start groups, folders are
  * flattened into the group they sit in (the Reference pages live in `api/`), links keep their
  * order. Both the desktop sidebar and the phone drawer render the same groups.
  */

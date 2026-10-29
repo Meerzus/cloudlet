@@ -170,7 +170,7 @@ const ISLANDS = new Map([
 const M2: PuppetMetrics = { ...METRICS, layers: ISLANDS };
 const at = (state: PuppetState, hold = 0) => poseOf(state, M2, hold);
 
-describe('site puppets: scene 3 abilities (LANDING §6, §8)', () => {
+describe('site puppets: scene 3 abilities', () => {
   const ready = at({ face: READY, mode: 'island', count: 3 });
   const saved = at({ face: SAVED, mode: 'island', count: 3, current: 1 });
 

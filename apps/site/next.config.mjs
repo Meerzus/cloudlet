@@ -1,11 +1,11 @@
 import { createMDX } from 'fumadocs-mdx/next';
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js';
 
-/* Documentation content (DOCS.md §1): MDX under content/docs, options in source.config.ts. */
+/* Documentation content: MDX under content/docs, options in source.config.ts. */
 const withMDX = createMDX();
 
 /**
- * Static export: the landing is plain files on any static host (LANDING §1).
+ * Static export: the landing is plain files on any static host.
  * `page.dev.tsx` routes (service stands such as /puppet-check) exist only under `next dev`
  * and in a service build for the checking scripts: `SITE_SERVICE_PAGES=1 npm run build:site`.
  */

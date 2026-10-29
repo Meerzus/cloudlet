@@ -25,8 +25,8 @@ export function useMotionOverrides() {
 export const timeScales = ['1', '0.5', '0.25', '0.1'] as const;
 
 /**
- * DESIGN §7 tuning (task 16): every field writes `Toaster motion.overrides` on change and
- * applies to the next transition without a rebuild. JSON carries complete values for task 17.
+ * Motion tuning: every field writes `Toaster motion.overrides` on change and
+ * applies to the next transition without a rebuild. JSON carries complete values.
  */
 export function MotionPanel({ overrides, setOverrides, timeScale, setTimeScale }: {
   overrides: CloudletMotionOverrides; setOverrides: (value: CloudletMotionOverrides) => void;
@@ -37,42 +37,42 @@ export function MotionPanel({ overrides, setOverrides, timeScale, setTimeScale }
   const count = Object.values(changed).reduce<number>((sum, value) => sum + (typeof value === 'number' ? 1 : Object.keys(value ?? {}).length), 0);
   const json = tuningJson(Number(timeScale), overrides);
   const [draft, setDraft] = useState<string | null>(null);
-  const [status, setStatus] = useState('Значения по DESIGN §7. Изменения применяются к следующему переходу.');
+  const [status, setStatus] = useState('Values from the design baseline. Changes apply to the next transition.');
   const area = useRef<HTMLTextAreaElement>(null);
   const id = useId();
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(json);
-      setStatus(`JSON скопирован: ${count ? `изменено полей — ${count}` : 'значения DESIGN'}, timeScale ${timeScale}.`);
+      setStatus(`JSON copied: ${count ? `fields changed — ${count}` : 'baseline values'}, timeScale ${timeScale}.`);
     } catch {
       setDraft(null);
       area.current?.focus(); area.current?.select();
-      setStatus('Буфер обмена недоступен: JSON выделен в поле ниже, скопируйте его вручную.');
+      setStatus('The clipboard is unavailable: the JSON is selected in the field below, copy it by hand.');
     }
   };
   const apply = () => {
     const parsed = parseTuning(draft ?? json);
-    if (!parsed.ok) { setStatus(`JSON не применён: ${parsed.error}.`); return; }
+    if (!parsed.ok) { setStatus(`JSON not applied: ${parsed.error}.`); return; }
     setOverrides(parsed.overrides);
     if (parsed.timeScale !== undefined) {
       const known = timeScales.find(value => Number(value) === parsed.timeScale);
       if (known) setTimeScale(known);
     }
     setDraft(null);
-    setStatus('JSON применён.');
+    setStatus('JSON applied.');
   };
 
   return <section id="motion" className="lab-motion" aria-labelledby={`${id}-title`} data-lab-keep-island="" data-testid="motion-panel" data-changed={count}>
     <div className="lab-motion-head">
-      <div><h2 id={`${id}-title`}>Настройка движения</h2>
-        <p className="lab-hint">Пружины и длительности DESIGN §7 → <code>Toaster motion.overrides</code> (отладочный канал). Меняйте значение и повторяйте переход: идущая анимация доигрывает со старыми значениями. Сохраняется в этом браузере.</p></div>
+      <div><h2 id={`${id}-title`}>Motion tuning</h2>
+        <p className="lab-hint">Springs and durations → <code>Toaster motion.overrides</code> (a debug channel). Change a value and repeat the transition: a running animation finishes with the old values. Saved in this browser.</p></div>
       <div className="lab-buttons">
-        <button type="button" disabled={!count} onClick={() => { setOverrides({}); setDraft(null); setStatus('Сброшено к DESIGN §7.'); }}>Сбросить к DESIGN</button>
-        <button type="button" className="lab-primary" onClick={() => void copy()}>Скопировать JSON</button>
+        <button type="button" disabled={!count} onClick={() => { setOverrides({}); setDraft(null); setStatus('Reset to the baseline.'); }}>Reset to baseline</button>
+        <button type="button" className="lab-primary" onClick={() => void copy()}>Copy JSON</button>
       </div>
     </div>
-    <div className="lab-motion-speed" role="group" aria-label="Скорость переходов">
+    <div className="lab-motion-speed" role="group" aria-label="Transition speed">
       <span>timeScale</span>{timeScales.map(value => <button key={value} type="button" aria-pressed={timeScale === value} onClick={() => setTimeScale(value)}>×{value}</button>)}
     </div>
         <p className="lab-hint" role="status" data-testid="motion-status">{status}</p>
@@ -87,11 +87,11 @@ export function MotionPanel({ overrides, setOverrides, timeScale, setTimeScale }
       })}
     </fieldset>)}</div>
     <details className="lab-motion-json">
-      <summary>JSON настроек{count ? ` · изменено ${count}` : ''}</summary>
-      <p className="lab-hint">Формат: <code>{'{ timeScale, motion, changed }'}</code> — <code>motion</code> содержит все значения (форма <code>CloudletMotionConstants</code>), <code>changed</code> — только отличия от DESIGN. Можно вставить сюда JSON из задачи 17 и применить.</p>
-      <textarea ref={area} aria-label="JSON настроек движения" data-testid="motion-json" spellCheck={false} rows={14}
+      <summary>Settings JSON{count ? ` · changed ${count}` : ''}</summary>
+      <p className="lab-hint">Format: <code>{'{ timeScale, motion, changed }'}</code> — <code>motion</code> holds every value (the <code>CloudletMotionConstants</code> shape), <code>changed</code> — only the differences from the baseline. Paste a JSON here and apply it.</p>
+      <textarea ref={area} aria-label="Motion settings JSON" data-testid="motion-json" spellCheck={false} rows={14}
         value={draft ?? json} onChange={event => setDraft(event.currentTarget.value)} />
-      <div className="lab-buttons"><button type="button" onClick={apply}>Применить JSON</button>{draft !== null && <button type="button" onClick={() => setDraft(null)}>Отменить правку</button>}</div>
+      <div className="lab-buttons"><button type="button" onClick={apply}>Apply JSON</button>{draft !== null && <button type="button" onClick={() => setDraft(null)}>Discard edit</button>}</div>
     </details>
   </section>;
 }
@@ -112,6 +112,6 @@ function NumberField({ name, label, unit, step, min, value, base, describedBy, o
         if (Number.isFinite(next) && next >= min && (min > 0 || next >= 0)) onCommit(next);
       }}
       onBlur={() => setText(null)} />
-    <small id={describedBy} className="lab-motion-base">{value !== base ? `DESIGN: ${base}` : 'как в DESIGN'}</small>
+    <small id={describedBy} className="lab-motion-base">{value !== base ? `Baseline: ${base}` : 'as the baseline'}</small>
   </label>;
 }
