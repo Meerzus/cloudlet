@@ -400,13 +400,8 @@ test('touch (Chromium): a tap opens the Island, a sideways touch swipe dismisses
     await page.evaluate(() => scrollTo(0, 0));
     await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
     await idle(page);
-    box = (await pill(page).boundingBox())!;
-    await touch([{ x: cx, y: cy }, { x: cx + 30, y: cy }, { x: cx + 80, y: cy }, { x: cx + 160, y: cy }], 30);
-    await expect.poll(async () => (await state(page)).closes).toEqual([{ id: 'C', reason: 'swipe' }]);
-    await expect.poll(async () => (await state(page)).current).toBe('B');
-    await idle(page);
-    // Linux CI: this tap after the swipe did not open the Island while the same tap without a swipe
-    // does. Record what reaches the page, so a failure says why.
+    // Linux CI: the tap after this swipe did not open the Island while the same tap without a swipe
+    // does. Record what reaches the page (capture phase, before the host's own guards), so a failure says why.
     await page.evaluate(() => {
       const log: string[] = [];
       (window as unknown as { tapLog: string[] }).tapLog = log;
@@ -415,10 +410,15 @@ test('touch (Chromium): a tap opens the Island, a sideways touch swipe dismisses
         window.addEventListener(type, event => {
           const pointer = event instanceof PointerEvent ? ` id=${event.pointerId} primary=${event.isPrimary} kind=${event.pointerType}` : '';
           const touches = event instanceof TouchEvent ? ` touches=${event.touches.length}` : '';
-          log.push(`${type} ${name(event.target)}${pointer}${touches} prevented=${event.defaultPrevented} detail=${(event as UIEvent).detail}`);
-        });
+          log.push(`${Math.round(event.timeStamp)} ${type} ${name(event.target)}${pointer}${touches} prevented=${event.defaultPrevented} detail=${(event as UIEvent).detail}`);
+        }, true);
       }
     });
+    box = (await pill(page).boundingBox())!;
+    await touch([{ x: cx, y: cy }, { x: cx + 30, y: cy }, { x: cx + 80, y: cy }, { x: cx + 160, y: cy }], 30);
+    await expect.poll(async () => (await state(page)).closes).toEqual([{ id: 'C', reason: 'swipe' }]);
+    await expect.poll(async () => (await state(page)).current).toBe('B');
+    await idle(page);
     const tapBox = (await pill(page).boundingBox())!;
     const under = await page.evaluate(({ x, y }) => { const element = document.elementFromPoint(x, y); return element ? `${element.tagName}.${[...element.classList].join('.')}` : 'none'; }, { x: tapBox.x + tapBox.width / 2, y: tapBox.y + tapBox.height / 2 });
     await pill(page).tap();
