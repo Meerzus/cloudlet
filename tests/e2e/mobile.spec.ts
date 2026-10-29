@@ -323,7 +323,10 @@ test('cancel, lost capture, a second pointer, orientation, a new top record, unm
   await readable(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(host(page)).toHaveAttribute('data-reduced-motion', 'true');
-  await drag(page, pill(page), 60, 0, 4, 40);
+  // Released beside the pill: with swipes off, a press released on the pill is a plain click that opens
+  // the Island, and whether 60 px leaves the pill depends on the platform's font.
+  const pillBox = (await pill(page).boundingBox())!;
+  await drag(page, pill(page), pillBox.width / 2 + 24, 0, 4, 40);
   expect((await state(page)).closes).toEqual([]);
   expect((await record(page, 'C')).pauses).not.toContain('gesture');
   await expect(host(page)).toHaveAttribute('data-state', 'stack');
