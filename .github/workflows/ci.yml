@@ -12,12 +12,13 @@ permissions:
 concurrency:
   group: verification-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+# The runner image is pinned: e2e timing and fonts differ between images, and ubuntu-latest moves on by itself.
 jobs:
   verification:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -34,7 +35,7 @@ jobs:
       - run: npm run notices && git diff --exit-code -- packages/toast/LICENSE packages/toast/THIRD_PARTY_NOTICES.md
       - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run test:e2e -- --workers=3
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: runtime-and-package
@@ -45,10 +46,10 @@ jobs:
             artifacts/integration/npm-pack.json
             playwright-report/
   consumers:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -57,17 +58,17 @@ jobs:
       - run: npm run pack:local
       - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run test:consumers
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: installed-tarball-consumers
           retention-days: 7
           path: artifacts/integration/
   registry:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -77,7 +78,7 @@ jobs:
       - run: npm run pack:local
       - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run test:registry
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: shadcn-registry
@@ -85,10 +86,10 @@ jobs:
           path: artifacts/integration/registry/
   size:
     # Size comparisons remain informational; build/measurement errors still fail.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -96,7 +97,7 @@ jobs:
       - run: npm ci
       - run: npm run pack:local
       - run: node scripts/measure-size.mjs --tarball artifacts/integration/cloudlet-toast-1.0.0.tgz
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: size-evidence
