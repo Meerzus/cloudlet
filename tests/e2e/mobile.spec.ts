@@ -405,8 +405,29 @@ test('touch (Chromium): a tap opens the Island, a sideways touch swipe dismisses
     await expect.poll(async () => (await state(page)).closes).toEqual([{ id: 'C', reason: 'swipe' }]);
     await expect.poll(async () => (await state(page)).current).toBe('B');
     await idle(page);
+    // Linux CI: this tap after the swipe did not open the Island while the same tap without a swipe
+    // does. Record what reaches the page, so a failure says why.
+    await page.evaluate(() => {
+      const log: string[] = [];
+      (window as unknown as { tapLog: string[] }).tapLog = log;
+      const name = (target: EventTarget | null) => target instanceof Element ? `${target.tagName.toLowerCase()}.${[...target.classList].join('.')}` : String(target);
+      for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'touchstart', 'touchend', 'touchcancel', 'click']) {
+        window.addEventListener(type, event => {
+          const pointer = event instanceof PointerEvent ? ` id=${event.pointerId} primary=${event.isPrimary} kind=${event.pointerType}` : '';
+          const touches = event instanceof TouchEvent ? ` touches=${event.touches.length}` : '';
+          log.push(`${type} ${name(event.target)}${pointer}${touches} prevented=${event.defaultPrevented} detail=${(event as UIEvent).detail}`);
+        });
+      }
+    });
+    const tapBox = (await pill(page).boundingBox())!;
+    const under = await page.evaluate(({ x, y }) => { const element = document.elementFromPoint(x, y); return element ? `${element.tagName}.${[...element.classList].join('.')}` : 'none'; }, { x: tapBox.x + tapBox.width / 2, y: tapBox.y + tapBox.height / 2 });
     await pill(page).tap();
-    await expect(host(page)).toHaveAttribute('data-island-reason', 'user');
+    try {
+      await expect(host(page)).toHaveAttribute('data-island-reason', 'user');
+    } catch (error) {
+      const log = await page.evaluate(() => (window as unknown as { tapLog: string[] }).tapLog);
+      throw new Error(`${String(error)}\npill ${JSON.stringify(tapBox)}, under its centre: ${under}, scrollY ${await page.evaluate(() => scrollY)}\nevents:\n${log.join('\n')}`);
+    }
     await expect(island(page)).toBeVisible();
     await idle(page);
     await expectControlsInside(page, { left: 16, top: 16, right: device.viewport.width - 16, bottom: device.viewport.height - 16 });
