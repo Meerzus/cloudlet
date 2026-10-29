@@ -27,7 +27,7 @@
   --cloudlet-info: oklch(0.685 0.169 237.323);
   --cloudlet-warning: oklch(0.795 0.184 86.047);
   --cloudlet-loading: oklch(0.556 0 0);
-  --cloudlet-badge: #ff3b30;
+  --cloudlet-badge: #d70015;
   --cloudlet-badge-foreground: #fff;
   --cloudlet-z-index: 1000;
   --cloudlet-safe-top: env(safe-area-inset-top, 0px);

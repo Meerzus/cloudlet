@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- The badge's disc is a deeper red (`--cloudlet-badge` `#ff3b30` → `#d70015`): its white number now
+  measures 5.38:1 instead of 3.55:1 and passes the 4.5:1 text contrast.
+
 ## 1.0.0 — 2026-10-29
 
 The first stable release, published to npm as `latest` (`npm install @cloudlet/toast`). The API is the
