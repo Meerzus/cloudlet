@@ -33,6 +33,9 @@
   --cloudlet-loading: oklch(0.556 0 0);
   --cloudlet-badge: #d70015;
   --cloudlet-badge-foreground: #fff;
+  --cloudlet-field-background: var(--cloudlet-action-background);
+  --cloudlet-field-border: transparent;
+  --cloudlet-placeholder: color-mix(in oklab, var(--cloudlet-muted) 85%, var(--cloudlet-foreground));
   --cloudlet-status: var(--cloudlet-loading);
 
   position: relative;
@@ -116,6 +119,23 @@
   color: color-mix(in oklab, var(--cloudlet-status) 55%, var(--cloudlet-foreground));
   background: color-mix(in oklab, var(--cloudlet-status) 12%, transparent);
 }
+/* A form, look A: a filled pill field and the round send button; the puppeteer types the text. */
+.puppet .pp-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; margin-block: 4px 2px; }
+.puppet .pp-field {
+  position: relative; display: flex; align-items: center; min-width: 0; height: 36px; padding: 7px 13px;
+  border: 1px solid var(--cloudlet-field-border); border-radius: 18px; background: var(--cloudlet-field-background);
+  line-height: 20px; white-space: pre; overflow: hidden;
+}
+.puppet .pp-placeholder { position: absolute; inset-inline-start: 14px; color: var(--cloudlet-placeholder); }
+.puppet .pp-caret { flex: none; width: 1.5px; height: 18px; margin-inline-start: 1px; background: var(--cloudlet-focus); opacity: 0; }
+.puppet .pp-field-ring { position: absolute; inset: -1px; border-radius: inherit; outline: 2px solid var(--cloudlet-focus); outline-offset: 1px; opacity: 0; }
+.puppet .pp-send {
+  position: relative; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  color: #fff; background: color-mix(in oklab, var(--cloudlet-status) 80%, #000);
+}
+.puppet .pp-send > svg { grid-area: 1 / 1; stroke-width: 2; }
+.puppet .pp-send-spinner { opacity: 0; }
+
 /* A call to action (scene 2 Retry, scene 3 focus): the hover tint plus the focus ring, faded in by the puppeteer. */
 .puppet .pp-highlight {
   position: absolute; inset: 0; border-radius: inherit; opacity: 0;

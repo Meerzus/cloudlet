@@ -2,7 +2,7 @@ import type { PuppetFace, PuppetState } from './puppet-model';
 import type { PuppetStep } from './puppeteer';
 
 /**
- * Scene 2, "Life of a notification": one notification lives through ten
+ * Scene 2, "Life of a notification": one notification lives through eleven
  * plateaus on a pinned, scrubbed timeline. Timeline units are seconds of the puppet
  * script; the scroll length maps onto them.
  */
@@ -33,6 +33,8 @@ const DRIFTED: PuppetFace = {
   retry: true,
 };
 const LANDED: PuppetFace = { id: 'landed', kind: 'success', title: '12 photos are in the cloud', description: 'Holiday album · 48 MB' };
+const ASK: PuppetFace = { id: 'ask', kind: 'info', title: 'How did the upload go?', field: { placeholder: 'Your feedback', text: 'Smooth as a cloud ☁️' } };
+const THANKS: PuppetFace = { id: 'thanks', kind: 'success', title: 'Thanks for the feedback' };
 
 /** Island states show the three notifications of the stack as dots. */
 const island = (face: PuppetFace, extra: Partial<PuppetState> = {}): PuppetState => ({ face, mode: 'island', count: 3, ...extra });
@@ -49,7 +51,13 @@ export const LIFE_STATES: readonly PuppetState[] = [
   /* 8 */ island(DRIFTED),
   /* 9 */ island(DRIFTED, { highlight: 1 }),
   /* 10 */ island(LANDED),
-  /* 11 */ { face: LANDED, mode: 'pill', count: 3 },
+  // The question arrives with an empty field; the answer types itself in on the way to the "ask"
+  // plateau, so a snap rests on the whole answer, then it sends.
+  /* 11 */ island(ASK),
+  /* 12 */ island(ASK, { typed: 1 }),
+  /* 13 */ island(ASK, { typed: 1, sending: true }),
+  /* 14 */ island(THANKS),
+  /* 15 */ { face: THANKS, mode: 'pill', count: 3 },
 ];
 
 export interface LifeCaption {
@@ -69,6 +77,7 @@ export const LIFE_CAPTIONS: readonly LifeCaption[] = [
   { id: 'error', title: 'Fails gracefully', text: 'Errors say what went wrong and keep the way forward.' },
   { id: 'retry', title: 'One tap to retry', text: 'Retry is built in. No glue code.' },
   { id: 'success', title: 'Lands the result', text: 'Success replaces the spinner in place.' },
+  { id: 'ask', title: 'Asks back', text: 'A field right in the Island: ask for a word back and get it in one step.' },
   { id: 'drift', title: 'Then drifts away', text: 'Done, it folds back into the stack and floats off like a cloud.' },
 ];
 
@@ -85,14 +94,18 @@ export const LIFE_STEPS: readonly PuppetStep[] = [
   { state: 8, hold: 1, stretch: 1.8, label: 'error' },
   { state: 9, hold: 1, stretch: 1, label: 'retry' },
   { state: 10, hold: 1, stretch: 1.8, label: 'success' },
-  { state: 11, hold: 0.8, stretch: 1.6, label: 'drift' },
+  { state: 11, hold: 0.4, stretch: 1.8 },
+  { state: 12, hold: 1, stretch: 2.2, label: 'ask' },
+  { state: 13, hold: 0.4, stretch: 1 },
+  { state: 14, hold: 0.5, stretch: 1.2 },
+  { state: 15, hold: 0.8, stretch: 1.6, label: 'drift' },
 ];
 
 /** After the last plateau the stack turns into a cloud and floats up (timeline seconds). */
 export const LIFE_DRIFT = 1.6;
 
 /** Pinned length in viewport heights (the section is this plus one screen). */
-export const LIFE_PIN_SCREENS = 8;
+export const LIFE_PIN_SCREENS = 9;
 
 /** Desktop camera: the puppet is shown at this scale of its 1:1 size (pills a little closer). */
 export const LIFE_CAMERA = { island: 1.5, pill: 1.8, minWidth: 768 } as const;
