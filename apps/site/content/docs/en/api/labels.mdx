@@ -34,6 +34,7 @@ Read on every render of the Toaster.
 | `stackSummary` | `(title: string, count: number, missed: number) => string` | `'Saved, 3 notifications, 2 missed'` | Name of the collapsed pill: the top title, how many notifications the stack holds and how many were missed. The default leaves out a count of 1 and a missed count of 0. |
 | `page` | `(index: number, total: number) => string` | `'2 of 5'` | Name of the Island's current slide; `index` starts at 1. |
 | `overflowCount` | `(count: number) => string` | `'4 missed notifications'` | The missed-notifications line in the Island. |
+| `draft` | `string` | `'Draft'` | Added to the collapsed pill's name while its form holds unsent text. |
 
 ## AnnouncementFormatters
 
@@ -92,6 +93,7 @@ const labels: CloudletLabels = {
   ].join(', '),
   page: (index, total) => `${index} von ${total}`,
   overflowCount: (missed) => count(missed, 'verpasste Benachrichtigung', 'verpasste Benachrichtigungen'),
+  draft: 'Entwurf',
 };
 
 /** Title, then the description: a text, or the spoken alternative of a rich one. */
@@ -118,6 +120,8 @@ const messages: FallbackMessages = {
   cancellationRequested: 'Abbruch angefordert',
   actionError: 'Aktion fehlgeschlagen',
   renderError: 'Inhalt nicht verfügbar',
+  fieldRequired: 'Bitte ausfüllen',
+  fieldTooLong: 'Dieser Text ist zu lang',
 };
 
 const cloudlet = createCloudlet({ messages });

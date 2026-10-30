@@ -46,6 +46,14 @@ describe('site puppets: fidelity to the package', () => {
     expect(own).toEqual(source);
   });
 
+  it('keeps the surface under a look equal to the background of each theme', () => {
+    for (const selector of ['.puppet {', ':is(.dark .puppet']) {
+      const start = puppet.indexOf(selector);
+      const body = puppet.slice(puppet.indexOf('{', start) + 1, puppet.indexOf('}', start));
+      expect(body.match(/--pp-surface:\s*([^;]+);/)?.[1], selector).toBe(tokens(puppet, selector)['--cloudlet-background']);
+    }
+  });
+
   it('draws the package glyphs and silhouette', () => {
     const card = read('packages/toast/src/react/card.tsx');
     const markup = read('apps/site/src/components/puppets/puppet.tsx');

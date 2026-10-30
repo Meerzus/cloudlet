@@ -21,9 +21,9 @@ const PHONE = DRIFT_PUPPETS.filter((puppet) => puppet.phone);
 const byId = new Map(DRIFT_PUPPETS.map((puppet) => [puppet.id, puppet]));
 
 describe('site scene 3: the crowd', () => {
-  it('flies 12 puppets on desktop and 6 of them on phones', () => {
-    expect(DRIFT_PUPPETS).toHaveLength(12);
-    expect(PHONE).toHaveLength(6);
+  it('flies 13 puppets on desktop and 7 of them on phones', () => {
+    expect(DRIFT_PUPPETS).toHaveLength(13);
+    expect(PHONE).toHaveLength(7);
     expect(DRIFT_PHONE_LAYERS.length).toBeLessThan(DRIFT_LAYERS.length);
     expect(new Set(DRIFT_PUPPETS.map((puppet) => puppet.id)).size).toBe(DRIFT_PUPPETS.length);
   });
@@ -70,13 +70,13 @@ describe('site scene 3: casting', () => {
     for (const stories of [DRIFT_STORIES, DRIFT_PHONE_STORIES]) expect(stories.map((story) => story.benefit)).toEqual(BENEFITS.map((benefit) => benefit.id));
   });
 
-  it('casts 2 / 3 / 2 / 2 / 2 / 1 on desktop and every crowd puppet exactly once', () => {
-    expect(casts(DRIFT_STORIES).map((cast) => cast.length)).toEqual([2, 3, 2, 2, 2, 1]);
+  it('casts 2 / 3 / 2 / 1 / 2 / 2 / 1 on desktop and every crowd puppet exactly once', () => {
+    expect(casts(DRIFT_STORIES).map((cast) => cast.length)).toEqual([2, 3, 2, 1, 2, 2, 1]);
     expect(casts(DRIFT_STORIES).flat().sort()).toEqual(DRIFT_PUPPETS.map((puppet) => puppet.id).sort());
   });
 
   it('casts one actor per benefit on phones, each of the phone crowd once', () => {
-    expect(casts(DRIFT_PHONE_STORIES).map((cast) => cast.length)).toEqual([1, 1, 1, 1, 1, 1]);
+    expect(casts(DRIFT_PHONE_STORIES).map((cast) => cast.length)).toEqual([1, 1, 1, 1, 1, 1, 1]);
     expect(casts(DRIFT_PHONE_STORIES).flat().sort()).toEqual(PHONE.map((puppet) => puppet.id).sort());
   });
 
@@ -108,10 +108,10 @@ describe('site scene 3: the timeline', () => {
   ] as const) {
     const timeline = buildDriftTimeline(crowd, stories, phone);
 
-    it(`${name}: lasts about 21 screens of scroll (fewer on phones) and lays the benefits out in order`, () => {
+    it(`${name}: lasts about 25 screens of scroll (fewer on phones) and lays the benefits out in order`, () => {
       const screens = timeline.duration / STORY_TIMING.secondsPerScreen;
-      expect(screens).toBeGreaterThan(phone ? 12 : 18);
-      expect(screens).toBeLessThan(phone ? 18 : 24);
+      expect(screens).toBeGreaterThan(phone ? 15 : 21);
+      expect(screens).toBeLessThan(phone ? 21 : 27);
       let last = timeline.intro.textOut[0];
       for (const benefit of timeline.benefits) {
         expect(benefit.textIn[0]).toBeGreaterThan(last - STORY_TIMING.overlap - 1e-9);
@@ -169,7 +169,7 @@ describe('site scene 3: the timeline', () => {
 
   it('alternates the text between halves and casts each benefit from its stage’s half', () => {
     const timeline = buildDriftTimeline(DRIFT_PUPPETS, DRIFT_STORIES);
-    expect(timeline.benefits.map((benefit) => benefit.textSide)).toEqual(['left', 'right', 'left', 'right', 'left', 'right']);
+    expect(timeline.benefits.map((benefit) => benefit.textSide)).toEqual(['left', 'right', 'left', 'right', 'left', 'right', 'left']);
     timeline.benefits.forEach((benefit, index) => {
       expect(benefit.stageSide).not.toBe(benefit.textSide);
       for (const id of storyCast(DRIFT_STORIES[index]!)) expect(sideOf(byId.get(id)!), `${benefit.id}: ${id}`).toBe(benefit.stageSide);
@@ -188,11 +188,12 @@ describe('site scene 3: the timeline', () => {
 });
 
 describe('site scene 3: benefits and FAQ', () => {
-  it('lists the six benefits in order', () => {
+  it('lists the seven benefits in order', () => {
     expect(BENEFITS.map((benefit) => benefit.title)).toEqual([
       'Springs, not keyframes',
       'Stack → Island',
       'Promises built in',
+      'Replies in place',
       'Speaks up when it matters',
       'Accessible by default',
       'Fits your stack',

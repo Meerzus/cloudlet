@@ -59,7 +59,8 @@ function bodyKey(item: Presented) {
   const { content, operation, action } = item;
   const description = content.description;
   return [description?.kind, description?.kind === 'text' ? description.text : '', content.progress?.kind,
-    content.action?.kind, content.action?.label, action.status === 'failed' ? action.message : '',
+    content.action?.kind, content.action?.label, content.action?.kind === 'form' ? content.action.fields.map(field => field.name).join('\u0001') : '',
+    action.status === 'failed' ? action.message : '',
     operation?.status, operation?.canRetry, operation?.canCancel].join('\u0000');
 }
 

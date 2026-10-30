@@ -73,7 +73,8 @@ const island = (face: PuppetFace, extra: Partial<PuppetState> = {}): PuppetState
 export const BENEFIT_TEXT_SIDES: readonly DriftSide[] = ['left', 'right', 'left', 'right', 'left', 'right'];
 const READY: PuppetFace = { id: 'ready', kind: 'info', title: '12 photos ready to upload', description: 'Holiday album · 48 MB', action: 'Upload' };
 const SYNCED: PuppetFace = { id: 'synced', kind: 'success', title: 'Synced to the cloud' };
-const INVITE: PuppetFace = { id: 'invite', kind: 'info', title: 'Ana shared “Skyline”', description: '3 photos from the trip.', action: 'Open' };
+const INVITE: PuppetFace = { id: 'invite', kind: 'info', title: 'Ana shared “Skyline”', description: '3 photos from the trip.', field: { placeholder: 'Reply', text: 'Love it! ☁️' } };
+const POSTCARD: PuppetFace = { id: 'postcard', kind: 'info', title: 'Postcard from the coast', description: 'Mia sent a photo of the sea.', action: 'Open' };
 const SAVED: PuppetFace = { id: 'saved', kind: 'success', title: 'Saved', description: 'Holiday album · 48 MB' };
 const FORECAST: PuppetFace = { id: 'forecast', kind: 'info', title: 'Forecast: clear skies', description: 'No storms for the next 7 days.' };
 const SYNCING: PuppetFace = { id: 'syncing', kind: 'loading', title: 'Syncing 3 files…', cancel: 'Cancel' };
@@ -93,25 +94,26 @@ const BACKED_AR: PuppetFace = { id: 'backed-ar', kind: 'info', title: 'تم نس
 const THEMED: PuppetFace = { id: 'themed', kind: 'info', title: 'A fresh coat of sky', description: 'Tokens and classNames, no forks.', action: 'Apply' };
 
 /**
- * 12 puppets on desktop, 6 of them on phones. Paint order: far to near. The text
- * alternates sides and the actors play on the other half (benefits 1, 3, 5 on the right, 2, 4, 6
+ * 13 puppets on desktop, 7 of them on phones. Paint order: far to near. The text
+ * alternates sides and the actors play on the other half (benefits 1, 3, 5, 7 on the right, 2, 4, 6
  * on the left), so each benefit's cast rests on its stage's half. All follow the page theme.
  */
 export const DRIFT_PUPPETS: readonly DriftPuppet[] = [
   // Far: small, pale, hazy; only these cross towards the centre column.
   { id: 'synced', states: [pill(SYNCED)], layer: 0, x: 66, y: 74, tilt: 3, spin: 22, from: 'bottom', delay: 0.42, duration: 1.6 },
-  { id: 'backed-up', states: [pill(BACKED_UP)], layer: 0, x: 32, y: 44, tilt: -3, spin: -28, from: 'top', delay: 0.18, duration: 1.7 },
+  { id: 'backed-up', states: [pill(BACKED_UP)], layer: 0, x: 68, y: 44, tilt: 3, spin: 28, from: 'top', delay: 0.18, duration: 1.7 },
   { id: 'forecast', states: [pill(FORECAST)], layer: 0, x: 34, y: 10, tilt: -2, spin: -34, from: 'left', delay: 0.3, duration: 1.5 },
-  { id: 'themed', states: [pill(THEMED), island(THEMED)], layer: 0, x: 42, y: 84, tilt: 2, spin: -18, from: 'bottom', delay: 0.32, duration: 1.55, phone: { x: 70, y: 86 } },
+  { id: 'themed', states: [pill(THEMED), island(THEMED)], layer: 0, x: 58, y: 84, tilt: -2, spin: 18, from: 'bottom', delay: 0.32, duration: 1.55, phone: { x: 70, y: 86 } },
   // Middle: off the centre column.
   { id: 'ready', states: [pill(READY)], layer: 1, x: 82, y: 28, tilt: 4, spin: 40, from: 'right', delay: 0.12, duration: 1.5, phone: { x: 24, y: 12 } },
   { id: 'saved', states: [pill(SAVED)], layer: 1, x: 16, y: 64, tilt: 3, spin: -26, from: 'left', delay: 0.06, duration: 1.4 },
-  { id: 'storm', states: [pill(STORM)], layer: 1, x: 22, y: 88, tilt: 4, spin: 30, from: 'bottom', delay: 0.24, duration: 1.45, phone: { x: 30, y: 90 } },
+  { id: 'storm', states: [pill(STORM)], layer: 1, x: 86, y: 10, tilt: -4, spin: -30, from: 'top', delay: 0.24, duration: 1.45, phone: { x: 30, y: 90 } },
+  { id: 'postcard', states: [pill(POSTCARD)], layer: 1, x: 20, y: 36, tilt: -3, spin: -32, from: 'left', delay: 0.16, duration: 1.45, phone: { x: 22, y: 34 } },
   { id: 'unreachable', states: [pill(UNREACHABLE), island(UNREACHABLE)], layer: 1, x: 80, y: 62, tilt: 4, spin: 38, from: 'right', delay: 0.36, duration: 1.5 },
   // Near: crisp, kept to the sides.
   { id: 'invite', states: [pill(INVITE)], layer: 2, x: 10, y: 18, tilt: -4, spin: -30, from: 'top', delay: 0.26, duration: 1.3, phone: { x: 76, y: 8 } },
-  { id: 'synced-ar', states: [pill(SYNCED_AR, 2)], dir: 'rtl', layer: 2, x: 90, y: 12, tilt: 6, spin: 44, from: 'right', delay: 0, duration: 1.2 },
-  { id: 'drifted', states: [pill(DRIFTED)], layer: 2, x: 92, y: 42, tilt: 6, spin: 42, from: 'right', delay: 0.1, duration: 1.25, phone: { x: 12, y: 64 } },
+  { id: 'synced-ar', states: [pill(SYNCED_AR, 2)], dir: 'rtl', layer: 2, x: 14, y: 86, tilt: -6, spin: -44, from: 'left', delay: 0, duration: 1.2 },
+  { id: 'drifted', states: [pill(DRIFTED)], layer: 2, x: 8, y: 50, tilt: -6, spin: -42, from: 'left', delay: 0.1, duration: 1.25, phone: { x: 12, y: 64 } },
   { id: 'syncing', states: [pill(SYNCING), island(SYNCING)], layer: 2, x: 88, y: 84, tilt: -5, spin: 34, from: 'right', delay: 0.2, duration: 1.3, phone: { x: 82, y: 44 } },
 ];
 
@@ -155,11 +157,12 @@ export interface Benefit {
   readonly text: string;
 }
 
-/** The six benefits, one per screen, after the scene title. Draft copy for the owner's review. */
+/** The seven benefits, one per screen, after the scene title. */
 export const BENEFITS: readonly Benefit[] = [
   { id: 'springs', title: 'Springs, not keyframes', text: 'Every motion rides a spring. Interrupt it anywhere and it carries on from its current speed.' },
   { id: 'island', title: 'Stack → Island', text: 'One shell that stacks, opens and slides. Swipe it, flick it on a trackpad, or use the arrow keys.' },
   { id: 'promises', title: 'Promises built in', text: 'track() shows loading, retries attempt by attempt and cancels for real. Your promise stays yours.' },
+  { id: 'forms', title: 'Replies in place', text: 'A form right in the Island: up to three fields, checks before sending, and a draft that waits for you.' },
   { id: 'attention', title: 'Speaks up when it matters', text: 'attention opens what is important on its own, and never steals focus.' },
   { id: 'a11y', title: 'Accessible by default', text: 'Native controls, calm announcements, full keyboard, reduced motion and RTL.' },
   { id: 'stack', title: 'Fits your stack', text: `A shadcn registry item, tokens and classNames, SSR and Next.js, strict CSP. ${formatKB(PACKAGE_SIZE.start)} of JavaScript on first load.` },
@@ -206,8 +209,9 @@ const RECONNECT_3: PuppetFace = { id: 'reconnect-3', kind: 'loading', title: 'Re
 const BACK: PuppetFace = { id: 'back', kind: 'success', title: 'Back in the sky', description: 'Attempt 3 of 3 got through.' };
 const SYNCING_2: PuppetFace = { id: 'syncing-2', kind: 'loading', title: 'Syncing 3 files…', description: 'Attempt 2.', cancel: 'Cancel' };
 const SYNCED_3: PuppetFace = { id: 'synced-3', kind: 'success', title: '3 files synced', description: 'Attempt 2 got through.' };
+const REPLY_SENT: PuppetFace = { id: 'reply-sent', kind: 'success', title: 'Reply sent to Ana' };
 
-/** Desktop: 2 / 3 / 2 / 2 / 2 / 1 actors, every crowd puppet acts exactly once. */
+/** Desktop: 2 / 3 / 2 / 1 / 2 / 2 / 1 actors, every crowd puppet acts exactly once. */
 export const DRIFT_STORIES: readonly Story[] = [
   {
     benefit: 'springs',
@@ -224,19 +228,19 @@ export const DRIFT_STORIES: readonly Story[] = [
   {
     benefit: 'island',
     beats: [
-      { kind: 'come', actor: 'invite' },
-      { kind: 'merge', actor: 'saved', into: 'invite', state: pill(SAVED, 2) },
-      { kind: 'merge', actor: 'forecast', into: 'invite', state: pill(FORECAST, 3) },
-      { kind: 'state', actor: 'invite', state: island(FORECAST, { count: 3 }) },
-      { kind: 'state', actor: 'invite', state: island(SAVED, { count: 3, current: 1 }), key: '→' },
-      { kind: 'state', actor: 'invite', state: island(INVITE, { count: 3, current: 2 }), key: '→' },
-      { kind: 'state', actor: 'invite', state: island(SAVED, { count: 3, current: 1 }), key: '←' },
-      { kind: 'state', actor: 'invite', state: island(SAVED, { count: 3, current: 1, highlight: 1, focus: 'close' }), hold: 0.3 },
+      { kind: 'come', actor: 'postcard' },
+      { kind: 'merge', actor: 'saved', into: 'postcard', state: pill(SAVED, 2) },
+      { kind: 'merge', actor: 'forecast', into: 'postcard', state: pill(FORECAST, 3) },
+      { kind: 'state', actor: 'postcard', state: island(FORECAST, { count: 3 }) },
+      { kind: 'state', actor: 'postcard', state: island(SAVED, { count: 3, current: 1 }), key: '→' },
+      { kind: 'state', actor: 'postcard', state: island(POSTCARD, { count: 3, current: 2 }), key: '→' },
+      { kind: 'state', actor: 'postcard', state: island(SAVED, { count: 3, current: 1 }), key: '←' },
+      { kind: 'state', actor: 'postcard', state: island(SAVED, { count: 3, current: 1, highlight: 1, focus: 'close' }), hold: 0.3 },
       // Closing the current one slides to the next older; its actor is gone from the stack.
-      { kind: 'state', actor: 'invite', state: island(INVITE, { count: 2, current: 1 }) },
-      { kind: 'state', actor: 'invite', state: pill(FORECAST, 2) },
-      { kind: 'split', actor: 'forecast', from: 'invite', state: pill(INVITE) },
-      { kind: 'go', actors: ['invite', 'forecast', 'saved'] },
+      { kind: 'state', actor: 'postcard', state: island(POSTCARD, { count: 2, current: 1 }) },
+      { kind: 'state', actor: 'postcard', state: pill(FORECAST, 2) },
+      { kind: 'split', actor: 'forecast', from: 'postcard', state: pill(POSTCARD) },
+      { kind: 'go', actors: ['postcard', 'forecast', 'saved'] },
     ],
   },
   {
@@ -256,6 +260,18 @@ export const DRIFT_STORIES: readonly Story[] = [
       { kind: 'state', actor: 'unreachable', state: island(BACK) },
       { kind: 'state', actor: 'unreachable', state: pill(BACK) },
       { kind: 'go', actors: ['unreachable'] },
+    ],
+  },
+  {
+    benefit: 'forms',
+    beats: [
+      // Ana's notification opens with a field; the reply types in letter by letter, sends, and goes out.
+      { kind: 'come', actor: 'invite' },
+      { kind: 'state', actor: 'invite', state: island(INVITE), hold: 0.4 },
+      { kind: 'state', actor: 'invite', state: island(INVITE, { typed: 1 }), hold: 0.4 },
+      { kind: 'state', actor: 'invite', state: island(INVITE, { typed: 1, sending: true }), hold: 0.5 },
+      { kind: 'state', actor: 'invite', state: pill(REPLY_SENT) },
+      { kind: 'go', actors: ['invite'] },
     ],
   },
   {
@@ -318,17 +334,17 @@ export const DRIFT_PHONE_STORIES: readonly Story[] = [
   {
     benefit: 'island',
     beats: [
-      { kind: 'come', actor: 'invite' },
-      { kind: 'state', actor: 'invite', state: pill(SAVED, 2) },
-      { kind: 'state', actor: 'invite', state: pill(FORECAST, 3) },
-      { kind: 'state', actor: 'invite', state: island(FORECAST, { count: 3 }) },
-      { kind: 'state', actor: 'invite', state: island(SAVED, { count: 3, current: 1 }), key: '→' },
-      { kind: 'state', actor: 'invite', state: island(INVITE, { count: 3, current: 2 }), key: '→' },
-      { kind: 'state', actor: 'invite', state: island(SAVED, { count: 3, current: 1 }), key: '←' },
-      { kind: 'state', actor: 'invite', state: island(SAVED, { count: 3, current: 1, highlight: 1, focus: 'close' }), hold: 0.3 },
-      { kind: 'state', actor: 'invite', state: island(INVITE, { count: 2, current: 1 }) },
-      { kind: 'state', actor: 'invite', state: pill(FORECAST, 2) },
-      { kind: 'go', actors: ['invite'] },
+      { kind: 'come', actor: 'postcard' },
+      { kind: 'state', actor: 'postcard', state: pill(SAVED, 2) },
+      { kind: 'state', actor: 'postcard', state: pill(FORECAST, 3) },
+      { kind: 'state', actor: 'postcard', state: island(FORECAST, { count: 3 }) },
+      { kind: 'state', actor: 'postcard', state: island(SAVED, { count: 3, current: 1 }), key: '→' },
+      { kind: 'state', actor: 'postcard', state: island(POSTCARD, { count: 3, current: 2 }), key: '→' },
+      { kind: 'state', actor: 'postcard', state: island(SAVED, { count: 3, current: 1 }), key: '←' },
+      { kind: 'state', actor: 'postcard', state: island(SAVED, { count: 3, current: 1, highlight: 1, focus: 'close' }), hold: 0.3 },
+      { kind: 'state', actor: 'postcard', state: island(POSTCARD, { count: 2, current: 1 }) },
+      { kind: 'state', actor: 'postcard', state: pill(FORECAST, 2) },
+      { kind: 'go', actors: ['postcard'] },
     ],
   },
   {
@@ -342,6 +358,18 @@ export const DRIFT_PHONE_STORIES: readonly Story[] = [
       { kind: 'state', actor: 'syncing', state: island(SYNCED_3) },
       { kind: 'state', actor: 'syncing', state: pill(SYNCED_3) },
       { kind: 'go', actors: ['syncing'] },
+    ],
+  },
+  {
+    benefit: 'forms',
+    beats: [
+      // Ana's notification opens with a field; the reply types in letter by letter, sends, and goes out.
+      { kind: 'come', actor: 'invite' },
+      { kind: 'state', actor: 'invite', state: island(INVITE), hold: 0.4 },
+      { kind: 'state', actor: 'invite', state: island(INVITE, { typed: 1 }), hold: 0.4 },
+      { kind: 'state', actor: 'invite', state: island(INVITE, { typed: 1, sending: true }), hold: 0.5 },
+      { kind: 'state', actor: 'invite', state: pill(REPLY_SENT) },
+      { kind: 'go', actors: ['invite'] },
     ],
   },
   {

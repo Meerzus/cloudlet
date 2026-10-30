@@ -111,6 +111,8 @@ function Generators({ session, disabled, long }: { session: LabSession; disabled
       <button disabled={disabled} onClick={() => session.generateRetry(attention)}>With retry</button>
       <button disabled={disabled} onClick={() => session.generateProgress(attention)}>With progress</button>
       <button disabled={disabled} onClick={() => session.generate('plain', attention)}>Plain</button>
+      <button disabled={disabled} onClick={() => session.generateForm('reply', attention)}>With form</button>
+      <button disabled={disabled} onClick={() => session.generateForm('note', attention)}>With form · note</button>
     </div>
     <div className="lab-buttons">
       <button disabled={disabled} onClick={() => session.loadingTo('success', attention)}>Loading → success</button>

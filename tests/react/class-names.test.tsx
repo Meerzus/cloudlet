@@ -33,8 +33,11 @@ const own: Record<CloudletPart, string> = {
   host: 'cloudlet-host', stack: 'cloudlet-stack', pill: 'cloudlet-pill', tail: 'cloudlet-tail', badge: 'cloudlet-badge',
   island: 'cloudlet-shell', header: 'cloudlet-header', icon: 'cloudlet-icon', title: 'cloudlet-title', close: 'cloudlet-close',
   body: 'cloudlet-body', description: 'cloudlet-description', actions: 'cloudlet-actions', action: 'cloudlet-action',
-  indicator: 'cloudlet-indicator', overflow: 'cloudlet-overflow',
+  indicator: 'cloudlet-indicator', overflow: 'cloudlet-overflow', form: 'cloudlet-form', field: 'cloudlet-field',
+  'field-error': 'cloudlet-field-error',
 };
+/** A form's parts; tests/react/forms.test.tsx checks them on a notification with a form. */
+const formParts: readonly CloudletPart[] = ['form', 'field', 'field-error'];
 const parts = Object.keys(own) as CloudletPart[];
 const classNames = Object.fromEntries(parts.map(part => [part, `app-${part} app-shared`])) as Record<CloudletPart, string>;
 /** Live elements only: snapshot containers hold inert copies of the same classes. */
@@ -67,7 +70,7 @@ describe('classNames', () => {
 
     fireEvent.click(pill());
     expect(host()).toHaveAttribute('data-state', 'island');
-    for (const part of parts.filter(part => part !== 'pill' && part !== 'tail')) {
+    for (const part of parts.filter(part => part !== 'pill' && part !== 'tail' && !formParts.includes(part))) {
       const elements = live(part);
       expect(elements.length, part).toBeGreaterThan(0);
       for (const element of elements) expect(element, part).toHaveClass(own[part], `app-${part}`, 'app-shared');

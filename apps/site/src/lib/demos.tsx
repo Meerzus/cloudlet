@@ -9,7 +9,7 @@ import { GITHUB_URL } from './site';
  * Snippets are plain JavaScript (JSX where a slot takes a React node) that assume `const cloudlet = useCloudlet();`.
  */
 
-export type DemoGroup = 'Kinds' | 'Content' | 'Actions' | 'Promises' | 'Attention' | 'Stack';
+export type DemoGroup = 'Kinds' | 'Content' | 'Actions' | 'Forms' | 'Promises' | 'Attention' | 'Stack';
 
 export interface Demo {
   readonly id: string;
@@ -24,6 +24,7 @@ export const DEMO_GROUPS: readonly { readonly id: DemoGroup; readonly blurb: str
   { id: 'Kinds', blurb: 'Five kinds of weather. Success and info drift off after six seconds; the rest stay until you close them.' },
   { id: 'Content', blurb: 'A title, a line of description, rich text or an icon of your own.' },
   { id: 'Actions', blurb: 'A command, a real link, and a command that fails once and offers a retry.' },
+  { id: 'Forms', blurb: 'A field right in the Island: a quick reply, a note with a check, and a send that fails once.' },
   { id: 'Promises', blurb: 'track() follows an operation from pending to its result; update() changes a card in place.' },
   { id: 'Attention', blurb: 'Whether a notification opens the Island on its own: auto, open or stack.' },
   { id: 'Stack', blurb: 'Newest on top, one pill at rest. Push it past 100 and the badge counts what was missed.' },
@@ -227,6 +228,111 @@ cloudlet.show({
       tries += 1;
       if (tries === 1) throw new Error('Gust of wind');
       cloudlet.show({ title: 'Album shared with the sky', kind: 'success' });
+    },
+  },
+});`,
+  },
+  {
+    id: 'form-reply',
+    group: 'Forms',
+    label: 'Reply',
+    run: (cloudlet) => {
+      cloudlet.show({
+        title: 'A cloud asks where to drift',
+        action: {
+          kind: 'form',
+          label: 'Send',
+          fields: [{ name: 'place', kind: 'text', label: 'Where to', required: true }],
+          run: ({ values }) => {
+            cloudlet.show({ title: `Drifting to ${values.place}`, kind: 'success' });
+          },
+        },
+      });
+    },
+    snippet: `cloudlet.show({
+  title: 'A cloud asks where to drift',
+  action: {
+    kind: 'form',
+    label: 'Send',
+    fields: [{ name: 'place', kind: 'text', label: 'Where to', required: true }],
+    run: ({ values }) => {
+      cloudlet.show({ title: \`Drifting to \${values.place}\`, kind: 'success' });
+    },
+  },
+});`,
+  },
+  {
+    id: 'form-note',
+    group: 'Forms',
+    label: 'Note',
+    run: (cloudlet) => {
+      cloudlet.show({
+        title: 'Leave a note for the sky',
+        action: {
+          kind: 'form',
+          label: 'Send note',
+          fields: [
+            { name: 'name', kind: 'text', label: 'Your name', autoComplete: 'name' },
+            { name: 'note', kind: 'textarea', label: 'Note', required: true, maxLength: 280 },
+          ],
+          validate: (values) => values.note.trim().length >= 3 || { note: 'A few more words, please' },
+          run: () => {
+            cloudlet.show({ title: 'Note tucked into a cloud', kind: 'success' });
+          },
+        },
+      });
+    },
+    snippet: `cloudlet.show({
+  title: 'Leave a note for the sky',
+  action: {
+    kind: 'form',
+    label: 'Send note',
+    fields: [
+      { name: 'name', kind: 'text', label: 'Your name', autoComplete: 'name' },
+      { name: 'note', kind: 'textarea', label: 'Note', required: true, maxLength: 280 },
+    ],
+    validate: (values) => values.note.trim().length >= 3 || { note: 'A few more words, please' },
+    run: () => {
+      cloudlet.show({ title: 'Note tucked into a cloud', kind: 'success' });
+    },
+  },
+});`,
+  },
+  {
+    id: 'form-retry',
+    group: 'Forms',
+    label: 'Fails once',
+    run: (cloudlet) => {
+      let tries = 0;
+      cloudlet.show({
+        title: 'Send a postcard to the clouds',
+        action: {
+          kind: 'form',
+          label: 'Send',
+          fields: [{ name: 'message', kind: 'text', label: 'Message', required: true }],
+          errorMessage: () => 'The wind took it. Try again?',
+          run: async () => {
+            await wait(800);
+            tries += 1;
+            if (tries === 1) throw new Error('Gust of wind');
+            cloudlet.show({ title: 'Postcard delivered', kind: 'success' });
+          },
+        },
+      });
+    },
+    snippet: `let tries = 0;
+cloudlet.show({
+  title: 'Send a postcard to the clouds',
+  action: {
+    kind: 'form',
+    label: 'Send',
+    fields: [{ name: 'message', kind: 'text', label: 'Message', required: true }],
+    errorMessage: () => 'The wind took it. Try again?',
+    run: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      tries += 1;
+      if (tries === 1) throw new Error('Gust of wind');
+      cloudlet.show({ title: 'Postcard delivered', kind: 'success' });
     },
   },
 });`,
