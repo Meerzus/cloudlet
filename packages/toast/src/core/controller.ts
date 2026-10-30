@@ -2,10 +2,10 @@ import type { CloudletController, ControllerOptions, FocusTarget } from '../cont
 import type { Diagnostic, EventBase, SemanticEvent } from '../contracts/events.js';
 import type { ActionAttemptToken, ControllerIdentity, Generation, HandleRejection, NotificationHandle, OperationAttemptToken, Unsubscribe } from '../contracts/identity.js';
 import type {
-  FocusRequest, FocusRequestToken, ControllerDependencies, HostLease, OperationAnnouncementPhase, PresentationToken,
+  FocusRequest, FocusRequestToken, ControllerDependencies, FormErrors, HostLease, OperationAnnouncementPhase, PresentationToken,
   RendererSnapshot,
 } from '../contracts/internal.js';
-import type { AdmissionResult, CloseReason, NotificationContent, NotificationKind, NotificationPatch, NotificationSpec, OperationAdmissionResult, Priority } from '../contracts/notifications.js';
+import type { AdmissionResult, CloseReason, FormAction, NotificationContent, NotificationKind, NotificationPatch, NotificationSpec, OperationAdmissionResult, Priority } from '../contracts/notifications.js';
 import type { AttemptStartResult, CancellationSignal, CancelResult, OperationAttempt, OperationContext, OperationHandle, OperationSnapshot, OperationSource, OperationStatus, TrackOptions } from '../contracts/operations.js';
 import type { ActionSnapshot, ControllerSnapshot, IslandReason, IslandSnapshot, PauseReason } from '../contracts/snapshots.js';
 import { copyContent, patchContent, validateContent, validateOptions, validatePatch, validateSpec, validateTrackOptions } from './validation.js';
@@ -41,6 +41,14 @@ export interface RecordState<Slot> {
   readonly operationAnnounced: Set<OperationAnnouncementPhase>;
   action: ActionSnapshot;
   actionAnnounced?: { readonly token: ActionAttemptToken; readonly status: 'pending' | 'failed' };
+  /** Values of the form action the record holds; a new action object starts from its defaults. */
+  form: FormState | null;
+}
+
+export interface FormState {
+  readonly action: FormAction;
+  values: Readonly<Record<string, string>>;
+  errors: FormErrors;
 }
 
 /** Open Island state; `null` is the collapsed stack. */
@@ -71,10 +79,11 @@ const SERVER: ControllerSnapshot<never> = freeze({
   island: COLLAPSED, overflow: freeze({ count: 0, pending: false }),
 });
 export const RENDERER_SERVER: RendererSnapshot<never> = freeze({
-  ...SERVER, presentation: null, focusRequest: null,
+  ...SERVER, presentation: null, focusRequest: null, forms: EMPTY,
   announcements: freeze({ notifications: EMPTY, overflowCount: 0 }),
 });
 const IDLE = freeze({ status: 'idle' as const });
+export const NO_FORM_ERRORS: FormErrors = freeze({ form: null, fields: freeze({}) });
 export const APPLIED = freeze({ status: 'applied' as const });
 export const UNCHANGED = freeze({ status: 'unchanged' as const });
 export const reject = <Reason extends string>(reason: Reason) => ({ status: 'rejected' as const, reason });
@@ -113,6 +122,7 @@ export interface ControllerKernel<Slot> {
   readonly settle: () => number;
   readonly assign: (record: RecordState<Slot>) => void;
   readonly newest: () => RecordState<Slot> | null;
+  readonly formOf: (record: RecordState<Slot>) => FormState | null;
   readonly handleError: (handle: NotificationHandle) => HandleRejection | 'disposed' | undefined;
   readonly withRecord: <Args extends unknown[], Result>(action: (record: RecordState<Slot>, ...args: Args) => Result)
     => (handle: NotificationHandle, ...args: Args) => Result | Rejected<HandleRejection | 'disposed'>;
@@ -189,8 +199,23 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     const rule = record.content.attention ?? 'auto';
     return rule === 'open' || (rule === 'auto' && (requiresAction(record) || !!record.content.description));
   };
+  /** The record's form state, started from the field defaults whenever its form action object changes. */
+  const formOf = (record: RecordState<Slot>): FormState | null => {
+    const action = record.content.action;
+    if (action?.kind !== 'form') return record.form = null;
+    if (record.form?.action !== action) {
+      record.form = { action, errors: NO_FORM_ERRORS,
+        values: freeze(Object.fromEntries(action.fields.map((field) => [field.name, field.defaultValue ?? '']))) };
+    }
+    return record.form;
+  };
+  const dirty = (record: RecordState<Slot>) => {
+    const form = formOf(record);
+    return !!form && form.action.fields.some((field) => form.values[field.name] !== (field.defaultValue ?? ''));
+  };
+  // A draft in the open Island holds it like a hand on it: attention never switches it away.
   const interacting = () => globalPauses.has('hover') || globalPauses.has('focus')
-    || [...records.values()].some((record) => record.pauses.has('gesture'));
+    || [...records.values()].some((record) => record.pauses.has('gesture')) || (!!island && dirty(island.current));
   const pauses = (record: RecordState<Slot>): PauseReason[] => {
     const current = record === presented;
     return [
@@ -200,6 +225,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       // An Island opened by the user, or a slide that asks for action, keeps its time.
       ...(current && island && (island.reason === 'user' || requiresAction(record)) ? ['island' as const] : []),
       ...(record.action.status === 'pending' ? ['action-pending' as const] : []),
+      ...(dirty(record) ? ['draft' as const] : []),
       ...globalPauses, ...record.pauses,
     ];
   };
@@ -313,6 +339,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       handle: record.handle, kind: record.kind, content: record.content, priority: record.priority,
       occurrences: record.occurrences, location: record === presented ? 'current' as const : 'stack' as const,
       remainingMs: record.remaining, pauseReasons: freeze(pauses(record)), operation: record.operation?.getSnapshot() ?? null, action: record.action,
+      draft: dirty(record),
     })));
     snapshot = freeze({ controller: identity, revision, disposed, notifications,
       stack: freeze(stackOrder().map((record) => record.handle)),
@@ -322,6 +349,10 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     rendererSnapshot = freeze({ ...snapshot,
       presentation: presented ? freeze({ handle: presented.handle, token: presented.presentation, readable: presented.readable }) : null,
       focusRequest,
+      forms: freeze(current.flatMap((record) => {
+        const form = formOf(record);
+        return form ? [freeze({ handle: record.handle, values: form.values, errors: form.errors })] : [];
+      })),
       announcements: freeze({ overflowCount: overflowAnnounced,
         notifications: freeze(current.map((record) => freeze({
           handle: record.handle, queued: record.queuedAnnounced, firstPresentation: record.firstAnnounced,
@@ -507,6 +538,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       operation: null,
       operationAnnounced: new Set(),
       action: IDLE,
+      form: null,
     };
     record.remaining = budget(record);
     records.set(id, record);
@@ -843,7 +875,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     get focusRequest() { return focusRequest; }, set focusRequest(value) { focusRequest = value; },
     get focused() { return focused; }, set focused(value) { focused = value; },
     get overflowAnnounced() { return overflowAnnounced; }, set overflowAnnounced(value) { overflowAnnounced = value; },
-    token, diagnostic, failure, mutate, commit, settle, assign, newest, handleError, withRecord,
+    token, diagnostic, failure, mutate, commit, settle, assign, newest, formOf, handleError, withRecord,
     autoDismissing, setHostAutoDismiss, dismiss, acknowledgeOverflow,
     reportRendererLoadError(error) {
       if (!disposed) diagnostic({ code: 'renderer-load-error', source: 'Toaster', message: 'Toaster renderer failed to load', error });

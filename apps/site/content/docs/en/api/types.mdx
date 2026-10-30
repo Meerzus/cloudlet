@@ -56,7 +56,7 @@ Handles and tokens are capabilities minted by the controller. They are never bui
 
 ### PrimaryAction
 
-`PrimaryAction` is a `CommandAction` or a `NavigationAction`; a notification has at most one. [Operations & cancellation](/toaster/docs/operations#actions) shows both.
+`PrimaryAction` is a `CommandAction`, a `NavigationAction` or a `FormAction`; a notification has at most one. [Operations & cancellation](/toaster/docs/operations#actions) shows both.
 
 `CommandAction` runs your function:
 
@@ -80,6 +80,33 @@ Handles and tokens are capabilities minted by the controller. They are never bui
 | `rel` | `string` | — | Your `rel`; `noopener` is added to it, never replacing it. |
 
 Following the link closes the notification with the reason `navigation`; modifier keys and new tabs behave as for any link.
+
+`FormAction` puts one to three fields in the Island and submits them like a command:
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `'form'` | — | Required. |
+| `fields` | `readonly FormField[]` | — | Required, one to three, with unique names. |
+| `label` | `string` | — | Required, non-empty. The submit button's accessible name. |
+| `run` | `(context: FormContext) => unknown` | — | Required. Called with the values once they pass the checks; pending, success and failure work as for a command. |
+| `errorMessage` | `(error: unknown) => string` | `messages.actionError` | Turns a failure into the message under the form. |
+| `validate` | `(values: FormValues) => FormValidation` | — | Runs on submit after `required` and `maxLength`. |
+
+`FormField` describes one field:
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `name` | `string` | — | Required. The key of its value in `FormValues`. |
+| `kind` | `FormFieldKind` | — | Required: `'text'` for one line, `'textarea'` for several. |
+| `label` | `string` | — | Required. Read by screen readers; also the placeholder when there is none. |
+| `placeholder` | `string` | `label` | The hint inside the empty field. |
+| `defaultValue` | `string` | `''` | The starting value; not longer than `maxLength`. |
+| `required` | `boolean` | `false` | An empty value, or only spaces, stops the submit with `messages.fieldRequired`. |
+| `maxLength` | `number` | — | A positive integer; a longer value stops the submit with `messages.fieldTooLong`. |
+| `autoComplete` | `string` | — | The field's `autocomplete`. |
+| `inputMode` | `FormInputMode` | — | The on-screen keyboard: `'text'`, `'email'`, `'numeric'`, `'decimal'`, `'tel'`, `'url'` or `'search'`. |
+
+`FormValues` maps each field name to its text, as typed. TypeScript takes the names from `fields`, so `values.reply` is a `string` and a misspelt name does not compile. `FormContext` is the `ActionContext` plus `values`. `FormValidation` is what `validate` returns: `true` to submit, a string for a message under the form, or messages keyed by field name.
 
 ### CloseReason
 
@@ -144,7 +171,8 @@ One notification in `ControllerSnapshot.notifications`, also passed to the [anno
 | `remainingMs` | `number \| null` | Readable time left when the snapshot was taken (it does not tick); `null` when it stays until closed. |
 | `pauseReasons` | `readonly PauseReason[]` | Why its time is not running; empty while it runs. |
 | `operation` | `OperationSnapshot \| null` | The tracked operation, or `null` for a plain notification. |
-| `action` | `ActionSnapshot` | The state of its command action. |
+| `action` | `ActionSnapshot` | The state of its command or form action. |
+| `draft` | `boolean` | A form whose values differ from their defaults. The values themselves stay inside Cloudlet. |
 
 `ActionSnapshot` is `{ status: 'idle' }`, `{ status: 'pending', token }` while a command runs, or `{ status: 'failed', token, message }` after it failed.
 
@@ -161,6 +189,7 @@ One notification in `ControllerSnapshot.notifications`, also passed to the [anno
 | `'action-pending'` | Its command action is running. |
 | `'content-transition'` | Its content is being swapped on screen. |
 | `'island'` | It is the Island's slide and the user opened the Island, or it asks for action. |
+| `'draft'` | Its form holds text that was not sent. |
 | `'document-hidden'` | The tab is hidden. |
 | `'window-blur'` | The window lost focus. |
 

@@ -13,7 +13,10 @@ const patchKeys = [...contentKeys, 'kind', 'priority'];
 const specKeys = [...patchKeys, 'id', 'dedupeKey', 'onClose'];
 const messageKeys = [
   'operationSuccess', 'operationError', 'operationCancelled', 'cancellationRequested', 'actionError', 'renderError',
+  'fieldRequired', 'fieldTooLong',
 ] as const;
+const fieldKeys = ['name', 'kind', 'label', 'placeholder', 'defaultValue', 'required', 'maxLength', 'autoComplete', 'inputMode'];
+const inputModes = ['text', 'email', 'numeric', 'decimal', 'tel', 'url', 'search'];
 const noIssues: readonly InputIssue[] = Object.freeze([]);
 const owns = Object.hasOwn;
 const at = (path: string, key: PropertyKey): string => path ? `${path}.${String(key)}` : String(key);
@@ -108,10 +111,43 @@ function safeHref(value: string): boolean {
   return ['http', 'https', 'mailto', 'tel'].includes(scheme);
 }
 
+function formFields(value: unknown, issues: InputIssue[]): void {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 3) {
+    issue(issues, 'action.fields', 'Expected an array of one to three fields');
+    return;
+  }
+  const names = new Set<unknown>();
+  value.forEach((item: unknown, index) => {
+    const path = `action.fields.${index}`;
+    const data = record(item, path, fieldKeys, issues);
+    if (!data) return;
+    fields(data, issues, path, [
+      ['name', 'nonempty string', true], ['kind', ['text', 'textarea'], true], ['label', 'nonempty string', true],
+      ['placeholder', 'string'], ['defaultValue', 'string'], ['required', 'boolean'], ['autoComplete', 'string'],
+      ['inputMode', inputModes],
+    ]);
+    if (names.has(data.name)) issue(issues, `${path}.name`, 'Field names must be unique');
+    names.add(data.name);
+    if (owns(data, 'maxLength') && data.maxLength !== undefined &&
+        (typeof data.maxLength !== 'number' || !Number.isInteger(data.maxLength) || data.maxLength < 1)) {
+      issue(issues, `${path}.maxLength`, 'Expected a positive integer');
+    } else if (typeof data.maxLength === 'number' && typeof data.defaultValue === 'string' && data.defaultValue.length > data.maxLength) {
+      issue(issues, `${path}.defaultValue`, 'Longer than maxLength');
+    }
+  });
+}
+
 function action(value: unknown, issues: InputIssue[]): void {
-  const data = record(value, 'action', ['kind', 'label', 'run', 'errorMessage', 'href', 'target', 'rel'], issues);
+  const data = record(value, 'action', ['kind', 'label', 'run', 'errorMessage', 'href', 'target', 'rel', 'fields', 'validate'], issues);
   if (!data) return;
   fields(data, issues, 'action', [['label', 'nonempty string', true]]);
+  if (data.kind === 'form') {
+    forbidden(data, issues, 'action', ['href', 'target', 'rel'], 'a form action');
+    fields(data, issues, 'action', [['run', 'function', true], ['errorMessage', 'function'], ['validate', 'function']]);
+    formFields(data.fields, issues);
+    return;
+  }
+  forbidden(data, issues, 'action', ['fields', 'validate'], `a ${data.kind === 'link' ? 'link' : 'command'} action`);
   if (data.kind === 'command') {
     forbidden(data, issues, 'action', ['href', 'target', 'rel'], 'a command action');
     fields(data, issues, 'action', [['run', 'function', true], ['errorMessage', 'function']]);
@@ -120,7 +156,7 @@ function action(value: unknown, issues: InputIssue[]): void {
     fields(data, issues, 'action', [['href', 'nonempty string', true]]);
     if (typeof data.href === 'string' && !safeHref(data.href)) issue(issues, 'action.href', 'Unsupported or unsafe URL');
     fields(data, issues, 'action', [['target', ['_self', '_blank', '_parent', '_top']], ['rel', 'string']]);
-  } else fields(data, issues, 'action', [['kind', ['command', 'link'], true]]);
+  } else fields(data, issues, 'action', [['kind', ['command', 'link', 'form'], true]]);
 }
 
 function common(data: Record<string, unknown>, issues: InputIssue[], patch: boolean): void {
@@ -241,9 +277,18 @@ function copyProgress(value: Progress): Progress {
   return value.kind === 'indeterminate' ? copyFields(value, ['kind'], ['label']) : copyFields(value, ['kind', 'value'], ['label']);
 }
 
+// A patch that keeps the action passes its existing copy back; keeping that identity keeps a form's draft.
+const copiedActions = new WeakSet<PrimaryAction>();
+
 function copyAction(value: PrimaryAction): PrimaryAction {
-  return value.kind === 'command' ? copyFields(value, ['kind', 'label', 'run'], ['errorMessage'])
-    : copyFields(value, ['kind', 'label', 'href'], ['target', 'rel']);
+  if (copiedActions.has(value)) return value;
+  const copy = value.kind === 'command' ? copyFields(value, ['kind', 'label', 'run'], ['errorMessage'])
+    : value.kind === 'link' ? copyFields(value, ['kind', 'label', 'href'], ['target', 'rel'])
+    : copyFields({ ...value, fields: Object.freeze(value.fields.map((field) => copyFields(field, ['name', 'kind', 'label'],
+      ['placeholder', 'defaultValue', 'required', 'maxLength', 'autoComplete', 'inputMode']))) },
+    ['kind', 'fields', 'label', 'run'], ['errorMessage', 'validate']);
+  copiedActions.add(copy);
+  return copy;
 }
 
 type MutableContent<Slot> = { -readonly [Key in keyof NotificationContent<Slot>]: NotificationContent<Slot>[Key] };

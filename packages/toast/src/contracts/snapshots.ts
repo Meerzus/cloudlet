@@ -12,6 +12,7 @@ export type PauseReason =
   | 'action-pending'
   | 'content-transition'
   | 'island'
+  | 'draft'
   | 'document-hidden'
   | 'window-blur';
 
@@ -34,6 +35,8 @@ export interface NotificationSnapshot<Slot = never> {
   readonly pauseReasons: readonly PauseReason[];
   readonly operation: OperationSnapshot | null;
   readonly action: ActionSnapshot;
+  /** A form action whose values differ from their defaults. The values stay inside Cloudlet. */
+  readonly draft: boolean;
 }
 
 export type IslandReason = 'user' | 'attention';

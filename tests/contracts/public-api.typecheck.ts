@@ -127,6 +127,23 @@ export function verifyRuntimeFactory(slot: ReactNode) {
   const notifications: NotificationController<ReactNode> = controller;
   // @ts-expect-error The legacy notification-only projection still omits track.
   notifications.track;
+  // A form action types its values by the field names it declares.
+  controller.show({ title: 'Anna: are you coming?', action: {
+    kind: 'form', label: 'Send',
+    fields: [{ name: 'reply', kind: 'text', label: 'Reply', required: true }, { name: 'note', kind: 'textarea', label: 'Note' }],
+    run: ({ values }) => {
+      const typed: string = values.reply + values.note;
+      // @ts-expect-error Only declared field names exist on the values.
+      void values.replly;
+      return typed;
+    },
+    validate: (values) => values.reply.trim() ? true : { reply: 'Write a reply' },
+  } });
+  controller.show({ title: 'Form', action: {
+    kind: 'form', label: 'Send', fields: [{ name: 'reply', kind: 'text', label: 'Reply' }], run: () => undefined,
+    // @ts-expect-error validate names only declared fields.
+    validate: () => ({ other: 'No' }),
+  } });
   void [finalFactory, provider, result];
   controller.dispose();
 }

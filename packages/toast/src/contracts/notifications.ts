@@ -36,14 +36,53 @@ export interface NavigationAction {
   readonly rel?: string;
 }
 
-export type PrimaryAction = CommandAction | NavigationAction;
+export type FormFieldKind = 'text' | 'textarea';
+export type FormInputMode = 'text' | 'email' | 'numeric' | 'decimal' | 'tel' | 'url' | 'search';
 
-export interface NotificationContent<Slot = never> {
+/** One field of a form action. `label` is read by screen readers; the placeholder falls back to it. */
+export interface FormField<Name extends string = string> {
+  readonly name: Name;
+  readonly kind: FormFieldKind;
+  readonly label: string;
+  readonly placeholder?: string;
+  readonly defaultValue?: string;
+  readonly required?: boolean;
+  readonly maxLength?: number;
+  readonly autoComplete?: string;
+  readonly inputMode?: FormInputMode;
+}
+
+/** Field values as typed, without trimming. */
+export type FormValues<Name extends string = string> = Readonly<Record<Name, string>>;
+
+export interface FormContext<Name extends string = string> extends ActionContext {
+  readonly values: FormValues<Name>;
+}
+
+/** `true` accepts; a string is a message under the form; an object holds messages under fields. */
+export type FormValidation<Name extends string = string> = true | string | Readonly<Partial<Record<Name, string>>>;
+
+/** A form in the Island: one to three fields and a submit button with command semantics. */
+export interface FormAction<Name extends string = string> {
+  readonly kind: 'form';
+  readonly fields: readonly FormField<Name>[];
+  /** The submit button's accessible name, like the label of a command. */
+  readonly label: string;
+  // Methods, not function properties: a form typed with its field names stays assignable to `FormAction`.
+  run(context: FormContext<Name>): unknown;
+  errorMessage?(error: unknown): string;
+  /** Runs on submit after `required` and `maxLength`. */
+  validate?(values: FormValues<Name>): FormValidation<Name>;
+}
+
+export type PrimaryAction<Name extends string = string> = CommandAction | NavigationAction | FormAction<Name>;
+
+export interface NotificationContent<Slot = never, Name extends string = string> {
   readonly title: string;
   readonly description?: Description<Slot>;
   readonly icon?: Slot;
   readonly progress?: Progress;
-  readonly action?: PrimaryAction;
+  readonly action?: PrimaryAction<Name>;
   readonly announcementPriority?: AnnouncementPriority;
   /** Omitted = policy default; null = persistent; number = readable milliseconds. */
   readonly duration?: Duration;
@@ -66,7 +105,7 @@ export interface CloseNotice {
   readonly reason: CloseReason;
 }
 
-export interface NotificationSpec<Slot = never> extends NotificationContent<Slot> {
+export interface NotificationSpec<Slot = never, Name extends string = string> extends NotificationContent<Slot, Name> {
   readonly id?: string;
   readonly kind?: NotificationKind;
   readonly priority?: Priority;
@@ -75,13 +114,13 @@ export interface NotificationSpec<Slot = never> extends NotificationContent<Slot
 }
 
 /** Omitted preserves; null removes optional content. IDs/dedupe keys are immutable. */
-export interface NotificationPatch<Slot = never> {
+export interface NotificationPatch<Slot = never, Name extends string = string> {
   readonly title?: string;
   readonly kind?: NotificationKind;
   readonly description?: Description<Slot> | null;
   readonly icon?: Slot | null;
   readonly progress?: Progress | null;
-  readonly action?: PrimaryAction | null;
+  readonly action?: PrimaryAction<Name> | null;
   readonly priority?: Priority;
   readonly announcementPriority?: AnnouncementPriority;
   readonly duration?: Duration;
