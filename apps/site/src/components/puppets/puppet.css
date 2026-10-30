@@ -16,6 +16,8 @@
   --cloudlet-font-family: system-ui, sans-serif;
   --cloudlet-font-size: .875rem;
   --cloudlet-background: #ffffff;
+  /* The theme's background under a look's tint: a look overrides --cloudlet-background inline. */
+  --pp-surface: #ffffff;
   --cloudlet-foreground: #111113;
   --cloudlet-muted: #6e6e76;
   --cloudlet-border: color-mix(in oklab, var(--cloudlet-foreground) 10%, transparent);
@@ -47,7 +49,7 @@
 }
 /* Dark: the page theme, or forced per puppet (the accuracy stand). */
 :is(.dark .puppet:not([data-theme="light"]), .puppet[data-theme="dark"]) {
-  --cloudlet-background: #1c1c1e; --cloudlet-foreground: #f5f5f7; --cloudlet-muted: #a1a1aa; --cloudlet-focus: #93b4ff;
+  --cloudlet-background: #1c1c1e; --pp-surface: #1c1c1e; --cloudlet-foreground: #f5f5f7; --cloudlet-muted: #a1a1aa; --cloudlet-focus: #93b4ff;
   --cloudlet-shadow: 0 12px 32px -12px rgb(0 0 0 / .6); color-scheme: dark;
   --cloudlet-tail-background: color-mix(in oklab, var(--cloudlet-foreground) 14%, var(--cloudlet-background)); --cloudlet-tail-border: color-mix(in oklab, var(--cloudlet-foreground) 18%, transparent);
 }

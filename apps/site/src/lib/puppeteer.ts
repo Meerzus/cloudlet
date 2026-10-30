@@ -110,8 +110,6 @@ export class Puppeteer {
   private readonly counts: ReadonlyMap<number, HTMLElement>;
   private readonly close: HTMLElement;
   private readonly closeHighlight: HTMLElement | null;
-  /** Unrestyled background, read while no look is applied. */
-  private background = '#ffffff';
   private restyled = false;
   private readonly indicator: HTMLElement | null;
   private readonly dots: readonly HTMLElement[];
@@ -164,7 +162,6 @@ export class Puppeteer {
       const value = Number.parseFloat(style.getPropertyValue(name));
       return Number.isFinite(value) ? value : fallback;
     };
-    if (!this.restyled) this.background = style.getPropertyValue('--cloudlet-background').trim() || this.background;
     const width = Number.parseFloat(getComputedStyle(this.content).width) || this.content.clientWidth;
     const layers = new Map<string, Box>();
     for (const [key, nodes] of this.layers) {
@@ -409,8 +406,10 @@ export class Puppeteer {
     };
     for (const [kind, base] of Object.entries(STATUS)) values[`--cloudlet-${kind}`] = mix(la.accent ?? base, lb.accent ?? base);
     const tint = (la.tint ?? 0) + ((lb.tint ?? 0) - (la.tint ?? 0)) * t;
-    const accent = mix(la.accent ?? this.background, lb.accent ?? this.background);
-    values['--cloudlet-background'] = tint > 0 ? `color-mix(in oklab, ${accent} ${round(tint * 100)}%, ${this.background})` : this.background;
+    // The theme's surface by reference, so a theme switch under a look repaints it.
+    const surface = 'var(--pp-surface)';
+    const accent = mix(la.accent ?? surface, lb.accent ?? surface);
+    values['--cloudlet-background'] = tint > 0 ? `color-mix(in oklab, ${accent} ${round(tint * 100)}%, ${surface})` : surface;
     this.css(this.root, values);
   }
 }

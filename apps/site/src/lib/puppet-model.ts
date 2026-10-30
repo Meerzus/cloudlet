@@ -60,10 +60,10 @@ export interface PuppetLook {
 }
 export const PUPPET_LOOKS = {
   default: {},
-  /** shadcn-like neutral: small radii, zinc instead of status colours. */
-  neutral: { radius: 10, control: 6, accent: 'oklch(0.552 0.016 285.938)' },
+  /** shadcn-like neutral: small radii, zinc instead of status colours, a faint zinc card. */
+  neutral: { radius: 10, control: 6, accent: 'oklch(0.552 0.016 285.938)', tint: 0.05 },
   /** A brand: violet accent washed into the background, rounder corners. */
-  brand: { radius: 30, control: 16, accent: 'oklch(0.606 0.25 292.717)', tint: 0.08 },
+  brand: { radius: 30, control: 16, accent: 'oklch(0.606 0.25 292.717)', tint: 0.09 },
 } as const satisfies Record<string, PuppetLook>;
 export type PuppetLookId = keyof typeof PUPPET_LOOKS;
 
