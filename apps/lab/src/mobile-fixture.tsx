@@ -18,10 +18,14 @@ export interface MobileFixtureApi {
   portal: (portal: 'body' | 'custom' | 'dialog') => void;
   command: () => void;
   link: () => void;
+  /** A record with a reply form (or a name and a note); each send waits for `settleForm`. */
+  form: (fields?: 'reply' | 'note') => void;
+  settleForm: (ok: boolean) => void;
   snapshot: () => IslandState & {
-    records: readonly { id: string; remaining: number | null; pauses: readonly string[] }[];
+    records: readonly { id: string; remaining: number | null; pauses: readonly string[]; draft: boolean }[];
     actionAttempts: number;
     closes: readonly { id: string; reason: string }[];
+    sent: readonly Readonly<Record<string, string>>[];
   };
 }
 
@@ -49,6 +53,8 @@ export function MobileFixture() {
   useEffect(() => {
     let actionAttempts = 0;
     const closes: { id: string; reason: string }[] = [];
+    const sent: Readonly<Record<string, string>>[] = [];
+    let settle: ((ok: boolean) => void) | null = null;
     const host = () => document.querySelector('.cloudlet-host');
     const handle = (id: string): NotificationHandle => {
       const found = controller.getHandle(id);
@@ -89,9 +95,22 @@ export function MobileFixture() {
       link: () => reset([{ id: 'successor', title: 'After link' }, { id: 'link', title: 'Mobile link', action: {
         kind: 'link', label: 'Open destination', href: '#mobile-destination',
       } }]),
+      form: (fields = 'reply') => {
+        sent.length = 0;
+        reset([{ id: 'successor', title: 'After form' }, { id: 'form', title: 'Anna: are you coming?', description: { kind: 'text', text: 'Dinner at eight.' },
+          action: { kind: 'form', label: 'Send', errorMessage: () => 'Could not send',
+            fields: fields === 'reply' ? [{ name: 'reply', kind: 'text', label: 'Reply', required: true }]
+              : [{ name: 'name', kind: 'text', label: 'Name' }, { name: 'note', kind: 'textarea', label: 'Note', required: true }],
+            validate: values => fields === 'reply' || (values.note ?? '').trim().length >= 3 || { note: 'Write at least three characters' },
+            run: ({ values }) => {
+              sent.push(values);
+              return new Promise<void>((resolve, reject) => { settle = ok => (ok ? resolve() : reject(new Error('offline'))); });
+            } } }]);
+      },
+      settleForm: ok => { settle?.(ok); settle = null; },
       snapshot: () => ({ ...islandState(controller),
-        records: controller.getSnapshot().notifications.map(item => ({ id: item.handle.id, remaining: item.remainingMs, pauses: item.pauseReasons })),
-        actionAttempts, closes: [...closes] }),
+        records: controller.getSnapshot().notifications.map(item => ({ id: item.handle.id, remaining: item.remainingMs, pauses: item.pauseReasons, draft: item.draft })),
+        actionAttempts, closes: [...closes], sent: [...sent] }),
     };
     window.mobileFixture = api;
     reset();

@@ -38,6 +38,7 @@ const labels: CloudletLabels = {
   stackSummary: (title, count, missed) => [title, ...(count > 1 ? [`notifications: ${count}`] : []), ...(missed ? [`missed: ${missed}`] : [])].join(', '),
   page: (index, total) => `${index} of ${total}`,
   overflowCount: count => `Missed: ${count}`,
+  draft: 'Draft',
 };
 
 const announcements: AnnouncementFormatters = {

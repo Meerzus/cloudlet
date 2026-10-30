@@ -29,6 +29,10 @@
   --cloudlet-loading: oklch(0.556 0 0);
   --cloudlet-badge: #d70015;
   --cloudlet-badge-foreground: #fff;
+  /* Form fields derive from the foreground like the neutral controls, so both themes follow it. */
+  --cloudlet-field-background: var(--cloudlet-action-background);
+  --cloudlet-field-border: transparent;
+  --cloudlet-placeholder: var(--cloudlet-muted);
   --cloudlet-z-index: 1000;
   --cloudlet-safe-top: env(safe-area-inset-top, 0px);
   --cloudlet-safe-right: env(safe-area-inset-right, 0px);
@@ -192,8 +196,29 @@
   .cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-overflow button):hover { background: color-mix(in oklab, var(--cloudlet-foreground) 13%, transparent); }
   .cloudlet-host .cloudlet-close:hover { color: var(--cloudlet-foreground); }
   .cloudlet-host .cloudlet-action.cloudlet-primary:hover { background: color-mix(in oklab, var(--cloudlet-status) 20%, transparent); }
+  .cloudlet-host .cloudlet-action.cloudlet-submit:hover { background: color-mix(in oklab, var(--cloudlet-status) 70%, #000); }
 }
 .cloudlet-host .cloudlet-action-error { padding-block: 4px; color: var(--cloudlet-muted); font-size: .8125rem; }
+/* Form, look A: filled pill fields, one under another; the round submit button beside the last one. */
+.cloudlet-host .cloudlet-form { display: flex; flex-direction: column; gap: 8px; margin-block: 4px 2px; }
+.cloudlet-host .cloudlet-form-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 4px 8px; }
+.cloudlet-host .cloudlet-field {
+  grid-column: 1; width: 100%; min-width: 0; min-height: 36px; margin: 0; padding: 7px 13px; border: 1px solid var(--cloudlet-field-border);
+  border-radius: 18px; color: var(--cloudlet-foreground); background: var(--cloudlet-field-background);
+  font: inherit; line-height: 20px; resize: none; overflow-wrap: anywhere;
+}
+.cloudlet-host .cloudlet-field::placeholder { color: var(--cloudlet-placeholder); opacity: 1; }
+.cloudlet-host .cloudlet-field:focus-visible { outline-offset: 1px; }
+.cloudlet-host .cloudlet-field[aria-invalid="true"] { border-color: var(--cloudlet-error); }
+.cloudlet-host .cloudlet-field[readonly] { color: var(--cloudlet-muted); }
+.cloudlet-host .cloudlet-field-error { grid-column: 1 / -1; padding-inline: 14px; color: color-mix(in oklab, var(--cloudlet-error) 70%, var(--cloudlet-foreground)); font-size: .8125rem; }
+/* White on the status colour darkened by a fifth: at least 3:1 for every kind, warning included. */
+.cloudlet-host .cloudlet-action.cloudlet-submit {
+  grid-column: 2; display: grid; place-items: center; width: 36px; height: 36px; min-width: 0; min-height: 0; padding: 0; border-radius: 50%;
+  color: #fff; background: color-mix(in oklab, var(--cloudlet-status) 80%, #000);
+}
+.cloudlet-host .cloudlet-submit > svg { width: 16px; height: 16px; stroke-width: 2; }
+.cloudlet-host button.cloudlet-submit::before { inset: calc((var(--cloudlet-control-min-size) - 36px) / -2); border-radius: 50%; }
 .cloudlet-host .cloudlet-indicator { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 8px; color: var(--cloudlet-muted); font-size: .75rem; padding-bottom: 6px; flex: none; }
 .cloudlet-host .cloudlet-indicator .cloudlet-dot-button { min-width: 24px; min-height: 24px; padding: 8px; }
 .cloudlet-host .cloudlet-dot { display: block; width: 6px; height: 6px; border-radius: 50%; background: color-mix(in oklab, var(--cloudlet-foreground) 25%, transparent); }
@@ -241,4 +266,7 @@
   .cloudlet-host .cloudlet-dot { background: Canvas; outline: 1px solid CanvasText; }
   .cloudlet-host .cloudlet-indicator [aria-current="true"] .cloudlet-dot { background: CanvasText; }
   .cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-overflow button) { border: 1px solid ButtonText; }
+  .cloudlet-host .cloudlet-field { color: FieldText; background: Field; border-color: CanvasText; }
+  .cloudlet-host .cloudlet-field[aria-invalid="true"] { border-width: 2px; }
+  .cloudlet-host .cloudlet-action.cloudlet-submit { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }
 }
