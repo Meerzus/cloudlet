@@ -126,3 +126,39 @@ test('on a phone at the bottom edge the form stays inside a shorter viewport, as
   await expect(field(page, 'Reply')).toBeInViewport();
   await screenshot(page, info, 'forms-phone');
 });
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`the ${theme} theme: field messages and the focused invalid field pass axe, with one ring in the error colour`, async ({ page }) => {
+    await open(page, 'note');
+    await page.evaluate(theme => window.mobileFixture!.theme(theme), theme);
+    await expect(host(page)).toHaveAttribute('data-theme', theme);
+    const note = field(page, 'Note');
+    await note.focus();
+    await page.keyboard.press('ControlOrMeta+Enter');
+    await expect(note).toHaveAttribute('aria-invalid', 'true');
+    const ring = await note.evaluate(element => {
+      const style = getComputedStyle(element);
+      return { border: style.borderTopColor, outline: style.outlineColor, error: getComputedStyle(element.closest('.cloudlet-host')!).getPropertyValue('--cloudlet-error').trim() };
+    });
+    expect(ring.border).toBe('rgba(0, 0, 0, 0)');
+    expect(ring.outline).not.toBe(ring.border);
+    const audit = await new AxeBuilder({ page }).include('.cloudlet-host').analyze();
+    expect(audit.violations).toEqual([]);
+  });
+}
+
+test('forced colours: fields and the send button use system colours', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'forced-colors emulation is Chromium-only');
+  await page.emulateMedia({ forcedColors: 'active' });
+  await open(page);
+  const colours = await page.evaluate(() => {
+    const read = (selector: string) => { const style = getComputedStyle(document.querySelector(selector)!); return [style.color, style.backgroundColor]; };
+    return { field: read('.cloudlet-body .cloudlet-field'), send: read('.cloudlet-submit'), adjust: getComputedStyle(document.querySelector('.cloudlet-submit')!).forcedColorAdjust };
+  });
+  expect(colours.adjust).toBe('none');
+  // System Highlight is never the default status blue.
+  expect(colours.send[1]).not.toBe('rgba(0, 0, 0, 0)');
+  expect(colours.send[0]).not.toBe(colours.send[1]);
+  expect(colours.field[0]).not.toBe(colours.field[1]);
+  await page.emulateMedia({ forcedColors: 'none' });
+});

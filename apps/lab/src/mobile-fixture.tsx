@@ -13,6 +13,7 @@ export interface MobileFixtureApi {
   open: () => boolean;
   collapse: () => boolean;
   position: (position: NonNullable<ToasterProps['position']>) => void;
+  theme: (theme: 'light' | 'dark') => void;
   offsets: (offsets: ToasterOffsets) => void;
   attach: (attached: boolean) => void;
   portal: (portal: 'body' | 'custom' | 'dialog') => void;
@@ -45,6 +46,7 @@ export function MobileFixture() {
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getServerSnapshot);
   const [position, setPosition] = useState<NonNullable<ToasterProps['position']>>('auto');
   const [offsets, setOffsets] = useState<ToasterOffsets>({});
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [attached, setAttached] = useState(true);
   const [portal, setPortal] = useState<'body' | 'custom' | 'dialog'>('body');
   const dialog = useRef<HTMLDialogElement>(null);
@@ -83,7 +85,7 @@ export function MobileFixture() {
       dismiss: id => { controller.dismiss(handle(id)); },
       open: () => openIsland(host()),
       collapse: () => collapseIsland(host()),
-      position: setPosition, offsets: setOffsets, attach: setAttached, portal: setPortal,
+      position: setPosition, theme: setTheme, offsets: setOffsets, attach: setAttached, portal: setPortal,
       command: () => {
         actionAttempts = 0;
         reset([{ id: 'successor', title: 'After command' }, { id: 'action', title: 'Mobile command', description: { kind: 'text', text: description },
@@ -141,7 +143,7 @@ export function MobileFixture() {
     </main>
     <div id="mobile-custom-portal" />
     <dialog id="mobile-dialog-portal" ref={dialog}><p>Application top layer</p></dialog>
-    {attached && <Toaster key={portal} position={position} offsets={offsets} theme="light" labels={fixtureLabels}
+    {attached && <Toaster key={portal} position={position} offsets={offsets} theme={theme} labels={fixtureLabels}
       {...(portal === 'body' ? {} : { container: () => document.getElementById(`mobile-${portal === 'custom' ? 'custom' : 'dialog'}-portal`) })}
       {...(nonce() ? { nonce: nonce()! } : {})} />}
   </>;

@@ -32,7 +32,8 @@
   /* Form fields derive from the foreground like the neutral controls, so both themes follow it. */
   --cloudlet-field-background: var(--cloudlet-action-background);
   --cloudlet-field-border: transparent;
-  --cloudlet-placeholder: var(--cloudlet-muted);
+  /* A step darker than muted: 4.5:1 on the filled field in the light theme. */
+  --cloudlet-placeholder: color-mix(in oklab, var(--cloudlet-muted) 85%, var(--cloudlet-foreground));
   --cloudlet-z-index: 1000;
   --cloudlet-safe-top: env(safe-area-inset-top, 0px);
   --cloudlet-safe-right: env(safe-area-inset-right, 0px);
@@ -210,7 +211,10 @@
 .cloudlet-host .cloudlet-field::placeholder { color: var(--cloudlet-placeholder); opacity: 1; }
 .cloudlet-host .cloudlet-field:focus-visible { outline-offset: 1px; }
 .cloudlet-host .cloudlet-field[aria-invalid="true"] { border-color: var(--cloudlet-error); }
+/* Focused and invalid: one ring in the error colour instead of the border and the focus ring together. */
+.cloudlet-host .cloudlet-field[aria-invalid="true"]:focus-visible { border-color: transparent; outline-color: var(--cloudlet-error); }
 .cloudlet-host .cloudlet-field[readonly] { color: var(--cloudlet-muted); }
+.cloudlet-host :is(.cloudlet-form > .cloudlet-action-error, .cloudlet-form ~ .cloudlet-action-error) { padding-inline: 14px; }
 .cloudlet-host .cloudlet-field-error { grid-column: 1 / -1; padding-inline: 14px; color: color-mix(in oklab, var(--cloudlet-error) 70%, var(--cloudlet-foreground)); font-size: .8125rem; }
 /* White on the status colour darkened by a fifth: at least 3:1 for every kind, warning included. */
 .cloudlet-host .cloudlet-action.cloudlet-submit {
