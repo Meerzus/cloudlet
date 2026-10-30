@@ -1,8 +1,8 @@
 import { Component, Suspense, useEffect, useId, useRef, useState } from 'react';
-import type { ComponentPropsWithRef, ReactNode } from 'react';
-import type { HostLease, RendererBridge } from '../contracts/internal.js';
+import type { ComponentPropsWithRef, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
+import type { FormDraft, HostLease, RendererBridge } from '../contracts/internal.js';
 import type { NotificationHandle } from '../contracts/identity.js';
-import type { NotificationKind } from '../contracts/notifications.js';
+import type { FormAction, FormField, NotificationKind } from '../contracts/notifications.js';
 import type { NotificationSnapshot } from '../contracts/snapshots.js';
 import type { CloudletLabels, CloudletPart, ToasterProps } from '../react.js';
 
@@ -15,6 +15,7 @@ export const defaultLabels: CloudletLabels = {
     ...(missed > 0 ? [`${missed} missed`] : [])].join(', '),
   page: (index, total) => `${index} of ${total}`,
   overflowCount: count => `${count} missed notifications`,
+  draft: 'Draft',
 };
 
 interface SlotProps {
@@ -180,9 +181,9 @@ export function SlidePreview({ notification, labels, part }: { notification: Not
 }
 
 /** Island slide body: description, progress, actions and the action error. */
-export function Body({ notification, bridge, lease, labels, navigate, slot, part }: {
-  notification: NotificationSnapshot<ReactNode>; bridge: RendererBridge<ReactNode>; lease: HostLease;
-  labels: CloudletLabels; navigate: (handle: NotificationHandle) => void; slot: (value: ReactNode) => ReactNode; part: PartClass;
+export function Body({ notification, form, bridge, lease, labels, navigate, slot, part, titleId }: {
+  notification: NotificationSnapshot<ReactNode>; form: FormDraft | undefined; bridge: RendererBridge<ReactNode>; lease: HostLease;
+  labels: CloudletLabels; navigate: (handle: NotificationHandle) => void; slot: (value: ReactNode) => ReactNode; part: PartClass; titleId: string;
 }) {
   const { handle, content, operation, action, kind } = notification;
   // The primary action is tinted with the status; retry and cancel stay neutral.
@@ -199,6 +200,8 @@ export function Body({ notification, bridge, lease, labels, navigate, slot, part
       {content.description.kind === 'text' && <p>{content.description.text}</p>}
       {content.description.kind === 'rich' && slot(content.description.content)}
     </div>}
+    {command?.kind === 'form' && form && <Form key={formKey(command)} action={command} draft={form} notification={notification}
+      bridge={bridge} lease={lease} part={part} titleId={titleId} actionErrorId={`${id}-action-error`} />}
     <div className={part('actions', 'cloudlet-actions')}>
       {command?.kind === 'command' && control('action', command.label, () => {
         if (action.status !== 'pending') bridge.invokeAction(lease, handle);
@@ -215,6 +218,86 @@ export function Body({ notification, bridge, lease, labels, navigate, slot, part
     </div>
     {action.status === 'failed' && <p id={`${id}-action-error`} className="cloudlet-action-error">{action.message}</p>}
   </div>;
+}
+
+// A new form action object starts a new draft in the controller, so its fields remount with the new defaults.
+const formKeys = new WeakMap<FormAction, number>();
+let nextFormKey = 0;
+function formKey(action: FormAction): number {
+  let key = formKeys.get(action);
+  if (key === undefined) formKeys.set(action, key = ++nextFormKey);
+  return key;
+}
+
+const TEXTAREA_ROWS = [3, 6] as const;
+
+/** Rows instead of a height: a strict CSP forbids style attributes, and rows grow with the text. */
+function fitRows(element: HTMLTextAreaElement): void {
+  element.rows = TEXTAREA_ROWS[0];
+  while (element.scrollHeight > element.clientHeight && element.rows < TEXTAREA_ROWS[1]) element.rows += 1;
+}
+
+/**
+ * Look A: each field is a filled pill; the round submit button sits beside the last one. The fields
+ * are uncontrolled: their text lives in the controller's draft and seeds them on mount, so typing
+ * never waits for a snapshot round trip.
+ */
+function Form({ action, draft, notification, bridge, lease, part, titleId, actionErrorId }: {
+  action: FormAction; draft: FormDraft; notification: NotificationSnapshot<ReactNode>; bridge: RendererBridge<ReactNode>;
+  lease: HostLease; part: PartClass; titleId: string; actionErrorId: string;
+}) {
+  const id = useId();
+  const fields = useRef(new Map<string, HTMLInputElement | HTMLTextAreaElement>());
+  const pending = notification.action.status === 'pending';
+  const failed = notification.action.status === 'failed';
+  const formError = draft.errors.form;
+  const submit = () => {
+    if (pending) return;
+    const result = bridge.invokeAction(lease, notification.handle);
+    if (result.status !== 'invalid') return;
+    const first = action.fields.find(field => result.errors.fields[field.name] !== undefined);
+    if (first) fields.current.get(first.name)?.focus();
+  };
+  const field = (field: FormField, index: number, last: boolean) => {
+    const fieldId = `${id}-${index}`;
+    const error = draft.errors.fields[field.name];
+    const props = {
+      id: fieldId, name: field.name, className: part('field', 'cloudlet-field'), defaultValue: draft.values[field.name] ?? '',
+      placeholder: field.placeholder ?? field.label, required: field.required, maxLength: field.maxLength,
+      autoComplete: field.autoComplete, inputMode: field.inputMode, readOnly: pending,
+      'aria-invalid': error === undefined ? undefined : true, 'aria-describedby': error === undefined ? undefined : `${fieldId}-error`,
+    };
+    const change = (element: HTMLInputElement | HTMLTextAreaElement) => bridge.setFormValue(lease, notification.handle, field.name, element.value);
+    return <div key={field.name} className="cloudlet-form-row">
+      <label htmlFor={fieldId} className="cloudlet-live">{field.label}</label>
+      {field.kind === 'text'
+        ? <input type="text" {...props} ref={element => { if (element) fields.current.set(field.name, element); }}
+          onChange={event => change(event.currentTarget)} />
+        : <textarea {...props} rows={TEXTAREA_ROWS[0]} ref={element => {
+          if (!element) return;
+          fields.current.set(field.name, element);
+          fitRows(element);
+        }} onChange={event => { change(event.currentTarget); fitRows(event.currentTarget); }}
+          onKeyDown={(event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+            // Enter starts a new line in a textarea; ⌘ or Ctrl with Enter sends.
+            if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey) || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            submit();
+          }} />}
+      {last && <button type="submit" data-cloudlet-control="action" className={part('action', 'cloudlet-action cloudlet-submit')}
+        aria-label={action.label} aria-disabled={pending} aria-busy={pending}
+        aria-describedby={failed ? actionErrorId : formError ? `${id}-error` : undefined}>
+        {pending ? <svg aria-hidden="true" viewBox="0 0 16 16" className="cloudlet-spinner"><circle cx="8" cy="8" r="5.5" strokeDasharray="22 13" /></svg>
+          : glyph('M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5')}
+      </button>}
+      {error !== undefined && <p id={`${fieldId}-error`} className={part('field-error', 'cloudlet-field-error')}>{error}</p>}
+    </div>;
+  };
+  return <form className={part('form', 'cloudlet-form')} noValidate aria-labelledby={titleId}
+    onSubmit={event => { event.preventDefault(); submit(); }}>
+    {action.fields.map((item, index) => field(item, index, index === action.fields.length - 1))}
+    {formError && <p id={`${id}-error`} className="cloudlet-action-error">{formError}</p>}
+  </form>;
 }
 
 export function closeButton(labels: CloudletLabels, part: PartClass, onClick: () => void) {

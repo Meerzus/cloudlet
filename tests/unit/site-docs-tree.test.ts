@@ -18,6 +18,7 @@ const SPEC_ORDER = [
   '---Guides---',
   'notifications',
   'operations',
+  'forms',
   'positioning',
   'styling',
   'ssr',
@@ -91,6 +92,7 @@ describe('site docs tree', () => {
     const RUNS: Record<string, readonly string[]> = {
       notifications: ['success', 'info', 'warning', 'error', 'loading', 'title-only', 'description', 'rich-description', 'custom-icon', 'update-loading', 'burst', 'overflow', 'dismiss-all'],
       operations: ['track-resolve', 'error-retry', 'track-cancel', 'promise-progress', 'action-command', 'action-retry', 'action-link'],
+      forms: ['form-reply', 'form-note', 'form-retry'],
       positioning: ['attention-auto', 'attention-upgrade', 'attention-stack'],
     };
     for (const [page, demos] of Object.entries(RUNS)) {
@@ -105,7 +107,7 @@ describe('site docs tree', () => {
   it('sends readers to the Playground from Introduction and Quick start only', () => {
     const nextSteps = (page: string) => frontmatter(page).body.split('## Next steps')[1] ?? '';
     for (const page of ['index', 'quick-start']) expect(nextSteps(page), page).toContain('](/toaster/playground)');
-    for (const page of ['installation', 'notifications', 'operations', 'positioning', 'styling', 'ssr', 'accessibility']) {
+    for (const page of ['installation', 'notifications', 'operations', 'forms', 'positioning', 'styling', 'ssr', 'accessibility']) {
       expect(nextSteps(page), page).not.toContain('](/toaster/playground)');
     }
   });

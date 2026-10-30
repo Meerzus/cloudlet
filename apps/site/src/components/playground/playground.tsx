@@ -40,8 +40,8 @@ export function Playground() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6 sm:pt-16">
-      {/* A glass panel like the group cards: small text straight on the deep top of the day sky misses 4.5:1. */}
-      <div className="rounded-3xl border border-glass-border bg-background/55 p-5 backdrop-blur-xl sm:p-8">
+      {/* A panel like the group cards: small text straight on the deep top of the day sky misses 4.5:1. */}
+      <div className="rounded-3xl border border-glass-border bg-background/78 p-5 sm:p-8">
         <h1 className="text-balance text-5xl font-semibold tracking-[-0.04em] sm:text-7xl">Playground</h1>
         <p className="mt-4 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
           Every kind of Cloudlet, one click away. The buttons call the real library on this page; Copy code gives you
@@ -78,10 +78,12 @@ export function Playground() {
 
 function GroupCard({ group, blurb }: { group: DemoGroup; blurb: string }) {
   const titleId = useId();
+  // Denser instead of frosted: the cards scroll over the fixed sky, so a backdrop blur is redone
+  // under all of them every frame — on integrated graphics most scroll frames missed 60 Hz.
   return (
     <section
       aria-labelledby={titleId}
-      className="flex flex-col rounded-3xl border border-glass-border bg-background/45 p-5 backdrop-blur-xl sm:p-6"
+      className="flex flex-col rounded-3xl border border-glass-border bg-background/72 p-5 sm:p-6"
     >
       <h2 id={titleId} className="text-2xl font-semibold tracking-[-0.02em]">
         {group}

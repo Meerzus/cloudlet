@@ -80,10 +80,25 @@ export type AnnouncementAcknowledgement =
   | { readonly kind: 'operation'; readonly handle: NotificationHandle; readonly token: OperationAttemptToken; readonly phase: OperationAnnouncementPhase }
   | { readonly kind: 'overflow'; readonly count: number };
 
+/** Messages from the last submit: `form` under the form, `fields` under each field. */
+export interface FormErrors {
+  readonly form: string | null;
+  readonly fields: Readonly<Record<string, string>>;
+}
+
+/** The values a form action holds for one record; only the renderer sees them. */
+export interface FormDraft {
+  readonly handle: NotificationHandle;
+  readonly values: Readonly<Record<string, string>>;
+  readonly errors: FormErrors;
+}
+
 export interface RendererSnapshot<Slot = never> extends ControllerSnapshot<Slot> {
   readonly presentation: RendererPresentation | null;
   readonly focusRequest: FocusRequest | null;
   readonly announcements: AnnouncementLedgerSnapshot;
+  /** One entry per record with a form action, in notification order. */
+  readonly forms: readonly FormDraft[];
 }
 
 export type AttachResult =
@@ -105,6 +120,8 @@ export type RendererCloseReason = Extract<CloseReason, 'close-button' | 'swipe' 
 
 export type ActionResult =
   | { readonly status: 'started' }
+  /** A form failed `required`, `maxLength` or `validate`; the messages are in the record's draft. */
+  | { readonly status: 'invalid'; readonly errors: FormErrors }
   | { readonly status: 'rejected'; readonly reason: BridgeRejection | 'no-command' | 'already-pending' };
 
 export type RetryOperationResult =
@@ -143,7 +160,10 @@ export interface RendererBridge<Slot = never> {
   readonly acknowledgeOverflow: (lease: HostLease) => BridgeResult;
   readonly acknowledgeAnnouncements: (lease: HostLease, acknowledgements: readonly AnnouncementAcknowledgement[]) => BridgeResult;
   readonly dismiss: (lease: HostLease, handle: NotificationHandle, reason: RendererCloseReason) => MutationResult | { readonly status: 'rejected'; readonly reason: 'stale-lease' };
+  /** Runs a command, or validates and submits a form. */
   readonly invokeAction: (lease: HostLease, handle: NotificationHandle) => ActionResult;
+  readonly setFormValue: (lease: HostLease, handle: NotificationHandle, name: string, value: string) =>
+    BridgeResult | { readonly status: 'rejected'; readonly reason: 'no-form' | 'already-pending' };
   readonly retryOperation: (lease: HostLease, handle: NotificationHandle, expected: OperationAttemptToken) => RetryOperationResult;
   readonly cancelOperation: (lease: HostLease, handle: NotificationHandle, expected: OperationAttemptToken, reason?: unknown) => CancelOperationResult;
   readonly reportDiagnostic: (lease: HostLease, diagnostic: Diagnostic) => BridgeResult;

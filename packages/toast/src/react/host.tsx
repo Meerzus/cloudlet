@@ -698,7 +698,10 @@ function createHostRuntime(owner: Host) {
     const visibility = () => pause('document-hidden', doc.visibilityState === 'hidden');
     // A pointer press outside the open Island collapses it to the stack.
     const outside = (event: Event) => {
-      if (bridge.getSnapshot().island.open && event.target instanceof view.Node && !root.contains(event.target)) bridge.collapseIsland(lease);
+      const snapshot = bridge.getSnapshot();
+      // Unsent text holds the Island open; Escape and the pill's own controls still collapse it.
+      const draft = snapshot.notifications.some(item => item.handle === snapshot.island.current && item.draft);
+      if (snapshot.island.open && !draft && event.target instanceof view.Node && !root.contains(event.target)) bridge.collapseIsland(lease);
     };
     // No mouseout reaches the host when the hovered card is removed or hidden under a still pointer
     // (React then never sees the leave): the next pointer over anything outside releases the pause.
@@ -809,11 +812,15 @@ function createHostRuntime(owner: Host) {
   function onIslandKey(event: ReactKeyboardEvent, stack: readonly NotificationHandle[], index: number, rtl: boolean) {
     if (event.defaultPrevented) return;
     let next: number | null = null;
+    // An IME composition owns Escape and the arrows until it ends.
+    if (event.nativeEvent.isComposing) return;
     if (event.key === 'Escape') {
       event.preventDefault();
       bridge.collapseIsland(lease);
       return;
     }
+    // The arrows, Home and End move the caret inside a form field.
+    if ((event.target as Element).closest('input, textarea')) return;
     // A focused scrolling body keeps Home/End for its own scroll.
     if ((event.key === 'Home' || event.key === 'End') && event.target === bodyElement() && bodyElement()?.tabIndex === 0) return;
     if (event.key === 'Home') next = 0;
@@ -893,7 +900,8 @@ function createHostRuntime(owner: Host) {
                   <Heading notification={presented} slot={slot} part={part} titleId={`${islandId}-title`} />
                   <div className="cloudlet-heading-out" aria-hidden="true" />
                 </div>
-                {open && <Body notification={presented} bridge={bridge} lease={lease} labels={labels} navigate={navigate} slot={slot} part={part} />}
+                {open && <Body notification={presented} form={snapshot.forms.find(form => form.handle === presented.handle)} bridge={bridge}
+                  lease={lease} labels={labels} navigate={navigate} slot={slot} part={part} titleId={`${islandId}-title`} />}
                 <div className="cloudlet-body-out" aria-hidden="true" />
               </div>}
               {preview && <div ref={inertRef} className="cloudlet-peek" aria-hidden="true"><SlidePreview notification={preview} labels={labels} part={part} /></div>}
@@ -914,7 +922,8 @@ function createHostRuntime(owner: Host) {
             </div>
             {presented && !open && <button type="button" className={part('pill', 'cloudlet-pill')} data-cloudlet-pill=""
               aria-expanded="false" aria-controls={islandId} onClick={() => bridge.openIsland(lease, 'user')}
-              aria-label={format(labels.stackSummary, defaultLabels.stackSummary, presented.content.title, total, missed)} />}
+              aria-label={[format(labels.stackSummary, defaultLabels.stackSummary, presented.content.title, total, missed),
+                ...(presented.draft ? [labels.draft] : [])].join(', ')} />}
             <span className={part('badge', 'cloudlet-badge')} aria-hidden="true"><span className="cloudlet-badge-value">{badgeCount}</span><span className="cloudlet-badge-out" /></span>
           </div>
           <div ref={exitRef} className="cloudlet-exit" aria-hidden="true" />

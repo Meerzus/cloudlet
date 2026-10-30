@@ -3,7 +3,8 @@ import type { IntroEnd } from './frame-protocol';
 
 /**
  * The hero's intro, looped by the hero: three toasts land one by one and stack
- * with a badge → pause → the stack opens into the Island → one slide → collapse.
+ * with a badge → pause → the stack opens into the Island → one slide → collapse → a feedback
+ * form opens on its own and waits; typing into it is visitor input, so the loop stops there.
  * The same runner drives the `/frame` screen and, for phone visitors, the page
  * Toaster. All values in milliseconds.
  */
@@ -18,8 +19,10 @@ export const INTRO_TIMING = {
   islandHold: 2000,
   /** On the second slide before collapsing. */
   slideHold: 1900,
-  /** After the collapse settles; then the next run starts from an empty stack. */
+  /** After the collapse settles, before the feedback form arrives. */
   settle: 900,
+  /** The feedback form waits this long; then the next run starts from an empty stack. */
+  feedbackHold: 6000,
   /** Upload progress ticks while the intro plays; it lands as success during the slide. */
   uploadTick: 600,
 } as const;
@@ -132,6 +135,20 @@ export function playIntro(controller: ReactCloudletController, host: () => Eleme
     if (!(await pause(t.slideHold, signal))) return 'interrupted';
     pilot.key(host(), 'Escape');
     if (!(await pause(t.settle, signal))) return 'interrupted';
+    // A real form: the visitor can answer. Nothing leaves the page; it only says thanks.
+    controller.show({
+      title: 'How does Cloudlet feel so far?',
+      action: {
+        kind: 'form',
+        label: 'Send',
+        fields: [{ name: 'feedback', kind: 'text', label: 'Your feedback', placeholder: 'A word or two…' }],
+        run: () => {
+          controller.show({ title: 'Thanks for the feedback ☁️', kind: 'success' });
+        },
+      },
+      attention: 'open',
+    });
+    if (!(await pause(t.feedbackHold, signal))) return 'interrupted';
     return 'complete';
   }
 

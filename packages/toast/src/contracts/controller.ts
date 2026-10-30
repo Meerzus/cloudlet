@@ -11,6 +11,10 @@ export interface FallbackMessages {
   readonly cancellationRequested: string;
   readonly actionError: string;
   readonly renderError: string;
+  /** A required form field is empty. */
+  readonly fieldRequired: string;
+  /** A form field is longer than its `maxLength`. */
+  readonly fieldTooLong: string;
 }
 
 export interface ControllerOptions {
@@ -42,8 +46,9 @@ export type ClearResult =
   | { readonly status: 'rejected'; readonly reason: 'disposed' };
 
 export interface CloudletController<Slot = never, Signal extends CancellationSignal = CancellationSignal> {
-  readonly show: (spec: NotificationSpec<Slot>) => AdmissionResult;
-  readonly update: (handle: NotificationHandle, patch: NotificationPatch<Slot>) => MutationResult;
+  /** `Name` is inferred from the field names of a form action. */
+  readonly show: <Name extends string = string>(spec: NotificationSpec<Slot, Name>) => AdmissionResult;
+  readonly update: <Name extends string = string>(handle: NotificationHandle, patch: NotificationPatch<Slot, Name>) => MutationResult;
   readonly getHandle: (id: string) => NotificationHandle | undefined;
   readonly track: <T>(source: OperationSource<T, Signal>, options: TrackOptions<T, Slot, Signal>) => OperationHandle<T>;
   readonly dismiss: (handle: NotificationHandle) => MutationResult;

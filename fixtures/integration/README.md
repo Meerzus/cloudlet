@@ -6,8 +6,8 @@ These fixtures install one retained `npm pack` artifact in fresh temporary direc
 npm run pack:local
 npm run test:consumers
 # Or split the same pipeline:
-node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.0.0.tgz --prepare-only
-node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.0.0.tgz --browser-only
+node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.1.0.tgz --prepare-only
+node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.1.0.tgz --browser-only
 ```
 
 `--prepare-only` copies templates/shared files and the archive, refreshes only its local-file candidate version/integrity in each tracked consumer lockfile, then performs clean `npm ci`, `npm ls`, cold no-DOM Node import, strict TypeScript and production build. Transitive public dependency versions/integrities remain locked. Missing locks/entries fail by default. `--update-locks` bootstraps them intentionally; ordinary runs never resolve a new dependency tree. The runner uses the workspace npm CLI with its current Node executable to avoid a Volta fallback after changing into `/tmp`. It rejects a different npm version from the workspace `packageManager`.

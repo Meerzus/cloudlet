@@ -55,7 +55,26 @@ type LayerNodes = {
   readonly ring: SVGCircleElement | null;
   readonly progressText: readonly HTMLElement[];
   readonly highlights: ReadonlyMap<PuppetControl, HTMLElement>;
+  readonly field: FieldNodes | null;
 };
+type FieldNodes = {
+  /** The text to type, split into what a reader sees as characters. */
+  readonly graphemes: readonly string[];
+  readonly placeholder: HTMLElement;
+  readonly typed: HTMLElement;
+  readonly caret: HTMLElement;
+  readonly ring: HTMLElement;
+  readonly arrow: SVGElement;
+  readonly spinner: SVGElement;
+};
+
+/** Characters as a reader sees them: an emoji with its variation selector is one. */
+function graphemes(text: string): string[] {
+  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+    return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)].map((part) => part.segment);
+  }
+  return Array.from(text);
+}
 
 /** Status tokens a look recolours, with the package values (puppet.css keeps them in sync). */
 const STATUS = {
@@ -110,8 +129,6 @@ export class Puppeteer {
   private readonly counts: ReadonlyMap<number, HTMLElement>;
   private readonly close: HTMLElement;
   private readonly closeHighlight: HTMLElement | null;
-  /** Unrestyled background, read while no look is applied. */
-  private background = '#ffffff';
   private restyled = false;
   private readonly indicator: HTMLElement | null;
   private readonly dots: readonly HTMLElement[];
@@ -149,12 +166,27 @@ export class Puppeteer {
           highlights: new Map(
             [...face.querySelectorAll<HTMLElement>('.pp-highlight')].map((node) => [node.dataset.control as PuppetControl, node]),
           ),
+          field: this.fieldOf(face, states.find((state) => layerKey(state) === face.dataset.layer)?.face.field?.text),
         },
       ]),
     );
     for (const state of states) {
       if (!this.layers.has(layerKey(state))) throw new Error(`Puppet markup has no layer ${layerKey(state)}`);
     }
+  }
+
+  private fieldOf(face: HTMLElement, text: string | undefined): FieldNodes | null {
+    const field = face.querySelector<HTMLElement>('.pp-field');
+    if (!field || text === undefined) return null;
+    return {
+      graphemes: graphemes(text),
+      placeholder: field.querySelector<HTMLElement>('.pp-placeholder')!,
+      typed: field.querySelector<HTMLElement>('.pp-typed')!,
+      caret: field.querySelector<HTMLElement>('.pp-caret')!,
+      ring: field.querySelector<HTMLElement>('.pp-field-ring')!,
+      arrow: face.querySelector<SVGElement>('.pp-send-arrow')!,
+      spinner: face.querySelector<SVGElement>('.pp-send-spinner')!,
+    };
   }
 
   /** Reads layout: call after resizes and font loads (ScrollTrigger `refreshInit`). */
@@ -164,7 +196,6 @@ export class Puppeteer {
       const value = Number.parseFloat(style.getPropertyValue(name));
       return Number.isFinite(value) ? value : fallback;
     };
-    if (!this.restyled) this.background = style.getPropertyValue('--cloudlet-background').trim() || this.background;
     const width = Number.parseFloat(getComputedStyle(this.content).width) || this.content.clientWidth;
     const layers = new Map<string, Box>();
     for (const [key, nodes] of this.layers) {
@@ -370,6 +401,19 @@ export class Puppeteer {
         }
       }
       for (const [control, highlight] of nodes.highlights) this.css(highlight, { opacity: String(shown?.highlight[control] ?? 0) });
+      if (nodes.field) {
+        const field = nodes.field;
+        const count = Math.round((shown?.typed ?? 0) * field.graphemes.length);
+        const text = field.graphemes.slice(0, count).join('');
+        if (field.typed.textContent !== text) field.typed.textContent = text;
+        const sending = shown?.sending ?? 0;
+        // Focus comes with the first letter and stays while sending; the caret shows only while typing.
+        this.css(field.placeholder, { opacity: count ? '0' : '1' });
+        this.css(field.ring, { opacity: count ? '1' : '0' });
+        this.css(field.caret, { opacity: count && count < field.graphemes.length && !sending ? '1' : '0' });
+        this.css(field.arrow, { opacity: String(1 - sending) });
+        this.css(field.spinner, { opacity: String(sending) });
+      }
     }
 
     this.css(this.close, { opacity: String(frame.close.opacity), transform: frame.close.y ? `translateY(${px(frame.close.y)})` : 'none' });
@@ -409,8 +453,10 @@ export class Puppeteer {
     };
     for (const [kind, base] of Object.entries(STATUS)) values[`--cloudlet-${kind}`] = mix(la.accent ?? base, lb.accent ?? base);
     const tint = (la.tint ?? 0) + ((lb.tint ?? 0) - (la.tint ?? 0)) * t;
-    const accent = mix(la.accent ?? this.background, lb.accent ?? this.background);
-    values['--cloudlet-background'] = tint > 0 ? `color-mix(in oklab, ${accent} ${round(tint * 100)}%, ${this.background})` : this.background;
+    // The theme's surface by reference, so a theme switch under a look repaints it.
+    const surface = 'var(--pp-surface)';
+    const accent = mix(la.accent ?? surface, lb.accent ?? surface);
+    values['--cloudlet-background'] = tint > 0 ? `color-mix(in oklab, ${accent} ${round(tint * 100)}%, ${surface})` : surface;
     this.css(this.root, values);
   }
 }

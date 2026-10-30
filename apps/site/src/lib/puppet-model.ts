@@ -26,6 +26,8 @@ export interface PuppetFace {
   readonly ring?: boolean;
   /** The neutral cancel of a pending operation, with this label (`labels.cancel`). */
   readonly cancel?: string;
+  /** A one-line form (look A): the empty field shows `placeholder`; states type `text` into it. */
+  readonly field?: { readonly placeholder: string; readonly text: string };
 }
 
 export interface PuppetState {
@@ -45,6 +47,10 @@ export interface PuppetState {
   readonly focus?: PuppetControl;
   /** A restyle through the tokens (scene 3, "Fits your stack"). Default `default`. */
   readonly look?: PuppetLookId;
+  /** How much of the field's text is typed, 0..1, or a range typed while the state is held. */
+  readonly typed?: number | readonly [number, number];
+  /** The form is sending: a spinner on the send button. */
+  readonly sending?: boolean;
 }
 
 /**
@@ -60,10 +66,10 @@ export interface PuppetLook {
 }
 export const PUPPET_LOOKS = {
   default: {},
-  /** shadcn-like neutral: small radii, zinc instead of status colours. */
-  neutral: { radius: 10, control: 6, accent: 'oklch(0.552 0.016 285.938)' },
+  /** shadcn-like neutral: small radii, zinc instead of status colours, a faint zinc card. */
+  neutral: { radius: 10, control: 6, accent: 'oklch(0.552 0.016 285.938)', tint: 0.05 },
   /** A brand: violet accent washed into the background, rounder corners. */
-  brand: { radius: 30, control: 16, accent: 'oklch(0.606 0.25 292.717)', tint: 0.08 },
+  brand: { radius: 30, control: 16, accent: 'oklch(0.606 0.25 292.717)', tint: 0.09 },
 } as const satisfies Record<string, PuppetLook>;
 export type PuppetLookId = keyof typeof PUPPET_LOOKS;
 
@@ -128,6 +134,8 @@ export interface Pose {
   readonly highlight: number;
   readonly focus: PuppetControl;
   readonly look: PuppetLookId;
+  readonly typed: number;
+  readonly sending: number;
   readonly iconX: number;
   readonly iconY: number;
 }
@@ -175,6 +183,7 @@ export function poseOf(state: PuppetState, metrics: PuppetMetrics, hold = 0): Po
   const w = island ? metrics.width : layer.w;
   const h = layer.h + (dots ? metrics.indicatorHeight : 0);
   const range = state.progress;
+  const typing = state.typed ?? 0;
   const look = state.look ?? 'default';
   const radius = (PUPPET_LOOKS[look] as PuppetLook).radius ?? metrics.islandRadius;
   return {
@@ -194,6 +203,8 @@ export function poseOf(state: PuppetState, metrics: PuppetMetrics, hold = 0): Po
     highlight: state.highlight ?? 0,
     focus: state.focus ?? firstControl(state.face),
     look,
+    typed: typeof typing === 'number' ? typing : lerp(typing[0], typing[1], clamp01(hold)),
+    sending: state.sending ? 1 : 0,
     iconX: layer.iconX,
     iconY: layer.iconY,
   };
@@ -208,6 +219,10 @@ export interface LayerFrame {
   readonly body: { readonly opacity: number; readonly x: number; readonly y: number };
   readonly progress: number | null;
   readonly highlight: Highlights;
+  /** Typed share of the field's text, 0..1. */
+  readonly typed: number;
+  /** Send button: arrow (0) to spinner (1). */
+  readonly sending: number;
 }
 
 export interface Frame {
@@ -266,6 +281,8 @@ export function transitionDuration(a: Pose, b: Pose): number {
   if (morph === 'close') parts.push(shape.duration - m.tails + m.badge);
   if (a.badge !== b.badge) parts.push(m.badge, m.countSwap, m.enter.duration);
   if (a.key === b.key && a.progress !== b.progress) parts.push(m.progress);
+  if (a.key === b.key && a.typed !== b.typed) parts.push(m.progress);
+  if (a.key === b.key && a.sending !== b.sending) parts.push(m.highlight);
   if (a.highlight !== b.highlight || a.focus !== b.focus) parts.push(m.highlight);
   if (slideOf(a, b)) parts.push(m.slide.duration, m.headerIn);
   if (a.count !== b.count) parts.push(m.countSwap);
@@ -339,6 +356,8 @@ export function frameBetween(from: Pose, to: Pose, time: number): Frame {
         cancel: lerp(ha.cancel, hb.cancel, hp),
         close: lerp(ha.close, hb.close, hp),
       },
+      typed: lerp(a.typed, b.typed, span(time, 0, m.progress)),
+      sending: lerp(a.sending, b.sending, hp),
     });
   } else {
     // Heading: the same notification moves (FLIP with the shape spring); another one blur-swaps in place.
@@ -371,8 +390,8 @@ export function frameBetween(from: Pose, to: Pose, time: number): Frame {
       bodyB = { opacity: bi, x: 0, y: m.bodyOffset * (1 - bi) };
     }
     layers.push(
-      { key: a.key, heading: headingA, body: bodyA, progress: progressOf(a), highlight: highlights(a) },
-      { key: b.key, heading: headingB, body: bodyB, progress: progressOf(b), highlight: highlights(b) },
+      { key: a.key, heading: headingA, body: bodyA, progress: progressOf(a), highlight: highlights(a), typed: a.typed, sending: a.sending },
+      { key: b.key, heading: headingB, body: bodyB, progress: progressOf(b), highlight: highlights(b), typed: b.typed, sending: b.sending },
     );
   }
 

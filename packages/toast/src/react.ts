@@ -57,6 +57,8 @@ export interface CloudletLabels {
   /** 1-based slide position. */
   readonly page: (index: number, total: number) => string;
   readonly overflowCount: (count: number) => string;
+  /** Added to the collapsed stack button's name while the presented form holds unsent text. */
+  readonly draft: string;
 }
 
 export interface AnnouncementFormatters {
@@ -158,7 +160,7 @@ export interface ToasterMotion {
 
 /** Styling hooks of the renderer; see `ToasterProps.classNames`. */
 export type CloudletPart = 'host' | 'stack' | 'pill' | 'tail' | 'badge' | 'island' | 'header' | 'icon' | 'title'
-  | 'close' | 'body' | 'description' | 'actions' | 'action' | 'indicator' | 'overflow';
+  | 'close' | 'body' | 'description' | 'actions' | 'action' | 'indicator' | 'overflow' | 'form' | 'field' | 'field-error';
 
 export interface ToasterProps {
   readonly position?: 'auto' | 'top-center' | 'bottom-center';

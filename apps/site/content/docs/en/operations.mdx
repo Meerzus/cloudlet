@@ -218,6 +218,8 @@ cloudlet.show({
 
 While a command is pending, an `update` that replaces the action is rejected with `action-pending`; title and progress still update.
 
+A **form** is the third kind: one to three text fields in the Island and a send button that works like a command. [Forms](/toaster/docs/forms) covers it.
+
 ## Closing is not cancelling
 
 `dismiss`, `clear`, a swipe, the close button and even `dispose()` detach the notification from the operation. They never abort it and never change its `result`: the upload keeps uploading, and only its notification is gone. After a dismiss, `retry()` and `restart()` on a saved handle still start new attempts, without bringing the notification back; call `track` again for a new one. To stop the work itself, call `cancel()` on the handle.

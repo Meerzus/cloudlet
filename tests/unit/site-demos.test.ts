@@ -129,9 +129,9 @@ describe('site demo catalog', () => {
   });
 
   it('covers every playground group', () => {
-    expect(DEMO_GROUPS.map((group) => group.id)).toEqual(['Kinds', 'Content', 'Actions', 'Promises', 'Attention', 'Stack']);
+    expect(DEMO_GROUPS.map((group) => group.id)).toEqual(['Kinds', 'Content', 'Actions', 'Forms', 'Promises', 'Attention', 'Stack']);
     const counts = Object.fromEntries(DEMO_GROUPS.map((group) => [group.id, demosIn(group.id).length]));
-    expect(counts).toEqual({ Kinds: 5, Content: 4, Actions: 3, Promises: 5, Attention: 3, Stack: 3 });
+    expect(counts).toEqual({ Kinds: 5, Content: 4, Actions: 3, Forms: 3, Promises: 5, Attention: 3, Stack: 3 });
   });
 
   it.each(DEMOS.map((demo) => [demo.id, demo] as const))('snippet of %s makes exactly the calls of its run', async (_id, demo) => {

@@ -10,6 +10,7 @@ const GLYPHS: Record<Exclude<PuppetKind, 'loading'>, string> = {
   warning: 'M8 4.75V8.5M8 11.25h.01',
 };
 const CLOSE = 'm4.5 4.5 7 7m0-7-7 7';
+const SEND = 'M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5';
 
 function Icon({ face }: { face: PuppetFace }) {
   return (
@@ -60,6 +61,24 @@ function Face({ layer }: { layer: ReturnType<typeof puppetLayers>[number] }) {
       {island ? (
         <div className="pp-body">
           {face.description ? <Description text={face.description} /> : null}
+          {face.field ? (
+            <div className="pp-form">
+              <span className="pp-field">
+                <span className="pp-placeholder">{face.field.placeholder}</span>
+                <span className="pp-typed" />
+                <span className="pp-caret" />
+                <span className="pp-field-ring" />
+              </span>
+              <span className="pp-send">
+                <svg className="pp-glyph pp-send-arrow" viewBox="0 0 16 16">
+                  <path d={SEND} />
+                </svg>
+                <svg className="pp-glyph pp-spinner pp-send-spinner" viewBox="0 0 16 16">
+                  <circle cx="8" cy="8" r="5.5" strokeDasharray="22 13" />
+                </svg>
+              </span>
+            </div>
+          ) : null}
           {face.action || face.retry || face.cancel ? (
             <div className="pp-actions">
               {face.action ? (

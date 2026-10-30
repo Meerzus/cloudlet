@@ -158,6 +158,25 @@ export class LabSession {
       action: { kind: 'command', label: 'Undo', run: () => this.note(`Undo for email ${n} done.`) } });
     else this.controller.show({ title: `Link copied · ${n}`, attention });
   }
+  /**
+   * A quick reply, or a note with a name and several lines. The send takes 700 ms; text containing
+   * "fail" makes it fail, so the error under the form and a second try can be checked.
+   */
+  generateForm(fields: 'reply' | 'note', attention: Attention) {
+    const n = ++this.generated;
+    const send = (text: string, done: string) => this.later(700, /fail/iu.test(text), done).then(() => this.note(done));
+    if (fields === 'reply') this.controller.show({ title: `Anna: are you coming tonight? · ${n}`, kind: 'info', attention,
+      description: { kind: 'text', text: 'Dinner at eight, table for four.' },
+      action: { kind: 'form', label: 'Send', errorMessage: () => 'Could not send. Try again.',
+        fields: [{ name: 'reply', kind: 'text', label: 'Reply', required: true, maxLength: 120 }],
+        run: ({ values }) => send(values.reply, `Reply ${n} sent: ${values.reply}`) } });
+    else this.controller.show({ title: `Leave a note · ${n}`, kind: 'info', attention,
+      action: { kind: 'form', label: 'Send note', errorMessage: () => 'Could not send. Try again.',
+        fields: [{ name: 'name', kind: 'text', label: 'Name', autoComplete: 'name' },
+          { name: 'note', kind: 'textarea', label: 'Note', required: true, maxLength: 500 }],
+        validate: values => values.note.trim().length >= 3 || { note: 'Write at least three characters' },
+        run: ({ values }) => send(values.note, `Note ${n} sent${values.name ? ` from ${values.name}` : ''}`) } });
+  }
   /** A tracked operation whose first attempt fails: the Island offers retry, the next attempt succeeds. */
   generateRetry(attention: Attention) {
     const n = ++this.generated;
