@@ -167,8 +167,8 @@
 html[data-wordmark-mask] .sky-clouds {
   mask-image: linear-gradient(#000, #000), var(--wordmark-mask);
   mask-repeat: no-repeat;
-  mask-position: 0 0, var(--wordmark-mask-box);
-  mask-size: 100% 100%, var(--wordmark-mask-size);
+  /* The halo's place and size are written inline every frame it moves (footer.tsx). */
+  mask-position: 0 0, -9999px -9999px;
   mask-composite: exclude;
 }
 
@@ -1311,8 +1311,7 @@ html[data-show="puppet"] .cloudlet-host { visibility: hidden; }
 html[data-wordmark-mask] .footer-bank {
   mask-image: linear-gradient(#000, #000), var(--wordmark-mask);
   mask-repeat: no-repeat;
-  mask-position: 0 0, var(--bank-mask-box, -9999px -9999px);
-  mask-size: 100% 100%, var(--wordmark-mask-size);
+  mask-position: 0 0, -9999px -9999px;
   mask-composite: exclude;
 }
 .footer-bank-layer { position: absolute; inset: 0; will-change: transform; }

@@ -99,9 +99,17 @@ function useWordmarkMask(
   const { ready } = useMotion();
   useEffect(() => {
     const element = drawn.current;
-    if (!ready || !halo || !onScreen || !element) return;
+    const sky = document.querySelector<HTMLElement>('.sky-clouds');
+    const frame = bank.current;
+    if (!ready || !halo || !onScreen || !element || !sky || !frame) return;
     const { aspect } = WORDMARK;
     const root = document.documentElement;
+    const masked = [sky, frame];
+    // The box goes straight into the two masked elements' own mask-position and mask-size, and
+    // only when it moved. A custom property on <html> would be inherited by every element of the
+    // page: writing it each frame restyled the whole document, and the end of the page ran at
+    // ~25 fps even at rest on a laptop without a fast GPU.
+    let last = '';
     const place = () => {
       const box = element.getBoundingClientRect();
       const width = Math.min(box.width, box.height * aspect);
@@ -109,10 +117,14 @@ function useWordmarkMask(
       const pad = width * WORDMARK_HALO_PAD;
       const x = box.left + (box.width - width) / 2 - pad;
       const y = box.top + (box.height - height) / 2 - pad;
-      root.style.setProperty('--wordmark-mask-box', `${x}px ${y}px`);
-      root.style.setProperty('--wordmark-mask-size', `${width + 2 * pad}px ${height + 2 * pad}px`);
-      const frame = bank.current?.getBoundingClientRect();
-      if (frame) bank.current?.style.setProperty('--bank-mask-box', `${x - frame.left}px ${y - frame.top}px`);
+      const bankBox = frame.getBoundingClientRect();
+      const size = `100% 100%, ${width + 2 * pad}px ${height + 2 * pad}px`;
+      const next = `${x} ${y} ${bankBox.left} ${bankBox.top} ${size}`;
+      if (next === last) return;
+      last = next;
+      sky.style.maskPosition = `0 0, ${x}px ${y}px`;
+      frame.style.maskPosition = `0 0, ${x - bankBox.left}px ${y - bankBox.top}px`;
+      for (const target of masked) target.style.maskSize = size;
     };
     root.style.setProperty('--wordmark-mask', `url("${halo}")`);
     root.dataset.wordmarkMask = '';
@@ -122,7 +134,11 @@ function useWordmarkMask(
     return () => {
       gsap.ticker.remove(place);
       delete root.dataset.wordmarkMask;
-      for (const name of ['--wordmark-mask', '--wordmark-mask-box', '--wordmark-mask-size']) root.style.removeProperty(name);
+      root.style.removeProperty('--wordmark-mask');
+      for (const target of masked) {
+        target.style.removeProperty('mask-position');
+        target.style.removeProperty('mask-size');
+      }
     };
   }, [ready, drawn, bank, halo, onScreen]);
 }
