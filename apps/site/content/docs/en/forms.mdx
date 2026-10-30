@@ -1,0 +1,110 @@
+---
+title: Forms
+description: Put one to three text fields in a notification and send them from the Island.
+---
+
+Some notifications ask for a few words back: a reply, a name, a short note. A form action puts the fields right in the Island, next to a round send button, so the answer goes out without a dialog or a page change. The form appears only in the open Island; the collapsed pill stays a pill.
+
+## A form action
+
+A form is the third kind of primary action, next to a command and a link: `{ kind: 'form', label, fields, run }`. `label` names the send button for screen readers; the button itself shows an arrow.
+
+```tsx demo="form-reply"
+cloudlet.show({
+  title: 'A cloud asks where to drift',
+  action: {
+    kind: 'form',
+    label: 'Send',
+    fields: [{ name: 'place', kind: 'text', label: 'Where to', required: true }],
+    run: ({ values }) => {
+      cloudlet.show({ title: `Drifting to ${values.place}`, kind: 'success' });
+    },
+  },
+});
+```
+
+`run` receives `values`, each field's text as typed, keyed by its `name`. TypeScript takes the names from `fields`, so `values.place` is a `string` and a misspelt name does not compile.
+
+## Fields
+
+A form has one to three fields. Each is `'text'` for one line or `'textarea'` for several; a textarea starts at three rows and grows to six, then scrolls.
+
+Every field needs a `label`. Screen readers read it, and it is the hint inside the empty field unless you set a `placeholder`. The rest is optional: `defaultValue`, `required`, `maxLength`, `autoComplete` and `inputMode` for the on-screen keyboard. [Types](/toaster/docs/api/types#primaryaction) lists them all.
+
+## Checks before sending
+
+When the user sends, Cloudlet checks the fields in order: a `required` field that is empty or only spaces, then a value longer than its `maxLength`, then your own `validate(values)`. The first failing step stops the send; `run` is not called.
+
+`validate` returns `true` to send, a string for a message under the form, or messages keyed by field name for messages under those fields.
+
+```tsx demo="form-note"
+cloudlet.show({
+  title: 'Leave a note for the sky',
+  action: {
+    kind: 'form',
+    label: 'Send note',
+    fields: [
+      { name: 'name', kind: 'text', label: 'Your name', autoComplete: 'name' },
+      { name: 'note', kind: 'textarea', label: 'Note', required: true, maxLength: 280 },
+    ],
+    validate: (values) => values.note.trim().length >= 3 || { note: 'A few more words, please' },
+    run: () => {
+      cloudlet.show({ title: 'Note tucked into a cloud', kind: 'success' });
+    },
+  },
+});
+```
+
+A message under a field marks it invalid and moves focus to the first such field. Editing a field clears its message. The texts for the built-in checks are `messages.fieldRequired` and `messages.fieldTooLong` in [`createCloudlet`](/toaster/docs/api/create-cloudlet), ready for translation.
+
+## Sending
+
+Sending works like a [command](/toaster/docs/operations#actions). While `run` is pending, the button shows a spinner, the fields turn read-only and a second send is refused. When `run` returns or resolves, the notification closes with the reason `action-success`. When it throws or rejects, the text stays, the message from `errorMessage(error)` appears under the form and is announced, and the user can send again.
+
+```tsx demo="form-retry"
+let tries = 0;
+cloudlet.show({
+  title: 'Send a postcard to the clouds',
+  action: {
+    kind: 'form',
+    label: 'Send',
+    fields: [{ name: 'message', kind: 'text', label: 'Message', required: true }],
+    errorMessage: () => 'The wind took it. Try again?',
+    run: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      tries += 1;
+      if (tries === 1) throw new Error('Gust of wind');
+      cloudlet.show({ title: 'Postcard delivered', kind: 'success' });
+    },
+  },
+});
+```
+
+While a send is pending, an `update` that replaces the action is rejected with `action-pending`.
+
+## Drafts
+
+Typed text belongs to the notification, not to the screen. It stays when the Island collapses, when the user swipes to another notification and when the Toaster remounts. A new action object, a successful send or closing the notification starts over.
+
+While a form holds unsent text:
+
+- its time stands still (the pause reason `'draft'`), even with a `duration`;
+- a press outside does not collapse the Island; Escape and the pill still do;
+- a notification arriving with [attention](/toaster/docs/positioning) waits in the stack instead of taking the Island over;
+- the collapsed pill adds `labels.draft` to its name, so a screen reader says there is a draft.
+
+`NotificationSnapshot.draft` tells your code the same; the text itself stays inside Cloudlet.
+
+## Keyboard
+
+- **Enter** sends from a text field; in a textarea it starts a new line, and **⌘ Enter** or **Ctrl Enter** sends.
+- **Arrows, Home and End** move the caret inside a field; they switch notifications only outside the fields.
+- **Escape** collapses the Island and keeps the draft.
+
+Focus never moves into a field on its own: a new notification, an auto-opened Island or a collapse leaves it where it was. The on-screen keyboard appears only when the user taps a field.
+
+## Next steps
+
+- [Operations & cancellation](/toaster/docs/operations#actions): commands and links, the other primary actions.
+- [Accessibility](/toaster/docs/accessibility): what is announced and how focus moves.
+- [Types](/toaster/docs/api/types#primaryaction): every field of `FormAction` and `FormField`.

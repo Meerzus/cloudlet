@@ -4,7 +4,8 @@
 first, that is either collapsed to a single pill or opened as the Island: one surface with a slider
 over every notification. Activating the pill opens the Island; a notification that needs attention
 opens it on its own after a short delay, without moving keyboard focus. The same controller follows
-promises from pending to success or failure, with retry and cooperative cancellation.
+promises from pending to success or failure, with retry and cooperative cancellation. A notification
+can carry a command, a link, or a short form of up to three text fields that is sent from the Island.
 
 **Status.** `1.0.0` is the first stable release; the API follows semantic versioning from here.
 Screen readers, physical phones and the minimum browser versions are checked by hand on top of the

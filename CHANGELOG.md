@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Features
+
+- Forms in the Island. A third primary action, `{ kind: 'form', label, fields, run, validate?, errorMessage? }`,
+  puts one to three text fields (`'text'` or `'textarea'`) in the open Island beside a round send button.
+  On send Cloudlet checks `required`, then `maxLength`, then your `validate`, shows messages under the
+  fields, and runs `run({ values })` with command semantics: pending, close on success, a message and
+  another try on failure. TypeScript takes `values`' keys from the field names. Guide:
+  [Forms](https://cloudlet.dev/toaster/docs/forms).
+- Drafts. Typed text stays with its notification across collapsing, swiping and remounting. While a form
+  holds unsent text its time stands still (pause reason `'draft'`), a press outside does not collapse
+  the Island, an auto-opening notification waits in the stack, and the pill's name adds `labels.draft`.
+  `NotificationSnapshot.draft` reports it.
+
+### API
+
+- New types `FormAction`, `FormField`, `FormFieldKind`, `FormInputMode`, `FormValues`, `FormContext` and
+  `FormValidation`; `PrimaryAction` includes `FormAction`. `show` and `update` take the field names as a
+  type parameter, inferred from the call.
+- New texts: `labels.draft`, `messages.fieldRequired` and `messages.fieldTooLong`. An object typed as the
+  full `CloudletLabels` or `FallbackMessages` now needs them; TypeScript points them out.
+- New CSS tokens `--cloudlet-field-background`, `--cloudlet-field-border`, `--cloudlet-placeholder` and
+  `classNames` parts `form`, `field`, `field-error`.
+
 ### Fixes
 
 - The badge's disc is a deeper red (`--cloudlet-badge` `#ff3b30` → `#d70015`): its white number now

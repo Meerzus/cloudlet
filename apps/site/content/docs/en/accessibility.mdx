@@ -185,7 +185,7 @@ Automation checks the DOM, not speech, so the rest is checked by hand:
 - **Keep important results in your interface.** A notification is a notice and can be missed, dismissed or closed by time. Anything the user must not lose also lives on the page.
 - **Translate** `labels`, `announcements` and `messages` with the rest of your interface.
 - **Choose the urgency**: `assertive` only for what cannot wait, `off` for what the page already shows.
-- **Keep rich content simple.** A rich description is text and inline formatting with its own `announcement`; interactive controls belong in `action`, not inside the description.
+- **Keep rich content simple.** A rich description is text and inline formatting with its own `announcement`; interactive controls belong in `action`, not inside the description. Text input belongs in a [form action](/toaster/docs/forms), whose fields come labelled and announced.
 - **Keep contrast** when you override colour tokens: 4.5:1 for text and 3:1 for the focus ring against the surface.
 - **Test with the screen readers your users have.** Delivery to a live region does not prove that it was spoken.
 
