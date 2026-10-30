@@ -35,7 +35,7 @@ export const FAQ = [
     id: 'stable',
     question: 'Is it stable?',
     answer:
-      'Yes: 1.0.0 is the stable release, and the API follows semantic versioning. Beyond the automated browser suite, screen readers, physical phones and the minimum browsers are checked by hand.',
+      'Yes: Cloudlet is stable since 1.0.0, and the API follows semantic versioning. Beyond the automated browser suite, screen readers, physical phones and the minimum browsers are checked by hand.',
   },
   {
     id: 'license',

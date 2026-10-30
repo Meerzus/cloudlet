@@ -9,7 +9,7 @@
       "title": "Cloudlet Toaster",
       "description": "Client Provider/Toaster adapter with shadcn theme tokens. The application explicitly owns its @cloudlet/toast controller.",
       "dependencies": [
-        "@cloudlet/toast@1.0.0"
+        "@cloudlet/toast@1.1.0"
       ],
       "files": [
         {
@@ -21,7 +21,7 @@
           "type": "registry:ui"
         }
       ],
-      "docs": "Import Toaster into a client owner and pass its controller. Import @cloudlet/toast/styles.css once before the local toaster.css (the wrapper already imports both). The owner creates/disposes its controller; do not share one across requests. See https://cloudlet.dev/toaster/docs for lifecycle, theme and SSR. @cloudlet/toast@1.0.0 is a release candidate published under the next dist-tag."
+      "docs": "Import Toaster into a client owner and pass its controller. Import @cloudlet/toast/styles.css once before the local toaster.css (the wrapper already imports both). The owner creates/disposes its controller; do not share one across requests. See https://cloudlet.dev/toaster/docs for lifecycle, theme and SSR."
     }
   ]
 }

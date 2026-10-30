@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 — 2026-10-30
+
+Forms in the Island and a badge that passes text contrast. Nothing is removed or changed in
+behaviour; the new texts and type parameters are additive (see API).
 
 ### Features
 
