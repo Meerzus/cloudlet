@@ -34,8 +34,11 @@ assert(wrapper.content.includes('import "@cloudlet/toast/styles.css"'));
 assert(wrapper.content.includes('import "./toaster.css"'));
 assert(!/createCloudlet|packages\/toast|src\/|singleton/.test(wrapper.content));
 assert(css.content.includes('var(--popover'));
-const catalog = { ...source, items: [{ ...item }] };
+// The catalog lists items without their source: the CLI reads `content` from `/r/<item>.json`, and the
+// shadcn registry index rejects a catalog whose files carry `content`.
+const catalog = { ...source, items: [{ ...item, files: item.files.map(({ content, ...file }) => file) }] };
 assert(validateCatalog(catalog), JSON.stringify(validateCatalog.errors));
+assert(catalog.items.every((entry) => entry.files.every((file) => !('content' in file))));
 await writeFile(resolve(root, 'registry/r/registry.json'), JSON.stringify(catalog, null, 2) + '\n');
 // The site serves the built catalog at `/r/*.json`; tests/unit/site-registry.test.ts keeps the copies equal.
 await mkdir(resolve(root, 'apps/site/public/r'), { recursive: true });

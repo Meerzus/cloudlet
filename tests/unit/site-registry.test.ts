@@ -16,6 +16,13 @@ describe('site registry (/r)', () => {
     }
   });
 
+  it('keeps the source out of the catalog, as the shadcn registry index requires', () => {
+    const catalog = JSON.parse(read('registry/r/registry.json')) as { items: { name: string; files: object[] }[] };
+    const item = JSON.parse(read('registry/r/toaster.json')) as { files: { content?: string }[] };
+    for (const entry of catalog.items) for (const file of entry.files) expect(file, entry.name).not.toHaveProperty('content');
+    expect(item.files.every((file) => typeof file.content === 'string' && file.content.length > 0)).toBe(true);
+  });
+
   it('is the item the install command names', () => {
     expect(REGISTRY_ITEM_URL).toBe(`${SITE_URL}/r/toaster.json`);
     expect(JSON.parse(read('registry/registry.json')).homepage).toBe(`${SITE_URL}${TOASTER_PATH}`);
