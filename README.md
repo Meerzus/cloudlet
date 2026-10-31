@@ -1,3 +1,10 @@
+<a href="https://cloudlet.dev/toaster">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/readme/wordmark-night.webp">
+    <img src=".github/readme/wordmark-day.webp" alt="Cloudlet, written in clouds across the sky" width="100%">
+  </picture>
+</a>
+
 # Cloudlet
 
 [![npm](https://img.shields.io/npm/v/@cloudlet/toast?color=245cdb)](https://www.npmjs.com/package/@cloudlet/toast)
@@ -44,7 +51,7 @@ npm run dev
 report. `dev` starts the laboratory; `npm run dev:site` starts the website. Other commands:
 `npm run build:site`, `npm run check:docs` (typechecks every documentation example and requires every
 public export to be documented), `npm run test:tooling`, `npm run test:consumers`,
-`npm run test:registry`, `npm run release:verify` (the whole chain from a clean install to the packed
+`npm run test:managers`, `npm run test:registry`, `npm run release:verify` (the whole chain from a clean install to the packed
 archive).
 
 Browser end-to-end tests build the production package and run Chromium, Firefox and WebKit under a

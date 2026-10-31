@@ -1,3 +1,10 @@
+<a href="https://cloudlet.dev/toaster">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Meerzus/cloudlet/main/.github/readme/wordmark-night.webp">
+    <img src="https://raw.githubusercontent.com/Meerzus/cloudlet/main/.github/readme/wordmark-day.webp" alt="Cloudlet, written in clouds across the sky" width="100%">
+  </picture>
+</a>
+
 # Cloudlet — React notifications and operations
 
 [![npm](https://img.shields.io/npm/v/@cloudlet/toast?color=245cdb)](https://www.npmjs.com/package/@cloudlet/toast)

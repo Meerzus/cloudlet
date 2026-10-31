@@ -7,7 +7,7 @@ import { DOCS_UI } from '@/lib/docs-ui-strings';
 import { Callout } from './callout';
 import { CodeBlock, type CodeBlockProps } from './code-block';
 import { DemoBlock, type DemoItem } from './demo-block';
-import { GetStartedCode, GetStartedTabs } from './get-started-code';
+import { GetStartedCode, GetStartedTabs, InstallCommand } from './get-started-code';
 import { Table } from './table';
 import { StyleEditor } from './style-editor/style-editor';
 
@@ -84,6 +84,7 @@ export function getMDXComponents(): MDXComponents {
     Demos,
     GetStartedTabs,
     GetStartedCode,
+    InstallCommand,
     StyleEditor,
   };
 }

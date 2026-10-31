@@ -51,6 +51,8 @@ high contrast and the minimum browser versions are checked by hand.
   size report.
 - `npm run test:consumers` — the packed archive installed into Vite React 18.2/19 and Next App/Pages
   under a strict CSP (`fixtures/integration`).
+- `npm run test:managers` — the packed archive installed with npm, pnpm, yarn (node_modules and
+  Plug'n'Play) and bun, then imported with its stylesheet resolved through `exports`.
 - `npm run test:registry` — `shadcn add` from a loopback registry into a Next consumer, in three engines.
 - `npm run check:docs` — every TS/TSX example of the READMEs and the documentation compiles.
 - `npm run release:verify` — the whole chain from a clean install, with input fingerprints, into
