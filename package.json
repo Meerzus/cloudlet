@@ -37,6 +37,7 @@
     "check": "npm run typecheck && npm test && npm run build && npm run check:package && node scripts/measure-size.mjs",
     "pack:local": "npm run build && node scripts/pack.mjs",
     "test:consumers": "node scripts/integration.mjs",
+    "test:managers": "node scripts/package-managers.mjs",
     "registry:build": "node scripts/registry-build.mjs",
     "test:registry": "node scripts/registry-check.mjs"
   },

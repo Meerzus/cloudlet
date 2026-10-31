@@ -44,7 +44,7 @@ npm run dev
 report. `dev` starts the laboratory; `npm run dev:site` starts the website. Other commands:
 `npm run build:site`, `npm run check:docs` (typechecks every documentation example and requires every
 public export to be documented), `npm run test:tooling`, `npm run test:consumers`,
-`npm run test:registry`, `npm run release:verify` (the whole chain from a clean install to the packed
+`npm run test:managers`, `npm run test:registry`, `npm run release:verify` (the whole chain from a clean install to the packed
 archive).
 
 Browser end-to-end tests build the production package and run Chromium, Firefox and WebKit under a

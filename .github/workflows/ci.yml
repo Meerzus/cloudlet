@@ -67,6 +67,23 @@ jobs:
           name: installed-tarball-consumers
           retention-days: 7
           path: artifacts/integration/
+  package-managers:
+    # The packed archive installs and resolves with npm, pnpm, yarn (node_modules and Plug'n'Play) and
+    # bun; pnpm and yarn come through corepack at the versions the script pins.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.18
+      - run: npm ci
+      - run: npm run pack:local
+      - run: npm run test:managers
   registry:
     runs-on: ubuntu-24.04
     steps:
