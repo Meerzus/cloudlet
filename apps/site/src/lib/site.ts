@@ -38,12 +38,12 @@ export const REGISTRY_ITEM_URL = `${SITE_URL}/r/toaster.json`;
 export const SHADCN_COMMAND = `npx shadcn@latest add ${REGISTRY_ITEM_URL}`;
 /**
  * What the published package adds to an app, min+gzip bytes (`release:verify` of the
- * `1.1.1` tarball, `artifacts/size/report.json`): its own JavaScript on first load (`start`, before
+ * `1.1.2` tarball, `artifacts/size/report.json`): its own JavaScript on first load (`start`, before
  * the lazy renderer) and the renderer chunk that follows (`lazy`), all of its JavaScript, its CSS,
  * and the whole delta over a React-only app. The landing leads with `start`, always named as
  * JavaScript on first load; tests/unit/site-drift.test.ts holds them to the latest size report.
  */
-export const PACKAGE_SIZE = { version: '1.1.1', start: 9288, lazy: 22650, javascript: 31938, css: 3794, total: 36141 } as const;
+export const PACKAGE_SIZE = { version: '1.1.2', start: 9288, lazy: 22650, javascript: 31938, css: 3794, total: 36141 } as const;
 /** Bytes as the landing prints them: whole kilobytes, one decimal under ten. */
 export function formatKB(bytes: number): string {
   const kb = bytes / 1000;
