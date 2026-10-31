@@ -29,7 +29,7 @@ jobs:
       - run: npm run test:tooling
       - run: npm run check:docs
       - run: npm run pack:local
-      - run: npm run check:package -- --tarball artifacts/integration/cloudlet-toast-1.1.0.tgz
+      - run: npm run check:package -- --tarball "artifacts/integration/cloudlet-toast-$(node -p "require('./packages/toast/package.json').version").tgz"
       # The landing consumes the built package dist, so it builds after pack:local.
       - run: npm run build:site
       - run: npm run notices && git diff --exit-code -- packages/toast/LICENSE packages/toast/THIRD_PARTY_NOTICES.md
@@ -96,7 +96,7 @@ jobs:
       - run: npm install --global npm@11.12.1
       - run: npm ci
       - run: npm run pack:local
-      - run: node scripts/measure-size.mjs --tarball artifacts/integration/cloudlet-toast-1.1.0.tgz
+      - run: node scripts/measure-size.mjs --tarball "artifacts/integration/cloudlet-toast-$(node -p "require('./packages/toast/package.json').version").tgz"
       - uses: actions/upload-artifact@v7
         if: always()
         with:

@@ -1,0 +1,96 @@
+name: release
+# A tag v<version> on main publishes @cloudlet/toast to npm and creates the GitHub Release.
+# npm accepts the publish through Trusted Publishing (OIDC, no token in secrets) and adds a provenance
+# attestation; the `npm` environment waits for the owner's approval before anything is published.
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      dist-tag: ${{ steps.version.outputs.dist-tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          # Release builds never restore a cache.
+          package-manager-cache: false
+      - run: npm install --global npm@11.12.1
+      # The tag names the package version and that version has a CHANGELOG section.
+      - run: node scripts/release-notes.mjs "$GITHUB_REF_NAME" > /dev/null
+      - id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # Prereleases go to `next`, stable versions to `latest`.
+          if [[ "$version" == *-* ]]; then echo "dist-tag=next" >> "$GITHUB_OUTPUT"; else echo "dist-tag=latest" >> "$GITHUB_OUTPUT"; fi
+      - name: The tagged commit is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      # A tag pushed right after the merge waits for that commit's CI run instead of failing.
+      - name: The full CI passed on main for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main --event push --commit "$GITHUB_SHA" --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -z "$run" ]; then echo "::error::ci.yml has not run on main for $GITHUB_SHA"; exit 1; fi
+          gh run watch "$run" --repo "$GITHUB_REPOSITORY" --exit-status --interval 30 > /dev/null
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:tooling
+      - run: npm run check:docs
+      - run: npm run pack:local
+      - run: npm run check:package -- --tarball "artifacts/integration/cloudlet-toast-${{ steps.version.outputs.version }}.tgz"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package
+          retention-days: 30
+          path: |
+            artifacts/integration/cloudlet-toast-${{ steps.version.outputs.version }}.tgz
+            artifacts/integration/package-evidence.json
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    environment: npm
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      # Trusted Publishing needs npm 11.5.1 or newer.
+      - run: npm install --global npm@11.12.1
+      - uses: actions/download-artifact@v8
+        with:
+          name: package
+          path: package
+      # The archive that passed the checks above is the one published, byte for byte.
+      - run: npm publish "package/cloudlet-toast-$VERSION.tgz" --access public --tag "${{ needs.verify.outputs.dist-tag }}" --provenance --ignore-scripts
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/release-notes.mjs "$GITHUB_REF_NAME" > release-notes.md
+          prerelease=""
+          if [ "${{ needs.verify.outputs.dist-tag }}" = "next" ]; then prerelease="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" "package/cloudlet-toast-$VERSION.tgz" \
+            --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md $prerelease

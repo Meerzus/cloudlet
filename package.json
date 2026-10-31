@@ -26,7 +26,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p packages/toast/tsconfig.core.json --noEmit && tsc -p apps/site/tsconfig.typecheck.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:tooling": "node --test tests/tooling/local-candidate.test.mjs tests/tooling/doc-coverage.test.mjs",
+    "test:tooling": "node --test tests/tooling/local-candidate.test.mjs tests/tooling/doc-coverage.test.mjs tests/tooling/release-notes.test.mjs",
     "check:docs": "node scripts/check-doc-examples.mjs && node scripts/check-doc-coverage.mjs",
     "release:verify": "node scripts/verify-release.mjs",
     "test:e2e": "playwright test",
