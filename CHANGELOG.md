@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.2 — 2026-11-01
+
+The package's code, CSS and types are the same as in 1.1.0 and 1.1.1. The README on npm opens with
+the cloud wordmark from cloudlet.dev.
+
+### Documentation
+
+- The README starts with the Cloudlet wordmark written in clouds, linking to the website.
+
 ## 1.1.1 — 2026-10-31
 
 The package's code, CSS and types are the same as in 1.1.0. This is the first release published from
