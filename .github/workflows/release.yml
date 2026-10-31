@@ -83,8 +83,9 @@ jobs:
         with:
           name: package
           path: package
-      # The archive that passed the checks above is the one published, byte for byte.
-      - run: npm publish "package/cloudlet-toast-$VERSION.tgz" --access public --tag "${{ needs.verify.outputs.dist-tag }}" --provenance --ignore-scripts
+      # The archive that passed the checks above is the one published, byte for byte. The leading ./
+      # keeps npm from reading `package/<file>` as a GitHub `owner/repo` shorthand.
+      - run: npm publish "./package/cloudlet-toast-$VERSION.tgz" --access public --tag "${{ needs.verify.outputs.dist-tag }}" --provenance --ignore-scripts
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
