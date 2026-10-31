@@ -1,9 +1,11 @@
 import { highlight } from 'fumadocs-core/highlight';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { Tabs } from '@/components/site/tabs';
 import { GET_STARTED, type GetStartedTab } from '@/lib/get-started';
+import { commandFor, PACKAGE_MANAGERS, type PackageManager } from '@/lib/package-managers';
 import { SHIKI_THEME } from '@/lib/shiki-theme';
 import { CodeBlock } from './code-block';
+import { PackageManagerCode } from './package-manager-code';
 
 /**
  * Get started of the landing, on documentation pages: the commands and examples
@@ -31,11 +33,22 @@ function Steps({ tab: { command, commandNote, file, code, codeNote } }: { tab: G
   return (
     <>
       <p>{commandNote}</p>
-      <Code code={command} lang="sh" title="Terminal" />
+      <InstallCommand command={command} />
       <p>{codeNote}</p>
       <Code code={code} lang="tsx" title={file} />
     </>
   );
+}
+
+/**
+ * `<InstallCommand command="npm install …" />`: a command written once in npm form, shown in npm, pnpm,
+ * yarn or bun by the reader's choice, which every command on the site shares.
+ */
+export async function InstallCommand({ command }: { command: string }) {
+  const entries = await Promise.all(
+    PACKAGE_MANAGERS.map(async (manager) => [manager, await Code({ code: commandFor(command, manager), lang: 'sh', title: 'Terminal' })] as const),
+  );
+  return <PackageManagerCode variants={Object.fromEntries(entries) as Record<PackageManager, ReactNode>} />;
 }
 
 /** `<GetStartedTabs />`: npm / shadcn tabs with the command and the example of each. */

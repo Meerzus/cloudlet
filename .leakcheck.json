@@ -1,0 +1,10 @@
+{
+  "$comment": "Names that only exist in the private docs repository (docs/, gitignored); scripts/check-leaks.mjs fails CI when a tracked file mentions one. Regular expressions with the u flag.",
+  "patterns": [
+    "(^|[^\\w/.-])docs/[A-Z][A-Z0-9_]+\\.md",
+    "(^|[^\\w/.-])docs/(landing|tasks|handoffs|launch|forms|style-editor|qa|reference)/",
+    "\\b(DESIGN|LANDING|DECISIONS|BRIEF|UI_KIT|PROJECT_STATE|RELEASE_READINESS)\\.md\\b",
+    "\\bINTERNAL\\b"
+  ],
+  "skip": []
+}

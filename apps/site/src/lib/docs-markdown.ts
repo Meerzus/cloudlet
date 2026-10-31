@@ -42,6 +42,8 @@ const RENDERERS: Record<string, (data: PlaceholderData) => string> = {
     const tab = getStartedTab(text(attributes.tab));
     return fence('tsx', tab.code, tab.file);
   },
+  /** Written once in npm form; pnpm add, yarn add and bun add install the same package. */
+  InstallCommand: ({ attributes }) => fence('sh', text(attributes.command) ?? '', 'Terminal'),
   /** A demo block of several fences: the fences, plain code already. */
   Demos: ({ children }) => children.trim(),
   /** The shareable editor contract stays useful away from the interactive page. */

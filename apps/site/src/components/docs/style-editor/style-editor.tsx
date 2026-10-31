@@ -4,17 +4,14 @@ import { CloudletProvider, createCloudlet, Toaster, type ReactCloudletController
 import { Check, Copy, Link, RotateCcw } from 'lucide-react';
 import { useEffect, useId, useInsertionEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { HexColorPicker } from 'react-colorful';
 import { useCopy } from '@/components/site/notifications';
 import { useTheme } from '@/components/site/theme';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
-import { springEasing } from '@/lib/spring';
+import { ColorPicker } from '@/components/ui/color-picker/color-picker';
 import { DEFAULT_STATE, FONT_STACKS, TOKENS, fromSearchParams, isDefault, toCss, toSearchParams, validate, type StyleEditorState, type Theme, type Token, type TokenShortName } from './model';
 
 const UI = DOCS_UI.styleEditor;
 const REGION_LABELS = { region: UI.region, island: UI.islandRegion };
-/** The Island's own open spring (puppet-model SHAPE_OPEN): the swatch opens the way a pill does. */
-const MORPH = springEasing({ stiffness: 900, damping: 60, mass: 2 });
 const LABELS: Record<TokenShortName, string> = {
   background: 'Background',
   foreground: 'Foreground',
@@ -322,99 +319,13 @@ function ColorField({ token, theme, value, onChange, ...row }: RowProps & { toke
   return (
     <Row {...row} htmlFor={id} error={invalid ? <p id={`${id}-error`} className="docs-style-error">{UI.invalidColor}</p> : null}>
       <div className="docs-style-color">
-        <ColorPicker label={row.label} color={lastHex.current} swatch={validate(token.name, value) ? value : lastHex.current} onChange={onChange} />
+        <ColorPicker color={lastHex.current} swatch={validate(token.name, value) ? value : lastHex.current} onChange={onChange} labels={{ open: UI.openPicker(row.label), panel: UI.picker(row.label), close: UI.closePicker }} />
         <input id={id} type="text" aria-label={row.label} value={draft} spellCheck={false} autoComplete="off" aria-invalid={invalid || undefined} aria-describedby={invalid ? `${id}-error` : undefined} onChange={(event) => {
           setDraft(event.target.value);
           if (validate(token.name, event.target.value)) onChange(event.target.value);
         }} />
       </div>
     </Row>
-  );
-}
-
-type Phase = 'closed' | 'open' | 'closing';
-
-/**
- * The swatch morphs into the picker: the panel's clip grows out of the swatch circle on the
- * Island's spring while the circle stays put, and shrinks back into it on close.
- */
-function ColorPicker({ label, color, swatch, onChange }: { label: string; color: string; swatch: string; onChange: (value: string) => void }) {
-  const panelId = useId();
-  const [phase, setPhase] = useState<Phase>('closed');
-  const trigger = useRef<HTMLButtonElement>(null);
-  const panel = useRef<HTMLDivElement>(null);
-  const body = useRef<HTMLDivElement>(null);
-  const handle = useRef<HTMLButtonElement>(null);
-  const running = useRef<Animation[]>([]);
-
-  const close = (refocus: boolean) => {
-    setPhase((current) => (current === 'open' ? 'closing' : current));
-    if (refocus) trigger.current?.focus();
-  };
-
-  useLayoutEffect(() => {
-    const element = panel.current;
-    const circle = handle.current;
-    if (phase === 'closed' || !element || !circle) return;
-    for (const animation of running.current) animation.cancel();
-    running.current = [];
-    if (phase === 'open') element.querySelector<HTMLElement>('.react-colorful__interactive')?.focus({ preventScroll: true });
-    if (typeof element.animate !== 'function' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      if (phase === 'closing') setPhase('closed');
-      return;
-    }
-    const box = element.getBoundingClientRect();
-    const dot = circle.getBoundingClientRect();
-    const top = dot.top - box.top;
-    const left = dot.left - box.left;
-    const collapsed = `inset(${top}px ${box.right - dot.right}px ${box.bottom - dot.bottom}px ${left}px round ${dot.width / 2}px)`;
-    const expanded = 'inset(0px 0px 0px 0px round 1.25rem)';
-    const content = body.current;
-    if (phase === 'open') {
-      running.current = [
-        element.animate({ clipPath: [collapsed, expanded] }, { duration: MORPH.duration, easing: MORPH.easing }),
-        ...(content ? [content.animate({ opacity: [0, 1], filter: ['blur(6px)', 'blur(0px)'] }, { duration: 240, delay: 70, easing: 'ease-out', fill: 'backwards' })] : []),
-      ];
-      return;
-    }
-    const shrink = element.animate({ clipPath: [expanded, collapsed] }, { duration: 240, easing: 'cubic-bezier(0.3, 0, 0.2, 1)', fill: 'forwards' });
-    running.current = [shrink, ...(content ? [content.animate({ opacity: [1, 0], filter: ['blur(0px)', 'blur(6px)'] }, { duration: 140, easing: 'ease-in', fill: 'forwards' })] : [])];
-    shrink.finished.then(() => setPhase('closed'), () => {});
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase !== 'open') return;
-    const outside = (event: PointerEvent) => {
-      if (!panel.current?.contains(event.target as Node)) close(false);
-    };
-    document.addEventListener('pointerdown', outside, true);
-    return () => document.removeEventListener('pointerdown', outside, true);
-  }, [phase]);
-
-  const style = { '--docs-style-swatch': swatch } as CSSProperties;
-  return (
-    <div className="docs-style-picker" style={style}>
-      <button ref={trigger} type="button" className="docs-style-swatch" aria-label={UI.openPicker(label)} aria-expanded={phase === 'open'} aria-controls={phase === 'closed' ? undefined : panelId} onClick={() => setPhase('open')} />
-      {phase === 'closed' ? null : (
-        // The drop shadow sits on a wrapper: the panel's own clip-path would cut it off.
-        <div className="docs-style-picker-shadow">
-          <div ref={panel} id={panelId} role="dialog" aria-label={UI.picker(label)} className="docs-style-picker-panel" data-phase={phase} onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.stopPropagation();
-              close(true);
-            }
-          }}>
-            <div className="docs-style-picker-head">
-              <button ref={handle} type="button" className="docs-style-swatch" aria-label={UI.closePicker} onClick={() => close(true)} />
-              <span className="docs-style-picker-value">{color}</span>
-            </div>
-            <div ref={body}>
-              <HexColorPicker color={color} onChange={onChange} />
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
 

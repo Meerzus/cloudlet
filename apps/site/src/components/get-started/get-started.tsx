@@ -3,8 +3,8 @@
 import { Check, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { CopyCommand } from '@/components/site/copy-command';
 import { useCopy } from '@/components/site/notifications';
+import { PackageManagerCommand } from '@/components/site/package-manager';
 import { Tabs } from '@/components/site/tabs';
 import { GET_STARTED, type GetStartedTab } from '@/lib/get-started';
 import { highlight } from '@/lib/highlight';
@@ -45,7 +45,7 @@ function Steps({ tab }: { tab: GetStartedTab }) {
         <div className="min-w-0">
           <h3>Install</h3>
           <p>{tab.commandNote}</p>
-          <CopyCommand command={tab.command} className="mt-4" />
+          <PackageManagerCommand command={tab.command} className="mt-4" />
         </div>
       </li>
       <li className="gs-step">
