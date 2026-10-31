@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.1 — 2026-10-31
+
+The package's code, CSS and types are the same as in 1.1.0. This is the first release published from
+GitHub Actions through npm Trusted Publishing, with a provenance attestation that links the archive
+to its commit and workflow run.
+
+### Documentation
+
+- The README on npm shows the version, first-load size, CI, types and license badges, lists the
+  Forms and Content Security Policy guides, and says how to contribute and how to report a
+  vulnerability privately.
+
 ## 1.1.0 — 2026-10-30
 
 Forms in the Island and a badge that passes text contrast. Nothing is removed or changed in
