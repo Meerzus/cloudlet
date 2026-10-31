@@ -4,6 +4,7 @@ import { Faq } from '@/components/faq/faq';
 import { GetStarted } from '@/components/get-started/get-started';
 import { Hero } from '@/components/hero/hero';
 import { LifeScene } from '@/components/life/life-scene';
+import { Chapters } from '@/components/site/chapters';
 import { Footer } from '@/components/site/footer';
 import { SITE_URL, TOASTER_PATH } from '@/lib/site';
 
@@ -19,6 +20,7 @@ export default function Home() {
         <GetStarted />
         <Faq />
       </main>
+      <Chapters />
       <Footer />
     </>
   );

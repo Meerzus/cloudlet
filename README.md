@@ -1,5 +1,11 @@
 # Cloudlet
 
+[![npm](https://img.shields.io/npm/v/@cloudlet/toast?color=245cdb)](https://www.npmjs.com/package/@cloudlet/toast)
+[![min+gzip](https://img.shields.io/badge/min%2Bgzip-9.3%20KB%20first%20load-245cdb)](https://cloudlet.dev/toaster#faq)
+[![CI](https://github.com/Meerzus/cloudlet/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Meerzus/cloudlet/actions/workflows/ci.yml)
+[![types](https://img.shields.io/npm/types/@cloudlet/toast)](https://www.npmjs.com/package/@cloudlet/toast)
+[![license](https://img.shields.io/npm/l/@cloudlet/toast)](https://github.com/Meerzus/cloudlet/blob/main/LICENSE)
+
 Cloudlet is a family of React components; this repository holds them, their website and their
 tests. The first one is the **Toaster**, `@cloudlet/toast`: one stack of notifications that collapses
 to a single pill and opens into the Island, a surface with a slider over every notification. Its
@@ -48,6 +54,13 @@ strict CSP:
 npx playwright install chromium firefox webkit
 npm run test:e2e
 ```
+
+## Contributing
+
+Bug reports and ideas are welcome in [issues](https://github.com/Meerzus/cloudlet/issues); read
+[CONTRIBUTING](CONTRIBUTING.md) before a pull request. Security problems go through
+[SECURITY](SECURITY.md), not public issues. Everyone taking part follows the
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 

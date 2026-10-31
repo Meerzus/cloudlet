@@ -3,7 +3,7 @@ title: SSR & Next.js
 description: What renders on the server, who owns the controller, and complete setups for Next.js and Vite.
 ---
 
-Cloudlet renders nothing on the server and appears after hydration, so it never causes a hydration mismatch. This page explains what that means for where the controller lives, then gives complete setups for the Next.js App Router and Pages Router, a note on Vite, and how the request's CSP nonce reaches the Toaster.
+Cloudlet renders nothing on the server and appears after hydration, so it never causes a hydration mismatch. This page explains what that means for where the controller lives and when it ends, then gives complete setups for the Next.js App Router and Pages Router and a note on Vite.
 
 ## What renders on the server
 
@@ -65,6 +65,17 @@ export function render() {
 
 The browser entry then creates its own controller and hydrates the same tree.
 
+### When to dispose
+
+`dispose()` is final: it closes every notification, releases the controller's timers and subscriptions, and every later call returns `disposed`. Business operations you tracked keep running to their own result. Call it only when the session the controller belongs to is over: a test that finished, a micro-frontend removed for good, a server request that has been answered. A single-page application usually never calls it; the controller lives as long as the page.
+
+Unmounting the Toaster is not the end of the controller. It pauses visible time and keeps every record and every tracked operation; mounting a Toaster again resumes the same queue.
+
+Two mistakes to avoid:
+
+- **Creating the controller in a component body.** Every render would create a new controller with an empty stack. Create it in the bootstrap, or in an effect of a client owner as in the [App Router](#nextjs-app-router) setup.
+- **Sharing a server controller between users.** On the server a controller belongs to one request.
+
 ## Next.js App Router
 
 The App Router renders every page on the server first, so the controller is owned by a client component. Its effect creates the controller, and its cleanup disposes exactly that instance. Your pages keep rendering on the server: until the controller exists, the Provider gets `null`, the Toaster renders nothing and your children render as usual.
@@ -74,7 +85,7 @@ The App Router renders every page on the server first, so the controller is owne
 import { useEffect, useState, type ReactNode } from 'react';
 import { CloudletProvider, createCloudlet, Toaster, type ReactCloudletController } from '@cloudlet/toast';
 
-export function NotificationOwner({ children, nonce }: { children: ReactNode; nonce?: string | undefined }) {
+export function NotificationOwner({ children }: { children: ReactNode }) {
   const [controller, setController] = useState<ReactCloudletController | null>(null);
 
   useEffect(() => {
@@ -88,11 +99,13 @@ export function NotificationOwner({ children, nonce }: { children: ReactNode; no
   return (
     <CloudletProvider controller={controller}>
       {children}
-      <Toaster {...(nonce ? { nonce } : {})} />
+      <Toaster />
     </CloudletProvider>
   );
 }
 ```
+
+Under a strict Content Security Policy the owner also passes the request's nonce to the Toaster: [Content Security Policy](/toaster/docs/csp#nextjs-app-router) shows how.
 
 The root layout imports the stylesheet once and wraps the application in the owner:
 
@@ -142,30 +155,6 @@ In development Strict Mode runs the owner's effect, its cleanup, and the effect 
 - disposing the controller from state (`controller.dispose()` in a cleanup), which disposes the instance the second setup still needs;
 - creating the controller once outside the effect and disposing it in the cleanup, which leaves the remounted owner with a disposed controller.
 
-### Nonce in the App Router
-
-Under a strict Content Security Policy every Toaster needs the request's nonce (see [Strict CSP](/toaster/docs/styling#strict-csp)). In Next.js, a `proxy.ts` generates a nonce for each request and puts it into the `Content-Security-Policy` header and an `x-nonce` request header, as described in the [Next.js CSP guide](https://nextjs.org/docs/app/guides/content-security-policy). Next.js applies it to its own scripts. Read it in the root layout and pass it to the owner, which hands it to the Toaster:
-
-```tsx title="app/layout.tsx"
-import '@cloudlet/toast/styles.css';
-import { headers } from 'next/headers';
-import type { ReactNode } from 'react';
-import { NotificationOwner } from '../components/notification-owner';
-
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const nonce = (await headers()).get('x-nonce') ?? undefined;
-  return (
-    <html lang="en">
-      <body>
-        <NotificationOwner nonce={nonce}>{children}</NotificationOwner>
-      </body>
-    </html>
-  );
-}
-```
-
-A nonce exists only for a request, so pages that use it are rendered dynamically; a statically generated page has no nonce to pass.
-
 ## Next.js Pages Router
 
 In the Pages Router, global CSS is imported from the custom App, and the same client owner wraps every page. `_app` stays mounted across client-side navigations, so one controller serves the whole session:
@@ -190,9 +179,9 @@ Both routers need a matching pair of `react` and `react-dom`, in the range Cloud
 
 ## Vite and other client-only apps
 
-A single-page application without server rendering has nothing to hydrate. Create the controller once at module scope of the client entry and render the Provider and the Toaster there, as in the [Quick start](/toaster/docs/quick-start#create-the-controller). With Vite's SSR mode, the server entry follows [One controller per session or request](#one-controller-per-session-or-request).
+A single-page application without server rendering has nothing to hydrate. Create the controller once at module scope of the client entry and render the Provider and the Toaster there, as in the [Quick start](/toaster/docs/quick-start#mount-the-toaster). With Vite's SSR mode, the server entry follows [One controller per session or request](#one-controller-per-session-or-request).
 
 ## Next steps
 
-- [Styling & strict CSP](/toaster/docs/styling): the policy the nonce belongs to, and where the stylesheet goes.
+- [Content Security Policy](/toaster/docs/csp): the request's nonce and a policy Cloudlet works under.
 - [Toaster props](/toaster/docs/api/toaster): `container`, `nonce` and every other prop.

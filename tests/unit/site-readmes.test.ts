@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DOCS_URL } from '../../apps/site/src/lib/site';
+import { DOCS_URL, formatKB, PACKAGE_SIZE } from '../../apps/site/src/lib/site';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
@@ -21,6 +21,11 @@ describe('READMEs and changelog', () => {
 
   it('ship the same changelog in the package as in the repository', () => {
     expect(read('packages/toast/CHANGELOG.md')).toBe(read('CHANGELOG.md'));
+  });
+
+  it('print the measured first-load size in the size badge', () => {
+    const badge = `min%2Bgzip-${encodeURIComponent(`${formatKB(PACKAGE_SIZE.start)} first load`)}-`;
+    for (const path of ['README.md', 'packages/toast/README.md']) expect(read(path), path).toContain(badge);
   });
 
   it('keep the rc.0 migration notes in the changelog', () => {

@@ -1,0 +1,20 @@
+name: Feature request
+description: An idea for the Toaster, its documentation or the website.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: The API or behaviour you have in mind, if any.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workarounds you tried

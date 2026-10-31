@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://cloudlet.dev/toaster/docs
+    about: Guides, API reference and a Playground with every kind of notification.
+  - name: Report a vulnerability
+    url: https://github.com/Meerzus/cloudlet/security/advisories/new
+    about: Security problems are reported privately, not as issues.

@@ -22,6 +22,7 @@ const SPEC_ORDER = [
   'positioning',
   'styling',
   'ssr',
+  'csp',
   'accessibility',
   '---Reference---',
   '...api',
@@ -107,7 +108,7 @@ describe('site docs tree', () => {
   it('sends readers to the Playground from Introduction and Quick start only', () => {
     const nextSteps = (page: string) => frontmatter(page).body.split('## Next steps')[1] ?? '';
     for (const page of ['index', 'quick-start']) expect(nextSteps(page), page).toContain('](/toaster/playground)');
-    for (const page of ['installation', 'notifications', 'operations', 'forms', 'positioning', 'styling', 'ssr', 'accessibility']) {
+    for (const page of ['installation', 'notifications', 'operations', 'forms', 'positioning', 'styling', 'ssr', 'csp', 'accessibility']) {
       expect(nextSteps(page), page).not.toContain('](/toaster/playground)');
     }
   });
@@ -117,6 +118,7 @@ describe('site docs tree', () => {
     const LINKS: Record<string, readonly string[]> = {
       styling: ['/toaster/docs/api/toaster'],
       ssr: ['/toaster/docs/api/toaster'],
+      csp: ['/toaster/docs/api/toaster'],
       accessibility: ['/toaster/docs/api/toaster', '/toaster/docs/api/labels'],
     };
     for (const [page, links] of Object.entries(LINKS)) {

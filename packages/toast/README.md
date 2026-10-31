@@ -1,5 +1,11 @@
 # Cloudlet — React notifications and operations
 
+[![npm](https://img.shields.io/npm/v/@cloudlet/toast?color=245cdb)](https://www.npmjs.com/package/@cloudlet/toast)
+[![min+gzip](https://img.shields.io/badge/min%2Bgzip-9.3%20KB%20first%20load-245cdb)](https://cloudlet.dev/toaster#faq)
+[![CI](https://github.com/Meerzus/cloudlet/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Meerzus/cloudlet/actions/workflows/ci.yml)
+[![types](https://img.shields.io/npm/types/@cloudlet/toast)](https://www.npmjs.com/package/@cloudlet/toast)
+[![license](https://img.shields.io/npm/l/@cloudlet/toast)](https://github.com/Meerzus/cloudlet/blob/main/LICENSE)
+
 `@cloudlet/toast` is a notification library for React. Every notification lives in one stack, newest
 first, that is either collapsed to a single pill or opened as the Island: one surface with a slider
 over every notification. Activating the pill opens the Island; a notification that needs attention
@@ -55,10 +61,17 @@ is permanently finished: in a React effect, clean up exactly the instance that e
 Full documentation: **https://cloudlet.dev/toaster/docs**
 
 - Getting started: Introduction, Installation (npm and the shadcn registry item), Quick start.
-- Guides: Notifications & time, Operations & cancellation, Positioning & offsets, Styling & strict
-  CSP, SSR & Next.js, Accessibility (including what is and is not tested).
+- Guides: Notifications & time, Operations & cancellation, Forms, Positioning & offsets, Styling,
+  SSR & Next.js, Content Security Policy, Accessibility (including what is and is not tested).
 - Reference: `createCloudlet`, the controller, Toaster props, labels & announcements, types.
 - The [changelog](CHANGELOG.md) lists every change, including migration from `1.0.0-rc.0`.
+
+## Contributing and security
+
+Issues and ideas: [GitHub issues](https://github.com/Meerzus/cloudlet/issues), with the
+[contributing guide](https://github.com/Meerzus/cloudlet/blob/main/CONTRIBUTING.md) for pull
+requests. Report vulnerabilities privately as described in
+[SECURITY](https://github.com/Meerzus/cloudlet/blob/main/SECURITY.md).
 
 ## License
 

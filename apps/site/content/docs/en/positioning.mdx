@@ -1,9 +1,9 @@
 ---
 title: Positioning & offsets
-description: Where the stack sits, how it avoids notches, navigation bars and the keyboard, and when the Island opens on its own.
+description: Where the stack sits, how it avoids notches, navigation bars and the keyboard, when the Island opens on its own, and which element it renders into.
 ---
 
-The stack takes one spot at the top or bottom centre of the viewport. This page explains how that spot is chosen, how Cloudlet keeps it clear of safe areas, your own navigation and the on-screen keyboard, and how a notification decides whether to open the Island without being asked.
+The stack takes one spot at the top or bottom centre of the viewport. This page explains how that spot is chosen, how Cloudlet keeps it clear of safe areas, your own navigation and the on-screen keyboard, how a notification decides whether to open the Island without being asked, and how to render the Toaster into an element of yours.
 
 ## Position
 
@@ -129,6 +129,39 @@ export function Notifications() {
   );
 }
 ```
+
+## Portal container
+
+By default the Toaster renders into `document.body` through a portal. `container` renders it into an element of yours: pass the element, or a function that returns it. Cloudlet reads it after mount, and it must be:
+
+- a connected HTML element in the document the Toaster mounts in;
+- outside Shadow DOM.
+
+The container is fixed for the life of the attachment. To move the Toaster into another element, remount it, for example by changing its `key`. An unusable container is reported to `onDiagnostic` and no host is rendered.
+
+A modal `<dialog>` puts the rest of the page behind it, so notifications that belong to the dialog should render inside it. One Toaster is active per controller, so such a dialog gets its own controller:
+
+```tsx title="editor-dialog.tsx"
+import { useRef, type ReactNode } from 'react';
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+
+// The dialog's own notifications: the page Toaster keeps its controller.
+const dialogCloudlet = createCloudlet();
+
+export function EditorDialog({ children }: { children: ReactNode }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  return (
+    <dialog ref={dialog}>
+      <CloudletProvider controller={dialogCloudlet}>
+        {children}
+        <Toaster container={() => dialog.current} />
+      </CloudletProvider>
+    </dialog>
+  );
+}
+```
+
+You are responsible for the container being visible and suitable. The host is `position: fixed`; an ancestor with a `transform`, `filter` or `overflow: hidden` can clip it or become its containing block, and no `z-index` overcomes that.
 
 ## Next steps
 

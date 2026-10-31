@@ -64,7 +64,7 @@ Opening the Island for attention never steals keyboard focus. Screen readers get
 
 Cloudlet owns the stack, its time and its accessibility. A few things stay yours by design:
 
-- **The controller's lifetime.** One controller per browser session or server request, disposed only when it ends: see [Create the controller](/toaster/docs/quick-start#create-the-controller) and [SSR](/toaster/docs/ssr#one-controller-per-session-or-request).
+- **The controller's lifetime.** One controller per browser session or server request, disposed only when it ends: see [One controller per session or request](/toaster/docs/ssr#one-controller-per-session-or-request) and [When to dispose](/toaster/docs/ssr#when-to-dispose).
 - **Important data.** A notification is a notice, not a record: anything the user must not lose also lives in your main interface.
 - **Words.** Every label, announcement and fallback message is a string or a formatter you can replace, so the Toaster speaks your product's language.
 - **Styling.** Cloudlet ships CSS tokens for colour, radius and spacing and adds your class names per part; it does not require Tailwind or shadcn/ui.

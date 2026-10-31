@@ -1,0 +1,16 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Cloudlet Toast",
+  "description": "@cloudlet/toast: a notification toaster for React 18 and 19 and Next.js. One stack that collapses to a pill and morphs into the Island; operations that follow a promise with progress, retry and cancel; forms inside a notification; accessible, SSR-safe and strict-CSP friendly.",
+  "folders": ["apps/site/content/docs"],
+  "excludeFolders": [],
+  "excludeFiles": ["CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "SECURITY.md"],
+  "rules": [
+    "Import '@cloudlet/toast/styles.css' once, create one controller with createCloudlet() and render <Toaster /> inside <CloudletProvider controller={...}>.",
+    "Get the controller with useCloudlet() and call show, update, dismiss or track from event handlers or effects, never during render.",
+    "In the Next.js App Router a 'use client' owner component creates the controller in an effect and disposes that same instance in the effect's cleanup.",
+    "On the server create one controller per request and dispose it after the response; never share a controller between requests.",
+    "Use cloudlet.track(promiseOrFactory, options) for async work; pass a factory ({ signal }) => ... to make the operation retryable and cancellable.",
+    "Dismissing a tracked notification never aborts its operation; call cancel() on the operation handle to stop the work."
+  ]
+}
