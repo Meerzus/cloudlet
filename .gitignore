@@ -10,8 +10,12 @@ test-results/
 .env.*
 !.env.example
 
-# Internal planning and design documents stay local.
+# Private material: the docs/ folder is its own private repository; agent instructions and local
+# settings stay on the machine. scripts/check-leaks.mjs fails CI if any of them is tracked.
 /docs/
+/CLAUDE.md
+CLAUDE.local.md
+.claude/settings.local.json
 
 # Next.js site (apps/site)
 .next/

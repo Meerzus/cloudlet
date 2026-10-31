@@ -18,6 +18,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+      # Private material (the gitignored docs/ repository, agent instructions, env files) never reaches
+      # this public repository: fails before anything else runs.
+      - run: node scripts/check-leaks.mjs
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
