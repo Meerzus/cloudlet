@@ -55,8 +55,8 @@ is permanently finished: in a React effect, clean up exactly the instance that e
 Full documentation: **https://cloudlet.dev/toaster/docs**
 
 - Getting started: Introduction, Installation (npm and the shadcn registry item), Quick start.
-- Guides: Notifications & time, Operations & cancellation, Positioning & offsets, Styling & strict
-  CSP, SSR & Next.js, Accessibility (including what is and is not tested).
+- Guides: Notifications & time, Operations & cancellation, Forms, Positioning & offsets, Styling,
+  SSR & Next.js, Content Security Policy, Accessibility (including what is and is not tested).
 - Reference: `createCloudlet`, the controller, Toaster props, labels & announcements, types.
 - The [changelog](CHANGELOG.md) lists every change, including migration from `1.0.0-rc.0`.
 

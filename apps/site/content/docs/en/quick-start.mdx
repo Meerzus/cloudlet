@@ -1,13 +1,21 @@
 ---
 title: Quick start
-description: Create one controller, mount a Provider and a Toaster, and show the first notification.
+description: Install Cloudlet, mount the Toaster and show the first notification.
 ---
 
-By the end of this page your application has one controller, a Toaster on screen and a first notification in the stack. It assumes the package and its CSS are installed as described in [Installation](/toaster/docs/installation).
+Cloudlet is a toaster for React 18 and 19, Next.js included. Three steps get the first notification on screen.
 
-## Create the controller
+## Install
 
-The controller owns every notification, its time and its announcements. Create it once per browser session, where your application starts, not inside a component that renders again. Creating it allocates no timers, listeners or DOM, so doing it at module scope of the client entry is cheap.
+```sh title="Terminal"
+npm install @cloudlet/toast
+```
+
+Using shadcn/ui? The [registry item](/toaster/docs/installation#the-shadcn-registry-item) adds a wrapper themed with your tokens.
+
+## Mount the Toaster
+
+Create one controller where your application starts, and render the Toaster inside its Provider:
 
 ```tsx title="main.tsx"
 import '@cloudlet/toast/styles.css';
@@ -26,13 +34,9 @@ createRoot(document.getElementById('root')!).render(
 );
 ```
 
-`CloudletProvider` only hands the controller to the tree below it; `Toaster` finds it in context and renders the stack and the Island. Mount one Toaster per controller; it portals into the document after mount, so it can sit anywhere under the Provider.
-
-In a Next.js App Router project a client component owns the controller instead of the module; [SSR & Next.js](/toaster/docs/ssr#nextjs-app-router) has the setup.
+In the Next.js App Router a client component creates the controller instead: [SSR & Next.js](/toaster/docs/ssr#nextjs-app-router) has the setup.
 
 ## Show a notification
-
-Any component under the Provider gets the controller with `useCloudlet()` and calls `show` from an event. The call returns an admission result right away: the record was created, merged into an identical one, or rejected, with the reason.
 
 ```tsx title="app.tsx"
 import { useCloudlet } from '@cloudlet/toast';
@@ -43,29 +47,24 @@ export function App() {
 }
 ```
 
-The same call, on the page's own Toaster:
-
 ```tsx demo="success"
 cloudlet.show({ title: 'Synced to the cloud', kind: 'success' });
 ```
 
-A success notification without an action stays for six seconds of time on screen. Hovering it, focusing it or switching to another tab pauses that time; it never disappears while someone is reading it.
+## Why Cloudlet
 
-## When to dispose
+- **One stack that morphs.** Notifications collapse into a single pill. Open it and the stack morphs into the Island, one surface to read, retry or close every notification. All motion runs on springs and can be interrupted mid-flight.
+- **Operations, not just messages.** `track` a promise and one notification shows the pending state, progress and result, with Retry and cooperative cancel.
+- **Forms in the Island.** A notification can ask back: a reply or a short note, sent without a dialog.
+- **Accessible.** Arrivals never take focus, announcements are calm, the keyboard reaches everything; checked with VoiceOver.
+- **Fits your stack.** Renders nothing on the server, works under a strict CSP, has no runtime dependencies and no Tailwind requirement.
 
-`dispose()` is final: it closes every notification, releases the controller's timers and subscriptions, and every later call returns `disposed`. Business operations you tracked keep running to their own result. Call it only when the session the controller belongs to is over: a test that finished, a micro-frontend removed for good, a server request that has been answered. A single-page application usually never calls it; the controller lives as long as the page.
-
-Unmounting the Toaster is not the end of the controller. It pauses visible time and keeps every record and every tracked operation; mounting a Toaster again resumes the same queue.
-
-Under React Strict Mode, an effect that creates a controller disposes exactly that instance in its cleanup; [React Strict Mode](/toaster/docs/ssr#react-strict-mode) explains why.
-
-## What not to do
-
-- **Calling `show` during render.** Render runs again on every state change, and twice in Strict Mode. Call `show` from an event: a click, a finished request, a message from the server.
-- **Creating the controller in a component body.** Every render would create a new controller with an empty stack. Create it in the bootstrap or in an effect of a client owner.
-- **Sharing a server controller between users.** On the server a controller belongs to one request.
+Need a plain toast, without the Island and the motion? [Sonner](https://sonner.emilkowal.ski) is a great choice.
 
 ## Next steps
 
-- [Try it in the Playground](/toaster/playground): every kind, action and operation on a button, with the exact call to copy.
-- [Notifications & time](/toaster/docs/notifications): `show`, `update` and `dismiss`, descriptions and icons, the stack and how time is spent.
+- [Playground](/toaster/playground): every kind, action and operation on a button, with the exact call to copy.
+- [Notifications & time](/toaster/docs/notifications): `show`, `update` and `dismiss`, and how long a notification stays.
+- [Operations & cancellation](/toaster/docs/operations): notifications that follow a promise.
+- [Styling](/toaster/docs/styling): tokens, themes and class names, with a live editor.
+- [Installation](/toaster/docs/installation): requirements, browsers and the shadcn registry item.

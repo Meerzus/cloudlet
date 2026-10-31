@@ -29,7 +29,7 @@ export const cloudlet = createCloudlet({
 
 - **Nothing outside the object.** Creating or importing a controller touches no `window` or `document`, starts no timer, adds no listener and runs no operation. It is safe in a module, in a server render and in a test.
 - **One controller, one host.** A controller is shown by exactly one `<Toaster>` at a time. A second Toaster of the same controller does not attach and reports a `second-host` diagnostic. Separate controllers are fully independent, even with the same notification IDs.
-- **A controller lives for a session.** One per browser session or server request, disposed only when it is finished for good: see [When to dispose](/toaster/docs/quick-start#when-to-dispose).
+- **A controller lives for a session.** One per browser session or server request, disposed only when it is finished for good: see [When to dispose](/toaster/docs/ssr#when-to-dispose).
 - **Wrong options throw.** An options object of the wrong shape, or a callback that is not a function, throws a `TypeError`; an out-of-range number throws a `RangeError`. These are programming errors, so they are the only failures of the API that throw instead of returning a result.
 
 The result type is `ReactCloudletController`, which is `CloudletController<ReactNode, AbortSignal>`: slots (rich descriptions, icons) are React nodes, and operations get a native `AbortSignal`.
