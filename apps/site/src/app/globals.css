@@ -75,6 +75,18 @@
 }
 
 @layer base {
+  /* Tailwind's preflight leaves buttons with the default arrow: everything clickable shows the hand. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab'],
+  summary,
+  select,
+  input[type='range'],
+  input[type='checkbox'],
+  input[type='radio'],
+  label:has(> input[type='checkbox'], > input[type='radio']) {
+    cursor: pointer;
+  }
   html {
     background: var(--sky-top);
     -webkit-text-size-adjust: 100%;
