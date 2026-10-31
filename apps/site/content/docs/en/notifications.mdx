@@ -27,6 +27,8 @@ if (admission.status === 'rejected') {
 
 A handle belongs to its controller and to one existence of the record. It is not a serializable ID: keep it in memory to update or dismiss that notification, and do not build one yourself.
 
+Call `show` from an event: a click, a finished request, a message from the server. Never call it during render, which runs again on every state change and twice in Strict Mode.
+
 ## Kinds
 
 `kind` sets the icon, the colour and the default time on screen. It defaults to `info`.

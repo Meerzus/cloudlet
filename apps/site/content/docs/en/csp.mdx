@@ -1,0 +1,99 @@
+---
+title: Content Security Policy
+description: Run Cloudlet under a strict Content Security Policy, pass the request's nonce to the Toaster, and set it up in the Next.js App Router.
+---
+
+Cloudlet works under a policy that forbids inline style attributes. It writes the animated geometry through CSSOM rules in its own `<style>` blocks, and uses no `style` attributes, no `cssText` and no `eval`. The only thing a nonce-based policy needs from you is the nonce.
+
+## Pass the nonce
+
+Under a nonce-based policy, pass the current request's nonce to every Toaster so the browser accepts its style blocks:
+
+```tsx title="notifications.tsx"
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+export function Notifications({ nonce }: { nonce: string }) {
+  return (
+    <CloudletProvider controller={cloudlet}>
+      <Toaster nonce={nonce} />
+    </CloudletProvider>
+  );
+}
+```
+
+`nonce` and every other prop are listed in [Toaster props](/toaster/docs/api/toaster).
+
+## A policy that works
+
+A representative production policy:
+
+```text
+default-src 'none'; script-src 'self' 'nonce-REQUEST_NONCE';
+style-src 'self' 'nonce-REQUEST_NONCE'; style-src-attr 'none';
+img-src 'self' data:; font-src 'self'; connect-src 'self';
+base-uri 'none'; object-src 'none'; frame-ancestors 'none'
+```
+
+- Keep `styles.css` external: it is served from `'self'` like the rest of your CSS.
+- The Toaster loads its renderer after mount as a separate chunk of your bundle; `script-src 'self'` covers it like your other chunks.
+- Use a fresh, unpredictable nonce for every response, and never copy a fixed nonce into production.
+- Your application and framework must put the nonce on their own inline scripts and style blocks too.
+- A nonce does not permit style attributes. Under `style-src-attr 'none'`, rich descriptions and icons must not use React `style` props or untrusted markup.
+
+Cloudlet's integration tests run production Vite and Next.js builds under this policy and watch for `securitypolicyviolation` while they drive the pill, the Island, slides, swipes and auto-opening.
+
+## Next.js App Router
+
+In Next.js, a `proxy.ts` generates a nonce for each request and puts it into the `Content-Security-Policy` header and an `x-nonce` request header, as described in the [Next.js CSP guide](https://nextjs.org/docs/app/guides/content-security-policy). Next.js applies it to its own scripts. The client component that owns the controller, set up in [SSR & Next.js](/toaster/docs/ssr#nextjs-app-router), takes the nonce and hands it to the Toaster:
+
+```tsx title="components/notification-owner.tsx"
+'use client';
+import { useEffect, useState, type ReactNode } from 'react';
+import { CloudletProvider, createCloudlet, Toaster, type ReactCloudletController } from '@cloudlet/toast';
+
+export function NotificationOwner({ children, nonce }: { children: ReactNode; nonce?: string | undefined }) {
+  const [controller, setController] = useState<ReactCloudletController | null>(null);
+
+  useEffect(() => {
+    const instance = createCloudlet();
+    setController(instance);
+    return () => instance.dispose();
+  }, []);
+
+  return (
+    <CloudletProvider controller={controller}>
+      {children}
+      <Toaster {...(nonce ? { nonce } : {})} />
+    </CloudletProvider>
+  );
+}
+```
+
+The root layout reads the nonce and passes it to the owner:
+
+```tsx title="app/layout.tsx"
+import '@cloudlet/toast/styles.css';
+import { headers } from 'next/headers';
+import type { ReactNode } from 'react';
+import { NotificationOwner } from '../components/notification-owner';
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+  return (
+    <html lang="en">
+      <body>
+        <NotificationOwner nonce={nonce}>{children}</NotificationOwner>
+      </body>
+    </html>
+  );
+}
+```
+
+A nonce exists only for a request, so pages that use it are rendered dynamically; a statically generated page has no nonce to pass.
+
+## Next steps
+
+- [SSR & Next.js](/toaster/docs/ssr): where the controller lives on the server and in the browser.
+- [Styling](/toaster/docs/styling): the stylesheet, tokens and class names.

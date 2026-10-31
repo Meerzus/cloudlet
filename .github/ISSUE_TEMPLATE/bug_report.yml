@@ -1,0 +1,43 @@
+name: Bug report
+description: Something in @cloudlet/toast or on cloudlet.dev does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Security problems go through [SECURITY.md](https://github.com/Meerzus/cloudlet/blob/main/SECURITY.md), not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: A minimal snippet, a repository or a sandbox link. The smaller, the faster the fix.
+      render: tsx
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Cloudlet version
+      placeholder: "1.1.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser and OS, framework (Vite, Next.js App or Pages Router), React version.
+      placeholder: "Safari 18.4 on macOS 15, Next.js 16 App Router, React 19.2"
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screen reader in use, console output, a screen recording for motion bugs.

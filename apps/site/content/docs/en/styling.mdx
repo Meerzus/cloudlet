@@ -1,6 +1,6 @@
 ---
-title: Styling & strict CSP
-description: Theme Cloudlet with tokens and class names, try them in the Style editor, and run it under a strict Content Security Policy.
+title: Styling
+description: Theme Cloudlet with tokens and class names, and try them in the Style editor.
 ---
 
 Cloudlet uses one external stylesheet and CSS tokens scoped to `.cloudlet-host`. The editor below lets you try them on a live Toaster and copy the CSS; every setting is a Toaster prop listed in [Toaster props](/toaster/docs/api/toaster).
@@ -12,6 +12,8 @@ Cloudlet uses one external stylesheet and CSS tokens scoped to `.cloudlet-host`.
 ## The stylesheet
 
 Import `@cloudlet/toast/styles.css` once, from your global CSS entry or root layout (see [Installation](/toaster/docs/installation#import-the-styles)). Rules and resets are scoped to `.cloudlet-host`.
+
+Keep it external under a strict Content Security Policy; [Content Security Policy](/toaster/docs/csp) has the rest of the setup.
 
 Put overrides in a stylesheet imported after Cloudlet's. Use tokens and class names to change the look; the renderer controls width, height, position, transform and clip path.
 
@@ -82,7 +84,7 @@ Dark surfaces use a more specific selector, so `.cloudlet-host` alone changes li
 }
 ```
 
-The tokens must reach the portal: define them on `:root` or on an ancestor of the [container](#portal-container), not on a wrapper around your React tree, which does not contain the default portal on `document.body`. This is the approach of the shadcn registry item's `toaster.css`, which maps `--popover`, `--popover-foreground`, `--muted-foreground`, `--border`, `--ring`, `--accent` and `--font-sans`.
+The tokens must reach the portal: define them on `:root` or on an ancestor of the [container](/toaster/docs/positioning#portal-container), not on a wrapper around your React tree, which does not contain the default portal on `document.body`. This is the approach of the shadcn registry item's `toaster.css`, which maps `--popover`, `--popover-foreground`, `--muted-foreground`, `--border`, `--ring`, `--accent` and `--font-sans`.
 
 ## Theme
 
@@ -153,75 +155,7 @@ The stylesheet is unlayered on purpose: then a page's own resets, such as `butto
 
 The host also exposes its state as data attributes you can select on: `data-state` (`stack` or `island`), `data-island-reason`, `data-position`, `data-edge` (`top` or `bottom`), `data-theme`, `data-resolved-theme`, `data-reduced-motion` and `data-dragging`. The current notification carries `data-kind` and `data-current`.
 
-## Portal container
-
-By default the Toaster renders into `document.body` through a portal. `container` renders it into an element of yours: pass the element, or a function that returns it. Cloudlet reads it after mount, and it must be:
-
-- a connected HTML element in the document the Toaster mounts in;
-- outside Shadow DOM.
-
-The container is fixed for the life of the attachment. To move the Toaster into another element, remount it, for example by changing its `key`. An unusable container is reported to `onDiagnostic` and no host is rendered.
-
-A modal `<dialog>` puts the rest of the page behind it, so notifications that belong to the dialog should render inside it. One Toaster is active per controller, so such a dialog gets its own controller:
-
-```tsx title="editor-dialog.tsx"
-import { useRef, type ReactNode } from 'react';
-import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
-
-// The dialog's own notifications: the page Toaster keeps its controller.
-const dialogCloudlet = createCloudlet();
-
-export function EditorDialog({ children }: { children: ReactNode }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  return (
-    <dialog ref={dialog}>
-      <CloudletProvider controller={dialogCloudlet}>
-        {children}
-        <Toaster container={() => dialog.current} />
-      </CloudletProvider>
-    </dialog>
-  );
-}
-```
-
-You are responsible for the container being visible and suitable. The host is `position: fixed`; an ancestor with a `transform`, `filter` or `overflow: hidden` can clip it or become its containing block, and no `z-index` overcomes that.
-
-## Strict CSP
-
-Cloudlet works under a policy that forbids inline style attributes. It writes the animated geometry through CSSOM rules in its own `<style>` blocks, and uses no `style` attributes, no `cssText` and no `eval`. Under a nonce-based policy, pass the current request's nonce to every Toaster so the browser accepts those blocks:
-
-```tsx title="notifications.tsx"
-import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
-
-const cloudlet = createCloudlet();
-
-export function Notifications({ nonce }: { nonce: string }) {
-  return (
-    <CloudletProvider controller={cloudlet}>
-      <Toaster nonce={nonce} />
-    </CloudletProvider>
-  );
-}
-```
-
-A representative production policy:
-
-```text
-default-src 'none'; script-src 'self' 'nonce-REQUEST_NONCE';
-style-src 'self' 'nonce-REQUEST_NONCE'; style-src-attr 'none';
-img-src 'self' data:; font-src 'self'; connect-src 'self';
-base-uri 'none'; object-src 'none'; frame-ancestors 'none'
-```
-
-- Keep `styles.css` external: it is served from `'self'` like the rest of your CSS.
-- The Toaster loads its renderer after mount as a separate chunk of your bundle; `script-src 'self'` covers it like your other chunks.
-- Use a fresh, unpredictable nonce for every response, and never copy a fixed nonce into production.
-- Your application and framework must put the nonce on their own inline scripts and style blocks too. [SSR & Next.js](/toaster/docs/ssr#nonce-in-the-app-router) shows how to read it in the App Router.
-- A nonce does not permit style attributes. Under `style-src-attr 'none'`, rich descriptions and icons must not use React `style` props or untrusted markup.
-
-Cloudlet's integration tests run production Vite and Next.js builds under this policy and watch for `securitypolicyviolation` while they drive the pill, the Island, slides, swipes and auto-opening.
-
 ## Next steps
 
 - [Toaster props](/toaster/docs/api/toaster): every prop with its type and default.
-- [SSR & Next.js](/toaster/docs/ssr): where the controller lives and how the nonce reaches the Toaster.
+- [Positioning & offsets](/toaster/docs/positioning): where the stack sits, and rendering it into an element of yours.
