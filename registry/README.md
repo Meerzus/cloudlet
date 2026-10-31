@@ -13,7 +13,7 @@ npm ci --prefix registry/tooling --ignore-scripts --no-audit --no-fund
 node scripts/registry-build.mjs
 npm run build
 node scripts/pack.mjs
-node scripts/registry-check.mjs --tarball artifacts/integration/cloudlet-toast-1.1.0.tgz
+node scripts/registry-check.mjs --tarball artifacts/integration/cloudlet-toast-1.1.1.tgz
 ```
 
 `registry-check` creates a fresh consumer and npm cache outside the workspace, installs its committed base lockfile, confirms that `@cloudlet/toast` is absent, then runs the real pinned command `shadcn add http://127.0.0.1:<port>/r/toaster.json --yes --overwrite --cwd <consumer>`. Only the `@cloudlet` npm scope is routed to the loopback registry; all ordinary dependencies come from public npm without private credentials. The item dependency is not rewritten to a nonexistent public release. The test verifies the downloaded tarball's SHA-512 integrity, the install HTTP request, the installed lockfile's resolved URL, and a physical consumer installation rather than a workspace link. A fresh cache ensures a previous install cannot hide a missing tarball.
