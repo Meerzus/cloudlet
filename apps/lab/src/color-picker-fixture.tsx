@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ColorPicker } from '@/components/ui/color-picker/color-picker';
 import { morphClock } from '@/components/ui/color-picker/morph';
-import '@/components/ui/color-picker/color-picker.css';
 
 export interface ColorPickerFixtureApi {
   open: () => void;

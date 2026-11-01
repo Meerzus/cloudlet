@@ -4,6 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 import { springEasing } from '@/lib/spring';
 import { COLOR_FORMATS, formatHsva, hsvToRgb, parseToHsva, type ColorFormat, type Hsva } from './color';
 import { CLIP_VARS, MORPH, RADIUS_VAR, SpringChannel, clipAt, morphClock, radiusAt, supportsMorphChannels } from './morph';
+import './color-picker.css';
 
 export type { ColorFormat } from './color';
 
@@ -470,7 +471,7 @@ export function ColorPickerPanel({ className, labels: partial, alpha = false, na
  * closes without moving focus. Without the Web Animations API or under reduced motion it opens and
  * closes instantly. The panel opens down and to the right, and flips up and/or left when that would
  * cross the viewport's edge; it is not portalled, so a container with `overflow: hidden` clips it.
- * Styles: color-picker.css (shadcn tokens: background, foreground, border, ring).
+ * Styles: color-picker.css, imported here (shadcn tokens: background, foreground, border, ring).
  */
 export function ColorPicker({ swatch, labels: partial, alpha = false, name, ...rest }: ColorPickerProps) {
   const labels = { ...DEFAULT_LABELS, ...partial };

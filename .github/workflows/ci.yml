@@ -117,6 +117,7 @@ jobs:
       - run: npm ci
       - run: npm run pack:local
       - run: node scripts/measure-size.mjs --tarball "artifacts/integration/cloudlet-toast-$(node -p "require('./packages/toast/package.json').version").tgz"
+      - run: npm run size:color-picker
       - uses: actions/upload-artifact@v7
         if: always()
         with:

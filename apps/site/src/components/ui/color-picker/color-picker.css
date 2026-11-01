@@ -1,5 +1,7 @@
 /* ColorPicker: a swatch that morphs into the picker panel (color-picker.tsx). shadcn tokens only. */
 .color-picker { position: relative; flex: none; width: 2rem; height: 2rem; }
+/* shadcn's --muted where the theme has one; otherwise a step of the foreground over the background, as shadcn's own muted is. */
+.color-picker, .color-picker-inline { --color-picker-muted: var(--muted, color-mix(in oklab, var(--foreground) 9%, var(--background))); }
 /* The picker's buttons draw themselves: no user-agent border, padding or background (Tailwind's preflight is not assumed). */
 .color-picker-swatch,
 .color-picker-icon {
@@ -67,7 +69,7 @@
   padding: 0 0.625rem;
   border: 0;
   border-radius: 9999px;
-  background: color-mix(in oklab, var(--muted, var(--foreground)) 60%, transparent);
+  background: color-mix(in oklab, var(--color-picker-muted) 60%, transparent);
   font: 400 0.8125rem/1 var(--font-geist-mono, ui-monospace), ui-monospace, monospace;
   color: var(--foreground);
   outline: none;
@@ -94,7 +96,7 @@
   display: flex;
   padding: 0.125rem;
   border-radius: 9999px;
-  background: color-mix(in oklab, var(--muted, var(--foreground)) 60%, transparent);
+  background: color-mix(in oklab, var(--color-picker-muted) 60%, transparent);
 }
 .color-picker-segment-indicator {
   position: absolute;

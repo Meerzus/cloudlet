@@ -1,6 +1,6 @@
 # shadcn registry
 
-Cloudlet has a shadcn-compatible `toaster` item. It installs two application-owned files: a thin `"use client"` Provider/Toaster adapter and a CSS theme bridge. The only notification runtime is `@cloudlet/toast`; the item does not copy its controller, renderer, store, or Motion implementation. The npm library has no Tailwind or shadcn dependency.
+Cloudlet has two shadcn-compatible items. `toaster` installs two application-owned files: a thin `"use client"` Provider/Toaster adapter and a CSS theme bridge. The only notification runtime is `@cloudlet/toast`; the item does not copy its controller, renderer, store, or Motion implementation. The npm library has no Tailwind or shadcn dependency. `color-picker` is a whole component with no dependencies; see [Color picker](#color-picker) below.
 
 The catalog is served from the site at `https://cloudlet.dev/r/toaster.json` (`apps/site/public/r`, copied by `registry:build`) and requests `@cloudlet/toast@1.2.0` from npm. The test below supplies that exact dependency through a temporary loopback npm test registry backed by the actual npm-pack tarball.
 
@@ -66,3 +66,13 @@ The local CSS bridge maps modern shadcn full-color custom properties (`--popover
 All public Toaster options pass through unchanged, including `position`, `theme`, `dir`, `container`, `offsets`, `nonce`, `labels`, `announcements`, `attention`, `classNames` and `motion`. For strict CSP, keep CSS external and pass the request nonce to `nonce` for Cloudlet's geometry stylesheet. This adapter adds no inline style attribute or style block of its own; the library's production CSP fixture covers the morph, slides, swipes and progress under the enforced policy. Follow the documentation's SSR & Next.js and Content Security Policy guides when integrating Next's own script/style nonces.
 
 The wrapper and local CSS are original MIT-licensed project code. They include no copied third-party controller/renderer code. The pinned shadcn/Ajv/Tailwind/Next packages are verification tools and consumer dependencies; they are not shipped inside the npm library or copied into its runtime. The official JSON schema snapshots retain the upstream MIT notice in `registry/schema/LICENSE.shadcn-ui` and are sourced from the MIT-licensed [shadcn/ui repository](https://github.com/shadcn-ui/ui), and their original content is retained.
+
+## Color picker
+
+`https://cloudlet.dev/r/color-picker.json` installs the site's own color picker as source: `components/ui/color-picker/color-picker.tsx`, `color-picker.css`, `color.ts` (parsing and conversions), `morph.ts` (the swatch-to-panel springs) and `lib/spring.ts`. The item lists the files at their paths in `apps/site`, so the site and the registry ship one source; rerun `registry:build` after editing them (`tests/unit/site-registry.test.ts` fails while `registry/r/color-picker.json` is stale). It has no npm dependencies besides React.
+
+`color-picker.tsx` imports its own `color-picker.css`. The stylesheet reads the shadcn tokens `--background`, `--foreground`, `--border`, `--ring` and, optionally, `--muted`, and resets its buttons itself, so it does not rely on Tailwind's preflight. The panel is not portalled: it inherits the theme of its subtree and works inside an iframe, but an ancestor with `overflow: hidden` clips it.
+
+`registry-check` installs the item after `toaster` into the same clean consumer and checks that `package.json` dependencies do not change, that the files land under the consumer's `ui` and `lib` aliases, and that the strict consumer (no `noUncheckedIndexedAccess`) builds and typechecks. In Chromium, Firefox and WebKit it then opens the picker from its server-rendered swatch, checks focus in the area, the dark `--background` on the panel, a hue step on the keyboard and Escape back to the swatch, and changes the opacity of an inline `ColorPickerPanel` whose hidden `name` input carries an `oklch(… / …)` value. shadcn strips the first comment of every installed file, so credits belong beside the code they describe, not in a file header.
+
+`npm run size:color-picker` measures the item min+gzip with React external (the same oxc/lightningcss settings as `measure-size`) and writes `artifacts/size/color-picker.json`; the CI `size` job runs it as information only.

@@ -4,7 +4,7 @@
  * result on the server, in the browser and in jsdom.
  *
  * The picker edits HSV (saturation × brightness area, hue, alpha); every other space is only an
- * input or output format. OKLCH follows Björn Ottosson's OKLab (https://bottosson.github.io/posts/oklab/).
+ * input or output format.
  */
 
 export type ColorFormat = 'hex' | 'rgb' | 'hsl' | 'oklch';
@@ -89,6 +89,7 @@ function rgbToHsl({ r, g, b }: Rgba): { h: number; s: number; l: number } {
 }
 
 // --- OKLCH ------------------------------------------------------------------------------------
+// The matrices are Björn Ottosson's OKLab (https://bottosson.github.io/posts/oklab/).
 
 const toLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
 const toGamma = (c: number) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
@@ -168,7 +169,7 @@ function tokenize(body: string): { readonly channels: Token[]; readonly alpha: T
   if (extra !== undefined) return null;
   const parts = channelPart.trim().split(/\s*,\s*|\s+/).filter(Boolean);
   const legacy = channelPart.includes(',');
-  let alphaSource = alphaPart?.trim() ?? null;
+  let alphaSource: string | null = alphaPart?.trim() ?? null;
   if (legacy && parts.length === 4 && alphaSource === null) alphaSource = parts.pop() ?? null;
   if (parts.length !== 3) return null;
   if (alphaSource === '') return null;
