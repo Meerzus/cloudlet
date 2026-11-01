@@ -418,6 +418,36 @@ function pickerStyle(hsva: Hsva, swatch: string): CSSProperties {
   } as CSSProperties;
 }
 
+// --- Placement ----------------------------------------------------------------------------------
+
+interface Box { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number }
+
+/**
+ * Which way the panel opens: `up` and/or `left` when the panel, measured where it opens by default
+ * (down and right of the trigger), would cross that edge of the viewport and the mirrored side has
+ * more room. Mirrored, the panel keeps the trigger's corner: its bottom and/or right edge sit where
+ * the default panel has its top and left, one padding past the trigger.
+ */
+function flipFor(panel: Box, trigger: Box, viewport: { readonly width: number; readonly height: number }): string {
+  const sides: string[] = [];
+  // Room from the viewport's top (left) edge to where the mirrored panel would end.
+  const above = trigger.bottom + (trigger.top - panel.top);
+  const before = trigger.right + (trigger.left - panel.left);
+  if (panel.bottom > viewport.height && above > viewport.height - panel.top) sides.push('up');
+  if (panel.right > viewport.width && before > viewport.width - panel.left) sides.push('left');
+  return sides.join(' ');
+}
+
+/** Measures the panel where it opens by default and mirrors it away from the viewport's edges (`data-flip` on the wrapper). */
+function place(wrapper: HTMLElement, panel: HTMLElement, trigger: HTMLElement) {
+  wrapper.setAttribute('data-flip', '');
+  const view = wrapper.ownerDocument.defaultView ?? window;
+  const root = wrapper.ownerDocument.documentElement;
+  // clientWidth leaves out a classic scrollbar; jsdom reports 0 for it.
+  const viewport = { width: root.clientWidth || view.innerWidth, height: root.clientHeight || view.innerHeight };
+  wrapper.setAttribute('data-flip', flipFor(panel.getBoundingClientRect(), trigger.getBoundingClientRect(), viewport));
+}
+
 // --- Public components --------------------------------------------------------------------------
 
 /** The picker without the swatch: rendered in the flow, for forms and sidebars. */
@@ -438,7 +468,9 @@ export function ColorPickerPanel({ className, labels: partial, alpha = false, na
  * another, the shadow grows with the panel, and closing shrinks it back into the swatch; an open or
  * close interrupted in flight keeps its momentum (owner's pick V3, C03). Escape and the in-panel swatch close and return focus to the trigger; a press outside
  * closes without moving focus. Without the Web Animations API or under reduced motion it opens and
- * closes instantly. Styles: color-picker.css (shadcn tokens: background, foreground, border, ring).
+ * closes instantly. The panel opens down and to the right, and flips up and/or left when that would
+ * cross the viewport's edge; it is not portalled, so a container with `overflow: hidden` clips it.
+ * Styles: color-picker.css (shadcn tokens: background, foreground, border, ring).
  */
 export function ColorPicker({ swatch, labels: partial, alpha = false, name, ...rest }: ColorPickerProps) {
   const labels = { ...DEFAULT_LABELS, ...partial };
@@ -467,6 +499,9 @@ export function ColorPicker({ swatch, labels: partial, alpha = false, name, ...r
     running.current = [];
     const opening = phase === 'open';
     const target = opening ? 1 : 0;
+    const wrapper = shadow.current;
+    // Placed once per wrapper: an open that interrupts a close keeps the side the panel is on.
+    if (opening && wrapper && !wrapper.hasAttribute('data-flip')) place(wrapper, element, origin);
     if (opening) element.querySelector<HTMLElement>('.color-picker-area')?.focus({ preventScroll: true });
     const still = typeof element.animate !== 'function' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (still) {
@@ -516,6 +551,8 @@ export function ColorPicker({ swatch, labels: partial, alpha = false, name, ...r
       const blur = (from: number, to: number) => ({ opacity: [from, to], filter: [`blur(${MORPH.blur * (1 - from)}px)`, `blur(${MORPH.blur * (1 - to)}px)`] });
       const current = parseFloat(getComputedStyle(content).opacity);
       const rows = Array.from(content.children);
+      // The rows unblur outward from the swatch: bottom first when the panel opens upward.
+      if (wrapper?.getAttribute('data-flip')?.includes('up')) rows.reverse();
       if (opening && rows.length > 0) {
         content.style.opacity = '';
         rows.forEach((row, index) => play(row, blur(0, 1), { duration: MORPH.contentIn, delay: MORPH.contentDelay + index * MORPH.stagger, easing: 'ease-out' }));
@@ -526,7 +563,6 @@ export function ColorPicker({ swatch, labels: partial, alpha = false, name, ...r
       }
     }
     // Shadow: grows with the panel instead of hanging there from the first frame.
-    const wrapper = shadow.current;
     if (wrapper && grow) {
       const drop = (progress: number) => `drop-shadow(0 ${12 * progress}px ${28 * progress}px rgb(0 0 0 / ${0.22 * progress})) drop-shadow(0 ${progress}px ${2 * progress}px rgb(0 0 0 / ${0.1 * progress}))`;
       play(wrapper, { filter: [drop(Math.max(0, grow.from)), drop(Math.max(0, grow.to))] }, { duration: grow.duration, easing: grow.easing });
@@ -543,8 +579,17 @@ export function ColorPicker({ swatch, labels: partial, alpha = false, name, ...r
     const outside = (event: PointerEvent) => {
       if (!panel.current?.contains(event.target as Node)) close(false);
     };
+    // A resize while open places the panel again; the close re-measures the circle on its own.
+    const view = panel.current?.ownerDocument.defaultView ?? window;
+    const resize = () => {
+      if (shadow.current && panel.current && trigger.current) place(shadow.current, panel.current, trigger.current);
+    };
     document.addEventListener('pointerdown', outside, true);
-    return () => document.removeEventListener('pointerdown', outside, true);
+    view.addEventListener('resize', resize);
+    return () => {
+      document.removeEventListener('pointerdown', outside, true);
+      view.removeEventListener('resize', resize);
+    };
   }, [phase]);
 
   // The swatch shows what the owner passed (a var() or an out-of-gamut oklch() included) and falls back to the value.

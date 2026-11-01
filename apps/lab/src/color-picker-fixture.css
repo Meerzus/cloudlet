@@ -48,5 +48,10 @@ body:has(.lab-cp) { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "
 /* Room for the open panel: 14rem wide and about 20rem tall below the swatch. */
 .lab-cp-stage { position: relative; display: flex; align-items: center; gap: 12px; height: 22rem; }
 .lab-cp-stage .color-picker { align-self: flex-start; }
+/* Pinned 16 px from the viewport's edge: the panel has no room down and/or right and flips. */
+.lab-cp-stage[data-edge] { position: fixed; z-index: 1; height: auto; }
+.lab-cp-stage[data-edge='right'] { top: 50%; right: 16px; flex-direction: row-reverse; }
+.lab-cp-stage[data-edge='bottom'] { bottom: 16px; left: 50%; }
+.lab-cp-stage[data-edge='corner'] { right: 16px; bottom: 16px; flex-direction: row-reverse; }
 .lab-cp-value { font: 400 13px/1 ui-monospace, monospace; color: var(--lab-cp-muted); }
 .lab-cp :focus-visible { outline: 3px solid #5d83da; outline-offset: 3px; }

@@ -31,6 +31,13 @@
   left: -0.5rem;
   filter: drop-shadow(0 12px 28px rgb(0 0 0 / 0.22)) drop-shadow(0 1px 2px rgb(0 0 0 / 0.1));
 }
+/* Flipped away from the viewport's edge (color-picker.tsx `place`): the panel keeps the trigger's corner and
+   the head moves to that corner, so the panel's swatch still lands on the trigger and the clip grows out of it. */
+.color-picker-shadow[data-flip~='up'] { top: auto; bottom: -0.5rem; }
+.color-picker-shadow[data-flip~='left'] { left: auto; right: -0.5rem; }
+.color-picker-shadow[data-flip~='up'] > .color-picker-panel { display: flex; flex-direction: column; }
+.color-picker-shadow[data-flip~='up'] .color-picker-head { order: 1; margin: 0.5rem 0 0; }
+.color-picker-shadow[data-flip~='left'] .color-picker-head { flex-direction: row-reverse; }
 .color-picker-panel {
   width: 16rem;
   padding: 0.5rem;

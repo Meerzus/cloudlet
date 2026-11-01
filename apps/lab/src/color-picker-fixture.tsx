@@ -16,6 +16,9 @@ declare global {
 }
 
 const RATES = [1, 0.5, 0.25, 0.1] as const;
+/** Where the swatch sits: in the card, or pinned near the viewport's right / bottom edge or corner (C04 flip). */
+const POSITIONS = ['card', 'right', 'bottom', 'corner'] as const;
+type Position = (typeof POSITIONS)[number];
 
 function trigger() {
   return document.querySelector<HTMLButtonElement>('.lab-cp-stage > .color-picker > button.color-picker-swatch');
@@ -37,6 +40,7 @@ export function ColorPickerFixture() {
   const [rate, setRate] = useState<number>(1);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [color, setColor] = useState('#007aff');
+  const [position, setPosition] = useState<Position>('card');
   useEffect(() => {
     morphClock.rate = rate;
     return () => { morphClock.rate = 1; };
@@ -72,6 +76,12 @@ export function ColorPickerFixture() {
             ))}
           </fieldset>
           <fieldset className="lab-cp-choice">
+            <legend>Swatch</legend>
+            {POSITIONS.map((option) => (
+              <label key={option}><input type="radio" name="position" checked={position === option} onChange={() => setPosition(option)} />{option}</label>
+            ))}
+          </fieldset>
+          <fieldset className="lab-cp-choice">
             <legend>Theme</legend>
             {(['light', 'dark'] as const).map((option) => (
               <label key={option}><input type="radio" name="theme" checked={theme === option} onChange={() => setTheme(option)} />{option}</label>
@@ -82,8 +92,8 @@ export function ColorPickerFixture() {
       <section className="lab-cp-grid" aria-label="Scene">
         <article className="lab-cp-card">
           <h2>Interruptible · two springs · staggered rows · growing shadow</h2>
-          <p>The clip grows out of the swatch on the Island's shape spring, the radius on its own; the rows unblur 40 ms apart.</p>
-          <div className="lab-cp-stage">
+          <p>The clip grows out of the swatch on the Island's shape spring, the radius on its own; the rows unblur 40 ms apart. Pin the swatch to an edge to see the panel flip up or left and still grow out of it.</p>
+          <div className="lab-cp-stage" data-edge={position === 'card' ? undefined : position}>
             <ColorPicker color={color} onChange={setColor} alpha labels={{ open: 'Open the picker', panel: 'Morph scene picker' }} />
             <span className="lab-cp-value">{color}</span>
           </div>

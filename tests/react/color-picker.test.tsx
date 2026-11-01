@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ColorPicker } from '@/components/ui/color-picker/color-picker';
 
 const LABELS = { open: 'Pick color', panel: 'Color picker', close: 'Close picker' };
@@ -171,5 +171,64 @@ describe('ColorPicker', () => {
     fireEvent.pointerDown(elsewhere);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(elsewhere).toHaveFocus();
+  });
+});
+
+/** A layout for jsdom: the trigger at (x, y) in a viewport, the panel 256 × 320 where it opens by default (8 px padding up and left of the trigger). */
+function layout({ x, y, width, height }: { x: number; y: number; width: number; height: number }) {
+  vi.stubGlobal('innerWidth', width);
+  vi.stubGlobal('innerHeight', height);
+  const rect = (left: number, top: number, w: number, h: number) => ({ x: left, y: top, left, top, right: left + w, bottom: top + h, width: w, height: h, toJSON: () => ({}) }) as DOMRect;
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    if (this.getAttribute('aria-label') === LABELS.open) return rect(x, y, 32, 32);
+    if (this.classList.contains('color-picker-panel')) return rect(x - 8, y - 8, 256, 320);
+    return rect(0, 0, 0, 0);
+  });
+}
+const flip = (dialog: HTMLElement) => dialog.parentElement?.getAttribute('data-flip');
+
+describe('ColorPicker placement', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('opens down and to the right when there is room', () => {
+    layout({ x: 100, y: 100, width: 1024, height: 768 });
+    render(<Owner />);
+    expect(flip(open())).toBe('');
+  });
+
+  it('flips up and to the left at the bottom-right corner of the viewport', () => {
+    layout({ x: 1024 - 48, y: 768 - 48, width: 1024, height: 768 });
+    render(<Owner />);
+    expect(flip(open())).toBe('up left');
+  });
+
+  it('flips only the side that would cross the edge', () => {
+    layout({ x: 1024 - 48, y: 100, width: 1024, height: 768 });
+    const { unmount } = render(<Owner />);
+    expect(flip(open())).toBe('left');
+    unmount();
+    layout({ x: 100, y: 768 - 48, width: 1024, height: 768 });
+    render(<Owner />);
+    expect(flip(open())).toBe('up');
+  });
+
+  it('stays down when the viewport is too short either way and there is more room below', () => {
+    // Below: 300 − 92 = 208 px; above, flipped: 132 + 8 = 140 px.
+    layout({ x: 100, y: 100, width: 1024, height: 300 });
+    render(<Owner />);
+    expect(flip(open())).toBe('');
+  });
+
+  it('places the panel again when the viewport is resized while it is open', () => {
+    layout({ x: 400, y: 100, width: 1024, height: 768 });
+    render(<Owner />);
+    const dialog = open();
+    expect(flip(dialog)).toBe('');
+    vi.stubGlobal('innerWidth', 500);
+    fireEvent(window, new Event('resize'));
+    expect(flip(dialog)).toBe('left');
   });
 });
