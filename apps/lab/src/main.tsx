@@ -16,6 +16,11 @@ async function mount() {
     const { EnvironmentFixture, isEnvironmentFixtureRoute } = await import('./environment-fixture.js');
     if (!active) return;
     if (isEnvironmentFixtureRoute(fixture)) root.render(<StrictMode><EnvironmentFixture fixture={fixture} /></StrictMode>);
+  } else if (fixture === 'color-picker') {
+    await import('./color-picker-fixture.css');
+    const { ColorPickerFixture } = await import('./color-picker-fixture.js');
+    if (!active) return;
+    root.render(<StrictMode><ColorPickerFixture /></StrictMode>);
   } else if (fixture === 'visual') {
     await import('./visual-fixture.css');
     const { createVisualFixture } = await import('./visual-fixture.js');

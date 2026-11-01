@@ -1,0 +1,52 @@
+/* The color picker morph stand (?fixture=color-picker). shadcn-style tokens the picker reads, in both themes. */
+body:has(.lab-cp) { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.lab-cp {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --border: #e4e4e7;
+  --ring: #a1a1aa;
+  --muted: #f4f4f5;
+  --lab-cp-paper: #f5f6f8;
+  --lab-cp-ink: #222b3b;
+  --lab-cp-muted: #586276;
+  --lab-cp-line: #dce1e9;
+  min-height: 100vh;
+  padding: 32px 40px 64px;
+  box-sizing: border-box;
+  color: var(--lab-cp-ink);
+  background: var(--lab-cp-paper);
+  color-scheme: light;
+}
+.lab-cp[data-theme="dark"] {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --border: #27272a;
+  --ring: #d4d4d8;
+  --muted: #27272a;
+  --lab-cp-paper: #18202e;
+  --lab-cp-ink: #e5eaf4;
+  --lab-cp-muted: #adb8cb;
+  --lab-cp-line: #3e495b;
+  color-scheme: dark;
+}
+.lab-cp * { box-sizing: border-box; }
+.lab-cp-header { display: flex; justify-content: space-between; gap: 32px; align-items: flex-start; max-width: 1344px; margin: 0 auto 28px; }
+.lab-cp-kicker { margin: 0 0 8px; font-size: 13px; color: var(--lab-cp-muted); }
+.lab-cp h1 { margin: 0 0 10px; font-size: 32px; letter-spacing: -0.04em; font-weight: 600; }
+.lab-cp-header p { margin: 0; max-width: 560px; color: var(--lab-cp-muted); line-height: 1.5; }
+.lab-cp-controls { display: flex; flex-direction: column; gap: 12px; align-items: flex-end; }
+.lab-cp-buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.lab-cp-controls button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--lab-cp-line); border-radius: 9px; font: inherit; color: var(--lab-cp-ink); background: var(--background); cursor: pointer; }
+.lab-cp-controls button:hover { border-color: #9ca9bf; }
+.lab-cp-choice { display: flex; gap: 12px; margin: 0; padding: 0; border: 0; font-size: 13px; color: var(--lab-cp-muted); }
+.lab-cp-choice legend { float: left; margin-right: 4px; }
+.lab-cp-choice label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.lab-cp-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; max-width: 480px; margin: 0; }
+.lab-cp-card { padding: 20px; border: 1px solid var(--lab-cp-line); border-radius: 16px; background: var(--background); color: var(--foreground); }
+.lab-cp-card h2 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
+.lab-cp-card p { margin: 0 0 16px; font-size: 13px; line-height: 1.45; color: var(--lab-cp-muted); }
+/* Room for the open panel: 14rem wide and about 20rem tall below the swatch. */
+.lab-cp-stage { position: relative; display: flex; align-items: center; gap: 12px; height: 22rem; }
+.lab-cp-stage .color-picker { align-self: flex-start; }
+.lab-cp-value { font: 400 13px/1 ui-monospace, monospace; color: var(--lab-cp-muted); }
+.lab-cp :focus-visible { outline: 3px solid #5d83da; outline-offset: 3px; }

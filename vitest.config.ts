@@ -9,7 +9,7 @@ const toast = fileURLToPath(new URL('./packages/toast/src/index.ts', import.meta
 export default defineConfig({
   test: {
     projects: [
-      { test: { name: 'unit', environment: 'node', include: ['tests/unit/**/*.test.ts'] } },
+      { resolve: { alias: [{ find: '@', replacement: site }] }, test: { name: 'unit', environment: 'node', include: ['tests/unit/**/*.test.ts'] } },
       { resolve: { alias: [{ find: /^@cloudlet\/toast$/, replacement: toast }, { find: '@', replacement: site }] }, test: {
         name: 'react', environment: 'jsdom', include: ['tests/react/**/*.test.tsx'],
         setupFiles: ['tests/setup/react.ts'],

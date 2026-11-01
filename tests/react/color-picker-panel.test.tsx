@@ -5,12 +5,11 @@ import { ColorPicker, ColorPickerPanel, type ColorFormat } from '@/components/ui
 
 const LABELS = { open: 'Pick color', panel: 'Color picker' };
 
-function Owner({ initial = '#00ff00', format, formats, alpha = false, presets, onChange = () => {}, onFormatChange }: {
+function Owner({ initial = '#00ff00', format, formats, alpha = false, onChange = () => {}, onFormatChange }: {
   initial?: string;
   format?: ColorFormat;
   formats?: readonly ColorFormat[];
   alpha?: boolean;
-  presets?: readonly string[];
   onChange?: (value: string) => void;
   onFormatChange?: (format: ColorFormat) => void;
 }) {
@@ -22,7 +21,6 @@ function Owner({ initial = '#00ff00', format, formats, alpha = false, presets, o
       labels={LABELS}
       {...(format ? { format } : {})}
       {...(formats ? { formats } : {})}
-      {...(presets ? { presets } : {})}
       {...(onFormatChange ? { onFormatChange } : {})}
       onChange={(value) => { setColor(value); onChange(value); }}
     />
@@ -127,24 +125,6 @@ describe('format switch', () => {
   });
 });
 
-describe('presets', () => {
-  it('applies a preset, marks the one that matches, drops unparsable entries and keeps twelve at most', () => {
-    const onChange = vi.fn();
-    const many = Array.from({ length: 14 }, (_, i) => `#${(i + 1).toString(16).padStart(2, '0')}0000`);
-    render(<Owner onChange={onChange} presets={['#00ff00', 'var(--nope)', ...many]} />);
-    const dialog = open();
-    const group = within(dialog).getByRole('group', { name: 'Presets' });
-    const buttons = within(group).getAllByRole('button');
-    expect(buttons).toHaveLength(12);
-    expect(within(group).queryByRole('button', { name: 'var(--nope)' })).not.toBeInTheDocument();
-    expect(within(group).getByRole('button', { name: '#00ff00' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(within(group).getByRole('button', { name: '#010000' }));
-    expect(onChange).toHaveBeenLastCalledWith('#010000');
-    expect(within(group).getByRole('button', { name: '#010000' })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(group).getByRole('button', { name: '#00ff00' })).toHaveAttribute('aria-pressed', 'false');
-  });
-});
-
 describe('uncontrolled and forms', () => {
   it('owns its value from defaultColor and keeps a hidden input in step, open or closed', () => {
     const { container } = render(<ColorPicker defaultColor="#336699" name="accent" labels={LABELS} />);
@@ -163,11 +143,10 @@ describe('uncontrolled and forms', () => {
 
   it('renders ColorPickerPanel in the flow without a dialog, with every control and the hidden input', () => {
     const onChange = vi.fn();
-    const { container } = render(<ColorPickerPanel defaultColor="#ff0000" name="tint" alpha presets={['#00ff00']} onChange={onChange} />);
+    const { container } = render(<ColorPickerPanel defaultColor="#ff0000" name="tint" alpha onChange={onChange} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: LABELS.open })).not.toBeInTheDocument();
     for (const name of ['Saturation and brightness', 'Hue', 'Opacity']) expect(screen.getByRole('slider', { name })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Presets' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Format' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole('slider', { name: 'Opacity' }), { key: 'ArrowLeft', shiftKey: true });

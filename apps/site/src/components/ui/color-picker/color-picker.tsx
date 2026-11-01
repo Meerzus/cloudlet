@@ -3,11 +3,10 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
 import { springEasing } from '@/lib/spring';
 import { COLOR_FORMATS, formatHsva, hsvToRgb, parseToHsva, type ColorFormat, type Hsva } from './color';
+import { CLIP_VARS, MORPH, RADIUS_VAR, SpringChannel, clipAt, morphClock, radiusAt, supportsMorphChannels } from './morph';
 
 export type { ColorFormat } from './color';
 
-/** The Cloudlet Island's opening spring: the swatch opens the way a pill does. */
-const MORPH = springEasing({ stiffness: 900, damping: 60, mass: 2 });
 /** The format highlight slides between segments on this spring: a hint of overshoot, settled in about 400 ms. */
 const SEGMENT = springEasing({ stiffness: 420, damping: 30 });
 
@@ -28,8 +27,6 @@ export interface ColorPickerLabels {
   readonly value: string;
   /** Name of the format switch. */
   readonly format: string;
-  /** Name of the presets group. */
-  readonly presets: string;
   /** Name of the eyedropper button. */
   readonly eyedropper: string;
   /** Name of the copy button. */
@@ -47,7 +44,6 @@ export const DEFAULT_LABELS: ColorPickerLabels = {
   alpha: 'Opacity',
   value: 'Color value',
   format: 'Format',
-  presets: 'Presets',
   eyedropper: 'Pick from screen',
   copy: 'Copy',
   copied: 'Copied',
@@ -69,8 +65,6 @@ interface ColorPickerBaseProps {
   readonly formats?: readonly ColorFormat[];
   /** Shows the opacity slider; without it alpha is dropped from input and output. */
   readonly alpha?: boolean;
-  /** Up to twelve preset colors shown as round swatches. */
-  readonly presets?: readonly string[];
   /** Renders a hidden input with this name so the value travels with a native form. */
   readonly name?: string;
   readonly labels?: Partial<ColorPickerLabels>;
@@ -89,7 +83,6 @@ type Phase = 'closed' | 'open' | 'closing';
 
 const clamp01 = (value: number) => (value < 0 ? 0 : value > 1 ? 1 : value);
 const percent = (value: number) => Math.round(value * 100);
-const MAX_PRESETS = 12;
 const COPIED_FOR = 1200;
 const STEP = 0.01;
 const BIG_STEP = 0.1;
@@ -316,25 +309,6 @@ function FormatSwitch({ state, label }: { state: PickerState; label: string }) {
   );
 }
 
-function Presets({ state, presets, label }: { state: PickerState; presets: readonly string[]; label: string }) {
-  const current = formatHsva({ ...state.hsva, a: 1 }, 'hex');
-  const entries = presets
-    .map((preset) => ({ preset, hsva: parseToHsva(preset) }))
-    .filter((entry): entry is { preset: string; hsva: Hsva } => entry.hsva !== null)
-    .slice(0, MAX_PRESETS);
-  if (entries.length === 0) return null;
-  return (
-    <div role="group" aria-label={label} className="color-picker-presets">
-      {entries.map(({ preset, hsva }) => {
-        const active = formatHsva({ ...hsva, a: 1 }, 'hex') === current;
-        return (
-          <button key={preset} type="button" className="color-picker-preset" aria-label={preset} aria-pressed={active} style={{ '--color-picker-preset': preset } as CSSProperties} onClick={() => state.set(hsva)} />
-        );
-      })}
-    </div>
-  );
-}
-
 interface EyeDropperResult { readonly sRGBHex: string }
 interface EyeDropperLike { open(): Promise<EyeDropperResult> }
 type EyeDropperWindow = Window & { EyeDropper?: new () => EyeDropperLike };
@@ -401,7 +375,6 @@ interface PanelBodyProps {
   readonly state: PickerState;
   readonly labels: ColorPickerLabels;
   readonly alpha: boolean;
-  readonly presets?: readonly string[] | undefined;
   readonly name?: string | undefined;
   /** What sits left of the value field: the closing swatch (popover) or a plain swatch (inline). */
   readonly head: ReactNode;
@@ -409,7 +382,7 @@ interface PanelBodyProps {
 }
 
 /** Everything inside the panel; shared by the morphing popover and the inline panel. */
-function PanelBody({ state, labels, alpha, presets, name, head, bodyRef }: PanelBodyProps) {
+function PanelBody({ state, labels, alpha, name, head, bodyRef }: PanelBodyProps) {
   const { hsva } = state;
   return (
     <>
@@ -421,7 +394,6 @@ function PanelBody({ state, labels, alpha, presets, name, head, bodyRef }: Panel
         <ColorArea hsva={hsva} onChange={state.set} label={labels.area} />
         <ColorSlider value={hsva.h} max={360} step={1} bigStep={10} label={labels.hue} valueText={`${Math.round(hsva.h)}°`} className="color-picker-hue" onChange={(h) => state.set({ ...hsva, h })} />
         {alpha ? <ColorSlider value={hsva.a} max={1} step={0.01} bigStep={0.1} label={labels.alpha} valueText={`${percent(hsva.a)}%`} className="color-picker-alpha" onChange={(a) => state.set({ ...hsva, a })} /> : null}
-        {presets && presets.length > 0 ? <Presets state={state} presets={presets} label={labels.presets} /> : null}
         <div className="color-picker-footer">
           {state.formats.length > 1 ? <FormatSwitch state={state} label={labels.format} /> : <span />}
           <div className="color-picker-tools">
@@ -449,33 +421,37 @@ function pickerStyle(hsva: Hsva, swatch: string): CSSProperties {
 // --- Public components --------------------------------------------------------------------------
 
 /** The picker without the swatch: rendered in the flow, for forms and sidebars. */
-export function ColorPickerPanel({ className, labels: partial, alpha = false, presets, name, ...rest }: ColorPickerPanelProps) {
+export function ColorPickerPanel({ className, labels: partial, alpha = false, name, ...rest }: ColorPickerPanelProps) {
   const labels = { ...DEFAULT_LABELS, ...partial };
   const state = usePickerState({ ...rest, alpha });
   const style = pickerStyle(state.hsva, formatHsva(state.hsva, 'hex'));
   return (
     <div className={`color-picker-panel color-picker-inline${className ? ` ${className}` : ''}`} style={style}>
-      <PanelBody state={state} labels={labels} alpha={alpha} presets={presets} name={name} head={<span className="color-picker-swatch" aria-hidden="true" />} />
+      <PanelBody state={state} labels={labels} alpha={alpha} name={name} head={<span className="color-picker-swatch" aria-hidden="true" />} />
     </div>
   );
 }
 
 /**
  * A round swatch that morphs into the color picker. The panel's clip grows out of the swatch circle
- * on a spring while the circle stays put, the content unblurs in, and closing shrinks it back into
- * the swatch. Escape and the in-panel swatch close and return focus to the trigger; a press outside
+ * on two springs (insets and radius) while the circle stays put, the rows unblur in one after
+ * another, the shadow grows with the panel, and closing shrinks it back into the swatch; an open or
+ * close interrupted in flight keeps its momentum (owner's pick V3, C03). Escape and the in-panel swatch close and return focus to the trigger; a press outside
  * closes without moving focus. Without the Web Animations API or under reduced motion it opens and
  * closes instantly. Styles: color-picker.css (shadcn tokens: background, foreground, border, ring).
  */
-export function ColorPicker({ swatch, labels: partial, alpha = false, presets, name, ...rest }: ColorPickerProps) {
+export function ColorPicker({ swatch, labels: partial, alpha = false, name, ...rest }: ColorPickerProps) {
   const labels = { ...DEFAULT_LABELS, ...partial };
   const panelId = useId();
   const [phase, setPhase] = useState<Phase>('closed');
   const trigger = useRef<HTMLButtonElement>(null);
+  const shadow = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
   const handle = useRef<HTMLButtonElement>(null);
   const running = useRef<Animation[]>([]);
+  const size = useRef(new SpringChannel(0));
+  const radius = useRef(new SpringChannel(0));
   const state = usePickerState({ ...rest, alpha });
 
   const close = (refocus: boolean) => {
@@ -485,32 +461,81 @@ export function ColorPicker({ swatch, labels: partial, alpha = false, presets, n
 
   useLayoutEffect(() => {
     const element = panel.current;
-    const circle = handle.current;
-    if (phase === 'closed' || !element || !circle) return;
+    const origin = trigger.current;
+    if (phase === 'closed' || !element || !origin) return;
     for (const animation of running.current) animation.cancel();
     running.current = [];
-    if (phase === 'open') element.querySelector<HTMLElement>('.color-picker-area')?.focus({ preventScroll: true });
-    if (typeof element.animate !== 'function' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      if (phase === 'closing') setPhase('closed');
+    const opening = phase === 'open';
+    const target = opening ? 1 : 0;
+    if (opening) element.querySelector<HTMLElement>('.color-picker-area')?.focus({ preventScroll: true });
+    const still = typeof element.animate !== 'function' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (still) {
+      for (const channel of [size, radius]) channel.current.settle(target);
+      delete element.dataset.morph;
+      if (!opening) setPhase('closed');
       return;
     }
+    // The clip starts as the trigger's circle, measured inside the panel's box.
     const box = element.getBoundingClientRect();
-    const dot = circle.getBoundingClientRect();
-    const top = dot.top - box.top;
-    const left = dot.left - box.left;
-    const collapsed = `inset(${top}px ${box.right - dot.right}px ${box.bottom - dot.bottom}px ${left}px round ${dot.width / 2}px)`;
-    const expanded = 'inset(0px 0px 0px 0px round 1.25rem)';
-    const content = body.current;
-    if (phase === 'open') {
-      running.current = [
-        element.animate({ clipPath: [collapsed, expanded] }, { duration: MORPH.duration, easing: MORPH.easing }),
-        ...(content ? [content.animate({ opacity: [0, 1], filter: ['blur(6px)', 'blur(0px)'] }, { duration: 240, delay: 70, easing: 'ease-out', fill: 'backwards' })] : []),
-      ];
-      return;
+    const dot = origin.getBoundingClientRect();
+    const collapsed: [number, number, number, number] = [dot.top - box.top, box.right - dot.right, box.bottom - dot.bottom, dot.left - box.left];
+    const circle = dot.width / 2;
+    const corner = parseFloat(getComputedStyle(element).borderRadius) || 20;
+    const animations: Animation[] = [];
+    const play = (node: Element, keyframes: PropertyIndexedKeyframes, timing: KeyframeAnimationOptions) => {
+      const animation = node.animate(keyframes, { fill: 'both', ...timing });
+      animation.playbackRate = morphClock.rate;
+      animations.push(animation);
+      return animation;
+    };
+    const grow = size.current.retarget(target, opening ? MORPH.sizeOpen : MORPH.sizeClose);
+    const round = radius.current.retarget(target, opening ? MORPH.radiusOpen : MORPH.radiusClose);
+    let last: Animation | null = null;
+    if (supportsMorphChannels()) {
+      // Two channels: the insets and the corner radius each move on their own spring.
+      element.dataset.morph = 'channels';
+      const finalClip = clipAt(collapsed, target);
+      CLIP_VARS.forEach((name, index) => element.style.setProperty(name, finalClip[index] ?? '0px'));
+      element.style.setProperty(RADIUS_VAR, radiusAt(circle, corner, target));
+      if (grow) {
+        const from = clipAt(collapsed, grow.from);
+        const to = clipAt(collapsed, grow.to);
+        const keyframes: PropertyIndexedKeyframes = {};
+        CLIP_VARS.forEach((name, index) => { keyframes[name] = [from[index] ?? '0px', to[index] ?? '0px']; });
+        last = play(element, keyframes, { duration: grow.duration, easing: grow.easing });
+      }
+      if (round) play(element, { [RADIUS_VAR]: [radiusAt(circle, corner, round.from), radiusAt(circle, corner, round.to)] }, { duration: round.duration, easing: round.easing });
+    } else if (grow) {
+      delete element.dataset.morph;
+      const inset = (progress: number) => `inset(${clipAt(collapsed, progress).join(' ')} round ${radiusAt(circle, corner, progress)})`;
+      last = play(element, { clipPath: [inset(grow.from), inset(grow.to)] }, { duration: grow.duration, easing: grow.easing });
     }
-    const shrink = element.animate({ clipPath: [expanded, collapsed] }, { duration: 240, easing: 'cubic-bezier(0.3, 0, 0.2, 1)', fill: 'forwards' });
-    running.current = [shrink, ...(content ? [content.animate({ opacity: [1, 0], filter: ['blur(0px)', 'blur(6px)'] }, { duration: 140, easing: 'ease-in', fill: 'forwards' })] : [])];
-    shrink.finished.then(() => setPhase('closed'), () => {});
+    // Content: unblurs after the clip has started to grow; with stagger, row by row.
+    const content = body.current;
+    if (content) {
+      const blur = (from: number, to: number) => ({ opacity: [from, to], filter: [`blur(${MORPH.blur * (1 - from)}px)`, `blur(${MORPH.blur * (1 - to)}px)`] });
+      const current = parseFloat(getComputedStyle(content).opacity);
+      const rows = Array.from(content.children);
+      if (opening && rows.length > 0) {
+        content.style.opacity = '';
+        rows.forEach((row, index) => play(row, blur(0, 1), { duration: MORPH.contentIn, delay: MORPH.contentDelay + index * MORPH.stagger, easing: 'ease-out' }));
+      } else if (opening) {
+        play(content, blur(Number.isFinite(current) ? current : 0, 1), { duration: MORPH.contentIn, delay: current > 0 ? 0 : MORPH.contentDelay, easing: 'ease-out' });
+      } else {
+        play(content, blur(Number.isFinite(current) ? current : 1, 0), { duration: MORPH.contentOut, easing: 'ease-in' });
+      }
+    }
+    // Shadow: grows with the panel instead of hanging there from the first frame.
+    const wrapper = shadow.current;
+    if (wrapper && grow) {
+      const drop = (progress: number) => `drop-shadow(0 ${12 * progress}px ${28 * progress}px rgb(0 0 0 / ${0.22 * progress})) drop-shadow(0 ${progress}px ${2 * progress}px rgb(0 0 0 / ${0.1 * progress}))`;
+      play(wrapper, { filter: [drop(Math.max(0, grow.from)), drop(Math.max(0, grow.to))] }, { duration: grow.duration, easing: grow.easing });
+    }
+    running.current = animations;
+    if (!opening) {
+      if (last) last.finished.then(() => setPhase('closed'), () => {});
+      else setPhase('closed');
+    }
   }, [phase]);
 
   useEffect(() => {
@@ -529,14 +554,14 @@ export function ColorPicker({ swatch, labels: partial, alpha = false, presets, n
       <button ref={trigger} type="button" className="color-picker-swatch" aria-label={labels.open} aria-expanded={phase === 'open'} aria-controls={phase === 'closed' ? undefined : panelId} onClick={() => setPhase('open')} />
       {phase === 'closed' ? name ? <input type="hidden" name={name} value={state.value} /> : null : (
         // The drop shadow sits on a wrapper: the panel's own clip-path would cut it off.
-        <div className="color-picker-shadow">
+        <div ref={shadow} className="color-picker-shadow">
           <div ref={panel} id={panelId} role="dialog" aria-label={labels.panel} className="color-picker-panel" data-phase={phase} onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.stopPropagation();
               close(true);
             }
           }}>
-            <PanelBody state={state} labels={labels} alpha={alpha} presets={presets} name={name} bodyRef={body} head={<button ref={handle} type="button" className="color-picker-swatch" aria-label={labels.close} onClick={() => close(true)} />} />
+            <PanelBody state={state} labels={labels} alpha={alpha} name={name} bodyRef={body} head={<button ref={handle} type="button" className="color-picker-swatch" aria-label={labels.close} onClick={() => close(true)} />} />
           </div>
         </div>
       )}
