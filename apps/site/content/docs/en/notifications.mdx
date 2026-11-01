@@ -149,7 +149,7 @@ cloudlet.show({ title: 'You are offline', kind: 'warning', dedupeKey: 'offline' 
 
 An explicit `id` that is already live is an `id-conflict`, even when the `dedupeKey` matches. Deduplication keeps the existing record as it was: its content, its place in the stack and its remaining time do not change. Once a record is closed, its `id` can be used again and the new record goes to the top.
 
-`onClose` on the spec is called once with the handle and the reason: `timeout`, `programmatic`, `close-button`, `swipe`, `action-success`, `navigation`, `clear` or `dispose`.
+`onClose` on the spec is called once with the handle and the reason: `timeout`, `programmatic`, `close-button`, `swipe`, `action-success`, `navigation`, `clear`, `clear-button` or `dispose`.
 
 ## The stack and the Island
 
@@ -162,6 +162,8 @@ for (const name of ['Cumulus', 'Stratus', 'Cirrus', 'Nimbus', 'Altocumulus']) {
   cloudlet.show({ title: `${name} drifted by` });
 }
 ```
+
+With two or more notifications, the Island's dots row ends with **Clear all**. The first press only arms it: it turns red and reads "Clear 5". A second press within 3 seconds closes every notification (close reason `clear-button`) and the missed count with them. To keep the button out, pass [`clearAll={false}`](/toaster/docs/api/toaster#props) to the Toaster.
 
 `getSnapshot()` describes the same state for your own UI: `notifications` in admission order, `stack` with the same handles newest first (`stack[0]` is the pill), `island` with `open`, `reason` and `current`, and `overflow`. `subscribe` tells you when it changed.
 

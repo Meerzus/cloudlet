@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.2.0 — unreleased
+
+Clear all in the Island. Nothing is removed or changed in behaviour; the new texts, prop and close
+reason are additive (see API).
+
+### Features
+
+- With two or more notifications, the open Island ends its dots row with a **Clear all** button. The
+  first press arms it: it takes the error tint and reads `labels.clearAllConfirm(count)` ("Clear 12"),
+  spoken once through a status. A second press within 3 seconds closes every notification with the
+  close reason `'clear-button'` and acknowledges the missed count in the same commit, so nothing is
+  left; focus returns to where it was before the Island. Waiting, leaving the button or collapsing the
+  Island disarms it, and one double click never counts as both presses. Like `clear()`, it does not
+  cancel tracked operations.
+- Missed notifications now take a row of their own under the dots, which stay centred.
+
+### API
+
+- New `Toaster` prop `clearAll` (default `true`); `false` hides the button.
+- New close reason `'clear-button'` in `CloseReason`. A `switch` over every reason now needs it;
+  `clear()` keeps `'clear'` and still leaves the missed count to `acknowledgeOverflow()`.
+- New texts `labels.clearAll` and `labels.clearAllConfirm`. An object typed as the full
+  `CloudletLabels` now needs them; TypeScript points them out.
+- New `classNames` part `clear` (`button.cloudlet-clear`, `data-armed` after the first press).
+
 ## 1.1.2 — 2026-11-01
 
 The package's code, CSS and types are the same as in 1.1.0 and 1.1.1. The README on npm opens with

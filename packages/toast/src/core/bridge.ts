@@ -214,6 +214,8 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
       if (!['close-button', 'swipe', 'navigation'].includes(reason)) return reject('invalid-input');
       return k.dismiss(handle, reason);
     }),
+    // The button lives only in the open Island.
+    clearAll: withLease(() => k.island ? k.clear('clear-button') : reject('island-closed')),
     invokeAction: withLease(k.withRecord((record) => {
       const handle = record.handle;
       const action = record.content.action;

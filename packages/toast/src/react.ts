@@ -50,6 +50,10 @@ export interface CloudletLabels {
   readonly cancel: string;
   readonly cancellationRequested: string;
   readonly acknowledgeOverflow: string;
+  /** The Island's clear button. */
+  readonly clearAll: string;
+  /** The clear button after the first press: a second press clears this many notifications. */
+  readonly clearAllConfirm: (count: number) => string;
   /** Hidden hint that Escape collapses the Island. */
   readonly collapse: string;
   /** Name of the collapsed stack button: top title, records in the stack, missed notifications. */
@@ -160,7 +164,7 @@ export interface ToasterMotion {
 
 /** Styling hooks of the renderer; see `ToasterProps.classNames`. */
 export type CloudletPart = 'host' | 'stack' | 'pill' | 'tail' | 'badge' | 'island' | 'header' | 'icon' | 'title'
-  | 'close' | 'body' | 'description' | 'actions' | 'action' | 'indicator' | 'overflow' | 'form' | 'field' | 'field-error';
+  | 'close' | 'body' | 'description' | 'actions' | 'action' | 'indicator' | 'clear' | 'overflow' | 'form' | 'field' | 'field-error';
 
 export interface ToasterProps {
   readonly position?: 'auto' | 'top-center' | 'bottom-center';
@@ -176,6 +180,8 @@ export interface ToasterProps {
   readonly attention?: ToasterAttention;
   /** Overrides the controller's `autoDismiss` while defined; changes apply without remount. */
   readonly autoDismiss?: boolean;
+  /** The clear button in the open Island with two or more notifications; default true. Read on every render. */
+  readonly clearAll?: boolean;
   /** Read on every render. */
   readonly motion?: ToasterMotion;
   /** Extra classes per part, added to the own `cloudlet-*` classes (never replacing them). Read on every render. */

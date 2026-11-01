@@ -91,6 +91,8 @@ const rulePaths = {
 } as const;
 type Rule = keyof typeof rulePaths;
 
+/** Milliseconds the clear button waits for its second press. */
+const CLEAR_CONFIRM = 3000;
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 /** Native `inert` without relying on React 19's boolean prop (React 18.2 is supported). */
 const inertRef = (node: HTMLElement | null) => node?.setAttribute('inert', '');
@@ -168,6 +170,9 @@ function createHostRuntime(owner: Host) {
   let gestureTarget: { readonly handle: NotificationHandle; readonly open: boolean } | null = null;
   /** A committed swipe dismiss: its exit snapshot keeps flying from the release point. */
   let fling: (Fling & { readonly handle: NotificationHandle }) | null = null;
+  /** The clear button's first press arms it; a second press within `CLEAR_CONFIRM` clears the stack. */
+  let armed = false;
+  let disarmTimer: number | undefined;
   // Formatter failures found during render are reported after commit, once per function.
   const failedFormatters = new WeakSet<object>();
   const formatterErrors: unknown[] = [];
@@ -771,6 +776,8 @@ function createHostRuntime(owner: Host) {
       const target = primaryFocus() ?? rootRef.current?.querySelector<HTMLElement>('[data-cloudlet-overflow]') ?? null;
       if (!restoreFocus(target)) rootRef.current?.focus({ preventScroll: true });
     }
+    // The button left (collapse, the stack shrank, the prop): the next one starts unarmed.
+    if (armed && !clearable(owner.props)) disarm(false);
     motion?.setTimeScale(owner.props.options.motion?.timeScale);
     syncConstants();
     // A swipe never continues on another record or state (arrival, programmatic dismiss, Escape).
@@ -788,6 +795,7 @@ function createHostRuntime(owner: Host) {
   function componentWillUnmount() {
     swipe?.dispose(); swipe = null;
     peek = null; fling = null;
+    disarm(false);
     announcer.dispose();
     mounted = false;
     cleanup?.(); cleanup = null;
@@ -805,6 +813,24 @@ function createHostRuntime(owner: Host) {
       (active as HTMLElement | null)?.blur();
     }
   }
+  function disarm(update = true) {
+    view?.clearTimeout(disarmTimer);
+    disarmTimer = undefined;
+    if (!armed) return;
+    armed = false;
+    if (update && mounted) owner.forceUpdate();
+  }
+  function pressClear() {
+    if (armed) {
+      disarm();
+      bridge.clearAll(lease);
+      return;
+    }
+    armed = true;
+    disarmTimer = view?.setTimeout(disarm, CLEAR_CONFIRM);
+    owner.forceUpdate();
+  }
+  const clearable = (props: HostProps) => props.options.clearAll !== false && shellView(props.snapshot).open && props.snapshot.stack.length > 1;
   const navigate = (handle: NotificationHandle) => {
     navigating = handle;
     if (bridge.dismiss(lease, handle, 'navigation').status !== 'applied') navigating = null;
@@ -849,6 +875,7 @@ function createHostRuntime(owner: Host) {
     const tails = Math.min(2, Math.max(current.depth, heldTails));
     const slot = presented ? slotRenderer(bridge, lease, presented.handle, rejectSlotFocus) : null;
     const page = format(labels.page, defaultLabels.page, index + 1, total);
+    const confirm = format(labels.clearAllConfirm, defaultLabels.clearAllConfirm, total);
     const part = partClasses(options.classNames);
     return <>
       {options.offsets && <OffsetStyles key={options.nonce ?? ''} instance={instance} offsets={options.offsets} nonce={options.nonce} />}
@@ -871,7 +898,8 @@ function createHostRuntime(owner: Host) {
           const target = (event.target as Element).closest('button');
           // A double click must not fire a one-shot action twice; close, the pill and the dots are
           // repeatable on purpose (each click dismisses or shows another record).
-          const oneShot = !!target?.matches('[data-cloudlet-control="action"], [data-cloudlet-control="retry"], [data-cloudlet-control="cancel"]');
+          // The clear button counts too: a double click must not arm and confirm it at once.
+          const oneShot = !!target?.matches('[data-cloudlet-control="action"], [data-cloudlet-control="retry"], [data-cloudlet-control="cancel"], [data-cloudlet-control="clear"]');
           if (target && (repeating || (oneShot && event.detail > 1) || (activation && activation !== target))) { event.preventDefault(); event.stopPropagation(); }
           activation = null;
         }}
@@ -908,11 +936,19 @@ function createHostRuntime(owner: Host) {
               {presented && open && closeButton(labels, part, () => bridge.dismiss(lease, presented.handle, 'close-button'))}
               {open && (total > 1 || missed > 0) && <div className={part('indicator', 'cloudlet-indicator')}>{total > 5
                 ? <p className="cloudlet-page" aria-hidden="true"><span className="cloudlet-page-value">{page}</span><span className="cloudlet-page-out" /></p>
-                : total > 1 && snapshot.stack.map((handle, position) =>
+                : total > 1 && <div className="cloudlet-dots">{snapshot.stack.map((handle, position) =>
                   <button key={handle.generation} type="button" className="cloudlet-dot-button" aria-current={position === index ? 'true' : undefined}
                     aria-label={format(labels.page, defaultLabels.page, position + 1, total)} onClick={() => bridge.navigate(lease, handle)}>
                     <span className="cloudlet-dot" aria-hidden="true" />
-                  </button>)}
+                  </button>)}</div>}
+                {clearable(owner.props) && <>
+                  {/* Both labels share one cell, so the button keeps its width when it arms. */}
+                  <button type="button" className={part('clear', 'cloudlet-clear')} data-cloudlet-control="clear" data-armed={armed}
+                    onClick={pressClear} onBlur={() => disarm()}>
+                    <span aria-hidden={armed || undefined}>{labels.clearAll}</span><span aria-hidden={!armed || undefined}>{confirm}</span>
+                  </button>
+                  <span role="status" className="cloudlet-live">{armed ? confirm : ''}</span>
+                </>}
                 {missed > 0 && <div className={part('overflow', 'cloudlet-overflow')}>
                   <p>{format(labels.overflowCount, defaultLabels.overflowCount, missed)}</p>
                   <button type="button" data-cloudlet-overflow="" onClick={() => bridge.acknowledgeOverflow(lease)}>{labels.acknowledgeOverflow}</button>
