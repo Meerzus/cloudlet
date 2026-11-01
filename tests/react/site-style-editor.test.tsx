@@ -346,8 +346,8 @@ describe('docs style editor', () => {
     fireEvent.click(swatch);
     expect(swatch).toHaveAttribute('aria-expanded', 'true');
     const dialog = screen.getByRole('dialog', { name: 'Background color picker' });
-    // White has no hue to turn: darken it in the saturation area (react-colorful reads keyCode).
-    fireEvent.keyDown(within(dialog).getByRole('slider', { name: 'Color' }), { key: 'ArrowDown', keyCode: 40 });
+    // White has no hue to turn: darken it in the saturation × brightness area.
+    fireEvent.keyDown(within(dialog).getByRole('slider', { name: 'Saturation and brightness' }), { key: 'ArrowDown' });
     expect(screen.getByRole('textbox', { name: 'Background' })).not.toHaveValue('#ffffff');
     expect(code()).toContain('--cloudlet-background:');
     fireEvent.keyDown(dialog, { key: 'Escape' });

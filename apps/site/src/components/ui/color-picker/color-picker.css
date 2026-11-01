@@ -32,14 +32,65 @@
   font: 400 0.8125rem/1 var(--font-geist-mono, ui-monospace), ui-monospace, monospace;
   color: var(--foreground);
 }
-.color-picker-panel .react-colorful { width: 100%; height: 11rem; gap: 0.5rem; }
-.color-picker-panel .react-colorful__saturation { border-radius: 0.875rem; border-bottom: 0; }
-.color-picker-panel .react-colorful__hue { height: 0.875rem; border-radius: 9999px; }
-.color-picker-panel .react-colorful__last-control { border-radius: 9999px; }
-.color-picker-panel .react-colorful__pointer {
+.color-picker-body { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* The engine: one 2D area and horizontal pills, each a role="slider" with a thumb. */
+.color-picker-area,
+.color-picker-slider {
+  position: relative;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: crosshair;
+  outline: none;
+}
+.color-picker-area {
+  height: 9rem;
+  border-radius: 0.875rem;
+  background:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, hsl(var(--color-picker-hue) 100% 50%));
+}
+.color-picker-slider {
+  height: 0.875rem;
+  border-radius: 9999px;
+  cursor: ew-resize;
+}
+/* The pills are thin to look at; the pressable band is 44 px tall. */
+.color-picker-slider::before { content: ''; position: absolute; inset: -0.95rem 0; }
+.color-picker-hue {
+  background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
+}
+.color-picker-alpha {
+  background:
+    linear-gradient(to right, transparent, var(--color-picker-opaque)),
+    repeating-conic-gradient(color-mix(in oklab, var(--foreground) 20%, transparent) 0 25%, transparent 0 50%) 0 0 / 0.5rem 0.5rem;
+}
+.color-picker-thumb {
+  position: absolute;
+  top: 50%;
   width: 1.125rem;
   height: 1.125rem;
-  border-width: 2px;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  background: var(--color-picker-current);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
-.color-picker-panel .react-colorful__interactive:focus .react-colorful__pointer { transform: translate(-50%, -50%) scale(1.15); }
+.color-picker-area:focus-visible .color-picker-thumb,
+.color-picker-slider:focus-visible .color-picker-thumb {
+  transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3), 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent);
+}
+
+@media (forced-colors: active) {
+  /* Gradients disappear here: the frames and the thumb keep every control findable. */
+  .color-picker-swatch,
+  .color-picker-area,
+  .color-picker-slider { border: 1px solid CanvasText; }
+  .color-picker-thumb { border-color: CanvasText; background: Canvas; forced-color-adjust: none; }
+  .color-picker-area:focus-visible,
+  .color-picker-slider:focus-visible,
+  .color-picker-swatch:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+}
