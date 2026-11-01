@@ -35,6 +35,7 @@ export function App({ nonce }: { nonce: string }) {
 | `announcements` | `Partial<AnnouncementFormatters>` | English texts | What screen readers hear, see [Labels & announcements](/toaster/docs/api/labels#announcementformatters). Read for each announcement. |
 | `attention` | `ToasterAttention` | — | Auto-open delay for this Toaster, see [below](#toasterattention). On attach. |
 | `autoDismiss` | `boolean` | the controller's `autoDismiss` | `false` keeps every notification until it is closed, `true` closes them on their timers; leaving the prop out restores the controller's option. Switching it off stops every timer, switching it on starts each one from its full duration. Every render, without a remount. |
+| `clearAll` | `boolean` | `true` | The clear button at the end of the Island's dots row, shown with two or more notifications; `false` hides it. The first press arms it, the second within 3 seconds closes every notification (close reason `clear-button`) and acknowledges the missed count. Every render. |
 | `motion` | `ToasterMotion` | — | Debugging aid for the animation, see [below](#toastermotion). Every render. |
 | `classNames` | `Partial<Record<CloudletPart, string>>` | — | Your classes per part, added to the own `cloudlet-*` classes, see [below](#classnames). Every render. |
 
@@ -136,6 +137,7 @@ Do not ship `timeScale` to production either.
 | `actions` | The row of actions, retry and cancel, `div.cloudlet-actions`. |
 | `action` | Every button or link in that row: the primary action, retry and cancel; also a form's round submit button. |
 | `indicator` | The page dots or counter under the body, `div.cloudlet-indicator`. |
+| `clear` | The clear button in the indicator, `button.cloudlet-clear`; `data-armed="true"` after the first press. |
 | `overflow` | The missed-notifications line in the indicator, `div.cloudlet-overflow`. |
 | `form` | A form action's fields and submit button, `form.cloudlet-form`. |
 | `field` | Each form field, `input.cloudlet-field` or `textarea.cloudlet-field`. |

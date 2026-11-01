@@ -200,3 +200,46 @@ test('missed notifications join the badge and the pill name; the Island indicato
   await expect(badge(page).locator('> .cloudlet-badge-value')).toHaveText('100');
   await expect(pill(page)).toHaveAccessibleName('Mobile 100, notifications: 100');
 });
+
+test('the clear button sits at the end of the dots row, arms on the first press and clears records and missed on the second', async ({ page }, info) => {
+  await open(page, Array.from({ length: 101 }, (_, index) => ({ id: `c-${index + 1}`, title: `Cloud ${index + 1}`, duration: null })));
+  await expect.poll(async () => (await state(page)).missed).toBe(1);
+  await page.evaluate(() => window.mobileFixture!.open());
+  await idle(page);
+  const clear = island(page).getByRole('button', { name: 'Clear all', exact: true });
+  await expect(clear).toBeVisible();
+  const boxes = await page.evaluate(() => {
+    const box = (selector: string) => document.querySelector(`.cloudlet-stack > .cloudlet-shell ${selector}`)!.getBoundingClientRect().toJSON() as DOMRect;
+    return { shell: box('.cloudlet-clip'), page: box('.cloudlet-page'), clear: box('.cloudlet-clear'), overflow: box('.cloudlet-overflow') };
+  });
+  // The page label stays centred; the button keeps clear of the rounded corner; missed get their own row.
+  expect(Math.abs(boxes.page.x + boxes.page.width / 2 - (boxes.shell.x + boxes.shell.width / 2))).toBeLessThan(1);
+  expect(boxes.shell.right - boxes.clear.right).toBeGreaterThanOrEqual(15);
+  expect(boxes.overflow.top).toBeGreaterThanOrEqual(boxes.clear.bottom);
+  const width = boxes.clear.width;
+  // The armed look in both themes. Each audit arms its own press and lets it lapse, so the
+  // 3 s window never decides the clearing below.
+  for (const theme of ['light', 'dark'] as const) {
+    await page.evaluate(theme => window.mobileFixture!.theme(theme), theme);
+    await expect(host(page)).toHaveAttribute('data-resolved-theme', theme);
+    await clear.click();
+    await idle(page);
+    await screenshot(page, info, theme === 'light' ? 'island-clear-armed' : 'island-clear-armed-dark');
+    // The error tint keeps text contrast on either surface.
+    expect((await new AxeBuilder({ page }).include('.cloudlet-host').analyze()).violations).toEqual([]);
+    await expect(clear).toHaveAttribute('data-armed', 'false', { timeout: 5_000 });
+  }
+  expect((await state(page)).stack).toHaveLength(100);
+  // The two presses back to back.
+  await clear.click();
+  const armed = island(page).getByRole('button', { name: 'Clear 100', exact: true });
+  await expect(armed).toHaveAttribute('data-armed', 'true');
+  expect((await armed.boundingBox())!.width).toBeCloseTo(width, 0);
+  expect((await state(page)).stack).toHaveLength(100);
+  await armed.click();
+  await expect.poll(async () => (await state(page)).stack).toEqual([]);
+  const after = await state(page);
+  expect(after.missed).toBe(0);
+  expect(after.closes.filter(item => item.reason === 'clear-button')).toHaveLength(100);
+  await expect(host(page).locator('.cloudlet-stack > .cloudlet-shell')).toBeHidden();
+});

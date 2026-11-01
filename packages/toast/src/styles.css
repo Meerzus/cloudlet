@@ -166,7 +166,7 @@
   border-radius: 50%; color: var(--cloudlet-muted); background: var(--cloudlet-action-background);
 }
 .cloudlet-host .cloudlet-close > svg { width: 16px; height: 16px; }
-.cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-overflow button)::before {
+.cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-clear, .cloudlet-overflow button)::before {
   content: ""; position: absolute; inset-block: calc((var(--cloudlet-control-min-size) - 32px) / -2); inset-inline: 0;
 }
 .cloudlet-host button.cloudlet-close::before { inset-inline: calc((var(--cloudlet-control-min-size) - 32px) / -2); border-radius: 50%; }
@@ -183,7 +183,7 @@
 .cloudlet-host .cloudlet-actions:empty { display: none; }
 .cloudlet-host .cloudlet-actions:not(:empty) { margin-block: 8px 2px; }
 /* Action pills: neutral retry/cancel; the primary action is tinted with the status colour. */
-.cloudlet-host :is(.cloudlet-action, .cloudlet-overflow button) {
+.cloudlet-host :is(.cloudlet-action, .cloudlet-clear, .cloudlet-overflow button) {
   position: relative; max-width: 100%; min-width: 0; min-height: 32px; padding: 6px 14px; border-radius: 9999px;
   font-size: .8125rem; font-weight: 500; line-height: 1.5; text-decoration: none; overflow-wrap: anywhere;
   color: var(--cloudlet-foreground); background: var(--cloudlet-action-background);
@@ -194,8 +194,9 @@
 }
 .cloudlet-host :is(.cloudlet-action, .cloudlet-overflow button)[aria-disabled="true"] { color: var(--cloudlet-muted); }
 @media (hover: hover) {
-  .cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-overflow button):hover { background: color-mix(in oklab, var(--cloudlet-foreground) 13%, transparent); }
+  .cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-clear, .cloudlet-overflow button):hover { background: color-mix(in oklab, var(--cloudlet-foreground) 13%, transparent); }
   .cloudlet-host .cloudlet-close:hover { color: var(--cloudlet-foreground); }
+  .cloudlet-host .cloudlet-clear[data-armed="true"]:hover { background: color-mix(in oklab, var(--cloudlet-error) 22%, transparent); }
   .cloudlet-host .cloudlet-action.cloudlet-primary:hover { background: color-mix(in oklab, var(--cloudlet-status) 20%, transparent); }
   .cloudlet-host .cloudlet-action.cloudlet-submit:hover { background: color-mix(in oklab, var(--cloudlet-status) 70%, #000); }
 }
@@ -223,14 +224,29 @@
 }
 .cloudlet-host .cloudlet-submit > svg { width: 16px; height: 16px; stroke-width: 2; }
 .cloudlet-host button.cloudlet-submit::before { inset: calc((var(--cloudlet-control-min-size) - 36px) / -2); border-radius: 50%; }
-.cloudlet-host .cloudlet-indicator { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 8px; color: var(--cloudlet-muted); font-size: .75rem; padding-bottom: 6px; flex: none; }
+.cloudlet-host .cloudlet-indicator {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 8px; padding: 0 16px 6px;
+  color: var(--cloudlet-muted); font-size: .75rem; flex: none;
+}
+.cloudlet-host .cloudlet-indicator > :is(.cloudlet-dots, .cloudlet-page) { grid-column: 2; }
+.cloudlet-host .cloudlet-dots { display: flex; }
 .cloudlet-host .cloudlet-indicator .cloudlet-dot-button { min-width: 24px; min-height: 24px; padding: 8px; }
 .cloudlet-host .cloudlet-dot { display: block; width: 6px; height: 6px; border-radius: 50%; background: color-mix(in oklab, var(--cloudlet-foreground) 25%, transparent); }
 .cloudlet-host .cloudlet-indicator [aria-current="true"] .cloudlet-dot { background: var(--cloudlet-foreground); }
 .cloudlet-host .cloudlet-page { display: grid; padding: 8px; font-variant-numeric: tabular-nums; }
 .cloudlet-host .cloudlet-page > * { grid-area: 1 / 1; }
-/* Missed notifications: the end of the indicator row. */
-.cloudlet-host .cloudlet-overflow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; min-width: 0; }
+/* Clear all: a pill like the overflow button at the inline end of the dots row. Both labels share one cell;
+   armed, it takes the error tint.
+   Words never break inside: the end column takes the label's width and the dots move over when it must. */
+.cloudlet-host button.cloudlet-clear { grid-column: 3; justify-self: end; display: grid; font-size: .75rem; overflow-wrap: normal; }
+.cloudlet-host .cloudlet-clear > * { grid-area: 1 / 1; transition: opacity .2s, visibility .2s; }
+.cloudlet-host .cloudlet-clear[data-armed="true"] > :first-child, .cloudlet-host .cloudlet-clear[data-armed="false"] > :last-child { opacity: 0; visibility: hidden; }
+.cloudlet-host .cloudlet-clear[data-armed="true"] {
+  color: color-mix(in oklab, var(--cloudlet-error) 70%, var(--cloudlet-foreground));
+  background: color-mix(in oklab, var(--cloudlet-error) 14%, transparent);
+}
+/* Missed notifications: a row of their own under the dots. */
+.cloudlet-host .cloudlet-overflow { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; min-width: 0; }
 .cloudlet-host .cloudlet-overflow button { font-size: .75rem; }
 .cloudlet-host .cloudlet-live { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 /* The announcer's live regions, inserted beside the host; visually hidden and out of the page flow. */
@@ -255,6 +271,10 @@
   .cloudlet-host .cloudlet-spinner { animation: cloudlet-spin .8s linear infinite; }
   .cloudlet-host .cloudlet-ring[data-progress="indeterminate"] { animation: cloudlet-spin 1s linear infinite; }
   .cloudlet-host[data-reduced-motion="true"] :is(.cloudlet-spinner, .cloudlet-ring) { animation: none; }
+  /* The clear button's labels blur-swap; reduced motion keeps only the fade. */
+  .cloudlet-host:not([data-reduced-motion="true"]) .cloudlet-clear > * { transition: opacity .2s, filter .2s, visibility .2s; }
+  .cloudlet-host:not([data-reduced-motion="true"]) .cloudlet-clear[data-armed="true"] > :first-child,
+  .cloudlet-host:not([data-reduced-motion="true"]) .cloudlet-clear[data-armed="false"] > :last-child { filter: blur(2px); }
 }
 /* Forced colours: system colours only; the badge, icon, ring and dots opt out of adjustment to stay visible. */
 @media (forced-colors: active) {
@@ -269,7 +289,8 @@
   .cloudlet-host .cloudlet-ring-track { stroke: GrayText; }
   .cloudlet-host .cloudlet-dot { background: Canvas; outline: 1px solid CanvasText; }
   .cloudlet-host .cloudlet-indicator [aria-current="true"] .cloudlet-dot { background: CanvasText; }
-  .cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-overflow button) { border: 1px solid ButtonText; }
+  .cloudlet-host :is(.cloudlet-close, .cloudlet-action, .cloudlet-clear, .cloudlet-overflow button) { border: 1px solid ButtonText; }
+  .cloudlet-host .cloudlet-clear[data-armed="true"] { border-width: 2px; }
   .cloudlet-host .cloudlet-field { color: FieldText; background: Field; border-color: CanvasText; }
   .cloudlet-host .cloudlet-field[aria-invalid="true"] { border-width: 2px; }
   .cloudlet-host .cloudlet-action.cloudlet-submit { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }

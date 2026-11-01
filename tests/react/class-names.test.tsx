@@ -33,7 +33,7 @@ const own: Record<CloudletPart, string> = {
   host: 'cloudlet-host', stack: 'cloudlet-stack', pill: 'cloudlet-pill', tail: 'cloudlet-tail', badge: 'cloudlet-badge',
   island: 'cloudlet-shell', header: 'cloudlet-header', icon: 'cloudlet-icon', title: 'cloudlet-title', close: 'cloudlet-close',
   body: 'cloudlet-body', description: 'cloudlet-description', actions: 'cloudlet-actions', action: 'cloudlet-action',
-  indicator: 'cloudlet-indicator', overflow: 'cloudlet-overflow', form: 'cloudlet-form', field: 'cloudlet-field',
+  indicator: 'cloudlet-indicator', clear: 'cloudlet-clear', overflow: 'cloudlet-overflow', form: 'cloudlet-form', field: 'cloudlet-field',
   'field-error': 'cloudlet-field-error',
 };
 /** A form's parts; tests/react/forms.test.tsx checks them on a notification with a form. */

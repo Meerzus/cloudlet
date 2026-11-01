@@ -281,6 +281,103 @@ describe('Island', () => {
   });
 });
 
+describe('clear button', () => {
+  const clear = () => screen.queryByRole('button', { name: /^Clear/ });
+
+  it('appears only in the open Island with two or more records, unless clearAll is false', () => {
+    const instance = controller();
+    const only = admit(instance, 'Only');
+    const view = render(tree(instance));
+    act(() => pill()!.click());
+    expect(clear()).toBeNull();
+    act(() => { admit(instance, 'Second'); });
+    expect(clear()).toHaveAccessibleName('Clear all');
+    expect(clear()).toHaveClass('cloudlet-clear');
+    view.rerender(tree(instance, { clearAll: false }));
+    expect(clear()).toBeNull();
+    view.rerender(tree(instance));
+    act(() => { instance.dismiss(only); });
+    expect(clear()).toBeNull();
+  });
+
+  it('hands focus to the slide title when clearAll={false} removes the focused button', () => {
+    const instance = controller();
+    admit(instance, 'Older');
+    admit(instance, 'Newer');
+    const view = render(tree(instance));
+    act(() => pill()!.click());
+    act(() => clear()!.focus());
+    const violations = protectMutations();
+    view.rerender(tree(instance, { clearAll: false }));
+    expect(clear()).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Newer' })).toHaveFocus();
+    expect(violations).toEqual([]);
+  });
+
+  it('arms on the first press and clears every record and the missed count on the second', async () => {
+    const user = userEvent.setup();
+    const application = outside();
+    application.focus();
+    const instance = controller();
+    const onClose = vi.fn();
+    for (let index = 0; index < 101; index++) instance.show({ title: `Item ${index}`, attention: 'stack', onClose });
+    render(tree(instance));
+    act(() => pill()!.click());
+    const button = clear()!;
+    act(() => button.focus());
+    await user.keyboard('{Enter}');
+    expect(instance.getSnapshot().stack).toHaveLength(100);
+    expect(button).toHaveAccessibleName('Clear 100');
+    expect(button).toHaveAttribute('data-armed', 'true');
+    expect(within(island()).getByRole('status')).toHaveTextContent('Clear 100');
+    const violations = protectMutations();
+    await user.keyboard('{Enter}');
+    expect(instance.getSnapshot()).toMatchObject({ notifications: [], island: { open: false }, overflow: { count: 0, pending: false } });
+    expect(onClose).toHaveBeenCalledTimes(100);
+    expect(onClose.mock.calls.every(([notice]) => notice.reason === 'clear-button')).toBe(true);
+    expect(application).toHaveFocus();
+    expect(violations).toEqual([]);
+  });
+
+  it('disarms after three seconds, on blur and on collapse', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const instance = controller();
+    admit(instance, 'Older');
+    admit(instance, 'Newer');
+    render(tree(instance));
+    act(() => pill()!.click());
+    act(() => clear()!.click());
+    expect(clear()).toHaveAccessibleName('Clear 2');
+    act(() => { vi.advanceTimersByTime(2_999); });
+    expect(clear()).toHaveAttribute('data-armed', 'true');
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(clear()).toHaveAccessibleName('Clear all');
+    act(() => clear()!.click());
+    act(() => { clear()!.focus(); clear()!.blur(); });
+    expect(clear()).toHaveAttribute('data-armed', 'false');
+    act(() => clear()!.click());
+    fireEvent.keyDown(island(), { key: 'Escape' });
+    act(() => pill()!.click());
+    expect(clear()).toHaveAttribute('data-armed', 'false');
+    expect(instance.getSnapshot().stack).toHaveLength(2);
+  });
+
+  it('does not arm and confirm on one double click', () => {
+    const instance = controller();
+    admit(instance, 'Older');
+    admit(instance, 'Newer');
+    render(tree(instance));
+    act(() => pill()!.click());
+    const button = clear()!;
+    fireEvent.click(button, { detail: 1 });
+    fireEvent.click(button, { detail: 2 });
+    expect(instance.getSnapshot().stack).toHaveLength(2);
+    expect(button).toHaveAttribute('data-armed', 'true');
+    fireEvent.click(button, { detail: 1 });
+    expect(instance.getSnapshot().stack).toHaveLength(0);
+  });
+});
+
 describe('external restoration and native navigation', () => {
   it.each(['removed', 'hidden ancestor', 'disabled'] as const)('uses another external control when the remembered target is %s', async condition => {
     const user = userEvent.setup();

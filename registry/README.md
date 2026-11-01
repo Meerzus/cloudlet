@@ -2,7 +2,7 @@
 
 Cloudlet has a shadcn-compatible `toaster` item. It installs two application-owned files: a thin `"use client"` Provider/Toaster adapter and a CSS theme bridge. The only notification runtime is `@cloudlet/toast`; the item does not copy its controller, renderer, store, or Motion implementation. The npm library has no Tailwind or shadcn dependency.
 
-The catalog is served from the site at `https://cloudlet.dev/r/toaster.json` (`apps/site/public/r`, copied by `registry:build`) and requests `@cloudlet/toast@1.0.0` from npm. The test below supplies that exact dependency through a temporary loopback npm test registry backed by the actual npm-pack tarball.
+The catalog is served from the site at `https://cloudlet.dev/r/toaster.json` (`apps/site/public/r`, copied by `registry:build`) and requests `@cloudlet/toast@1.2.0` from npm. The test below supplies that exact dependency through a temporary loopback npm test registry backed by the actual npm-pack tarball.
 
 The catalog is [registry/registry.json](registry.json), the editable wrapper is [registry/cloudlet/toaster.tsx](cloudlet/toaster.tsx), and the stylesheet is [registry/cloudlet/toaster.css](cloudlet/toaster.css). `registry/r/` contains the built catalog/item JSON that the site serves. Schema snapshots in `registry/schema/` were fetched on 2026-10-16 from the official [catalog schema](https://ui.shadcn.com/schema/registry.json) and [item schema](https://ui.shadcn.com/schema/registry-item.json). The build validates both with Ajv 8.20.0 and the pinned shadcn 4.21.5 CLI. This follows the official [registry setup](https://ui.shadcn.com/docs/registry/getting-started) and [item dependency format](https://ui.shadcn.com/docs/registry/registry-item-json).
 
@@ -13,7 +13,7 @@ npm ci --prefix registry/tooling --ignore-scripts --no-audit --no-fund
 node scripts/registry-build.mjs
 npm run build
 node scripts/pack.mjs
-node scripts/registry-check.mjs --tarball artifacts/integration/cloudlet-toast-1.1.2.tgz
+node scripts/registry-check.mjs --tarball artifacts/integration/cloudlet-toast-1.2.0.tgz
 ```
 
 `registry-check` creates a fresh consumer and npm cache outside the workspace, installs its committed base lockfile, confirms that `@cloudlet/toast` is absent, then runs the real pinned command `shadcn add http://127.0.0.1:<port>/r/toaster.json --yes --overwrite --cwd <consumer>`. Only the `@cloudlet` npm scope is routed to the loopback registry; all ordinary dependencies come from public npm without private credentials. The item dependency is not rewritten to a nonexistent public release. The test verifies the downloaded tarball's SHA-512 integrity, the install HTTP request, the installed lockfile's resolved URL, and a physical consumer installation rather than a workspace link. A fresh cache ensures a previous install cannot hide a missing tarball.
