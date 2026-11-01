@@ -24,6 +24,7 @@ const open = () => {
 const value = () => screen.getByTestId('value').textContent;
 const area = (dialog: HTMLElement) => within(dialog).getByRole('slider', { name: 'Saturation and brightness' });
 const hue = (dialog: HTMLElement) => within(dialog).getByRole('slider', { name: 'Hue' });
+const field = (scope: HTMLElement) => within(scope).getByRole('textbox', { name: 'Color value' });
 
 /** Gives an element a layout box so pointer positions mean something in jsdom. */
 const box = (element: HTMLElement, width: number, height: number) => {
@@ -43,7 +44,7 @@ describe('ColorPicker', () => {
     expect(hue(dialog)).toHaveAttribute('aria-valuenow', '120');
     expect(hue(dialog)).toHaveAttribute('aria-valuetext', '120°');
     expect(within(dialog).queryByRole('slider', { name: 'Opacity' })).not.toBeInTheDocument();
-    expect(within(dialog).getByText('#00ff00')).toBeInTheDocument();
+    expect(field(dialog)).toHaveValue('#00ff00');
   });
 
   it('moves saturation and brightness with the arrows, ten times further with Shift, and never past the edges', () => {
@@ -115,10 +116,10 @@ describe('ColorPicker', () => {
     render(<Owner initial="oklch(62.8% 0.258 29.2)" onChange={onChange} />);
     const dialog = open();
     // The oklch canon rounds: this red lands one step off pure red, with the hue just under 360°.
-    expect(within(dialog).getByText('#ff0001')).toBeInTheDocument();
+    expect(field(dialog)).toHaveValue('#ff0001');
     expect(hue(dialog)).toHaveAttribute('aria-valuenow', '360');
     fireEvent.click(screen.getByRole('button', { name: 'Set blue' }));
-    expect(within(dialog).getByText('#336699')).toBeInTheDocument();
+    expect(field(dialog)).toHaveValue('#336699');
     expect(hue(dialog)).toHaveAttribute('aria-valuenow', '210');
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -127,7 +128,7 @@ describe('ColorPicker', () => {
     const { rerender } = render(<ColorPicker color="#336699" labels={LABELS} onChange={() => {}} />);
     rerender(<ColorPicker color="var(--surface)" swatch="var(--surface)" labels={LABELS} onChange={() => {}} />);
     const dialog = open();
-    expect(within(dialog).getByText('#336699')).toBeInTheDocument();
+    expect(field(dialog)).toHaveValue('#336699');
     expect(screen.getByRole('button', { name: LABELS.open }).parentElement).toHaveStyle({ '--color-picker-swatch': 'var(--surface)' });
   });
 

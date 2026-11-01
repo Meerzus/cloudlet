@@ -362,7 +362,7 @@ describe('docs style editor', () => {
     fireEvent.change(input, { target: { value: 'var(--surface)' } });
     expect(input).not.toHaveAttribute('aria-invalid', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Pick background color' }));
-    expect(within(screen.getByRole('dialog')).getByText('#336699')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByRole('textbox', { name: 'Color value' })).toHaveValue('#336699');
     expect(previewRule().style.getPropertyValue('--cloudlet-background')).toBe('var(--surface)');
     expect(code()).toContain('--cloudlet-background: var(--surface);');
   });
