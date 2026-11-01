@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.0 — unreleased
+## 1.2.0 — 2026-11-01
 
 Clear all in the Island. Nothing is removed or changed in behaviour; the new texts, prop and close
 reason are additive (see API).
