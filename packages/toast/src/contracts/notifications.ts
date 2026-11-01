@@ -98,6 +98,7 @@ export type CloseReason =
   | 'action-success'
   | 'navigation'
   | 'clear'
+  | 'clear-button'
   | 'dispose';
 
 export interface CloseNotice {

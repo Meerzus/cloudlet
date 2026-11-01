@@ -132,7 +132,7 @@ export function Notifications() {
 }
 ```
 
-The parts are `host`, `stack`, `pill`, `tail`, `badge`, `island`, `header`, `icon`, `title`, `close`, `body`, `description`, `actions`, `action`, `indicator` and `overflow`; [classNames](/toaster/docs/api/toaster#classnames) says which element each one is.
+The parts are `host`, `stack`, `pill`, `tail`, `badge`, `island`, `header`, `icon`, `title`, `close`, `body`, `description`, `actions`, `action`, `indicator`, `clear` and `overflow`; [classNames](/toaster/docs/api/toaster#classnames) says which element each one is.
 
 Cloudlet's own rules use two classes, such as `.cloudlet-host .cloudlet-action`, so a selector with a single class of yours loses to them on the properties they set. Write rules at least as specific, or style through the tokens:
 

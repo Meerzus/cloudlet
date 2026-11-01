@@ -160,6 +160,10 @@ export interface RendererBridge<Slot = never> {
   readonly acknowledgeOverflow: (lease: HostLease) => BridgeResult;
   readonly acknowledgeAnnouncements: (lease: HostLease, acknowledgements: readonly AnnouncementAcknowledgement[]) => BridgeResult;
   readonly dismiss: (lease: HostLease, handle: NotificationHandle, reason: RendererCloseReason) => MutationResult | { readonly status: 'rejected'; readonly reason: 'stale-lease' };
+  /** The open Island's clear button: removes every record (`reason: 'clear-button'`) and acknowledges the missed count. */
+  readonly clearAll: (lease: HostLease) =>
+    | { readonly status: 'cleared'; readonly count: number }
+    | { readonly status: 'rejected'; readonly reason: 'disposed' | 'stale-lease' | 'island-closed' };
   /** Runs a command, or validates and submits a form. */
   readonly invokeAction: (lease: HostLease, handle: NotificationHandle) => ActionResult;
   readonly setFormValue: (lease: HostLease, handle: NotificationHandle, name: string, value: string) =>

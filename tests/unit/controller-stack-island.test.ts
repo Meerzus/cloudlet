@@ -255,3 +255,47 @@ describe('overflow in the stack model', () => {
     expect(controller.getSnapshot().overflow).toEqual({ count: 0, pending: false });
   });
 });
+
+describe('the clear button', () => {
+  it('works only through the current lease and the open Island', () => {
+    const { controller, bridge } = harness();
+    const lease = attach(bridge);
+    admit(controller, quiet('a'));
+    admit(controller, quiet('b'));
+    expect(bridge.clearAll({} as HostLease)).toEqual({ status: 'rejected', reason: 'stale-lease' });
+    expect(bridge.clearAll(lease)).toEqual({ status: 'rejected', reason: 'island-closed' });
+    expect(controller.getSnapshot().stack).toHaveLength(2);
+    controller.dispose();
+    expect(bridge.clearAll(lease)).toEqual({ status: 'rejected', reason: 'disposed' });
+  });
+
+  it('closes every record with clear-button and acknowledges the missed count in one commit', () => {
+    const { controller, bridge } = harness();
+    const lease = attach(bridge);
+    const onClose = vi.fn();
+    for (let index = 0; index < 100; index++) admit(controller, quiet(`n-${index}`, { onClose }));
+    controller.show(quiet('rejected'));
+    bridge.openIsland(lease, 'user');
+    const events: string[] = [];
+    controller.onEvent((event) => events.push(event.type === 'closed' ? `closed:${event.reason}` : event.type));
+    const listener = vi.fn();
+    controller.subscribe(listener);
+    expect(bridge.clearAll(lease)).toEqual({ status: 'cleared', count: 100 });
+    expect(listener).toHaveBeenCalledOnce();
+    expect(controller.getSnapshot()).toMatchObject({ stack: [], island: { open: false }, overflow: { count: 0, pending: false } });
+    expect(events).toEqual([...Array(100).fill('closed:clear-button'), 'overflow-acknowledged']);
+    expect(onClose).toHaveBeenCalledTimes(100);
+    expect(onClose.mock.calls.every(([notice]) => notice.reason === 'clear-button')).toBe(true);
+  });
+
+  it('keeps clear() programmatic: reason clear, the missed count stays', () => {
+    const { controller } = harness();
+    const onClose = vi.fn();
+    admit(controller, quiet('first', { onClose }));
+    for (let index = 1; index < 100; index++) admit(controller, quiet(`n-${index}`));
+    controller.show(quiet('rejected'));
+    expect(controller.clear()).toEqual({ status: 'cleared', count: 100 });
+    expect(onClose).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ reason: 'clear' }));
+    expect(controller.getSnapshot().overflow).toEqual({ count: 1, pending: true });
+  });
+});

@@ -19,6 +19,7 @@ Activating the pill opens the Island in place of it. The Island is a region with
 - Its title is a heading. Opening the Island from the keyboard moves focus to it.
 - Close, actions, retry and cancel are native buttons and links. Close is 32px wide with a 44px touch target.
 - With more than one notification, page dots appear: buttons named like the slides, with `aria-current` on the current one. Above five notifications a text counter replaces them; it is hidden from assistive technology, because the slide's name already says where you are.
+- With more than one notification, a clear button ends the dots row, named `labels.clearAll` ("Clear all"). Its first press only arms it: its name becomes `labels.clearAllConfirm(count)` ("Clear 12"), spoken once through a status. A second press within 3 seconds closes every notification and the missed count, and focus returns to where it was before the Island. Leaving the button, collapsing the Island or waiting disarms it; a double click never does both presses.
 - Missed notifications appear as a line, `labels.overflowCount(count)`, with a button named `labels.acknowledgeOverflow`.
 - A notification with progress exposes a `progressbar` in the Island, named by its progress `label` or its title.
 
@@ -26,7 +27,7 @@ Activating the pill opens the Island in place of it. The Island is a region with
 
 | Input | Result |
 |---|---|
-| `Tab` | Reaches the pill like any other button. In the Island, from the title: the body when its text scrolls, the actions, close, the dots, then the overflow button. |
+| `Tab` | Reaches the pill like any other button. In the Island, from the title: the body when its text scrolls, the actions, close, the dots, the clear button, then the overflow button. |
 | `Enter` or `Space` on the pill | Opens the Island and moves focus to the title. |
 | `←` `→` | Previous and next notification; mirrored when `dir="rtl"`. |
 | `Home` `End` | Newest and oldest notification. On a focused body that scrolls, its top and bottom instead. |

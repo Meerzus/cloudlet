@@ -1,6 +1,6 @@
 {
   "name": "@cloudlet/toast",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Cloudlet notifications and async operations with an SSR-safe React renderer",
   "license": "MIT",
   "homepage": "https://cloudlet.dev/toaster",

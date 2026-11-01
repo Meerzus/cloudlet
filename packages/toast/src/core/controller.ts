@@ -1,4 +1,4 @@
-import type { CloudletController, ControllerOptions, FocusTarget } from '../contracts/controller.js';
+import type { ClearResult, CloudletController, ControllerOptions, FocusTarget } from '../contracts/controller.js';
 import type { Diagnostic, EventBase, SemanticEvent } from '../contracts/events.js';
 import type { ActionAttemptToken, ControllerIdentity, Generation, HandleRejection, NotificationHandle, OperationAttemptToken, Unsubscribe } from '../contracts/identity.js';
 import type {
@@ -130,6 +130,7 @@ export interface ControllerKernel<Slot> {
   readonly setHostAutoDismiss: (value: boolean | undefined) => void;
   readonly dismiss: (handle: NotificationHandle, reason: CloseReason) => typeof APPLIED | Rejected<HandleRejection | 'disposed'>;
   readonly acknowledgeOverflow: () => typeof APPLIED | typeof UNCHANGED | Rejected<'disposed'>;
+  readonly clear: (reason: 'clear' | 'clear-button') => ClearResult;
   readonly reportRendererLoadError: (error: unknown) => void;
 }
 
@@ -469,14 +470,28 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
   }
   const dismiss = withRecord((record, reason: CloseReason) =>
     mutate((deliveries) => remove(record, reason, deliveries)));
+  function forgetOverflow(deliveries: Delivery[]) {
+    deliveries.push({ type: 'overflow-acknowledged', count: overflow });
+    overflow = overflowAnnounced = 0;
+    if (focusRequest?.target.kind === 'overflow') focusRequest = null;
+  }
   function acknowledgeOverflow() {
     if (disposed) return reject('disposed');
     if (!overflow) return UNCHANGED;
-    return mutate((deliveries) => {
-      deliveries.push({ type: 'overflow-acknowledged', count: overflow });
-      overflow = overflowAnnounced = 0;
-      if (focusRequest?.target.kind === 'overflow') focusRequest = null;
-    });
+    return mutate(forgetOverflow);
+  }
+  /** `clear()`, or the Island's clear button, which also acknowledges the missed count: nothing is left. */
+  function clear(reason: 'clear' | 'clear-button'): ClearResult {
+    if (disposed) return reject('disposed');
+    const count = records.size;
+    const acknowledge = reason === 'clear-button' && overflow > 0;
+    if (count || acknowledge) {
+      mutate((deliveries) => {
+        for (const record of records.values()) remove(record, reason, deliveries);
+        if (acknowledge) forgetOverflow(deliveries);
+      });
+    }
+    return { status: 'cleared', count };
   }
   function subscribe<T>(set: Set<T>, listener: T): Unsubscribe {
     if (typeof listener !== 'function') throw new TypeError('Listener must be a function');
@@ -802,15 +817,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     }),
     getHandle: (id) => !disposed && typeof id === 'string' ? records.get(id)?.handle : undefined,
     dismiss: (handle) => dismiss(handle, 'programmatic'),
-    clear() {
-      if (disposed) return reject('disposed');
-      const count = records.size;
-      if (!count) return { status: 'cleared', count };
-      mutate((deliveries) => {
-        for (const record of records.values()) remove(record, 'clear', deliveries);
-      });
-      return { status: 'cleared', count };
-    },
+    clear: () => clear('clear'),
     requestFocus(target: FocusTarget = { kind: 'anchor' }) {
       if (disposed) return reject('disposed');
       if (target?.kind === 'notification') {
@@ -876,7 +883,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     get focused() { return focused; }, set focused(value) { focused = value; },
     get overflowAnnounced() { return overflowAnnounced; }, set overflowAnnounced(value) { overflowAnnounced = value; },
     token, diagnostic, failure, mutate, commit, settle, assign, newest, formOf, handleError, withRecord,
-    autoDismissing, setHostAutoDismiss, dismiss, acknowledgeOverflow,
+    autoDismissing, setHostAutoDismiss, dismiss, acknowledgeOverflow, clear,
     reportRendererLoadError(error) {
       if (!disposed) diagnostic({ code: 'renderer-load-error', source: 'Toaster', message: 'Toaster renderer failed to load', error });
     },

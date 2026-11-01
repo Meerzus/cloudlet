@@ -194,7 +194,7 @@ Closes the notification at once, with the close reason `programmatic`. A late re
 
 `clear(): ClearResult`
 
-Closes every notification (close reason `clear`) and collapses the Island. The missed count stays until `acknowledgeOverflow()`.
+Closes every notification (close reason `clear`) and collapses the Island. The missed count stays until `acknowledgeOverflow()`. The Island's own clear button ([`clearAll`](/toaster/docs/api/toaster#props)) does both at once, with the close reason `clear-button`.
 
 | Status | Fields | Meaning |
 |---|---|---|

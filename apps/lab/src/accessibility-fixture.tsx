@@ -35,6 +35,7 @@ declare global {
 const labels: CloudletLabels = {
   region: 'Notifications', island: 'Current notifications', carousel: 'carousel', slide: 'slide', close: 'Close notification', collapse: 'Escape to collapse',
   retry: 'Retry', cancel: 'Request cancellation', cancellationRequested: 'Cancellation requested', acknowledgeOverflow: 'Acknowledge missed',
+  clearAll: 'Clear all', clearAllConfirm: count => `Clear: ${count}`,
   stackSummary: (title, count, missed) => [title, ...(count > 1 ? [`notifications: ${count}`] : []), ...(missed ? [`missed: ${missed}`] : [])].join(', '),
   page: (index, total) => `${index} of ${total}`,
   overflowCount: count => `Missed: ${count}`,

@@ -30,6 +30,8 @@ Read on every render of the Toaster.
 | `cancel` | `string` | `'Request cancellation'` | Text of the cancel button of a pending operation. |
 | `cancellationRequested` | `string` | `'Cancellation requested'` | Text of that button once cancellation was requested. |
 | `acknowledgeOverflow` | `string` | `'Acknowledge missed notifications'` | Name of the button that resets the missed count. |
+| `clearAll` | `string` | `'Clear all'` | Text of the Island's clear button. |
+| `clearAllConfirm` | `(count: number) => string` | `'Clear 12'` | Text of the clear button after the first press, spoken once as a status; a second press closes `count` notifications. Keep it about as long as `clearAll`: the button is as wide as the longer of the two. |
 | `collapse` | `string` | `'Press Escape to collapse'` | Hidden hint in the Island that Escape collapses it. |
 | `stackSummary` | `(title: string, count: number, missed: number) => string` | `'Saved, 3 notifications, 2 missed'` | Name of the collapsed pill: the top title, how many notifications the stack holds and how many were missed. The default leaves out a count of 1 and a missed count of 0. |
 | `page` | `(index: number, total: number) => string` | `'2 of 5'` | Name of the Island's current slide; `index` starts at 1. |
@@ -85,6 +87,8 @@ const labels: CloudletLabels = {
   cancel: 'Abbruch anfordern',
   cancellationRequested: 'Abbruch angefordert',
   acknowledgeOverflow: 'Verpasste Benachrichtigungen bestätigen',
+  clearAll: 'Alle löschen',
+  clearAllConfirm: (total) => `${total} löschen`,
   collapse: 'Mit Escape einklappen',
   stackSummary: (title, total, missed) => [
     title,
