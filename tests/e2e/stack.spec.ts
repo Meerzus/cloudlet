@@ -217,20 +217,25 @@ test('the clear button sits at the end of the dots row, arms on the first press 
   expect(boxes.shell.right - boxes.clear.right).toBeGreaterThanOrEqual(15);
   expect(boxes.overflow.top).toBeGreaterThanOrEqual(boxes.clear.bottom);
   const width = boxes.clear.width;
+  // The armed look in both themes. Each audit arms its own press and lets it lapse, so the
+  // 3 s window never decides the clearing below.
+  for (const theme of ['light', 'dark'] as const) {
+    await page.evaluate(theme => window.mobileFixture!.theme(theme), theme);
+    await expect(host(page)).toHaveAttribute('data-resolved-theme', theme);
+    await clear.click();
+    await idle(page);
+    await screenshot(page, info, theme === 'light' ? 'island-clear-armed' : 'island-clear-armed-dark');
+    // The error tint keeps text contrast on either surface.
+    expect((await new AxeBuilder({ page }).include('.cloudlet-host').analyze()).violations).toEqual([]);
+    await expect(clear).toHaveAttribute('data-armed', 'false', { timeout: 5_000 });
+  }
+  expect((await state(page)).stack).toHaveLength(100);
+  // The two presses back to back.
   await clear.click();
   const armed = island(page).getByRole('button', { name: 'Clear 100', exact: true });
   await expect(armed).toHaveAttribute('data-armed', 'true');
   expect((await armed.boundingBox())!.width).toBeCloseTo(width, 0);
   expect((await state(page)).stack).toHaveLength(100);
-  await idle(page);
-  await screenshot(page, info, 'island-clear-armed');
-  expect((await new AxeBuilder({ page }).include('.cloudlet-host').analyze()).violations).toEqual([]);
-  // The error tint keeps text contrast on the dark surface too.
-  await page.evaluate(() => window.mobileFixture!.theme('dark'));
-  await expect(host(page)).toHaveAttribute('data-resolved-theme', 'dark');
-  await idle(page);
-  await screenshot(page, info, 'island-clear-armed-dark');
-  expect((await new AxeBuilder({ page }).include('.cloudlet-host').analyze()).violations).toEqual([]);
   await armed.click();
   await expect.poll(async () => (await state(page)).stack).toEqual([]);
   const after = await state(page);

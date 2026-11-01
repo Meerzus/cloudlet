@@ -755,7 +755,8 @@ function createHostRuntime(owner: Host) {
     const root = rootRef.current;
     const active = doc.activeElement;
     if (!root || !view || !(active instanceof view.HTMLElement) || active === root || !root.contains(active)
-      || structure(previous.snapshot) === structure(owner.props.snapshot)) return pending;
+      // `clearAll` turning false removes the clear button without a snapshot change.
+      || (structure(previous.snapshot) === structure(owner.props.snapshot) && clearable(previous) === clearable(owner.props))) return pending;
     // The commit may remove or hide the focused branch: park focus on the stable anchor
     // (or outside after the last record) before React mutates the DOM.
     focusedBefore = active;

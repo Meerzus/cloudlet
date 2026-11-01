@@ -300,6 +300,20 @@ describe('clear button', () => {
     expect(clear()).toBeNull();
   });
 
+  it('hands focus to the slide title when clearAll={false} removes the focused button', () => {
+    const instance = controller();
+    admit(instance, 'Older');
+    admit(instance, 'Newer');
+    const view = render(tree(instance));
+    act(() => pill()!.click());
+    act(() => clear()!.focus());
+    const violations = protectMutations();
+    view.rerender(tree(instance, { clearAll: false }));
+    expect(clear()).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Newer' })).toHaveFocus();
+    expect(violations).toEqual([]);
+  });
+
   it('arms on the first press and clears every record and the missed count on the second', async () => {
     const user = userEvent.setup();
     const application = outside();
