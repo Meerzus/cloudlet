@@ -3,6 +3,7 @@
 @import 'lenis/dist/lenis.css';
 @import '../components/puppets/puppet.css';
 @import '../components/docs/docs.css';
+@import '../components/picker/picker.css';
 
 @custom-variant dark (&:is(.dark, .dark *));
 

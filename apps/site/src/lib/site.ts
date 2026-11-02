@@ -7,6 +7,8 @@ export const SITE_URL = 'https://cloudlet.dev';
  */
 export const TOASTER_PATH = '/toaster';
 export const PLAYGROUND_PATH = `${TOASTER_PATH}/playground`;
+/** The color picker's landing (COLOR_PICKER §8): a registry item, no npm package. */
+export const COLOR_PICKER_PATH = '/color-picker';
 /**
  * Search engines are welcome since 1.0.0: pages carry no `noindex`, `robots.txt` and `sitemap.xml`
  * are static files of the export. `false` brings back `noindex, nofollow` on every page; then

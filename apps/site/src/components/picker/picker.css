@@ -1,0 +1,106 @@
+/*
+ * The color picker landing (app/color-picker, COLOR_PICKER §8). The picked color lives on <html>:
+ * `--cp-color` and `data-cp-hour`, written before first paint by START_SCRIPT (lib/landscape.ts) and
+ * then by picker-hero.tsx; `data-cp-top` says the header sits on the hero.
+ */
+html:has(.cp-site) { background: var(--background); }
+
+/* The flat sky: shown until the landscape draws, and for good without WebGL 2. FLAT_SKY in lib/landscape.ts mixes the same. */
+.cp-hero {
+  --cp-ink: oklch(0.985 0.005 250);
+  --cp-ink-soft: oklch(0.985 0.005 250 / 0.86);
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  /* Under the sticky header: the landscape runs to the top edge. */
+  margin-top: -3.5rem;
+  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 55%, black);
+  color: var(--cp-ink);
+}
+html[data-cp-hour='day'] .cp-hero {
+  --cp-ink: oklch(0.17 0.02 260);
+  --cp-ink-soft: oklch(0.17 0.02 260 / 0.84);
+  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 60%, white);
+}
+.cp-hero-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.cp-hero[data-flat] .cp-hero-canvas { display: none; }
+
+.cp-hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: calc(3.5rem + 12svh) 1.5rem 0;
+}
+.cp-hero-title {
+  max-width: 10ch;
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  font-weight: 600;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.cp-hero-lede {
+  max-width: 28rem;
+  margin-top: 1.5rem;
+  font-size: 1.125rem;
+  line-height: 1.5;
+  color: var(--cp-ink-soft);
+  text-wrap: pretty;
+}
+
+/* The disc is the picker's swatch, grown to the size of a sun; the panel still morphs out of its circle. */
+.cp-hero-disc {
+  --disc: 5.5rem;
+  position: absolute;
+  z-index: 2;
+  left: calc(68% - var(--disc) / 2);
+  top: calc(34% - var(--disc) / 2);
+}
+.cp-hero-disc > .color-picker,
+.cp-hero-disc > .color-picker > .color-picker-swatch {
+  width: var(--disc);
+  height: var(--disc);
+}
+.cp-hero-disc > .color-picker > .color-picker-swatch { box-shadow: none; }
+.cp-hero-disc > .color-picker > .color-picker-swatch:focus-visible {
+  box-shadow: none;
+  outline: 3px solid var(--cp-ink);
+  outline-offset: 4px;
+}
+@media (max-width: 639px) {
+  .cp-hero-copy { padding-top: calc(3.5rem + 7svh); }
+  .cp-hero-lede { font-size: 1rem; }
+  .cp-hero-disc {
+    --disc: 4rem;
+    left: calc(32% - var(--disc) / 2);
+    top: calc(58% - var(--disc) / 2);
+  }
+}
+
+/* The header over the hero takes the hero's ink: light tokens on a day sky, dark ones otherwise. */
+html[data-cp-top] .site-header {
+  --foreground: oklch(0.985 0.005 250);
+  --muted-foreground: oklch(0.9 0.01 250);
+  --accent: oklch(1 0 0 / 0.14);
+  --accent-foreground: oklch(0.985 0.005 250);
+  --background: oklch(0.2 0.03 265);
+  --glass-border: oklch(1 0 0 / 0.2);
+  color: var(--foreground);
+}
+html[data-cp-top][data-cp-hour='day'] .site-header {
+  --foreground: oklch(0.17 0.02 260);
+  --muted-foreground: oklch(0.24 0.03 260);
+  --accent: oklch(1 0 0 / 0.45);
+  --accent-foreground: oklch(0.17 0.02 260);
+  --background: oklch(0.985 0.008 240);
+  --glass-border: oklch(1 0 0 / 0.55);
+}
+html[data-cp-top] .site-edge-tint { opacity: 0; }
