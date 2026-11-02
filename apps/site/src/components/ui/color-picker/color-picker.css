@@ -202,6 +202,9 @@
   .color-picker-segments[data-ready] .color-picker-segment-indicator { transition: none; }
   .color-picker-icon[data-copied] svg { animation: none; }
 }
+/* An app's own reduce-motion switch: the same stillness under any `data-reduced-motion` ancestor. */
+[data-reduced-motion] .color-picker-segments[data-ready] .color-picker-segment-indicator { transition: none; }
+[data-reduced-motion] .color-picker-icon[data-copied] svg { animation: none; }
 
 @media (forced-colors: active) {
   /* Gradients disappear here: the frames and the thumb keep every control findable. */

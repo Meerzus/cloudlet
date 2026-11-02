@@ -71,7 +71,28 @@ The wrapper and local CSS are original MIT-licensed project code. They include n
 
 `https://cloudlet.dev/r/color-picker.json` installs the site's own color picker as source: `components/ui/color-picker/color-picker.tsx`, `color-picker.css`, `color.ts` (parsing and conversions), `morph.ts` (the swatch-to-panel springs) and `lib/spring.ts`. The item lists the files at their paths in `apps/site`, so the site and the registry ship one source; rerun `registry:build` after editing them (`tests/unit/site-registry.test.ts` fails while `registry/r/color-picker.json` is stale). It has no npm dependencies besides React.
 
-`color-picker.tsx` imports its own `color-picker.css`. The stylesheet reads the shadcn tokens `--background`, `--foreground`, `--border`, `--ring` and, optionally, `--muted`, and resets its buttons itself, so it does not rely on Tailwind's preflight. The panel is not portalled: it inherits the theme of its subtree and works inside an iframe, but an ancestor with `overflow: hidden` clips it.
+```tsx
+"use client";
+
+import { useState } from "react";
+import { ColorPicker } from "@/components/ui/color-picker/color-picker";
+
+export function AccentField() {
+  const [accent, setAccent] = useState("oklch(62% 0.19 255)");
+  // The swatch opens the picker; `name` sends the value with a native form.
+  return (
+    <ColorPicker
+      color={accent}
+      onChange={setAccent}
+      format="oklch"
+      name="accent"
+      labels={{ open: "Pick accent" }}
+    />
+  );
+}
+```
+
+`color-picker.tsx` imports its own `color-picker.css`. The stylesheet reads the shadcn tokens `--background`, `--foreground`, `--border`, `--ring` and, optionally, `--muted`, and resets its buttons itself, so it does not rely on Tailwind's preflight. The panel is not portalled: it inherits the theme of its subtree and works inside an iframe, but an ancestor with `overflow: hidden` clips it. The swatch opens without the morph under `prefers-reduced-motion: reduce` and inside any ancestor with `data-reduced-motion`, for apps with their own reduce-motion setting.
 
 `registry-check` installs the item after `toaster` into the same clean consumer and checks that `package.json` dependencies do not change, that the files land under the consumer's `ui` and `lib` aliases, and that the strict consumer (no `noUncheckedIndexedAccess`) builds and typechecks. In Chromium, Firefox and WebKit it then opens the picker from its server-rendered swatch, checks focus in the area, the dark `--background` on the panel, a hue step on the keyboard and Escape back to the swatch, and changes the opacity of an inline `ColorPickerPanel` whose hidden `name` input carries an `oklch(… / …)` value. shadcn strips the first comment of every installed file, so credits belong beside the code they describe, not in a file header.
 

@@ -468,8 +468,8 @@ export function ColorPickerPanel({ className, labels: partial, alpha = false, na
  * on two springs (insets and radius) while the circle stays put, the rows unblur in one after
  * another, the shadow grows with the panel, and closing shrinks it back into the swatch; an open or
  * close interrupted in flight keeps its momentum (owner's pick V3, C03). Escape and the in-panel swatch close and return focus to the trigger; a press outside
- * closes without moving focus. Without the Web Animations API or under reduced motion it opens and
- * closes instantly. The panel opens down and to the right, and flips up and/or left when that would
+ * closes without moving focus. Without the Web Animations API, under reduced motion or inside a
+ * `data-reduced-motion` ancestor it opens and closes instantly. The panel opens down and to the right, and flips up and/or left when that would
  * cross the viewport's edge; it is not portalled, so a container with `overflow: hidden` clips it.
  * Styles: color-picker.css, imported here (shadcn tokens: background, foreground, border, ring).
  */
@@ -504,7 +504,8 @@ export function ColorPicker({ swatch, labels: partial, alpha = false, name, ...r
     // Placed once per wrapper: an open that interrupts a close keeps the side the panel is on.
     if (opening && wrapper && !wrapper.hasAttribute('data-flip')) place(wrapper, element, origin);
     if (opening) element.querySelector<HTMLElement>('.color-picker-area')?.focus({ preventScroll: true });
-    const still = typeof element.animate !== 'function' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    // An app's own "reduce motion" setting: `data-reduced-motion` on any ancestor stills the morph like the system preference.
+    const still = typeof element.animate !== 'function' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || element.closest('[data-reduced-motion]') !== null;
     if (still) {
       for (const channel of [size, radius]) channel.current.settle(target);
       delete element.dataset.morph;

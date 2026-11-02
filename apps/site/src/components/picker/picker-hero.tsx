@@ -1,61 +1,33 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ColorPicker } from '@/components/ui/color-picker/color-picker';
 import { parseColor } from '@/components/ui/color-picker/color';
-import { flatSky, landscapeFor, START_COLORS, START_GLOBAL, startColor, type Landscape } from '@/lib/landscape';
+import { flatSky } from '@/lib/landscape';
 import { flatPaint, LandscapeRenderer, paintOf, type LandscapeLayout } from './landscape-renderer';
+import { usePickerColor } from './picker-color';
 
 /** Phones get a lower lake and hills, the disc a little below the centre (§8.2). */
 const PHONE = '(max-width: 639px)';
-const URL_DELAY = 250;
 
 const rgbOf = (color: string): [number, number, number] => {
   const rgb = parseColor(color) ?? { r: 0, g: 0, b: 0 };
   return [rgb.r, rgb.g, rgb.b];
 };
 
-/** The page's color lives on <html>: the flat sky, the ink and (later) the tint of the other sections read it from there. */
-function publish(landscape: Landscape) {
-  const root = document.documentElement;
-  root.style.setProperty('--cp-color', landscape.hex);
-  root.setAttribute('data-cp-hour', landscape.hour);
-}
-
-/** `?c=` follows the color, without a history entry per change (like the style editor's URL). */
-function writeUrl(hex: string) {
-  const url = new URL(window.location.href);
-  url.searchParams.set('c', hex.slice(1));
-  if (url.href !== window.location.href) window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
-}
-
 /**
  * The landing's hero (COLOR_PICKER §8.2–8.4): a paper landscape in one shader, recolored by the
- * picked color. The sun (or the moon) is the ColorPicker's swatch, so the picker morphs out of it
- * over the landscape. Dragging a handle repaints at once; a jump (typing, the eyedropper, the start)
- * bleeds out of the disc. Without WebGL 2 the flat sky of picker.css stays.
+ * page's color (PickerColorProvider). The sun (or the moon) is the ColorPicker's swatch, so the
+ * picker morphs out of it over the landscape. Dragging a handle repaints at once; a jump (typing,
+ * the eyedropper, the start) bleeds out of the disc. Without WebGL 2 the flat sky of picker.css stays.
  */
 export function PickerHero() {
-  // The server renders the first curated color; the start script has already painted the real one on <html>.
-  const [value, setValue] = useState<string>(START_COLORS[0]);
-  const [started, setStarted] = useState(false);
+  const { value, landscape, started, bleed, pick } = usePickerColor();
   const [flat, setFlat] = useState(false);
   const section = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const disc = useRef<HTMLDivElement>(null);
   const renderer = useRef<LandscapeRenderer | null>(null);
-  /** How the next landscape arrives: at once while a slider has focus, bleeding otherwise. */
-  const bleedNext = useRef(true);
-  const changed = useRef(false);
-  // Keyed by hex: a format switch re-emits the same color in other words, and the landscape stays.
-  const hex = useMemo(() => landscapeFor(value)?.hex ?? START_COLORS[0], [value]);
-  const landscape = useMemo(() => landscapeFor(hex)!, [hex]);
-
-  useLayoutEffect(() => {
-    const fromScript = (window as unknown as Record<string, unknown>)[START_GLOBAL];
-    setValue(typeof fromScript === 'string' ? fromScript : startColor(window.location.search, Math.random()));
-    setStarted(true);
-  }, []);
 
   // The renderer: created once the start color is known, its first frame drawn before paint.
   useLayoutEffect(() => {
@@ -114,16 +86,9 @@ export function PickerHero() {
 
   useLayoutEffect(() => {
     if (!started) return;
-    publish(landscape);
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    renderer.current?.paint(paintOf(landscape), bleedNext.current && !still);
-  }, [landscape, started]);
-
-  useEffect(() => {
-    if (!changed.current) return;
-    const timer = window.setTimeout(() => writeUrl(landscape.hex), URL_DELAY);
-    return () => window.clearTimeout(timer);
-  }, [landscape.hex]);
+    renderer.current?.paint(paintOf(landscape), bleed.current && !still);
+  }, [landscape, started, bleed]);
 
   // The header reads the hero's ink while the hero is under it.
   useEffect(() => {
@@ -137,13 +102,6 @@ export function PickerHero() {
       root.removeAttribute('data-cp-top');
     };
   }, []);
-
-  const onChange = (next: string) => {
-    const active = document.activeElement;
-    bleedNext.current = active?.getAttribute('role') !== 'slider';
-    changed.current = true;
-    setValue(next);
-  };
 
   return (
     <section ref={section} id="hero" aria-labelledby="hero-title" className="cp-hero" data-flat={flat || undefined}>
@@ -162,7 +120,7 @@ export function PickerHero() {
       <div ref={disc} className="cp-hero-disc">
         <ColorPicker
           color={value}
-          onChange={onChange}
+          onChange={pick}
           {...(started ? {} : { swatch: 'var(--cp-color)' })}
           labels={{ open: 'Pick the sky color', panel: 'Sky color' }}
         />

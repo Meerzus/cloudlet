@@ -187,6 +187,39 @@ function layout({ x, y, width, height }: { x: number; y: number; width: number; 
 }
 const flip = (dialog: HTMLElement) => dialog.parentElement?.getAttribute('data-flip');
 
+describe('ColorPicker motion', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete (HTMLElement.prototype as Partial<HTMLElement>).animate;
+  });
+
+  /** A Web Animations stand-in that records every animation the morph starts. */
+  const animate = () => {
+    const calls: unknown[] = [];
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} }));
+    HTMLElement.prototype.animate = function (keyframes: unknown) {
+      calls.push(keyframes);
+      return { cancel() {}, finished: Promise.resolve(), playbackRate: 1 } as unknown as Animation;
+    };
+    return calls;
+  };
+
+  it('morphs open when the platform can animate', () => {
+    const calls = animate();
+    render(<Owner />);
+    open();
+    expect(calls.length).toBeGreaterThan(0);
+  });
+
+  it("opens instantly inside a data-reduced-motion ancestor, an app's own reduce-motion setting", () => {
+    const calls = animate();
+    render(<div data-reduced-motion=""><Owner /></div>);
+    const dialog = open();
+    expect(calls).toHaveLength(0);
+    expect(area(dialog)).toHaveFocus();
+  });
+});
+
 describe('ColorPicker placement', () => {
   afterEach(() => {
     vi.restoreAllMocks();

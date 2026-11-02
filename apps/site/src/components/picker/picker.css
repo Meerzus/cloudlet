@@ -104,3 +104,181 @@ html[data-cp-top][data-cp-hour='day'] .site-header {
   --glass-border: oklch(1 0 0 / 0.55);
 }
 html[data-cp-top] .site-edge-tint { opacity: 0; }
+
+/* --- The neutral sections (§8.6): a few percent of the picked color, changing over 320 ms. --- */
+.cp-tint {
+  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 5%, var(--background));
+  transition: background-color 320ms ease;
+}
+.cp-section-title {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.cp-section-lede {
+  max-width: 42rem;
+  margin-top: 1rem;
+  font-size: 1.125rem;
+  color: var(--muted-foreground);
+  text-wrap: pretty;
+}
+@media (min-width: 640px) { .cp-section-lede { font-size: 1.25rem; } }
+.cp-code {
+  padding: 0.1em 0.35em;
+  border-radius: 0.375rem;
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  font: 0.875em var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* --- Combinations (§8.5) --- */
+.cp-harmonies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 2rem;
+  margin-top: 2.5rem;
+}
+.cp-harmony-name { margin-bottom: 0.75rem; font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
+.cp-harmony-swatches { display: flex; flex-direction: column; gap: 0.25rem; }
+.cp-swatch {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.375rem;
+  border-radius: 0.875rem;
+  text-align: left;
+  outline: none;
+  transition: background-color 150ms ease;
+}
+.cp-swatch:hover { background: color-mix(in oklab, var(--foreground) 6%, transparent); }
+.cp-swatch:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.cp-swatch-chip {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.625rem;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 12%, transparent);
+  transition: background-color 320ms ease;
+}
+.cp-swatch-value {
+  min-width: 0;
+  font: 0.8125rem/1.35 var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Riso posters: flat paper, flat glyphs, film grain over both (a 256 px tile, scripts/grain.mjs). */
+.cp-posters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin-top: 3.5rem;
+}
+.cp-poster {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  margin: 0;
+  border-radius: 1.25rem;
+  transition: background-color 320ms ease, color 320ms ease;
+}
+.cp-glyph { position: absolute; transition: color 320ms ease; }
+.cp-glyph-moon { left: 26%; top: 8%; width: 48%; }
+.cp-glyph-reflection { left: 36%; top: 48%; width: 28%; }
+.cp-glyph-drop { left: 14%; top: 12%; width: 44%; }
+.cp-glyph-star { right: 12%; top: 32%; width: 34%; }
+.cp-glyph-cloud { left: 12%; top: 16%; width: 74%; }
+.cp-glyph-star-small { right: 14%; top: 8%; width: 18%; }
+.cp-poster-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: url('/picker/grain.png') 0 0 / 256px 256px;
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+  pointer-events: none;
+}
+.cp-poster-caption {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  left: 1.25rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.cp-poster-title { font-size: 2rem; font-weight: 600; line-height: 1; letter-spacing: -0.035em; }
+.cp-poster-meta { font: 500 0.75rem var(--font-geist-mono), ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* --- Built for keyboards (§8.5) --- */
+.cp-keyboards { display: grid; align-items: start; gap: 2rem; margin-top: 2.5rem; }
+@media (min-width: 768px) { .cp-keyboards { grid-template-columns: auto 1fr; gap: 3rem; } }
+.cp-keys { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+.cp-keys tr + tr > * { border-top: 1px solid var(--border); }
+.cp-keys th { padding: 0.625rem 1.5rem 0.625rem 0; font-weight: 400; text-align: left; white-space: nowrap; vertical-align: top; }
+.cp-keys td { padding: 0.9rem 0 0.625rem; color: var(--muted-foreground); }
+.cp-keys kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  height: 2rem;
+  margin-right: 0.375rem;
+  padding: 0 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px var(--border), 0 2px 0 var(--border);
+  font: 500 0.8125rem var(--font-geist-mono), ui-monospace, monospace;
+  transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+.cp-keys kbd[data-pressed] {
+  transform: translateY(2px);
+  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 24%, var(--background));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--cp-color, #ff6a3d) 60%, var(--border));
+}
+.cp-motion-demo { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; margin-top: 3rem; }
+.cp-motion-demo > p { flex: 1 1 18rem; }
+.cp-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  border-radius: 9999px;
+  font-size: 0.9375rem;
+  outline: none;
+}
+.cp-switch:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.cp-switch-track {
+  position: relative;
+  width: 2.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 22%, transparent);
+  transition: background-color 200ms ease;
+}
+.cp-switch[aria-checked='true'] .cp-switch-track { background: var(--foreground); }
+.cp-switch-thumb {
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background: var(--background);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  transition: transform 250ms cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+.cp-switch[aria-checked='true'] .cp-switch-thumb { transform: translateX(1rem); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-tint, .cp-swatch-chip, .cp-poster, .cp-glyph, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb { transition: none; }
+}
+@media (forced-colors: active) {
+  .cp-switch-track { border: 1px solid CanvasText; }
+  .cp-switch[aria-checked='true'] .cp-switch-track { background: Highlight; }
+  .cp-keys kbd { border: 1px solid CanvasText; }
+  .cp-keys kbd[data-pressed] { background: Highlight; color: HighlightText; }
+}
