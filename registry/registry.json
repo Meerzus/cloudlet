@@ -22,6 +22,35 @@
         }
       ],
       "docs": "Import Toaster into a client owner and pass its controller. Import @cloudlet/toast/styles.css once before the local toaster.css (the wrapper already imports both). The owner creates/disposes its controller; do not share one across requests. See https://cloudlet.dev/toaster/docs for lifecycle, theme and SSR."
+    },
+    {
+      "name": "color-picker",
+      "type": "registry:ui",
+      "title": "Cloudlet Color Picker",
+      "description": "A round swatch that morphs into a color picker on interruptible springs: a saturation × brightness area, hue and optional opacity sliders, an editable value in hex, rgb, hsl or oklch, an eyedropper where the browser has one, and copy. ColorPickerPanel renders the same panel inline. No dependencies.",
+      "files": [
+        {
+          "path": "apps/site/src/components/ui/color-picker/color-picker.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "apps/site/src/components/ui/color-picker/color-picker.css",
+          "type": "registry:ui"
+        },
+        {
+          "path": "apps/site/src/components/ui/color-picker/color.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "apps/site/src/components/ui/color-picker/morph.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "apps/site/src/lib/spring.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "docs": "Import ColorPicker (or ColorPickerPanel) from components/ui/color-picker/color-picker; it imports its own color-picker.css. color/onChange take any hex, rgb(), hsl() or oklch() string and return one in `format` (hex by default); `formats` limits the switch, `alpha` adds opacity, `name` adds a hidden input. Styles read the shadcn tokens --background, --foreground, --border, --ring and --muted. The panel is not portalled: give an `overflow: hidden` ancestor `overflow: visible`."
     }
   ]
 }

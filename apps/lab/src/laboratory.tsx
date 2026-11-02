@@ -204,7 +204,7 @@ function Secondary({ session, reset, position, inset, motion }: { session: LabSe
 
 const fixtures = [
   ['attention', 'Auto-open'], ['slider', 'Open slider'], ['no-reset', 'No CSS reset'], ['hostile', 'Hostile CSS'], ['long-text', 'Long texts / RTL'],
-  ['zoom', 'Large text'], ['portal', 'Own portal'], ['inset', 'Mobile bar'], ['visual', 'Look'],
+  ['zoom', 'Large text'], ['portal', 'Own portal'], ['inset', 'Mobile bar'], ['visual', 'Look'], ['color-picker', 'Color picker morph'],
 ] as const;
 
 function Laboratory() {

@@ -7,6 +7,8 @@ export const SITE_URL = 'https://cloudlet.dev';
  */
 export const TOASTER_PATH = '/toaster';
 export const PLAYGROUND_PATH = `${TOASTER_PATH}/playground`;
+/** The color picker's landing (COLOR_PICKER §8): a registry item, no npm package. */
+export const COLOR_PICKER_PATH = '/color-picker';
 /**
  * Search engines are welcome since 1.0.0: pages carry no `noindex`, `robots.txt` and `sitemap.xml`
  * are static files of the export. `false` brings back `noindex, nofollow` on every page; then
@@ -36,6 +38,9 @@ export const INSTALL_COMMAND = 'npm install @cloudlet/toast';
 /** The shadcn registry item, served from `public/r/`. */
 export const REGISTRY_ITEM_URL = `${SITE_URL}/r/toaster.json`;
 export const SHADCN_COMMAND = `npx shadcn@latest add ${REGISTRY_ITEM_URL}`;
+/** The color picker's registry item: source files only, no npm package (COLOR_PICKER §1). */
+export const COLOR_PICKER_ITEM_URL = `${SITE_URL}/r/color-picker.json`;
+export const COLOR_PICKER_COMMAND = `npx shadcn@latest add ${COLOR_PICKER_ITEM_URL}`;
 /**
  * What the published package adds to an app, min+gzip bytes (`release:verify` of the
  * `1.2.0` tarball, `artifacts/size/report.json`): its own JavaScript on first load (`start`, before

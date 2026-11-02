@@ -11,16 +11,24 @@ const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta
  */
 describe('site registry (/r)', () => {
   it('serves the built catalog and item unchanged', () => {
-    for (const name of ['registry.json', 'toaster.json']) {
+    for (const name of ['registry.json', 'toaster.json', 'color-picker.json']) {
       expect(JSON.parse(read(`apps/site/public/r/${name}`)), name).toEqual(JSON.parse(read(`registry/r/${name}`)));
     }
   });
 
   it('keeps the source out of the catalog, as the shadcn registry index requires', () => {
     const catalog = JSON.parse(read('registry/r/registry.json')) as { items: { name: string; files: object[] }[] };
-    const item = JSON.parse(read('registry/r/toaster.json')) as { files: { content?: string }[] };
+    expect(catalog.items.map((entry) => entry.name)).toEqual(['toaster', 'color-picker']);
     for (const entry of catalog.items) for (const file of entry.files) expect(file, entry.name).not.toHaveProperty('content');
-    expect(item.files.every((file) => typeof file.content === 'string' && file.content.length > 0)).toBe(true);
+    for (const name of ['toaster', 'color-picker']) {
+      const item = JSON.parse(read(`registry/r/${name}.json`)) as { files: { content?: string }[] };
+      expect(item.files.every((file) => typeof file.content === 'string' && file.content.length > 0), name).toBe(true);
+    }
+  });
+
+  it('serves the color picker exactly as the site runs it (rerun registry:build after editing it)', () => {
+    const item = JSON.parse(read('registry/r/color-picker.json')) as { files: { path: string; content: string }[] };
+    for (const file of item.files) expect(file.content, file.path).toBe(read(file.path));
   });
 
   it('is the item the install command names', () => {

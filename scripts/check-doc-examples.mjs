@@ -96,6 +96,9 @@ try {
       paths: {
         '@cloudlet/toast': [resolve(root, 'packages/toast/src/index.ts')],
         '@/components/ui/toaster': [resolve(root, 'registry/cloudlet/toaster.tsx')],
+        // The color picker registry item installs the site's own files at these paths.
+        '@/components/ui/color-picker/color-picker': [resolve(root, 'apps/site/src/components/ui/color-picker/color-picker.tsx')],
+        '@/lib/spring': [resolve(root, 'apps/site/src/lib/spring.ts')],
       },
     },
     files: examples.map(example => `./${example.filename}`),

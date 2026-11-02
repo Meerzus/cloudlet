@@ -60,7 +60,7 @@ function Steps({ tab }: { tab: GetStartedTab }) {
   );
 }
 
-function CodeBlock({ file, code }: { file: string; code: string }) {
+export function CodeBlock({ file, code }: { file: string; code: string }) {
   const copy = useCopy();
   const [copied, setCopied] = useState(false);
   const tokens = useMemo(() => highlight(code), [code]);

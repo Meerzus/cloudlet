@@ -311,7 +311,7 @@ function useDraft(value: string) {
 function ColorField({ token, theme, value, onChange, ...row }: RowProps & { token: ColorToken; theme: Theme; value: string; onChange: (value: string) => void }) {
   const id = useId();
   const [draft, setDraft] = useDraft(value);
-  // The picker only speaks hex: oklch(), var() and names keep the last hex the swatch had.
+  // The editor's picker only speaks hex (the format switch is hidden): oklch(), var() and names keep the last hex the swatch had.
   const lastHex = useRef(hexSwatch(value) ?? token.defaults[theme]);
   const hex = hexSwatch(value);
   if (hex) lastHex.current = hex;
@@ -319,7 +319,7 @@ function ColorField({ token, theme, value, onChange, ...row }: RowProps & { toke
   return (
     <Row {...row} htmlFor={id} error={invalid ? <p id={`${id}-error`} className="docs-style-error">{UI.invalidColor}</p> : null}>
       <div className="docs-style-color">
-        <ColorPicker color={lastHex.current} swatch={validate(token.name, value) ? value : lastHex.current} onChange={onChange} labels={{ open: UI.openPicker(row.label), panel: UI.picker(row.label), close: UI.closePicker }} />
+        <ColorPicker color={lastHex.current} swatch={validate(token.name, value) ? value : lastHex.current} formats={['hex']} onChange={onChange} labels={{ open: UI.openPicker(row.label), panel: UI.picker(row.label), close: UI.closePicker }} />
         <input id={id} type="text" aria-label={row.label} value={draft} spellCheck={false} autoComplete="off" aria-invalid={invalid || undefined} aria-describedby={invalid ? `${id}-error` : undefined} onChange={(event) => {
           setDraft(event.target.value);
           if (validate(token.name, event.target.value)) onChange(event.target.value);

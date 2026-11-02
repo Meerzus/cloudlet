@@ -25,3 +25,4 @@ CLAUDE.local.md
 
 # fumadocs-mdx cache of the documentation collections (apps/site)
 /apps/site/.source/
+apps/site/scripts/smoke/*.actual.png
