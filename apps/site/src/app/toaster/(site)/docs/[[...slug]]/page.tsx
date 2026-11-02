@@ -1,5 +1,5 @@
 import { findNeighbour } from 'fumadocs-core/page-tree';
-import type { Metadata } from 'next';
+import type { Metadata, ResolvingMetadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getMDXComponents } from '@/components/docs/mdx-components';
 import { PageNav } from '@/components/docs/page-nav';
@@ -44,16 +44,18 @@ export function generateStaticParams() {
   return source.generateParams();
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props, parent: ResolvingMetadata): Promise<Metadata> {
   const { slug } = await params;
   const page = source.getPage(slug);
   if (!page) notFound();
   const title = `${page.data.title} — Cloudlet Docs`;
+  // A page's own openGraph replaces the parent's whole, file-based image included: carry it over.
+  const { openGraph } = await parent;
   // Agents and crawlers: the canonical address and the page's own Markdown.
   return {
     title,
     description: page.data.description,
-    openGraph: { title, description: page.data.description, url: page.url },
+    openGraph: { title, description: page.data.description, url: page.url, images: openGraph?.images ?? [] },
     alternates: { canonical: `${SITE_URL}${page.url}`, types: { 'text/markdown': `${SITE_URL}${markdownUrl(page)}` } },
   };
 }

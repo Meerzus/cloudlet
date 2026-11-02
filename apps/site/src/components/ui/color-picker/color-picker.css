@@ -125,6 +125,8 @@
   cursor: pointer;
   transition: color 160ms ease;
 }
+/* The segments are 20 px tall to look at; the pressable band reaches 32 px (WCAG 2.5.8 asks 24). */
+.color-picker-segment::before { content: ''; position: absolute; inset: -0.375rem 0; }
 .color-picker-segment:hover,
 .color-picker-segment:has(:checked) { color: var(--foreground); }
 .color-picker-segment:has(:focus-visible) { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }

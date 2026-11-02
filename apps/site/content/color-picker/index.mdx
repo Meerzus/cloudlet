@@ -95,13 +95,31 @@ The eyedropper button appears only where the browser has the EyeDropper API, Chr
 | Part | Role | Keys |
 | --- | --- | --- |
 | Swatch | button, `aria-expanded` | Enter or Space opens the picker |
-| Picker | dialog named by `labels.panel` | focus starts in the area; Escape closes and returns focus to the swatch; a press outside closes without moving focus |
+| Picker | dialog named by `labels.panel` | focus starts in the area; Escape closes and returns focus to the swatch; a press outside, or Tab out of the panel, closes without moving focus |
 | Area | slider, "Saturation 40%, Brightness 80%" | ← → saturation, ↑ ↓ brightness, by 1%; with Shift by 10% |
 | Hue, opacity | sliders, "Hue 48°", "Opacity 50%" | ← → by 1° or 1%, Shift by 10, Home and End to the ends |
 | Value field | text field named by `labels.value` | typing applies every color that parses; Escape reverts, a second Escape closes |
 | Format switch | radio group | arrows move between formats |
 
-Tab moves through the value field, the area, the sliders, the format switch, the eyedropper and copy, in that order. In forced-colors mode the handles, the area and the switch draw borders in system colors, so every part stays findable without gradients.
+Tab moves through the swatch that closes the panel, the value field, the area, the sliders, the format switch, the eyedropper and copy, in that order; past copy, focus leaves the picker and the panel closes, so it never covers what Tab reaches next. `ColorPickerPanel` has no closing swatch and starts at the value field. In forced-colors mode the handles, the area and the switch draw borders in system colors, so every part stays findable without gradients.
+
+### Labels
+
+Every name and spoken word comes from `labels`; pass the ones you translate and the rest keep these defaults (`DEFAULT_LABELS`):
+
+| Key | Default | Where |
+| --- | --- | --- |
+| `open` | `Pick color` | the swatch button |
+| `panel` | `Color picker` | the dialog |
+| `close` | `Close` | the swatch inside the panel |
+| `area` | `Saturation and brightness` | the area's name |
+| `saturation`, `brightness` | `Saturation`, `Brightness` | the area's value, "Saturation 40%, Brightness 80%" |
+| `hue` | `Hue` | the hue slider's name and value, "Hue 48°" |
+| `alpha` | `Opacity` | the opacity slider's name and value, "Opacity 50%" |
+| `value` | `Color value` | the value field |
+| `format` | `Format` | the format switch |
+| `eyedropper` | `Pick from screen` | the eyedropper button |
+| `copy`, `copied` | `Copy`, `Copied` | the copy button and its announcement |
 
 ## Styling
 

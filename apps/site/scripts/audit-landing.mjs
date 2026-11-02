@@ -10,7 +10,7 @@
  *   npm run build && npm run build:site
  *   node apps/site/scripts/audit-landing.mjs <out-dir> [--base URL] [--browser chromium|firefox|webkit] [scenario ...]
  *
- * Besides axe, on `/`, `/playground` and `/color-picker`: a keyboard pass (Tab from the top until focus leaves the
+ * Besides axe, on `/`, `/playground`, `/color-picker` and its docs: a keyboard pass (Tab from the top until focus leaves the
  * page or cycles; every stop must show a focus ring and be scrolled into view) and, with reduced
  * motion, the still layout (no Lenis, no pin spacers, sky and scenes untransformed).
  *
@@ -186,7 +186,7 @@ try {
       }
     }
     entry.keyboard = {};
-    for (const path of ['/toaster', '/toaster/playground', '/color-picker']) {
+    for (const path of ['/toaster', '/toaster/playground', '/color-picker', '/color-picker/docs']) {
       entry.keyboard[path] = await keyboard(page, path);
       if (entry.keyboard[path].failures.length) failed = true;
     }

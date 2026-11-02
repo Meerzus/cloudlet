@@ -8,7 +8,8 @@ html:has(.cp-site) { background: var(--background); }
 /* The flat sky: shown until the landscape draws, and for good without WebGL 2. FLAT_SKY in lib/landscape.ts mixes the same. */
 .cp-hero {
   --cp-ink: oklch(0.985 0.005 250);
-  --cp-ink-soft: oklch(0.985 0.005 250 / 0.86);
+  /* The other ink: the inner band of the disc's two-tone focus ring. */
+  --cp-ink-contrast: oklch(0.17 0.02 260);
   position: relative;
   isolation: isolate;
   min-height: 100svh;
@@ -19,7 +20,7 @@ html:has(.cp-site) { background: var(--background); }
 }
 html[data-cp-hour='day'] .cp-hero {
   --cp-ink: oklch(0.17 0.02 260);
-  --cp-ink-soft: oklch(0.17 0.02 260 / 0.84);
+  --cp-ink-contrast: oklch(0.985 0.005 250);
   background: color-mix(in oklch, var(--cp-color, #ff6a3d) 60%, white);
 }
 .cp-hero-canvas {
@@ -52,7 +53,8 @@ html[data-cp-hour='day'] .cp-hero {
   margin-top: 1.5rem;
   font-size: 1.125rem;
   line-height: 1.5;
-  color: var(--cp-ink-soft);
+  /* Full ink: at dusk a softened one fell under 4.5:1 over the bright lower sky (C09). */
+  color: var(--cp-ink);
   text-wrap: pretty;
 }
 
@@ -70,8 +72,9 @@ html[data-cp-hour='day'] .cp-hero {
   height: var(--disc);
 }
 .cp-hero-disc > .color-picker > .color-picker-swatch { box-shadow: none; }
+/* Two bands, the other ink inside the hero's: a sun's own halo can match either ink, never both (WCAG 1.4.11). */
 .cp-hero-disc > .color-picker > .color-picker-swatch:focus-visible {
-  box-shadow: none;
+  box-shadow: 0 0 0 4px var(--cp-ink-contrast);
   outline: 3px solid var(--cp-ink);
   outline-offset: 4px;
 }

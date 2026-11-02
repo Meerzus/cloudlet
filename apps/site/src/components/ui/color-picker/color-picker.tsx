@@ -20,9 +20,13 @@ export interface ColorPickerLabels {
   readonly close: string;
   /** Name of the saturation × brightness area. */
   readonly area: string;
-  /** Name of the hue slider. */
+  /** Word for saturation in the area's spoken value, "Saturation 40%, Brightness 80%". */
+  readonly saturation: string;
+  /** Word for brightness in the area's spoken value. */
+  readonly brightness: string;
+  /** Name of the hue slider, also spoken before its value: "Hue 48°". */
   readonly hue: string;
-  /** Name of the opacity slider. */
+  /** Name of the opacity slider, also spoken before its value: "Opacity 50%". */
   readonly alpha: string;
   /** Name of the editable value field. */
   readonly value: string;
@@ -41,6 +45,8 @@ export const DEFAULT_LABELS: ColorPickerLabels = {
   panel: 'Color picker',
   close: 'Close',
   area: 'Saturation and brightness',
+  saturation: 'Saturation',
+  brightness: 'Brightness',
   hue: 'Hue',
   alpha: 'Opacity',
   value: 'Color value',
@@ -114,7 +120,7 @@ function usePointerDrag(onPoint: (x: number, y: number) => void) {
 }
 
 /** The saturation × brightness square: one `role="slider"` whose arrows move both axes. */
-function ColorArea({ hsva, onChange, label }: { hsva: Hsva; onChange: (next: Hsva) => void; label: string }) {
+function ColorArea({ hsva, onChange, labels }: { hsva: Hsva; onChange: (next: Hsva) => void; labels: ColorPickerLabels }) {
   const drag = usePointerDrag((x, y) => onChange({ ...hsva, s: x, v: 1 - y }));
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const step = event.shiftKey ? BIG_STEP : STEP;
@@ -131,7 +137,7 @@ function ColorArea({ hsva, onChange, label }: { hsva: Hsva; onChange: (next: Hsv
   };
   const style = { '--color-picker-hue': hsva.h } as CSSProperties;
   return (
-    <div role="slider" tabIndex={0} aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent(hsva.s)} aria-valuetext={`Saturation ${percent(hsva.s)}%, Brightness ${percent(hsva.v)}%`} className="color-picker-area" style={style} onKeyDown={onKeyDown} {...drag}>
+    <div role="slider" tabIndex={0} aria-label={labels.area} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent(hsva.s)} aria-valuetext={`${labels.saturation} ${percent(hsva.s)}%, ${labels.brightness} ${percent(hsva.v)}%`} className="color-picker-area" style={style} onKeyDown={onKeyDown} {...drag}>
       <span className="color-picker-thumb" style={{ left: `${hsva.s * 100}%`, top: `${(1 - hsva.v) * 100}%` }} aria-hidden="true" />
     </div>
   );
@@ -394,9 +400,9 @@ function PanelBody({ state, labels, alpha, name, head, bodyRef }: PanelBodyProps
         <ValueField state={state} label={labels.value} />
       </div>
       <div ref={bodyRef} className="color-picker-body">
-        <ColorArea hsva={hsva} onChange={state.set} label={labels.area} />
-        <ColorSlider value={hsva.h} max={360} step={1} bigStep={10} label={labels.hue} valueText={`${Math.round(hsva.h)}°`} className="color-picker-hue" onChange={(h) => state.set({ ...hsva, h })} />
-        {alpha ? <ColorSlider value={hsva.a} max={1} step={0.01} bigStep={0.1} label={labels.alpha} valueText={`${percent(hsva.a)}%`} className="color-picker-alpha" onChange={(a) => state.set({ ...hsva, a })} /> : null}
+        <ColorArea hsva={hsva} onChange={state.set} labels={labels} />
+        <ColorSlider value={hsva.h} max={360} step={1} bigStep={10} label={labels.hue} valueText={`${labels.hue} ${Math.round(hsva.h)}°`} className="color-picker-hue" onChange={(h) => state.set({ ...hsva, h })} />
+        {alpha ? <ColorSlider value={hsva.a} max={1} step={0.01} bigStep={0.1} label={labels.alpha} valueText={`${labels.alpha} ${percent(hsva.a)}%`} className="color-picker-alpha" onChange={(a) => state.set({ ...hsva, a })} /> : null}
         <div className="color-picker-footer">
           {state.formats.length > 1 ? <FormatSwitch state={state} label={labels.format} /> : <span />}
           <div className="color-picker-tools">
@@ -469,8 +475,8 @@ export function ColorPickerPanel({ className, labels: partial, alpha = false, na
  * A round swatch that morphs into the color picker. The panel's clip grows out of the swatch circle
  * on two springs (insets and radius) while the circle stays put, the rows unblur in one after
  * another, the shadow grows with the panel, and closing shrinks it back into the swatch; an open or
- * close interrupted in flight keeps its momentum (owner's pick V3, C03). Escape and the in-panel swatch close and return focus to the trigger; a press outside
- * closes without moving focus. Without the Web Animations API, under reduced motion or inside a
+ * close interrupted in flight keeps its momentum (owner's pick V3, C03). Escape and the in-panel swatch close and return focus to the trigger; a press outside,
+ * or Tab past the last control, closes without moving focus (the panel would otherwise cover what Tab reaches next). Without the Web Animations API, under reduced motion or inside a
  * `data-reduced-motion` ancestor it opens and closes instantly. The panel opens down and to the right, and flips up and/or left when that would
  * cross the viewport's edge; it is not portalled, so a container with `overflow: hidden` clips it.
  * Styles: color-picker.css, imported here (shadcn tokens: background, foreground, border, ring).
@@ -609,6 +615,10 @@ export function ColorPicker({ swatch, labels: partial, alpha = false, name, ...r
               event.stopPropagation();
               close(true);
             }
+          }} onBlur={(event) => {
+            // Focus moved on to something outside (Tab past copy, Shift+Tab onto the covered trigger): close, leave focus there.
+            const next = event.relatedTarget;
+            if (next instanceof Node && !event.currentTarget.contains(next)) close(false);
           }}>
             <PanelBody state={state} labels={labels} alpha={alpha} name={name} bodyRef={body} head={<button ref={handle} type="button" className="color-picker-swatch" aria-label={labels.close} onClick={() => close(true)} />} />
           </div>

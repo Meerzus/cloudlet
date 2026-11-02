@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, ResolvingMetadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getMDXComponents } from '@/components/docs/mdx-components';
 import { DesktopToc, MobileToc, TocProvider } from '@/components/docs/toc';
@@ -31,13 +31,15 @@ export default function ColorPickerDocs() {
   );
 }
 
-export function generateMetadata(): Metadata {
+export async function generateMetadata(_: unknown, parent: ResolvingMetadata): Promise<Metadata> {
   const current = page();
   const title = `${current.data.title} — Cloudlet Docs`;
+  // A page's own openGraph replaces the parent's whole, file-based image included: carry it over.
+  const { openGraph } = await parent;
   return {
     title,
     description: current.data.description,
-    openGraph: { title, description: current.data.description, url: current.url },
+    openGraph: { title, description: current.data.description, url: current.url, images: openGraph?.images ?? [] },
     alternates: { canonical: `${SITE_URL}${current.url}`, types: { 'text/markdown': `${SITE_URL}${markdownUrl(current)}` } },
   };
 }
