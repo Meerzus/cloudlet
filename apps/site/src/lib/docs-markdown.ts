@@ -1,13 +1,15 @@
 import { renderPlaceholder, type PlaceholderData } from 'fumadocs-core/mdx-plugins/remark-llms.runtime';
 import { groupTree } from '@/components/docs/nav';
 import { source, type DocsPage } from './docs-source';
+import { pickerSource } from './picker-docs-source';
 import { DOCS_UI } from './docs-ui-strings';
 import { GET_STARTED, type GetStartedTab } from './get-started';
-import { DOCS_PATH, DOCS_URL, SITE_URL } from './site';
+import { COLOR_PICKER_DOCS_PATH, DOCS_PATH, DOCS_URL, SITE_URL } from './site';
 
 /*
  * The documentation for agents, from the same MDX as the pages: `/llms.txt` lists
- * the pages, `/llms-full.txt` holds them all, `/toaster/docs/<slug>.md` is one page. fumadocs-mdx keeps
+ * the pages, `/llms-full.txt` holds them all, `/toaster/docs/<slug>.md` is one page, and the color
+ * picker's page follows the Toaster's under its own heading (`/color-picker/docs.md`). fumadocs-mdx keeps
  * the authored Markdown of each page (`includeProcessedMarkdown`); MDX components come as
  * placeholders and are expanded here into plain text and code, runnable fences are already plain
  * code (remark-demo-note.ts) and a `<Demos>` group is just its fences, and site links become absolute.
@@ -46,6 +48,8 @@ const RENDERERS: Record<string, (data: PlaceholderData) => string> = {
   InstallCommand: ({ attributes }) => fence('sh', text(attributes.command) ?? '', 'Terminal'),
   /** A demo block of several fences: the fences, plain code already. */
   Demos: ({ children }) => children.trim(),
+  /** The live example of the color picker docs: nothing to read away from the page. */
+  PickerDemo: () => `Live example at ${SITE_URL}${COLOR_PICKER_DOCS_PATH}: the swatch and the inline panel on one color.`,
   /** The shareable editor contract stays useful away from the interactive page. */
   StyleEditor: () => `Style editor at ${DOCS_URL}/styling#style-editor: set the tokens on a live Toaster and copy the CSS. The query string carries the values — one parameter per token name without the \`--cloudlet-\` prefix (\`background\`, \`background-dark\`, \`pill-radius\`, \`font-family\`, …); dark-theme colors use the \`-dark\` suffix, and the preview follows the site theme.`,
 };
@@ -75,6 +79,14 @@ function sidebar() {
   }));
 }
 
+/** The color picker's pages: a registry item with its own docs, after the Toaster's. */
+const pickerPages = () => pickerSource.getPages();
+
+/** The Markdown of any documentation page, the Toaster's or the color picker's, by its `.md` address without the leading slash. */
+export function markdownPages(): Map<string, DocsPage> {
+  return new Map([...source.getPages(), ...pickerPages()].map((page) => [markdownUrl(page).slice(1), page]));
+}
+
 /** `/llms.txt` (llmstxt.org): title, summary, then the pages by group, linking to their Markdown. */
 export function llmsIndex(): string {
   const sections = sidebar().map(({ name, links }) => {
@@ -85,13 +97,15 @@ export function llmsIndex(): string {
     });
     return `## ${name ?? DOCS_UI.navLabel}\n\n${items.join('\n')}`;
   });
+  const picker = pickerPages().map((page) => `- [${page.data.title}](${SITE_URL}${markdownUrl(page)})${page.data.description ? `: ${page.data.description}` : ''}`);
+  sections.push(`## Color picker\n\nA separate component, installed as source with the shadcn CLI.\n\n${picker.join('\n')}`);
   const intro = `Every page is Markdown at its address plus \`.md\`; all of them in one file: ${SITE_URL}/llms-full.txt.`;
   return `# Cloudlet\n\n> ${LLMS_SUMMARY}\n\n${intro}\n\n${sections.join('\n\n')}\n`;
 }
 
 /** `/llms-full.txt`: every page in sidebar order, separated by rules. */
 export async function llmsFull(): Promise<string> {
-  const pages = sidebar().flatMap(({ links }) => links.flatMap(({ page }) => (page ? [page] : [])));
+  const pages = [...sidebar().flatMap(({ links }) => links.flatMap(({ page }) => (page ? [page] : []))), ...pickerPages()];
   const parts = await Promise.all(pages.map(pageMarkdown));
   return parts.map((part) => part.trim()).join('\n\n---\n\n') + '\n';
 }

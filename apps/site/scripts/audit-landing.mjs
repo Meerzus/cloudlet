@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * axe on the static export of the landings: the Toaster's `/`, `/playground` and `/frame`, and `/color-picker`,
+ * axe on the static export of the landings: the Toaster's `/`, `/playground` and `/frame`, `/color-picker` and its docs,
  * desktop 1440×900 and phone 390×844, light and dark, with motion and with reduced motion.
  * Scenes are pinned and fade text in and out, so the home page is checked at every section
  * and at points inside scenes 2 and 3, not only at the top. Text caught mid-fade (opacity
@@ -173,7 +173,7 @@ try {
     page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
     page.on('pageerror', (error) => errors.push(String(error)));
     const entry = (report[name] = { errors, checks: [] });
-    for (const path of ['/toaster', '/toaster/playground', '/toaster/frame', '/color-picker']) {
+    for (const path of ['/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/color-picker/docs']) {
       await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(600);
       const stops = path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
