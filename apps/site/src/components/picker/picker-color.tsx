@@ -48,9 +48,14 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
 
   useLayoutEffect(() => {
     // After a client navigation the start script did not run: pick the same way here.
-    const fromScript = (window as unknown as Record<string, unknown>)[START_GLOBAL];
+    const globals = window as unknown as Record<string, unknown>;
+    const fromScript = globals[START_GLOBAL];
     setValue(typeof fromScript === 'string' ? fromScript : startColor(window.location.search, Math.random()));
     setStarted(true);
+    // Used once: a later client navigation back here picks afresh. Cleared after a task, so StrictMode's
+    // immediate second run of this effect still reads the same color.
+    const consume = window.setTimeout(() => delete globals[START_GLOBAL]);
+    return () => window.clearTimeout(consume);
   }, []);
 
   useLayoutEffect(() => {

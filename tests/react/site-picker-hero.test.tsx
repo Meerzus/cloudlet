@@ -49,6 +49,14 @@ describe('color picker landing hero (COLOR_PICKER §8.2–8.3)', () => {
     expect(window.location.search).toBe('');
   });
 
+  it("uses the start script's color once, so a client navigation back picks afresh", async () => {
+    global[START_GLOBAL] = '#1b1f4a';
+    render(<Hero />);
+    expect(global[START_GLOBAL]).toBe('#1b1f4a');
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(global[START_GLOBAL]).toBeUndefined();
+  });
+
   it('starts from ?c= after a client navigation, when the start script did not run', () => {
     window.history.replaceState(null, '', '/color-picker?c=0f3d5c');
     render(<Hero />);

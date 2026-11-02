@@ -124,6 +124,30 @@ describe('ColorPicker', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it('reads a prop that returns to a value the picker emitted earlier', () => {
+    const emitted: string[] = [];
+    function Shared() {
+      const [color, setColor] = useState('#00ff00');
+      return (
+        <>
+          <ColorPicker color={color} labels={LABELS} onChange={(hex) => { emitted.push(hex); setColor(hex); }} />
+          <button type="button" onClick={() => setColor('#336699')}>Set blue</button>
+          <button type="button" onClick={() => setColor(emitted.at(-1)!)}>Restore</button>
+        </>
+      );
+    }
+    render(<Shared />);
+    const dialog = open();
+    fireEvent.keyDown(area(dialog), { key: 'ArrowLeft' });
+    const picked = emitted.at(-1)!;
+    expect(field(dialog)).toHaveValue(picked);
+    fireEvent.click(screen.getByRole('button', { name: 'Set blue' }));
+    expect(field(dialog)).toHaveValue('#336699');
+    // Back to the value the picker itself emitted: it must follow, not keep showing blue.
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+    expect(field(dialog)).toHaveValue(picked);
+  });
+
   it('keeps the last valid color when the prop stops parsing and paints the swatch with it', () => {
     const { rerender } = render(<ColorPicker color="#336699" labels={LABELS} onChange={() => {}} />);
     rerender(<ColorPicker color="var(--surface)" swatch="var(--surface)" labels={LABELS} onChange={() => {}} />);

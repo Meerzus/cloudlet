@@ -187,8 +187,8 @@ const FALLBACK: Hsva = { h: 0, s: 0, v: 1, a: 1 };
 
 /**
  * Owns the HSV state, the output format and their controlled/uncontrolled modes. The color prop is
- * re-read only when it is not what the picker last emitted, so the hue survives zero saturation or
- * brightness; switching the format re-emits the same color so the field, the hidden input and the
+ * re-read only when it is not the value the picker last emitted or read, so the hue survives zero
+ * saturation or brightness; switching the format re-emits the same color so the field, the hidden input and the
  * owner agree.
  */
 function usePickerState({ color, defaultColor, onChange, format, defaultFormat, onFormatChange, formats = COLOR_FORMATS, alpha = false }: ColorPickerBaseProps): PickerState {
@@ -199,6 +199,8 @@ function usePickerState({ color, defaultColor, onChange, format, defaultFormat, 
   const emitted = useRef<string | null>(null);
   useEffect(() => {
     if (color === undefined || color === emitted.current) return;
+    // Remember what was read from outside as well: a prop that later returns to an earlier emitted value is read again.
+    emitted.current = color;
     const parsed = parseToHsva(color);
     if (parsed) setHsva(alpha ? parsed : { ...parsed, a: 1 });
   }, [color, alpha]);

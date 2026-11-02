@@ -113,8 +113,8 @@ export function PickerHero() {
           paint the sky
         </h1>
         <p className="cp-hero-lede">
-          The sun is the swatch: it opens into a full picker with hex, rgb, hsl and oklch, opacity, the eyedropper and the
-          keyboard. One shadcn item, no dependencies.
+          The sun is the swatch: it opens into a full picker with hex, rgb, hsl and oklch, the eyedropper and the keyboard.
+          One shadcn item, no dependencies.
         </p>
       </div>
       <div ref={disc} className="cp-hero-disc">

@@ -6,11 +6,11 @@ import { usePickerColor } from './picker-color';
 
 /** The cheat sheet: each row's keys (as `KeyboardEvent.key`), how they read and what they do. */
 const KEYS: readonly { readonly keys: readonly (readonly [key: string, label: string])[]; readonly does: string }[] = [
-  { keys: [['ArrowLeft', '←'], ['ArrowRight', '→']], does: 'Saturation in the area, hue and opacity on the sliders, 1% at a time' },
+  { keys: [['ArrowLeft', '←'], ['ArrowRight', '→']], does: 'Saturation in the area by 1%, hue on its slider by 1°, opacity by 1%' },
   { keys: [['ArrowUp', '↑'], ['ArrowDown', '↓']], does: 'Brightness in the area' },
   { keys: [['Shift', 'Shift']], does: 'With an arrow: ten steps at once' },
   { keys: [['Home', 'Home'], ['End', 'End']], does: 'A slider to its ends' },
-  { keys: [['Tab', 'Tab']], does: 'Area, hue, value field, format, eyedropper, copy' },
+  { keys: [['Tab', 'Tab']], does: 'Value field, area, hue, format, eyedropper, copy, in that order' },
   { keys: [['Enter', 'Enter'], [' ', 'Space']], does: 'Open the picker from its swatch' },
   { keys: [['Escape', 'Esc']], does: 'Revert the value field, then close and return to the swatch' },
 ];

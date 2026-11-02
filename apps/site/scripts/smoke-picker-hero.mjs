@@ -21,9 +21,10 @@ const MAX_DIFFERENT = 0.01;
 const update = process.argv.includes('--update');
 
 const server = await serve();
-const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+let browser;
 let failed = false;
 try {
+  browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, reducedMotion: 'reduce', colorScheme: 'light' });
   const page = await context.newPage();
   const errors = [];
@@ -75,7 +76,8 @@ try {
   }
   await context.close();
 } finally {
-  await browser.close();
+  // A browser that failed to launch must not keep the server open.
+  await browser?.close();
   server.close();
 }
 process.exit(failed ? 1 : 0);

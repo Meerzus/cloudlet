@@ -84,7 +84,7 @@ export function AccentField() {
     <ColorPicker
       color={accent}
       onChange={setAccent}
-      format="oklch"
+      defaultFormat="oklch"
       name="accent"
       labels={{ open: "Pick accent" }}
     />

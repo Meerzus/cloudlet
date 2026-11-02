@@ -12,7 +12,7 @@ import { COLOR_PICKER_PATH, SITE_URL } from '@/lib/site';
 
 const TITLE = 'Cloudlet Color Picker — a swatch that opens into a picker';
 const DESCRIPTION =
-  'A color picker for React and shadcn: a round swatch that morphs into hex, rgb, hsl and oklch, opacity, the eyedropper and the keyboard. One registry item, no dependencies.';
+  'A color picker for React and shadcn: a round swatch that morphs into hex, rgb, hsl and oklch, optional opacity, the eyedropper and the keyboard. One registry item, no dependencies.';
 
 export const metadata: Metadata = {
   title: TITLE,
