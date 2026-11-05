@@ -345,7 +345,8 @@ describe('Island: horizontal swipe navigation', () => {
       return event;
     };
     expect(wheel(0, 40).defaultPrevented).toBe(false);
-    expect(wheel(30, 4).defaultPrevented).toBe(false);
+    // The vertical stream does not turn into a swipe, but its sideways events never reach the browser.
+    expect(wheel(30, 4).defaultPrevented).toBe(true);
     act(() => { vi.advanceTimersByTime(200); });
     expect(calls('drag')).toEqual([]);
     const slow = wheel(10, 1);
@@ -373,6 +374,70 @@ describe('Island: horizontal swipe navigation', () => {
     expect(instance.getSnapshot().island.current).toBe(c);
     act(() => { vi.advanceTimersByTime(140); });
     expect(instance.getSnapshot().island.current).toBe(c);
+  });
+
+  it('decides a trackpad swipe by its summed travel, not its first event, and never lets the browser swipe back over the Island', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const { instance, a, b } = three();
+    render(tree(instance));
+    open(instance);
+    const wheel = (deltaX: number, deltaY: number, target: Element = title()) => {
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaX, deltaY });
+      Object.defineProperty(event, 'timeStamp', { value: time += 16 });
+      act(() => { target.dispatchEvent(event); });
+      return event;
+    };
+    const idle = () => act(() => { vi.advanceTimersByTime(200); });
+    // A finger that lands diagonally: the first delta leans vertical, the swipe is sideways.
+    const landing = wheel(1, 2);
+    expect(landing.defaultPrevented).toBe(true);
+    expect(calls('drag')).toEqual([]);
+    expect(wheel(12, 0).defaultPrevented).toBe(true);
+    expect(calls('drag:slide')).toEqual(['drag:slide:-13']);
+    expect([40, 40].map(delta => wheel(delta, 0).defaultPrevented)).toEqual([true, true]);
+    expect(instance.getSnapshot().island.current).toBe(b);
+    idle();
+
+    // At the oldest end of the slider nothing commits, yet the browser still gets none of it.
+    const key = (name: string) => act(() => { title().dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true })); });
+    key('End');
+    expect(instance.getSnapshot().island.current).toBe(a);
+    const header = document.querySelector<HTMLElement>('.cloudlet-clip > .cloudlet-slide > .cloudlet-header')!;
+    expect([40, 40, 40, 40].map(delta => wheel(delta, 0, header).defaultPrevented)).toEqual([true, true, true, true]);
+    idle();
+    // Outside the slides (the badge) no swipe starts, and sideways events are still held back.
+    const badge = document.querySelector<HTMLElement>('.cloudlet-badge')!;
+    const before = calls('drag').length;
+    expect([30, 30].map(delta => wheel(delta, 0, badge).defaultPrevented)).toEqual([true, true]);
+    expect(calls('drag')).toHaveLength(before);
+    idle();
+    // Small vertical deltas are held only until the intent decides; then scrolling is native.
+    expect(wheel(0, 3).defaultPrevented).toBe(true);
+    expect(wheel(0, 6).defaultPrevented).toBe(false);
+    expect(wheel(0, 40).defaultPrevented).toBe(false);
+    idle();
+    expect(instance.getSnapshot().island.current).toBe(a);
+    // The collapsed stack keeps native wheel events: the page under the pill scrolls and swipes as usual.
+    key('Escape');
+    expect(instance.getSnapshot().island.open).toBe(false);
+    idle();
+    expect(wheel(1, 2, pill()).defaultPrevented).toBe(false);
+    expect(wheel(40, 0, pill()).defaultPrevented).toBe(false);
+  });
+
+  it('holds sideways wheel events over the Island under reduced motion, where swipes are off', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query, addEventListener() {}, removeEventListener() {} }));
+    const { instance } = three();
+    render(tree(instance));
+    open(instance);
+    const events = [40, 40, 40].map(deltaX => {
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaX });
+      act(() => { title().dispatchEvent(event); });
+      return event;
+    });
+    expect(events.every(event => event.defaultPrevented)).toBe(true);
+    expect(calls('drag')).toEqual([]);
   });
 
   it('ignores trackpad swipes on the collapsed stack and pinch zoom', () => {

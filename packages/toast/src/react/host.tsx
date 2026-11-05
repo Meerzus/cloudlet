@@ -670,6 +670,11 @@ function createHostRuntime(owner: Host) {
       },
     };
   }
+  /** A wheel stream over the open Island never reaches the browser's back/forward swipe. */
+  function claimsWheel(target: Element): boolean {
+    const shell = shellRef.current;
+    return !!shell && shellView(owner.props.snapshot).open && shell.contains(target);
+  }
   function componentDidMount() {
     const root = rootRef.current;
     const shell = shellRef.current;
@@ -685,7 +690,7 @@ function createHostRuntime(owner: Host) {
     }
     for (const container of [exitRef.current, slideOutRef.current, chromeOutRef.current]) container?.setAttribute('inert', '');
     announcer.mount(root);
-    swipe = createSwipe(root, { begin: beginSwipe, now: () => view.performance.now() });
+    swipe = createSwipe(root, { begin: beginSwipe, claimsWheel, now: () => view.performance.now() });
     const media = view.matchMedia?.('(prefers-reduced-motion: reduce)');
     reduced = media?.matches ?? false;
     root.dataset.reducedMotion = String(reduced);

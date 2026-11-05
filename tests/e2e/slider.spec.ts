@@ -176,6 +176,64 @@ test('a swipe shows the inert neighbour only during the gesture, resists at the 
   expect(await page.evaluate(() => window.__shellAudit.maxLiveSlides)).toBe(1);
 });
 
+test('a trackpad swipe that lands diagonally still navigates, and no sideways wheel event over the Island reaches the browser', async ({ page }) => {
+  await openSlider(page);
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { wheelSeen: string[] }).wheelSeen = seen;
+    // Bubble phase on the window: after the host's listener, as the browser's own back/forward swipe sees it.
+    addEventListener('wheel', event => { if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) seen.push(`${event.deltaX}:${event.defaultPrevented}`); });
+  });
+  const seen = () => page.evaluate(() => (window as unknown as { wheelSeen: string[] }).wheelSeen.splice(0));
+  const url = page.url();
+  await body(page).hover();
+  // The first delta leans vertical (1, 2), the rest is sideways: the swipe used to be handed to the page.
+  await page.mouse.wheel(1, 2);
+  for (let step = 0; step < 6; step += 1) await page.mouse.wheel(40, 0);
+  await expect.poll(async () => (await sliderState(page)).current).toBe('slide-2');
+  expect((await seen()).every(entry => entry.endsWith(':true'))).toBe(true);
+  await idle(page);
+  // The oldest end: nothing to swipe to, still nothing for the browser.
+  await title(page).focus();
+  await page.keyboard.press('End');
+  await expect(slide(page, '3 of 3')).toBeVisible();
+  await idle(page);
+  await body(page).hover();
+  for (let step = 0; step < 6; step += 1) await page.mouse.wheel(40, 0);
+  await page.waitForTimeout(300);
+  const ends = await seen();
+  expect(ends.length).toBeGreaterThan(0);
+  expect(ends.every(entry => entry.endsWith(':true'))).toBe(true);
+  expect((await sliderState(page)).current).toBe('slide-1');
+  expect(page.url()).toBe(url);
+});
+
+test('a mouse press, a hold and a slow drag navigate the Island and dismiss the pill like a finger', async ({ page }) => {
+  await openSlider(page);
+  const hold = async (target: ReturnType<typeof title>, dx: number) => {
+    const box = (await target.boundingBox())!;
+    const x = box.x + Math.min(30, box.width / 2);
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.waitForTimeout(250);
+    for (let step = 1; step <= 20; step += 1) { await page.mouse.move(x + dx * step / 20, y); await page.waitForTimeout(16); }
+    await page.mouse.up();
+  };
+  // From the title's text: no selection is left behind and the slide changes.
+  await hold(title(page), -220);
+  await expect.poll(async () => (await sliderState(page)).current).toBe('slide-2');
+  expect(await page.evaluate(() => String(getSelection()))).toBe('');
+  await idle(page);
+  await page.getByRole('heading', { level: 1 }).click();
+  await expect(host(page)).toHaveAttribute('data-state', 'stack');
+  await idle(page);
+  // The pill (the newest record again): the drag dismisses it, and the click that follows it does not open the Island.
+  await hold(pill(page), 220);
+  await expect.poll(async () => (await sliderState(page)).stack).toEqual(['slide-2', 'slide-1']);
+  await expect(host(page)).toHaveAttribute('data-state', 'stack');
+});
+
 test('timeScale 0.1 keeps the shell still while the body slides and the heading blur-swaps; reduced motion crossfades in place', async ({ page }) => {
   await openSlider(page, '&timeScale=0.1');
   const rest = await geometry(shell(page));

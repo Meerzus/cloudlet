@@ -51,6 +51,12 @@ export interface SwipeCandidate {
 interface SwipeOptions {
   /** Null ignores the input; the candidate is released exactly once. */
   readonly begin: (target: Element, input: 'pointer' | 'wheel') => SwipeCandidate | null;
+  /**
+   * The open Island under a wheel stream: until the stream's axis is decided, and for every
+   * mostly horizontal event after that, the browser gets no wheel event from it (no history swipe),
+   * even where no swipe can start (an end of the slider, reduced motion, outside the slides).
+   */
+  readonly claimsWheel?: (target: Element) => boolean;
   readonly now: () => number;
 }
 
@@ -72,7 +78,13 @@ interface PointerSwipe {
 }
 
 interface WheelSwipe {
-  readonly candidate: SwipeCandidate | null;
+  /** Started over the open Island (`claimsWheel`). */
+  readonly claimed: boolean;
+  /** Decided after `MOTION.swipe.intent` px of summed travel, like a pointer. */
+  axis: SwipeAxis | null;
+  travelX: number;
+  travelY: number;
+  candidate: SwipeCandidate | null;
   session: SwipeSession | null;
   /** Committed early: the rest of the stream (macOS momentum) is swallowed until it goes idle. */
   spent: boolean;
@@ -235,18 +247,43 @@ export function createSwipe(root: HTMLElement, options: SwipeOptions) {
       }
     }
     if (!wheel) {
-      const target = event.target;
-      const candidate = Math.abs(dx) > Math.abs(dy) && target instanceof view.Element ? options.begin(target, 'wheel') : null;
-      const session = candidate?.x ? candidate.start('x') : null;
-      if (candidate && !session) candidate.release();
-      // A stream that started vertical stays native until it goes idle.
-      wheel = { candidate: session ? candidate : null, session, spent: false, spentAt: 0, lastDx: dx, offset: 0, velocity: 0, time, timer: 0 };
+      const claimed = event.target instanceof view.Element && (options.claimsWheel?.(event.target) ?? false);
+      wheel = {
+        claimed, axis: null, travelX: 0, travelY: 0, candidate: null, session: null,
+        spent: false, spentAt: 0, lastDx: dx, offset: 0, velocity: 0, time, timer: 0,
+      };
     }
     const stream = wheel;
     view.clearTimeout(stream.timer);
     stream.timer = view.setTimeout(() => endWheel(true), swipe.wheelIdle);
     stream.lastDx = dx;
-    if (!stream.session) return;
+    if (!stream.axis) {
+      // The first event alone does not decide: a trackpad swipe often lands diagonally (1, 2 px).
+      stream.travelX += dx;
+      stream.travelY += dy;
+      const horizontal = Math.abs(stream.travelX);
+      const vertical = Math.abs(stream.travelY);
+      if (Math.max(horizontal, vertical) >= swipe.intent) {
+        stream.axis = horizontal > vertical ? 'x' : 'y';
+        const target = event.target;
+        const candidate = stream.axis === 'x' && target instanceof view.Element ? options.begin(target, 'wheel') : null;
+        const session = candidate?.x ? candidate.start('x') : null;
+        if (candidate && !session) candidate.release();
+        if (session) {
+          stream.candidate = candidate;
+          stream.session = session;
+          // The travel of the intent window counts, as a pointer's does.
+          stream.offset = dx - stream.travelX;
+        }
+      }
+    }
+    if (!stream.session) {
+      // A stream that started vertical stays native until it goes idle; over the Island its
+      // sideways events are still held back from the browser's back/forward swipe.
+      if (stream.claimed && (!stream.axis || Math.abs(dx) > Math.abs(dy))) event.preventDefault();
+      stream.time = time;
+      return;
+    }
     event.preventDefault();
     // Fingers moving left scroll right (positive deltaX): the content follows the fingers.
     const elapsed = time - stream.time;

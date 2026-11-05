@@ -18,6 +18,15 @@ additive (see API).
   four new values; TypeScript points them out.
 - The host carries `data-align="left|center|right"` beside `data-edge`.
 
+### Fixes
+
+- A trackpad swipe over the open Island goes to the next or previous slide even when its first delta
+  leans vertical (a finger landing diagonally). The axis is now decided by the first 8 px of travel, as
+  for a finger, instead of by the first wheel event, which used to hand the whole swipe to the browser
+  and start its back/forward gesture. Over the open Island no sideways wheel event reaches the browser,
+  also at either end of the slider and under reduced motion; vertical scrolling and the page outside
+  stay native.
+
 ## 1.2.0 — 2026-11-01
 
 Clear all in the Island. Nothing is removed or changed in behaviour; the new texts, prop and close
