@@ -25,7 +25,7 @@ export function App({ nonce }: { nonce: string }) {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `position` | `'auto' \| 'top-center' \| 'bottom-center'` | `'auto'` | Which edge the stack sits on. `auto` is the top from a 48rem wide viewport and the bottom below it, following resizes. Every render. |
+| `position` | `'auto' \| 'top-left' \| 'top-center' \| 'top-right' \| 'bottom-left' \| 'bottom-center' \| 'bottom-right'` | `'auto'` | Which edge and side the stack sits on. `auto` is the top centre from a 48rem wide viewport and the bottom centre below it, following resizes; `-left` and `-right` are physical and stay put in RTL. [Positioning](/toaster/docs/positioning#position). Every render. |
 | `theme` | `'system' \| 'light' \| 'dark'` | `'system'` | Colour scheme of the notifications; `system` follows the user's preference. Every render. |
 | `dir` | `'ltr' \| 'rtl'` | the document's `dir` | Text direction; `rtl` mirrors the layout and the swipes. Every render. |
 | `container` | `Element \| (() => Element \| null) \| null` | `document.body` | Where the portal goes: a connected HTML element of the same document, outside Shadow DOM, or a function returning one. On attach; an invalid one shows nothing and reports `invalid-container`. |

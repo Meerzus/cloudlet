@@ -3,7 +3,7 @@ title: Positioning & offsets
 description: Where the stack sits, how it avoids notches, navigation bars and the keyboard, when the Island opens on its own, and which element it renders into.
 ---
 
-The stack takes one spot at the top or bottom centre of the viewport. This page explains how that spot is chosen, how Cloudlet keeps it clear of safe areas, your own navigation and the on-screen keyboard, how a notification decides whether to open the Island without being asked, and how to render the Toaster into an element of yours.
+The stack takes one spot at the top or bottom of the viewport: in the centre, or in a corner. This page explains how that spot is chosen, how Cloudlet keeps it clear of safe areas, your own navigation and the on-screen keyboard, how a notification decides whether to open the Island without being asked, and how to render the Toaster into an element of yours.
 
 ## Position
 
@@ -11,10 +11,29 @@ The stack takes one spot at the top or bottom centre of the viewport. This page 
 
 - `auto` puts the stack at the top centre on viewports 48rem wide and wider, and at the bottom centre below that, where a thumb reaches it. The edge is re-evaluated when the viewport crosses the threshold.
 - `top-center` and `bottom-center` fix the edge regardless of width.
+- `top-left`, `top-right`, `bottom-left` and `bottom-right` fix the edge and put the stack in that corner.
 
 At the bottom edge everything is mirrored vertically: the Island grows upwards, the tails peek above the pill, and notifications enter and leave from the bottom. The threshold is in `rem`, so it follows the user's font size rather than device pixels.
 
-[Try Top, Bottom and RTL in the Playground](/toaster/playground): its toggles change the page's Toaster live. `dir="rtl"` on the Toaster mirrors the badge, the slider and the arrow keys.
+In a corner the pill and its tails keep to their side, and the Island grows away from it: its edge on that side does not move while it opens and closes. The Island is as wide as in the centre, so on a phone it still spans the screen between the gutters. `auto` is always centred; pick the corner and the edge yourself if you want both.
+
+```tsx title="notifications.tsx"
+import type { ReactNode } from 'react';
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+export function Notifications({ children }: { children: ReactNode }) {
+  return (
+    <CloudletProvider controller={cloudlet}>
+      {children}
+      <Toaster position="bottom-right" />
+    </CloudletProvider>
+  );
+}
+```
+
+The side is physical, like [offsets](#offsets): `-left` stays on the left in `dir="rtl"`. [Try the edges, the sides and RTL in the Playground](/toaster/playground): its toggles change the page's Toaster live. `dir="rtl"` on the Toaster mirrors the badge, the slider and the arrow keys.
 
 ## Safe area
 
