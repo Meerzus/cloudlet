@@ -134,6 +134,45 @@ test('auto placement crosses 48rem while both explicit positions keep the pill f
   await attachEnvironment(page, info);
 });
 
+test('side positions keep the pill, its tails and the morphing Island against their edge, in RTL too', async ({ page }, info) => {
+  await openFixture(page, { width: 1024, height: 768 });
+  const bg = host(page).locator('.cloudlet-stack > .cloudlet-shell > .cloudlet-bg');
+  const tail = host(page).locator('[data-cloudlet-tail="1"]');
+  /** Left or right edge of the silhouette on every frame until the morph settles. */
+  const frames = (side: 'left' | 'right') => page.evaluate(async side => {
+    const svg = document.querySelector('.cloudlet-stack > .cloudlet-shell > .cloudlet-bg')!;
+    const seen: number[] = [];
+    for (let frame = 0; frame < 40; frame++) {
+      await new Promise(requestAnimationFrame);
+      seen.push(svg.getBoundingClientRect()[side]);
+    }
+    return seen;
+  }, side);
+  for (const [position, dir, edge] of [['top-left', 'ltr', 'left'], ['bottom-right', 'rtl', 'right'], ['top-right', 'ltr', 'right'], ['bottom-left', 'rtl', 'left']] as const) {
+    await page.evaluate(([position, dir]) => {
+      document.documentElement.dir = dir;
+      window.mobileFixture!.position(position);
+    }, [position, dir] as const);
+    await expect(host(page)).toHaveAttribute('data-align', edge);
+    await settle(bg);
+    const target = edge === 'left' ? 16 : await page.evaluate(() => document.documentElement.clientWidth) - 16;
+    const at = (box: { x: number; width: number }) => edge === 'left' ? box.x : box.x + box.width;
+    expect(at((await pill(page).boundingBox())!)).toBeCloseTo(target, 0);
+    expect(at((await bg.boundingBox())!)).toBeCloseTo(target, 0);
+    // Tails scale from the same side, so their outer edge does not move.
+    expect(at((await tail.boundingBox())!)).toBeCloseTo(target, 0);
+    await page.evaluate(() => window.mobileFixture!.open());
+    for (const value of await frames(edge)) expect(value).toBeCloseTo(target, 0);
+    await expect(host(page)).toHaveAttribute('data-state', 'island');
+    expect(at((await island(page).boundingBox())!)).toBeCloseTo(target, 0);
+    await screenshot(page, info, `mobile-side-${position}-${dir}`);
+    await page.evaluate(() => window.mobileFixture!.collapse());
+    for (const value of await frames(edge)) expect(value).toBeCloseTo(target, 0);
+    await expect(host(page)).toHaveAttribute('data-state', 'stack');
+  }
+  expect((await state(page)).closes).toEqual([]);
+});
+
 test('four safe edges and extra obstruction compose once inside a resized and panned VisualViewport; pinch never scales text', async ({ page }, info) => {
   await openFixture(page);
   await installSafeArea(page, 7, 11, 13, 17);

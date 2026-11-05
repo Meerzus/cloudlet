@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.3.0 — unreleased
+
+The stack can sit in a corner. Nothing is removed or changed in behaviour; the new positions are
+additive (see API).
+
+### Features
+
+- `<Toaster position>` takes `top-left`, `top-right`, `bottom-left` and `bottom-right` besides the
+  centre. The pill, its tails and the badge keep to that side, and the Island grows away from it: the
+  morph, the enter and the exit stay against the edge. The side is physical, so `dir="rtl"` keeps it.
+
+### API
+
+- `ToasterProps['position']` widens to `'auto' | 'top-left' | 'top-center' | 'top-right' |
+  'bottom-left' | 'bottom-center' | 'bottom-right'`. Code that narrows it with a `switch` now needs the
+  four new values; TypeScript points them out.
+- The host carries `data-align="left|center|right"` beside `data-edge`.
+
 ## 1.2.0 — 2026-11-01
 
 Clear all in the Island. Nothing is removed or changed in behaviour; the new texts, prop and close

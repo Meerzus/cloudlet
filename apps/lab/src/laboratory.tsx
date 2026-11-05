@@ -44,7 +44,8 @@ function Settings({ position, setPosition, theme, setTheme, dir, setDir, motion,
   return <section className="lab-settings" aria-labelledby="settings-title">
     <h2 id="settings-title">Display</h2>
     <div className="lab-fields">
-      <Choice label="Position" value={position} onChange={setPosition} options={[['auto', 'Auto · by width'], ['top-center', 'Top'], ['bottom-center', 'Bottom']]} />
+      <Choice label="Position" value={position} onChange={setPosition} options={[['auto', 'Auto · by width'], ['top-left', 'Top left'], ['top-center', 'Top'], ['top-right', 'Top right'],
+        ['bottom-left', 'Bottom left'], ['bottom-center', 'Bottom'], ['bottom-right', 'Bottom right']]} />
       <Choice label="Theme" value={theme} onChange={setTheme} options={[['system', 'System'], ['light', 'Light'], ['dark', 'Dark']]} />
       <Choice label="Direction" value={dir} onChange={setDir} options={[['ltr', 'LTR'], ['rtl', 'RTL']]} />
       <Choice label="Motion" value={motion} onChange={setMotion} options={[['system', 'As the system'], ['reduce', 'Reduce · emulated'], ['full', 'Full · explicit']]} />
@@ -237,7 +238,7 @@ function Laboratory() {
     return () => media.removeEventListener('change', update);
   }, []);
   const motion: Motion = { timeScale: Number(timeScale), overrides };
-  const secondaryPosition = position === 'top-center' || (position === 'auto' && desktop) ? 'bottom-center' : 'top-center';
+  const secondaryPosition = position.startsWith('top-') || (position === 'auto' && desktop) ? 'bottom-center' : 'top-center';
   const slowed = timeScale !== '1';
   return <div className="lab" data-theme={theme} data-time-scale={timeScale}>
     <a className="lab-skip" href="#scenarios">Skip to scenarios</a>

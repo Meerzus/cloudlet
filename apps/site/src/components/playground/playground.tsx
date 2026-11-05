@@ -17,11 +17,31 @@ const THEMES: readonly { value: ThemePreference; label: string }[] = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ];
-const POSITIONS: readonly { value: ToasterSettings['position']; label: string }[] = [
+type Edge = 'auto' | 'top' | 'bottom';
+type Side = 'left' | 'center' | 'right';
+const EDGES: readonly { value: Edge; label: string }[] = [
   { value: 'auto', label: 'Auto' },
-  { value: 'top-center', label: 'Top' },
-  { value: 'bottom-center', label: 'Bottom' },
+  { value: 'top', label: 'Top' },
+  { value: 'bottom', label: 'Bottom' },
 ];
+const SIDES: readonly { value: Side; label: string }[] = [
+  { value: 'left', label: 'Left' },
+  { value: 'center', label: 'Center' },
+  { value: 'right', label: 'Right' },
+];
+
+/** `auto` exists only in the centre: beside it the playground takes the edge `auto` would, by the same 48rem breakpoint. */
+function useWide() {
+  const [wide, setWide] = useState(true);
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 48rem)');
+    const update = () => setWide(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+  return wide;
+}
 const DIRECTIONS: readonly { value: ToasterSettings['dir']; label: string }[] = [
   { value: 'ltr', label: 'LTR' },
   { value: 'rtl', label: 'RTL' },
@@ -34,8 +54,12 @@ const DIRECTIONS: readonly { value: ToasterSettings['dir']; label: string }[] = 
  */
 export function Playground() {
   const { preference, setPreference } = useTheme();
-  const [position, setPosition] = useState<ToasterSettings['position']>('auto');
+  const [edge, setEdge] = useState<Edge>('auto');
+  const [side, setSide] = useState<Side>('center');
   const [dir, setDir] = useState<ToasterSettings['dir']>('ltr');
+  const wide = useWide();
+  const position: ToasterSettings['position'] = edge === 'auto' && side === 'center'
+    ? 'auto' : `${edge === 'auto' ? (wide ? 'top' : 'bottom') : edge}-${side}`;
   useToasterSettings({ position, dir });
 
   return (
@@ -62,7 +86,8 @@ export function Playground() {
           className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4 border-t border-glass-border pt-5"
         >
           <Segmented legend="Theme" options={THEMES} value={preference} onChange={setPreference} />
-          <Segmented legend="Position" options={POSITIONS} value={position} onChange={setPosition} />
+          <Segmented legend="Position" options={EDGES} value={edge} onChange={setEdge} />
+          <Segmented legend="Side" options={SIDES} value={side} onChange={setSide} />
           <Segmented legend="Direction" options={DIRECTIONS} value={dir} onChange={setDir} />
         </div>
       </div>

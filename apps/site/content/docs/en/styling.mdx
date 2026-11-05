@@ -153,7 +153,7 @@ To let utilities win, import the stylesheet into a layer of your own, ordered be
 
 The stylesheet is unlayered on purpose: then a page's own resets, such as `button { all: unset }`, cannot break the notifications. Inside a layer, every unlayered rule of the page wins over Cloudlet, so check your global styles after the switch.
 
-The host also exposes its state as data attributes you can select on: `data-state` (`stack` or `island`), `data-island-reason`, `data-position`, `data-edge` (`top` or `bottom`), `data-theme`, `data-resolved-theme`, `data-reduced-motion` and `data-dragging`. The current notification carries `data-kind` and `data-current`.
+The host also exposes its state as data attributes you can select on: `data-state` (`stack` or `island`), `data-island-reason`, `data-position`, `data-edge` (`top` or `bottom`), `data-align` (`left`, `center` or `right`), `data-theme`, `data-resolved-theme`, `data-reduced-motion` and `data-dragging`. The current notification carries `data-kind` and `data-current`.
 
 ## Next steps
 

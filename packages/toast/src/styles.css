@@ -52,6 +52,8 @@
   max-width: var(--cloudlet-island-max-width);
   max-height: var(--cloudlet-host-height);
   margin-inline: auto; color: var(--cloudlet-foreground);
+  /* Where the stack's layers hang: the centre, or the side of a `-left`/`-right` position (`data-align`). */
+  --cloudlet-anchor: 50%;
   display: flex; flex-direction: column;
   font: 400 var(--cloudlet-font-size)/1.43 var(--cloudlet-font-family);
   text-align: start; color-scheme: light; pointer-events: none; isolation: isolate;
@@ -86,25 +88,25 @@
  */
 .cloudlet-host .cloudlet-stack { position: relative; align-self: center; width: fit-content; max-width: 100%; flex: none; }
 .cloudlet-host[data-state="island"] .cloudlet-stack { width: 100%; }
-.cloudlet-host .cloudlet-shell { position: relative; transform-origin: 50% 0; z-index: 1; }
-.cloudlet-host[data-edge="bottom"] .cloudlet-shell { transform-origin: 50% 100%; }
+.cloudlet-host .cloudlet-shell { position: relative; transform-origin: var(--cloudlet-anchor) 0; z-index: 1; }
+.cloudlet-host[data-edge="bottom"] .cloudlet-shell { transform-origin: var(--cloudlet-anchor) 100%; }
 .cloudlet-host .cloudlet-bg {
-  position: absolute; top: 0; left: 50%; transform: translateX(-50%); overflow: visible; pointer-events: none;
+  position: absolute; top: 0; left: var(--cloudlet-anchor); transform: translateX(calc(-1 * var(--cloudlet-anchor))); overflow: visible; pointer-events: none;
   box-shadow: var(--cloudlet-shadow);
 }
 .cloudlet-host .cloudlet-bg path { fill: var(--cloudlet-background); stroke: var(--cloudlet-border); stroke-width: 1px; }
-.cloudlet-host :is(.cloudlet-tail, .cloudlet-exit) { position: absolute; top: 0; left: 50%; pointer-events: none; }
+.cloudlet-host :is(.cloudlet-tail, .cloudlet-exit) { position: absolute; top: 0; left: var(--cloudlet-anchor); pointer-events: none; }
 .cloudlet-host .cloudlet-tail {
   z-index: 0; border-radius: var(--cloudlet-pill-radius); background: var(--cloudlet-tail-background);
-  border: 1px solid var(--cloudlet-tail-border); box-shadow: var(--cloudlet-shadow); transform-origin: 50% 100%; opacity: 0;
+  border: 1px solid var(--cloudlet-tail-border); box-shadow: var(--cloudlet-shadow); transform-origin: var(--cloudlet-anchor) 100%; opacity: 0;
 }
 /* The farther tail lies behind the near one, a step closer to the pill surface: depth reads on dark pages too. */
 .cloudlet-host .cloudlet-tail[data-cloudlet-tail="2"] { z-index: -1; background: color-mix(in oklab, var(--cloudlet-tail-background) 60%, var(--cloudlet-background)); }
-.cloudlet-host .cloudlet-exit { z-index: 2; transform-origin: 50% 0; }
+.cloudlet-host .cloudlet-exit { z-index: 2; transform-origin: var(--cloudlet-anchor) 0; }
 /* Bottom edge: the silhouette, tails, badge and exit snapshot are anchored to the bottom and grow upwards. */
 .cloudlet-host[data-edge="bottom"] :is(.cloudlet-bg, .cloudlet-tail, .cloudlet-exit, .cloudlet-badge) { top: auto; bottom: 0; }
-.cloudlet-host[data-edge="bottom"] .cloudlet-tail { transform-origin: 50% 0; }
-.cloudlet-host[data-edge="bottom"] .cloudlet-exit { transform-origin: 50% 100%; }
+.cloudlet-host[data-edge="bottom"] .cloudlet-tail { transform-origin: var(--cloudlet-anchor) 0; }
+.cloudlet-host[data-edge="bottom"] .cloudlet-exit { transform-origin: var(--cloudlet-anchor) 100%; }
 .cloudlet-host .cloudlet-exit:empty { display: none; }
 .cloudlet-host .cloudlet-clip {
   position: relative; pointer-events: auto; color: var(--cloudlet-foreground); overflow-wrap: anywhere;
@@ -251,7 +253,12 @@
 .cloudlet-host .cloudlet-live { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 /* The announcer's live regions, inserted beside the host; visually hidden and out of the page flow. */
 .cloudlet-announcer { position: fixed; top: 0; left: 0; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; pointer-events: none; }
-.cloudlet-host[data-position="top-center"] { top: calc(var(--cloudlet-viewport-top, 0px) + var(--cloudlet-top)); bottom: auto; }
+.cloudlet-host[data-position^="top-"] { top: calc(var(--cloudlet-viewport-top, 0px) + var(--cloudlet-top)); bottom: auto; }
+/* A side position: the host keeps to that edge (physical, also in RTL) and the stack inside it. */
+.cloudlet-host[data-align="left"] { margin-left: 0; margin-right: auto; --cloudlet-anchor: 0%; }
+.cloudlet-host[data-align="right"] { margin-left: auto; margin-right: 0; --cloudlet-anchor: 100%; }
+.cloudlet-host[data-align="left"] .cloudlet-stack { margin-right: auto; }
+.cloudlet-host[data-align="right"] .cloudlet-stack { margin-left: auto; }
 @media (min-width: 48rem) { .cloudlet-host[data-position="auto"] { top: calc(var(--cloudlet-viewport-top, 0px) + var(--cloudlet-top)); bottom: auto; } }
 /* Dark theme: forced, or `system` on a dark page. Border and neutral controls follow the foreground. */
 .cloudlet-host[data-theme="dark"] {

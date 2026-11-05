@@ -6,13 +6,14 @@ import {
   Toaster,
   useOptionalCloudlet,
   type ReactCloudletController,
+  type ToasterProps,
 } from '@cloudlet/toast';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useTheme } from './theme';
 
 /** Live Toaster options a page may set (the playground); null = site defaults. */
 export interface ToasterSettings {
-  readonly position: 'auto' | 'top-center' | 'bottom-center';
+  readonly position: NonNullable<ToasterProps['position']>;
   readonly dir: 'ltr' | 'rtl';
 }
 

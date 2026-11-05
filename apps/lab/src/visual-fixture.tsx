@@ -1,5 +1,6 @@
 import { CloudletProvider, Toaster, createCloudlet } from '@cloudlet/toast';
 import type { ReactCloudletController, ToasterProps } from '@cloudlet/toast';
+import { positions } from './fixture-kit.js';
 
 /**
  * `?fixture=visual`: a bare page for screenshots, contrast and axe checks of the look
@@ -19,7 +20,7 @@ export function createVisualFixture(params: URLSearchParams) {
   const theme = pick(params.get('theme'), ['system', 'light', 'dark'] as const, 'system');
   const page = pick(params.get('page'), ['light', 'dark'] as const, 'light');
   const dir = pick(params.get('dir'), ['ltr', 'rtl'] as const, 'ltr');
-  const position = pick(params.get('position'), ['auto', 'top-center', 'bottom-center'] as const, 'top-center');
+  const position = pick(params.get('position'), positions, 'top-center');
   document.documentElement.dataset.visualPage = page;
   const run = () => {};
   const scenario = params.get('scenario') ?? 'mix';
