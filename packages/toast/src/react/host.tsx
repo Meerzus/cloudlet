@@ -252,6 +252,8 @@ function createHostRuntime(owner: Host) {
   }
   const bottomEdge = () => rootRef.current?.dataset.edge === 'bottom';
   const edgeSign = (): -1 | 1 => bottomEdge() ? 1 : -1;
+  /** Where the layers hang in the stack's layout box: 0 at its left, ½ in the centre, 1 at its right (CSS `--cloudlet-anchor`). */
+  const anchor = () => { const align = rootRef.current?.dataset.align; return align === 'left' ? 0 : align === 'right' ? 1 : 0.5; };
 
   /** The only DOM writer of animated values: scoped CSSOM rules and SVG attributes. */
   function write(frame: ShellFrame) {
@@ -263,6 +265,10 @@ function createHostRuntime(owner: Host) {
     // At the bottom edge the silhouette grows upwards: it is anchored to the layout bottom.
     const bottom = bottomEdge();
     const top = bottom ? layout.height - height : 0;
+    // A side position keeps the silhouette against its edge of the layout box: the morph grows away from it.
+    const along = anchor();
+    const hang = `translateX(${-along * 100}%)`;
+    const left = (layout.width - width) * along;
     if (r.shell) {
       r.shell.opacity = String(clamp01(frame.opacity));
       r.shell.transform = still ? 'none' : `translate(${px(frame.dragX)}, ${px(frame.y + frame.dragY)}) scale(${frame.scale})`;
@@ -279,13 +285,13 @@ function createHostRuntime(owner: Host) {
       // Layout keeps the box at the top and a transform carries it to the bottom edge: a growing
       // silhouette then moves no layout start point, so the morph is not counted as layout shift (CLS).
       r.bg.top = '0px'; r.bg.bottom = 'auto';
-      r.bg.transform = `translateX(-50%) translateY(${px(top)})`;
+      r.bg.transform = `${hang} translateY(${px(top)})`;
     }
-    if (r.clip) r.clip.clipPath = `path("${createRoundedRectPath(width, height, radius, (layout.width - width) / 2, top)}")`;
+    if (r.clip) r.clip.clipPath = `path("${createRoundedRectPath(width, height, radius, left, top)}")`;
     if (r.badge) {
       const scale = still ? 1 : constants.badge.scale + (1 - constants.badge.scale) * frame.badge;
-      // Outer corner: top right, mirrored in RTL; the bottom corner at the bottom edge.
-      const x = (width / 2 - 10) * (rtl ? -1 : 1);
+      // Outer corner: top right, mirrored in RTL; the bottom corner at the bottom edge. The badge hangs from the layout centre.
+      const x = (rtl ? left + 10 : left + width - 10) - layout.width / 2;
       r.badge.opacity = String(clamp01(frame.badge));
       r.badge.transform = `translate(calc(${px(x)} - 50%), ${bottom ? '6px' : '-6px'}) scale(${scale})`;
     }
@@ -298,7 +304,7 @@ function createHostRuntime(owner: Host) {
       rule.width = px(width);
       rule.height = px(Math.min(height, tokens.pillHeight));
       rule.opacity = String(clamp01(frame[`tail${index}Opacity`]));
-      rule.transform = `translateX(-50%) translateY(${px(inward * slot * (tokens.tailOffset + constants.hoverLift * frame.lift))}) scale(${Math.pow(tokens.tailScale, slot)})`;
+      rule.transform = `${hang} translateY(${px(inward * slot * (tokens.tailOffset + constants.hoverLift * frame.lift))}) scale(${Math.pow(tokens.tailScale, slot)})`;
     }
     if (r.slideOut) {
       r.slideOut.transform = still ? 'none' : `translateX(${px(frame.slide - frame.slideDirection * frame.slideWidth)})`;
@@ -332,7 +338,7 @@ function createHostRuntime(owner: Host) {
     if (r.bodyOut) r.bodyOut.opacity = String(clamp01(frame.bodyOut));
     if (r.exit) {
       r.exit.opacity = String(clamp01(frame.exitOpacity));
-      r.exit.transform = still ? 'translateX(-50%)' : `translateX(-50%) translate(${px(frame.exitX)}, ${px(frame.exitY)}) scale(${frame.exitScale})`;
+      r.exit.transform = still ? hang : `${hang} translate(${px(frame.exitX)}, ${px(frame.exitY)}) scale(${frame.exitScale})`;
     }
     if (progressActive && progressFill?.isConnected) progressFill.setAttribute('stroke-dasharray', `${Math.round(frame.progress * 10000) / 100} 100`);
   }
@@ -872,7 +878,9 @@ function createHostRuntime(owner: Host) {
     if (current.badge) badgeCount = current.count;
     const preview = open && peek ? snapshot.notifications.find(item => item.handle === peek!.handle) : undefined;
     const position = options.position ?? 'auto';
-    const bottom = position === 'bottom-center' || (position === 'auto' && view?.matchMedia?.('(min-width: 48rem)').matches === false);
+    const named = String(position);
+    const bottom = named.startsWith('bottom-') || (position === 'auto' && view?.matchMedia?.('(min-width: 48rem)').matches === false);
+    const align = named.endsWith('-left') ? 'left' : named.endsWith('-right') ? 'right' : 'center';
     const tails = Math.min(2, Math.max(current.depth, heldTails));
     const slot = presented ? slotRenderer(bridge, lease, presented.handle, rejectSlotFocus) : null;
     const page = format(labels.page, defaultLabels.page, index + 1, total);
@@ -883,7 +891,7 @@ function createHostRuntime(owner: Host) {
       <div ref={rootRef} className={part('host', 'cloudlet-host')} role="region" aria-label={labels.region} tabIndex={-1}
         data-cloudlet-focus-anchor="" data-cloudlet-instance={instance} data-theme={theme}
         data-resolved-theme={theme === 'system' ? view?.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : theme}
-        data-position={position} data-edge={bottom ? 'bottom' : 'top'} data-state={open ? 'island' : 'stack'}
+        data-position={position} data-edge={bottom ? 'bottom' : 'top'} data-align={align} data-state={open ? 'island' : 'stack'}
         data-island-reason={snapshot.island.reason ?? undefined} data-overflow={snapshot.overflow.pending} dir={dir}
         onPointerDownCapture={event => { activation = (event.target as Element).closest('button'); }}
         onPointerCancelCapture={() => { activation = null; }}

@@ -167,7 +167,8 @@ export type CloudletPart = 'host' | 'stack' | 'pill' | 'tail' | 'badge' | 'islan
   | 'close' | 'body' | 'description' | 'actions' | 'action' | 'indicator' | 'clear' | 'overflow' | 'form' | 'field' | 'field-error';
 
 export interface ToasterProps {
-  readonly position?: 'auto' | 'top-center' | 'bottom-center';
+  /** Physical: `-left` and `-right` stay on that side in RTL too. Default `auto`. */
+  readonly position?: 'auto' | 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
   readonly theme?: 'system' | 'light' | 'dark';
   readonly dir?: 'ltr' | 'rtl';
   /** Read after mount; a connected HTML Element in the mounting root's document. Fixed until remount. */
