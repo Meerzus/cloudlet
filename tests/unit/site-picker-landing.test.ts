@@ -36,7 +36,7 @@ describe('color picker landing (COLOR_PICKER §8.1, §8.5)', () => {
     }
     const page = read('apps/site/src/app/color-picker/page.tsx').toString('utf8');
     expect(page).not.toMatch(/combinations/i);
-    expect([...page.matchAll(/\{ id: '([a-z-]+)'/g)].map((match) => match[1])).toEqual(['hero', 'palette', 'keyboards', 'get-started', 'faq']);
+    expect([...page.matchAll(/\{ id: '([a-z-]+)'/g)].map((match) => match[1])).toEqual(['hero', 'palette', 'opacity', 'tools', 'keyboards', 'get-started', 'faq']);
   });
 
   it('answers the five questions of the spec', () => {

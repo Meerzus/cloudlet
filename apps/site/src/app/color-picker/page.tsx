@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { Keyboards } from '@/components/picker/keyboards';
+import { Opacity } from '@/components/picker/opacity';
 import { Palette } from '@/components/picker/palette';
 import { PickerColorProvider } from '@/components/picker/picker-color';
 import { PickerFaq } from '@/components/picker/picker-faq';
 import { PickerGetStarted } from '@/components/picker/picker-get-started';
 import { PickerHero } from '@/components/picker/picker-hero';
+import { Tools } from '@/components/picker/tools';
 import { Chapters, type ChapterList } from '@/components/site/chapters';
 import { Footer } from '@/components/site/footer';
 import { START_SCRIPT } from '@/lib/picker-start';
@@ -25,7 +27,9 @@ export const metadata: Metadata = {
 const CHAPTERS: ChapterList = [
   { id: 'hero', label: 'Intro' },
   { id: 'palette', label: 'Palette' },
-  { id: 'keyboards', label: 'Built for keyboards' },
+  { id: 'opacity', label: 'Opacity' },
+  { id: 'tools', label: 'Tools' },
+  { id: 'keyboards', label: 'Keyboards' },
   { id: 'get-started', label: 'Get started' },
   { id: 'faq', label: 'FAQ' },
 ];
@@ -41,6 +45,8 @@ export default function ColorPickerHome() {
           {/* The neutral sections carry a few percent of the picked color (picker.css). */}
           <div className="cp-tint">
             <Palette />
+            <Opacity />
+            <Tools />
             <Keyboards />
             <PickerGetStarted />
             <PickerFaq />
