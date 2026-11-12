@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
-import { formatColor, parseColor } from '@/components/ui/color-picker/color';
+import { detectFormat, formatColor, parseColor } from '@/components/ui/color-picker/color';
 import { harmoniesOf, type HarmonyId } from '@/lib/harmonies';
 import { heroRamp, paletteRamp, type Ramp } from '@/lib/picker-ramp';
 import { PALETTE_MAX, paletteFromSearch, paletteParam, START_COLORS, START_GLOBAL, startColor } from '@/lib/picker-start';
@@ -66,13 +66,17 @@ const toHex = (value: string) => {
 /** The colors an untouched palette shows after the page color. */
 export const followersOf = (hex: string): readonly string[] => harmoniesOf(hex).find((harmony) => harmony.id === FOLLOW_HARMONY)!.colors.slice(1);
 
-/** The same colors, give or take the last digit a trip through another format can move. */
-const same = (a: readonly string[], b: readonly string[]) =>
-  a.length === b.length &&
-  a.every((entry, index) => {
-    const p = parseColor(entry);
-    const q = parseColor(b[index]!);
-    return p !== null && q !== null && Math.abs(p.r - q.r) + Math.abs(p.g - q.g) + Math.abs(p.b - q.b) < 4 / 255;
+/**
+ * The followers as the palette shows them: each emitted color is one of them written in its own
+ * format, exactly as the palette writes a color it re-emits. A nudge of one percent moves a channel
+ * by a unit or two, as little as a trip through hsl() rounds, so only the string tells them apart.
+ */
+const same = (emitted: readonly string[], followers: readonly string[]) =>
+  emitted.length === followers.length &&
+  emitted.every((entry, index) => {
+    const rgba = parseColor(followers[index]!);
+    const format = detectFormat(entry);
+    return rgba !== null && format !== null && entry === formatColor({ ...rgba, a: 1 }, format);
   });
 
 /** Dragging or arrowing a slider repaints at once; typing, the eyedropper, a hint and the like bleed. */

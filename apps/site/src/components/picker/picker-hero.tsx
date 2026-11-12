@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { softwareGL, watchScroll } from '@/lib/picker-motion';
 import { ColorPickerPanel } from '@/components/ui/color-picker/color-picker';
 import { flatLut, flatOf, rampLut } from '@/lib/picker-ramp';
 import { MaterialRenderer, type MaterialLayout, type Rect } from './material-renderer';
@@ -62,7 +63,7 @@ export function PickerHero() {
     renderer.current = instance;
     const reduced = window.matchMedia(REDUCED);
     const phone = window.matchMedia(PHONE);
-    const motion = () => instance.setMoving(!reduced.matches);
+    const motion = () => instance.setMoving(!reduced.matches && !softwareGL());
     motion();
     reduced.addEventListener('change', motion);
 
@@ -116,7 +117,13 @@ export function PickerHero() {
     load();
 
     let onScreen = true;
-    const sync = () => instance.setActive(onScreen && document.visibilityState === 'visible');
+    let scrolling = false;
+    // Held on its frame while the page scrolls (lib/picker-motion.ts); the flow's clock does not jump.
+    const sync = () => instance.setActive(onScreen && !scrolling && document.visibilityState === 'visible');
+    const unwatch = watchScroll((now) => {
+      scrolling = now;
+      sync();
+    });
     const view = new IntersectionObserver(([entry]) => {
       onScreen = entry?.isIntersecting ?? true;
       sync();
@@ -135,6 +142,7 @@ export function PickerHero() {
       view.disconnect();
       img?.removeEventListener('load', load);
       document.removeEventListener('visibilitychange', sync);
+      unwatch();
       element.removeEventListener('webglcontextlost', lost);
       instance.destroy();
       renderer.current = null;
@@ -178,13 +186,14 @@ export function PickerHero() {
       data-started={started || undefined}
     >
       <canvas ref={canvas} className="cp-hero-canvas" aria-hidden="true" />
-      {/* Never shown: the shader reads it. */}
+      {/* Never shown: the shader reads it. The flat color paints first and the material bleeds in after,
+          so its request stays behind the scripts and fonts that the headline waits for. */}
       <picture hidden>
         <source media={PHONE} type="image/avif" srcSet="/picker/material-hero-tall-720.avif 720w, /picker/material-hero-tall-1440.avif 1440w" sizes="100vw" />
         <source media={PHONE} type="image/webp" srcSet="/picker/material-hero-tall-720.webp 720w, /picker/material-hero-tall-1440.webp 1440w" sizes="100vw" />
         <source type="image/avif" srcSet="/picker/material-hero-1280.avif 1280w, /picker/material-hero-2560.avif 2560w" sizes="100vw" />
         {/* eslint-disable-next-line @next/next/no-img-element -- a texture for WebGL, not an image on the page */}
-        <img ref={image} src="/picker/material-hero-1280.webp" srcSet="/picker/material-hero-1280.webp 1280w, /picker/material-hero-2560.webp 2560w" sizes="100vw" alt="" decoding="async" />
+        <img ref={image} src="/picker/material-hero-1280.webp" srcSet="/picker/material-hero-1280.webp 1280w, /picker/material-hero-2560.webp 2560w" sizes="100vw" alt="" decoding="async" fetchPriority="low" />
       </picture>
       <div className="cp-hero-inner">
         <div ref={copy} className="cp-hero-copy">

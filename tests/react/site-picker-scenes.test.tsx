@@ -67,6 +67,26 @@ describe('color picker landing scenes (COLOR_PICKER §8.5)', () => {
     expect(root.dataset['cpScene']).toBe('dark');
   });
 
+  it('Palette: a format switch keeps it following, the smallest nudge of another color makes it the visitor\'s', () => {
+    render(<PickerColorProvider><Palette /></PickerColorProvider>);
+    const followers = followersOf('#ff6a3d');
+    const open = (index: number) => fireEvent.click(within(palette()).getAllByRole('button', { name: /^Color \d+ of \d+/ })[index]!);
+    // hsl() rounds every channel: the palette re-emits the followers in other words and still follows.
+    open(0);
+    fireEvent.click(within(palette()).getByRole('radio', { name: 'hsl' }));
+    fireEvent.keyDown(within(palette()).getByRole('slider', { name: 'Saturation and brightness' }), { key: 'Escape' });
+    open(0);
+    fireEvent.click(within(palette()).getByRole('radio', { name: 'hex' }));
+    expect(swatches()).toEqual(['#ff6a3d', ...followers]);
+    // One percent of saturation on the second color moves a channel by a unit or two: still an edit.
+    open(1);
+    const area = within(palette()).getAllByRole('slider', { name: 'Saturation and brightness' }).at(-1)!;
+    fireEvent.keyDown(area, { key: 'ArrowLeft' });
+    const nudged = swatches()[1];
+    expect(nudged).not.toBe(followers[0]);
+    expect(swatches()).toEqual(['#ff6a3d', nudged, followers[1]]);
+  });
+
   it('Palette: a hint fills the palette from the page color, and the palette lands in ?c=', async () => {
     render(<PickerColorProvider><Palette /></PickerColorProvider>);
     const hints = within(screen.getByRole('group', { name: 'Start from a harmony' })).getAllByRole('button');

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { softwareGL, watchScroll } from '@/lib/picker-motion';
 import type { FlutedScene, GlassLook } from './fluted-glass';
 
 const REDUCED = '(prefers-reduced-motion: reduce)';
@@ -69,11 +70,17 @@ export function GlassCard({ frame, look, className, scene, image, onImage, child
       if (scene) scene.current = created;
 
       const reduced = window.matchMedia(REDUCED);
-      const motion = () => created.setMoving(!reduced.matches);
+      const motion = () => created.setMoving(!reduced.matches && !softwareGL());
       motion();
       reduced.addEventListener('change', motion);
       let onScreen = true;
-      const sync = () => created.setActive(onScreen && document.visibilityState === 'visible');
+      let scrolling = false;
+      // Held on its frame while the page scrolls (lib/picker-motion.ts).
+      const sync = () => created.setActive(onScreen && !scrolling && document.visibilityState === 'visible');
+      const unwatch = watchScroll((now) => {
+        scrolling = now;
+        sync();
+      });
       const view = new IntersectionObserver(([entry]) => {
         onScreen = entry?.isIntersecting ?? true;
         sync();
@@ -89,6 +96,7 @@ export function GlassCard({ frame, look, className, scene, image, onImage, child
         reduced.removeEventListener('change', motion);
         view.disconnect();
         document.removeEventListener('visibilitychange', sync);
+        unwatch();
         created.canvas.removeEventListener('webglcontextlost', lost);
         created.destroy();
         instance.current = null;

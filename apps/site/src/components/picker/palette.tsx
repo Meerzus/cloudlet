@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { softwareGL, watchScroll } from '@/lib/picker-motion';
 import { ColorPalette } from '@/components/ui/color-palette/color-palette';
 import { harmoniesOf } from '@/lib/harmonies';
 import { flatLut, rampLut } from '@/lib/picker-ramp';
@@ -56,7 +57,7 @@ export function Palette() {
     }
     renderer.current = instance;
     const reduced = window.matchMedia(REDUCED);
-    const motion = () => instance.setMoving(!reduced.matches);
+    const motion = () => instance.setMoving(!reduced.matches && !softwareGL());
     motion();
     reduced.addEventListener('change', motion);
 
@@ -95,7 +96,13 @@ export function Palette() {
     load();
 
     let onScreen = true;
-    const sync = () => instance.setActive(onScreen && document.visibilityState === 'visible');
+    let scrolling = false;
+    // Held on its frame while the page scrolls (lib/picker-motion.ts); the flow's clock does not jump.
+    const sync = () => instance.setActive(onScreen && !scrolling && document.visibilityState === 'visible');
+    const unwatch = watchScroll((now) => {
+      scrolling = now;
+      sync();
+    });
     const view = new IntersectionObserver(([entry]) => {
       onScreen = entry?.isIntersecting ?? true;
       sync();
@@ -114,6 +121,7 @@ export function Palette() {
       view.disconnect();
       img?.removeEventListener('load', load);
       document.removeEventListener('visibilitychange', sync);
+      unwatch();
       element.removeEventListener('webglcontextlost', lost);
       instance.destroy();
       renderer.current = null;
