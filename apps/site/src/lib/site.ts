@@ -68,7 +68,7 @@ export const COLOR_PICKER_COMMAND = `npx shadcn@latest add ${COLOR_PICKER_ITEM_U
  * and the whole delta over a React-only app. The landing leads with `start`, always named as
  * JavaScript on first load; tests/unit/site-drift.test.ts holds them to the latest size report.
  */
-export const PACKAGE_SIZE = { version: '1.2.0', start: 9337, lazy: 23084, javascript: 32421, css: 4079, total: 36907 } as const;
+export const PACKAGE_SIZE = { version: '1.2.0', start: 9336, lazy: 23240, javascript: 32576, css: 4079, total: 37062 } as const;
 /** Bytes as the landing prints them: whole kilobytes, one decimal under ten. */
 export function formatKB(bytes: number): string {
   const kb = bytes / 1000;
