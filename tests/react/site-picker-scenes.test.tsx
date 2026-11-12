@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Combinations } from '../../apps/site/src/components/picker/combinations';
 import { Keyboards } from '../../apps/site/src/components/picker/keyboards';
 import { PickerColorProvider } from '../../apps/site/src/components/picker/picker-color';
-import { START_GLOBAL } from '../../apps/site/src/lib/landscape';
+import { START_GLOBAL } from '../../apps/site/src/lib/picker-start';
 
 const copied = vi.hoisted(() => ({ text: '' }));
 vi.mock('@/components/site/notifications', () => ({
@@ -24,7 +24,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   delete global[START_GLOBAL];
-  root.removeAttribute('data-cp-hour');
+  root.removeAttribute('data-cp-scene');
   root.style.removeProperty('--cp-color');
   window.history.replaceState(null, '', '/');
 });

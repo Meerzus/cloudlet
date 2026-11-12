@@ -30,9 +30,9 @@ const POSTERS: readonly Poster[] = [
  * in the format chosen here, and three posters printed in them with the landing's glyphs and grain.
  */
 export function Combinations() {
-  const { landscape } = usePickerColor();
+  const { hex } = usePickerColor();
   const [format, setFormat] = useState<ColorFormat>('hex');
-  const harmonies = useMemo(() => harmoniesOf(landscape.hex), [landscape.hex]);
+  const harmonies = useMemo(() => harmoniesOf(hex), [hex]);
   const copy = useCopy();
 
   return (

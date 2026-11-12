@@ -5,10 +5,11 @@
  * keyboard and screen reader user meets, and measures the hero's text against the shader's pixels.
  *
  * 1. Hero contrast by pixels (Chromium with SwiftShader): axe cannot see a canvas, so for every curated
- *    start color plus a storm the hero is shot with its text made transparent, and each text
+ *    start color plus the extremes and the colors either side of the scene threshold the hero is
+ *    shot with its text made transparent once the material has drawn (`data-ready`), and each text
  *    box (headline, lede, header) is compared with the pixels under it; the score is the 1st
- *    percentile of the per-pixel ratio (a few grain pixels may fall below). Text ≥ 4.5:1, the
- *    disc's focus ring ≥ 3:1.
+ *    percentile of the per-pixel ratio (a few grain pixels may fall below). Text ≥ 4.5:1. The same
+ *    again with WebGL 2 taken away: the flat background (`data-flat`) must hold the ink too.
  * 2. Every picker on /color-picker and /color-picker/docs, desktop 1440×900 and phone 390×844, light
  *    and dark: Enter on the swatch opens a named dialog with focus in the area; axe on the open panel;
  *    the panel inside the viewport; arrows, Shift and Home/End against the promised values
@@ -29,10 +30,13 @@ import { join, resolve } from 'node:path';
 import { chromium, webkit } from '@playwright/test';
 import { serve } from './serve-out.mjs';
 
-/** The curated start colors, read from lib/landscape.ts so the list cannot drift. */
-const START_COLORS = [.../START_COLORS = \[([^\]]+)\]/u.exec(readFileSync(new URL('../src/lib/landscape.ts', import.meta.url), 'utf8'))[1].matchAll(/'(#[0-9a-f]{6})'/gu)].map((match) => match[1]);
-/** Not curated, but reachable: a storm, and the extremes of a day and a night sky. */
-const EXTRA_COLORS = ['#3d5a80', '#ffffff', '#000000', '#ffff00'];
+/** The curated start colors, read from lib/picker-start.ts so the list cannot drift. */
+const START_COLORS = [.../START_COLORS = \[([^\]]+)\]/u.exec(readFileSync(new URL('../src/lib/picker-start.ts', import.meta.url), 'utf8'))[1].matchAll(/'(#[0-9a-f]{6})'/gu)].map((match) => match[1]);
+/**
+ * Not curated, but reachable: the extremes, a greyish blue, and colors just under and over the
+ * scene threshold (OKLCH L 0.445 / 0.455), where each ink meets the least room.
+ */
+const EXTRA_COLORS = ['#3d5a80', '#ffffff', '#000000', '#ffff00', '#808080', '#0b5693', '#105996', '#99291d', '#336128'];
 const DESKTOP = { viewport: { width: 1440, height: 900 } };
 const PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 };
 const TEXT_MIN = 4.5;
@@ -63,7 +67,7 @@ const fail = (where, what) => {
 
 // --- 1. Hero contrast -----------------------------------------------------------------------------
 
-/** In the page: per-pixel contrast of each text box and the disc's ring against a shot of the hero without its text. */
+/** In the page: per-pixel contrast of each text box (or ring) against a shot of the hero without its text. */
 const measure = (page, shot, targets) =>
   page.evaluate(async ({ shot, targets }) => {
     const image = new Image();
@@ -152,57 +156,61 @@ const textTargets = (page) =>
       if (!text || boxes.length === 0 || getComputedStyle(element).visibility === 'hidden') continue;
       targets.push({ label: `header “${text.slice(0, 20)}”`, color: getComputedStyle(element).color, boxes });
     }
-    const swatch = document.querySelector('.cp-hero-disc .color-picker-swatch');
-    if (swatch) {
-      // The disc's focus ring: 3 px of the hero's ink, 4 px out from the circle, round a band of the other ink.
-      const style = getComputedStyle(document.querySelector('.cp-hero'));
-      const { left, top, right, bottom } = swatch.getBoundingClientRect();
-      const r = (right - left) / 2;
-      targets.push({
-        label: 'disc focus ring',
-        color: [style.getPropertyValue('--cp-ink').trim(), style.getPropertyValue('--cp-ink-contrast').trim()].filter(Boolean),
-        boxes: [{ left: left + r, top: top + r, right: right - r, bottom: bottom - r }],
-        ring: { offset: r + 4, width: 3 },
-      });
-    }
     return targets;
   });
 
+/** Takes WebGL 2 away before the page runs: the hero must keep its flat background. */
+const NO_WEBGL = () => {
+  const original = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+    return type === 'webgl2' ? null : original.call(this, type, ...rest);
+  };
+};
+
 async function heroContrast(browser) {
-  for (const [device, options] of Object.entries({ desktop: DESKTOP, phone: PHONE })) {
-    for (const colorScheme of ['light', 'dark']) {
-      const context = await browser.newContext({ ...options, colorScheme, reducedMotion: 'reduce' });
-      const page = await context.newPage();
-      for (const color of [...START_COLORS, ...EXTRA_COLORS]) {
-        await page.goto(`${base}/color-picker?c=${color.slice(1)}`, { waitUntil: 'networkidle' });
-        await page.waitForTimeout(500);
-        const where = `contrast ${device}-${colorScheme} ${color}`;
-        if ((await page.locator('.cp-hero').getAttribute('data-flat')) !== null) {
-          fail(where, 'the hero fell back to the flat sky (no WebGL 2)');
-          continue;
+  for (const flat of [false, true]) {
+    for (const [device, options] of Object.entries({ desktop: DESKTOP, phone: PHONE })) {
+      for (const colorScheme of ['light', 'dark']) {
+        const context = await browser.newContext({ ...options, colorScheme, reducedMotion: 'reduce' });
+        if (flat) await context.addInitScript(NO_WEBGL);
+        const page = await context.newPage();
+        for (const color of [...START_COLORS, ...EXTRA_COLORS]) {
+          await page.goto(`${base}/color-picker?c=${color.slice(1)}`, { waitUntil: 'networkidle' });
+          const where = `contrast ${flat ? 'flat ' : ''}${device}-${colorScheme} ${color}`;
+          const state = await page
+            .waitForSelector(flat ? '.cp-hero[data-flat]' : '.cp-hero[data-ready]', { timeout: 10_000 })
+            .then(() => 'ok')
+            .catch(async () => ((await page.locator('.cp-hero').getAttribute('data-flat')) !== null ? 'flat' : 'not ready'));
+          if (state !== 'ok') {
+            fail(where, state === 'flat' ? 'the hero fell back to the flat background (no WebGL 2)' : flat ? 'the hero did not fall back without WebGL 2' : 'the material never drew');
+            continue;
+          }
+          await page.waitForTimeout(150);
+          const targets = await textTargets(page);
+          const style = await page.addStyleTag({
+            content: '.cp-hero-copy, .cp-hero-copy *, .site-header, .site-header * { color: transparent !important; text-shadow: none !important; }',
+          });
+          await page.waitForTimeout(100);
+          const shot = (await page.screenshot()).toString('base64');
+          await style.evaluate((node) => node.remove());
+          const scene = await page.evaluate(() => document.documentElement.getAttribute('data-cp-scene'));
+          for (const result of await measure(page, shot, targets)) {
+            const min = result.ring ? RING_MIN : TEXT_MIN;
+            const entry = { flat, device, colorScheme, color, scene, ...result, passed: result.p1 >= min };
+            report.contrast.push(entry);
+            if (!entry.passed) fail(where, `${result.label} ${result.p1}:1 at the 1st percentile (needs ${min}:1)`);
+          }
         }
-        const targets = await textTargets(page);
-        const style = await page.addStyleTag({
-          content: '.cp-hero-copy, .cp-hero-copy *, .site-header, .site-header * { color: transparent !important; text-shadow: none !important; }',
-        });
-        await page.waitForTimeout(100);
-        const shot = (await page.screenshot()).toString('base64');
-        await style.evaluate((node) => node.remove());
-        const hour = await page.evaluate(() => document.documentElement.getAttribute('data-cp-hour'));
-        for (const result of await measure(page, shot, targets)) {
-          const min = result.ring ? RING_MIN : TEXT_MIN;
-          const entry = { device, colorScheme, color, hour, ...result, passed: result.p1 >= min };
-          report.contrast.push(entry);
-          if (!entry.passed) fail(where, `${result.label} ${result.p1}:1 at the 1st percentile (needs ${min}:1)`);
-        }
+        await context.close();
       }
-      await context.close();
     }
   }
-  const scored = report.contrast.length;
-  const passed = report.contrast.filter((entry) => entry.passed).length;
-  const worst = [...report.contrast].sort((p, q) => p.p1 / (p.ring ? RING_MIN : TEXT_MIN) - q.p1 / (q.ring ? RING_MIN : TEXT_MIN))[0];
-  console.log(`hero contrast: ${passed}/${scored} passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme} ${worst?.color}, ${worst?.hour})`);
+  for (const flat of [false, true]) {
+    const entries = report.contrast.filter((entry) => entry.flat === flat);
+    const passed = entries.filter((entry) => entry.passed).length;
+    const worst = [...entries].sort((p, q) => p.p1 - q.p1)[0];
+    console.log(`hero contrast${flat ? ' (flat, no WebGL 2)' : ''}: ${passed}/${entries.length} passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme} ${worst?.color}, ${worst?.scene})`);
+  }
 }
 
 // --- 2. Pickers -------------------------------------------------------------------------------------

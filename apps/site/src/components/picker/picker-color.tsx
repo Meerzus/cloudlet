@@ -1,14 +1,19 @@
 'use client';
 
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
-import { landscapeFor, START_COLORS, START_GLOBAL, startColor, type Landscape } from '@/lib/landscape';
+import { formatColor, parseColor } from '@/components/ui/color-picker/color';
+import { heroRamp, type Ramp } from '@/lib/picker-ramp';
+import { START_COLORS, START_GLOBAL, startColor } from '@/lib/picker-start';
 
 const URL_DELAY = 250;
 
 interface PickerColor {
   /** The value as the pickers last emitted it (any format): fed back to them unchanged. */
   readonly value: string;
-  readonly landscape: Landscape;
+  /** The picked color as `#rrggbb`, alpha dropped. */
+  readonly hex: string;
+  /** The hero's ramp for it, with its scene. */
+  readonly ramp: Ramp;
   /** The start color is known: before that the server's first curated color stands in. */
   readonly started: boolean;
   /** Whether the latest change should bleed (a jump) or repaint at once (a slider moved). */
@@ -31,10 +36,13 @@ function writeUrl(hex: string) {
   if (url.href !== window.location.href) window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
 }
 
+/** Any color the picker emits as `#rrggbb`, alpha dropped. */
+const normalize = (value: string) => formatColor({ ...parseColor(value)!, a: 1 }, 'hex');
+
 /**
- * The landing's one color (COLOR_PICKER §8): the hero's disc, the inline panel in Built for
+ * The landing's one color (COLOR_PICKER §8): the hero's panel, the inline panel in Built for
  * keyboards and the Combinations read and set it. It lives on <html> too — `--cp-color` and
- * `data-cp-hour` — for the flat sky, the ink and the tint of the neutral sections.
+ * `data-cp-scene` — for the flat background, the ink and the tint of the neutral sections.
  */
 export function PickerColorProvider({ children }: { children: ReactNode }) {
   // The server renders the first curated color; the start script has already painted the real one on <html>.
@@ -42,9 +50,9 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
   const [started, setStarted] = useState(false);
   const bleed = useRef(true);
   const changed = useRef(false);
-  // Keyed by hex: a format switch re-emits the same color in other words, and the landscape stays.
-  const hex = useMemo(() => landscapeFor(value)?.hex ?? START_COLORS[0], [value]);
-  const landscape = useMemo(() => landscapeFor(hex)!, [hex]);
+  // Keyed by hex: a format switch re-emits the same color in other words, and the ramp stays.
+  const hex = useMemo(() => (heroRamp(value) ? normalize(value) : START_COLORS[0]), [value]);
+  const ramp = useMemo(() => heroRamp(hex)!, [hex]);
 
   useLayoutEffect(() => {
     // After a client navigation the start script did not run: pick the same way here.
@@ -61,20 +69,21 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     if (!started) return;
     const root = document.documentElement;
-    root.style.setProperty('--cp-color', landscape.hex);
-    root.setAttribute('data-cp-hour', landscape.hour);
-  }, [landscape, started]);
+    root.style.setProperty('--cp-color', hex);
+    root.setAttribute('data-cp-scene', ramp.scene);
+  }, [hex, ramp, started]);
 
   useEffect(() => {
     if (!changed.current) return;
-    const timer = window.setTimeout(() => writeUrl(landscape.hex), URL_DELAY);
+    const timer = window.setTimeout(() => writeUrl(hex), URL_DELAY);
     return () => window.clearTimeout(timer);
-  }, [landscape.hex]);
+  }, [hex]);
 
   const state = useMemo<PickerColor>(
     () => ({
       value,
-      landscape,
+      hex,
+      ramp,
       started,
       bleed,
       pick(next) {
@@ -84,7 +93,7 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
         setValue(next);
       },
     }),
-    [value, landscape, started],
+    [value, hex, ramp, started],
   );
   return <PickerColorContext.Provider value={state}>{children}</PickerColorContext.Provider>;
 }

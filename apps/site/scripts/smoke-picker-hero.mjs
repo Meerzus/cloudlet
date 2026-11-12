@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Smoke snapshot of the color picker landing's hero (COLOR_PICKER §8.4): headless Chromium with
- * SwiftShader renders `/color-picker?c=ff6a3d` from the static export, still (reduced motion),
- * without the copy — fonts differ between systems, the shader should not. The frame is scaled
+ * Smoke snapshot of the color picker landing's hero (COLOR_PICKER §8.4, §8.9): headless Chromium
+ * with SwiftShader renders `/color-picker?c=ff6a3d` from the static export once the material has
+ * drawn (`data-ready`), still (reduced motion: no flow, no bleed), without the copy and the panel —
+ * fonts differ between systems, the shader should not. The frame is scaled
  * down to 160×100 in the page, which averages the film grain away, and compared with the
  * committed reference `smoke/picker-hero.png`: it fails when more than 1 % of the pixels differ
  * by more than 24 of 255 in any channel. `--update` writes a new reference.
@@ -30,8 +31,10 @@ try {
   const errors = [];
   page.on('pageerror', (error) => errors.push(String(error)));
   await page.goto(`http://127.0.0.1:${server.address().port}/color-picker?c=ff6a3d`, { waitUntil: 'networkidle' });
-  await page.addStyleTag({ content: '.cp-hero-copy, .site-header, .site-edge, nextjs-portal { visibility: hidden !important; }' });
+  await page.waitForSelector('.cp-hero[data-ready], .cp-hero[data-flat]', { timeout: 15_000 }).catch(() => {});
+  await page.addStyleTag({ content: '.cp-hero-copy, .cp-hero-panel, .site-header, .site-edge, .chapters, nextjs-portal { visibility: hidden !important; }' });
   await page.waitForTimeout(400);
+  const ready = await page.locator('.cp-hero').getAttribute('data-ready');
   const flat = await page.locator('.cp-hero').getAttribute('data-flat');
   const shot = (await page.locator('.cp-hero').screenshot()).toString('base64');
   const reference = existsSync(REFERENCE) && !update ? readFileSync(REFERENCE).toString('base64') : null;
@@ -59,7 +62,10 @@ try {
   }, { shot, reference, size: SIZE, tolerance: TOLERANCE });
 
   if (flat !== null) {
-    console.error('The hero fell back to the flat sky: no WebGL 2 in this Chromium.');
+    console.error('The hero fell back to the flat background: no WebGL 2 in this Chromium.');
+    failed = true;
+  } else if (ready === null) {
+    console.error('The material never drew.');
     failed = true;
   } else if (result.different === null) {
     writeFileSync(REFERENCE, Buffer.from(result.png, 'base64'));
