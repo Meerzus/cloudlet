@@ -23,12 +23,29 @@ export const START_COLORS = [
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-/** `?c=ff5500` (3 or 6 hex digits, no #) as `#rrggbb`; null when absent or not a color. */
-export function colorFromSearch(search: string): string | null {
+/** Most colors a palette — and so `?c=` — holds (COLOR_PALETTE §2: `max` defaults to 4). */
+export const PALETTE_MAX = 4;
+
+const HEX_DIGITS = /^(?:[\da-f]{3}|[\da-f]{6})$/iu;
+
+/**
+ * `?c=ff5500,2f8f9d` (3 or 6 hex digits each, no #, at most PALETTE_MAX) as `#rrggbb` strings, the
+ * page color first; a link from before the palette carries one color. Null when absent or when the
+ * first is not a color (the start script reads the same first entry); later entries that are not
+ * colors are dropped.
+ */
+export function paletteFromSearch(search: string): string[] | null {
   const value = new URLSearchParams(search).get('c');
-  if (!value || !/^(?:[\da-f]{3}|[\da-f]{6})$/iu.test(value)) return null;
-  return formatColor(parseColor(`#${value}`)!, 'hex');
+  const [first, ...rest] = value?.split(',') ?? [];
+  if (!first || !HEX_DIGITS.test(first)) return null;
+  return [first, ...rest.filter((entry) => HEX_DIGITS.test(entry))].slice(0, PALETTE_MAX).map((entry) => formatColor(parseColor(`#${entry}`)!, 'hex'));
 }
+
+/** The page color of `?c=`: its first entry. */
+export const colorFromSearch = (search: string): string | null => paletteFromSearch(search)?.[0] ?? null;
+
+/** `#rrggbb` colors as the value of `?c=`: their digits, comma separated. */
+export const paletteParam = (colors: readonly string[]): string => colors.map((hex) => hex.slice(1)).join(',');
 
 /** The color a visit starts with: the link's `?c=`, otherwise a random curated one. */
 export function startColor(search: string, random: number): string {
@@ -44,7 +61,7 @@ export const START_GLOBAL = '__cloudletColor';
  * so the server's markup shows the right flat background and ink before React hydrates.
  * Dependency-free ES5; the scene rule repeats `sceneOf` over OKLab lightness.
  */
-export const START_SCRIPT = `(function(){try{var C=${JSON.stringify(START_COLORS)};var m=/[?&]c=([0-9a-fA-F]{3}|[0-9a-fA-F]{6})(?:&|$)/.exec(location.search);var x=m?m[1].toLowerCase():C[Math.floor(Math.random()*C.length)].slice(1);if(x.length===3)x=x.charAt(0)+x.charAt(0)+x.charAt(1)+x.charAt(1)+x.charAt(2)+x.charAt(2);var hex='#'+x;var r=document.documentElement;r.style.setProperty('--cp-color',hex);r.setAttribute('data-cp-scene',(${sceneScript()})(hex));r.setAttribute('data-cp-top','');window.${START_GLOBAL}=hex}catch(e){}})()`;
+export const START_SCRIPT = `(function(){try{var C=${JSON.stringify(START_COLORS)};var m=/[?&]c=([0-9a-fA-F]{3}|[0-9a-fA-F]{6})(?:,|%2C|&|$)/i.exec(location.search);var x=m?m[1].toLowerCase():C[Math.floor(Math.random()*C.length)].slice(1);if(x.length===3)x=x.charAt(0)+x.charAt(0)+x.charAt(1)+x.charAt(1)+x.charAt(2)+x.charAt(2);var hex='#'+x;var r=document.documentElement;r.style.setProperty('--cp-color',hex);r.setAttribute('data-cp-scene',(${sceneScript()})(hex));r.setAttribute('data-cp-top','');window.${START_GLOBAL}=hex}catch(e){}})()`;
 
 /** ES5 copy of `sceneOf(OKLCH lightness)` over a `#rrggbb` string, for START_SCRIPT. */
 function sceneScript(): string {

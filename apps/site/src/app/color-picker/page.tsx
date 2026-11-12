@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { Combinations } from '@/components/picker/combinations';
 import { Keyboards } from '@/components/picker/keyboards';
+import { Palette } from '@/components/picker/palette';
 import { PickerColorProvider } from '@/components/picker/picker-color';
 import { PickerFaq } from '@/components/picker/picker-faq';
 import { PickerGetStarted } from '@/components/picker/picker-get-started';
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 const CHAPTERS: ChapterList = [
   { id: 'hero', label: 'Intro' },
-  { id: 'combinations', label: 'Combinations' },
+  { id: 'palette', label: 'Palette' },
   { id: 'keyboards', label: 'Built for keyboards' },
   { id: 'get-started', label: 'Get started' },
   { id: 'faq', label: 'FAQ' },
@@ -40,7 +40,7 @@ export default function ColorPickerHome() {
           <PickerHero />
           {/* The neutral sections carry a few percent of the picked color (picker.css). */}
           <div className="cp-tint">
-            <Combinations />
+            <Palette />
             <Keyboards />
             <PickerGetStarted />
             <PickerFaq />

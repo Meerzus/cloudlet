@@ -2,7 +2,7 @@ import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import { formatColor, oklchToRgb, parseColor, rgbToOklch, type Rgba } from '../../apps/site/src/components/ui/color-picker/color';
 import { contrast, flatLut, flatOf, heroRamp, INK, LUT_SIZE, paletteRamp, rampLut, sampleRamp, sceneOf } from '../../apps/site/src/lib/picker-ramp';
-import { colorFromSearch, START_COLORS, START_GLOBAL, START_SCRIPT, startColor } from '../../apps/site/src/lib/picker-start';
+import { colorFromSearch, paletteFromSearch, paletteParam, START_COLORS, START_GLOBAL, START_SCRIPT, startColor } from '../../apps/site/src/lib/picker-start';
 
 /** Runs the inline start script against a fake <html> and returns what it left there. */
 function runStartScript(search: string, random = 0) {
@@ -119,6 +119,24 @@ describe('color picker ramps (COLOR_PICKER §8.2)', () => {
     expect(paletteRamp(['nope'])).toBeNull();
   });
 
+  it('any 2–4 colors give the palette ramp depth: lightness climbs, the darkest color sits in the shadows', () => {
+    const grid: string[] = [];
+    for (let r = 0; r < 256; r += 85) for (let g = 0; g < 256; g += 85) for (let b = 0; b < 256; b += 85) grid.push(`#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`);
+    const l = (hex: string) => rgbToOklch(parseColor(hex)!).l;
+    for (let size = 2; size <= 4; size++) {
+      for (let start = 0; start < grid.length; start += 3) {
+        const colors = Array.from({ length: size }, (_, index) => grid[(start + index * 17) % grid.length]!);
+        const { stops } = paletteRamp(colors)!;
+        const lightness = stops.map((stop) => l(stop.color));
+        expect(lightness, colors.join()).toEqual([...lightness].sort((a, b) => a - b));
+        expect(stops[1]!.color, colors.join()).toBe([...colors].sort((a, b) => l(a) - l(b))[0]);
+        // The shadow end is darker than the darkest color (unless that is black already), the light end lighter than the lightest.
+        expect(lightness[0]!, colors.join()).toBeLessThanOrEqual(Math.min(...colors.map(l)) * 0.5 + 0.001);
+        expect(lightness.at(-1)!, colors.join()).toBeGreaterThanOrEqual(Math.max(...colors.map(l)) - 0.001);
+      }
+    }
+  });
+
   it('turns a ramp into the lookup table the shader samples', () => {
     const { stops } = heroRamp('#ff6a3d')!;
     const lut = rampLut(stops);
@@ -143,6 +161,19 @@ describe('color picker landing start (COLOR_PICKER §8.2)', () => {
     expect(startColor('', 0)).toBe(START_COLORS[0]);
     expect(startColor('', 0.99999)).toBe(START_COLORS.at(-1));
     expect(new Set(START_COLORS.map((color) => heroRamp(color)!.scene))).toEqual(new Set(['dark', 'light']));
+  });
+
+  it('reads ?c= as a palette: comma separated, the page color first, links with one color still work', () => {
+    expect(paletteFromSearch('?c=ff6a3d')).toEqual(['#ff6a3d']);
+    expect(paletteFromSearch('?c=ff6a3d,2f8f9d,f50')).toEqual(['#ff6a3d', '#2f8f9d', '#ff5500']);
+    expect(paletteFromSearch('?c=ff6a3d%2C2f8f9d')).toEqual(['#ff6a3d', '#2f8f9d']);
+    // Entries that are not colors drop out, at most four stay; without a first color there is no palette.
+    expect(paletteFromSearch('?c=ff6a3d,nope,2f8f9d,111,222,333')).toEqual(['#ff6a3d', '#2f8f9d', '#111111', '#222222']);
+    expect(paletteFromSearch('?c=nope,2f8f9d')).toBeNull();
+    expect(colorFromSearch('?c=ff6a3d,2f8f9d')).toBe('#ff6a3d');
+    expect(paletteParam(['#ff6a3d', '#2f8f9d'])).toBe('ff6a3d,2f8f9d');
+    expect(runStartScript('?c=2f8f9d,ff6a3d').color).toBe('#2f8f9d');
+    expect(runStartScript('?c=2f8f9d%2Cff6a3d').color).toBe('#2f8f9d');
   });
 
   it('the start script picks the same color and scene as the hero will', () => {

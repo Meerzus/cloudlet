@@ -120,87 +120,56 @@ html[data-cp-top] .site-edge-tint { opacity: 0; }
   font: 0.875em var(--font-geist-mono), ui-monospace, monospace;
 }
 
-/* --- Combinations (§8.5) --- */
-.cp-harmonies {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 2rem;
-  margin-top: 2.5rem;
-}
-.cp-harmony-name { margin-bottom: 0.75rem; font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
-.cp-harmony-swatches { display: flex; flex-direction: column; gap: 0.25rem; }
-.cp-swatch {
-  display: flex;
+/* --- Palette (§8.5): the palette and its hints beside a card of paint recolored by it. --- */
+.cp-palette { display: grid; align-items: center; gap: 2.5rem; margin-top: 2.5rem; }
+@media (min-width: 768px) { .cp-palette { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 3rem; } }
+.cp-palette-controls { display: flex; flex-direction: column; gap: 2.5rem; }
+.cp-palette-row { align-self: start; }
+.cp-hints-title { margin-bottom: 0.75rem; font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
+.cp-hints-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.cp-hint {
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.375rem;
-  border-radius: 0.875rem;
-  text-align: left;
+  gap: 0.625rem;
+  min-height: 2.5rem;
+  padding: 0.375rem 0.875rem 0.375rem 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 0.9375rem;
   outline: none;
-  transition: background-color 150ms ease;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
 }
-.cp-swatch:hover { background: color-mix(in oklab, var(--foreground) 6%, transparent); }
-.cp-swatch:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
-.cp-swatch-chip {
-  flex: none;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.625rem;
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 12%, transparent);
-  transition: background-color 320ms ease;
+.cp-hint:hover { background: color-mix(in oklab, var(--foreground) 9%, var(--background)); }
+.cp-hint:focus-visible { box-shadow: inset 0 0 0 1px var(--border), 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.cp-hint[aria-pressed='true'] { box-shadow: inset 0 0 0 1.5px var(--foreground); }
+.cp-hint-chips { display: inline-flex; }
+.cp-hint-chip {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2px var(--background), inset 0 0 0 1px rgb(0 0 0 / 0.12);
 }
-.cp-swatch-value {
-  min-width: 0;
-  font: 0.8125rem/1.35 var(--font-geist-mono), ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-/* Riso posters: flat paper, flat glyphs, film grain over both (a 256 px tile, scripts/grain.mjs). */
-.cp-posters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 1rem;
-  margin-top: 3.5rem;
-}
-.cp-poster {
+.cp-hint-chip + .cp-hint-chip { margin-left: -0.375rem; }
+.cp-palette-card {
   position: relative;
-  isolation: isolate;
   overflow: hidden;
-  aspect-ratio: 4 / 5;
-  margin: 0;
-  border-radius: 1.25rem;
-  transition: background-color 320ms ease, color 320ms ease;
+  aspect-ratio: 4 / 3;
+  border-radius: 1.5rem;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.06), 0 24px 48px -24px rgb(0 0 0 / 0.28);
+  transition: background 320ms ease;
 }
-.cp-glyph { position: absolute; transition: color 320ms ease; }
-.cp-glyph-moon { left: 26%; top: 8%; width: 48%; }
-.cp-glyph-reflection { left: 36%; top: 48%; width: 28%; }
-.cp-glyph-drop { left: 14%; top: 12%; width: 44%; }
-.cp-glyph-star { right: 12%; top: 32%; width: 34%; }
-.cp-glyph-cloud { left: 12%; top: 16%; width: 74%; }
-.cp-glyph-star-small { right: 14%; top: 8%; width: 18%; }
-.cp-poster-grain {
+.cp-palette-canvas {
   position: absolute;
   inset: 0;
-  z-index: 1;
-  background: url('/picker/grain.png') 0 0 / 256px 256px;
-  mix-blend-mode: overlay;
-  opacity: 0.6;
-  pointer-events: none;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 400ms ease;
 }
-.cp-poster-caption {
-  position: absolute;
-  right: 1.25rem;
-  bottom: 1.25rem;
-  left: 1.25rem;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-.cp-poster-title { font-size: 2rem; font-weight: 600; line-height: 1; letter-spacing: -0.035em; }
-.cp-poster-meta { font: 500 0.75rem var(--font-geist-mono), ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.cp-palette-card[data-ready] .cp-palette-canvas { opacity: 1; }
+.cp-palette-card[data-flat] .cp-palette-canvas { display: none; }
 
 /* --- Built for keyboards (§8.5) --- */
 .cp-keyboards { display: grid; align-items: start; gap: 2rem; margin-top: 2.5rem; }
@@ -262,9 +231,11 @@ html[data-cp-top] .site-edge-tint { opacity: 0; }
 .cp-switch[aria-checked='true'] .cp-switch-thumb { transform: translateX(1rem); }
 
 @media (prefers-reduced-motion: reduce) {
-  .cp-hero-panel, .cp-tint, .cp-swatch-chip, .cp-poster, .cp-glyph, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb { transition: none; }
+  .cp-hero-panel, .cp-tint, .cp-hint, .cp-palette-card, .cp-palette-canvas, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb { transition: none; }
 }
 @media (forced-colors: active) {
+  .cp-hint-chip { forced-color-adjust: none; }
+  .cp-hint[aria-pressed='true'] { outline: 2px solid Highlight; }
   .cp-switch-track { border: 1px solid CanvasText; }
   .cp-switch[aria-checked='true'] .cp-switch-track { background: Highlight; }
   .cp-keys kbd { border: 1px solid CanvasText; }

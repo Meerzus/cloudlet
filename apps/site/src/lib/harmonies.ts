@@ -1,8 +1,9 @@
 import { formatColor, oklchToRgb, parseColor, rgbToOklch } from '@/components/ui/color-picker/color';
 
 /**
- * Combinations (COLOR_PICKER §8.5): the classic harmonies of the picked color, turned in OKLCH so
- * a rotated hue keeps the base's lightness and chroma (pulled into sRGB where it does not fit).
+ * The Palette section's hints (COLOR_PICKER §8.5): the classic harmonies of the page color, turned
+ * in OKLCH so a rotated hue keeps the base's lightness and chroma (pulled into sRGB where it does not
+ * fit). The base always comes first: a hint fills the palette, and the first color is the page's.
  */
 
 export type HarmonyId = 'complement' | 'split-complement' | 'analogous' | 'tints';
@@ -10,7 +11,7 @@ export type HarmonyId = 'complement' | 'split-complement' | 'analogous' | 'tints
 export interface Harmony {
   readonly id: HarmonyId;
   readonly name: string;
-  /** `#rrggbb`, the base color included where the harmony has it. */
+  /** `#rrggbb`, the base color first. */
   readonly colors: readonly string[];
 }
 
@@ -26,26 +27,7 @@ export function harmoniesOf(color: string): readonly Harmony[] {
   return [
     { id: 'complement', name: 'Complement', colors: [base, turn(180)] },
     { id: 'split-complement', name: 'Split complement', colors: [base, turn(150), turn(210)] },
-    { id: 'analogous', name: 'Analogous', colors: [turn(-30), base, turn(30)] },
+    { id: 'analogous', name: 'Analogous', colors: [base, turn(-30), turn(30)] },
     { id: 'tints', name: 'Tints', colors: [base, tint(0.25), tint(0.5), tint(0.75)] },
   ];
 }
-
-const luminance = (color: string) => {
-  const { r, g, b } = parseColor(color) ?? { r: 0, g: 0, b: 0 };
-  const linear = (channel: number) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
-  return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
-};
-
-/** WCAG 2 contrast ratio of two colors. */
-export function contrast(a: string, b: string): number {
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
-  return (light + 0.05) / (dark + 0.05);
-}
-
-// Pure black: with any lighter dark ink some mid-tone backgrounds fall under 4.5:1 against both inks.
-export const INK_DARK = '#000000';
-export const INK_LIGHT = '#ffffff';
-
-/** Text over a color: whichever of black and white contrasts more (always ≥ 4.58:1). */
-export const inkOn = (background: string) => (contrast(background, INK_DARK) >= contrast(background, INK_LIGHT) ? INK_DARK : INK_LIGHT);
