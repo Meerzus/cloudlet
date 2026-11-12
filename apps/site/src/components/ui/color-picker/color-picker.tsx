@@ -195,24 +195,29 @@ const FALLBACK: Hsva = { h: 0, s: 0, v: 1, a: 1 };
  * Owns the HSV state, the output format and their controlled/uncontrolled modes. The color prop is
  * re-read only when it is not the value the picker last emitted or read, so the hue survives zero
  * saturation or brightness; switching the format re-emits the same color so the field, the hidden input and the
- * owner agree.
+ * owner agree. The prop is compared while rendering, not in an effect: several controlled pickers
+ * sharing one color (a drag in one moves the others) would otherwise chain an update from each
+ * other's effects on every pointer move.
  */
 function usePickerState({ color, defaultColor, onChange, format, defaultFormat, onFormatChange, formats = COLOR_FORMATS, alpha = false }: ColorPickerBaseProps): PickerState {
   const [ownFormat, setOwnFormat] = useState<ColorFormat>(() => defaultFormat ?? formats[0] ?? 'hex');
   const currentFormat = format ?? ownFormat;
   const strip = (hsva: Hsva) => (alpha ? hsva : { ...hsva, a: 1 });
-  const [hsva, setHsva] = useState<Hsva>(() => strip(parseToHsva(color ?? defaultColor ?? '') ?? FALLBACK));
-  const emitted = useRef<string | null>(null);
-  useEffect(() => {
-    if (color === undefined || color === emitted.current) return;
+  // `source`: the color string this HSV came from — the last one emitted, or the last prop read.
+  const [state, setState] = useState<{ readonly hsva: Hsva; readonly source: string | null }>(() => ({
+    hsva: strip(parseToHsva(color ?? defaultColor ?? '') ?? FALLBACK),
+    source: color ?? null,
+  }));
+  let { hsva } = state;
+  if (color !== undefined && color !== state.source) {
     // Remember what was read from outside as well: a prop that later returns to an earlier emitted value is read again.
-    emitted.current = color;
     const parsed = parseToHsva(color);
-    if (parsed) setHsva(alpha ? parsed : { ...parsed, a: 1 });
-  }, [color, alpha]);
+    if (parsed) hsva = strip(parsed);
+    setState({ hsva, source: color });
+  }
   const emit = (next: Hsva, nextFormat: ColorFormat) => {
     const value = formatHsva(next, nextFormat);
-    emitted.current = value;
+    setState({ hsva: next, source: value });
     onChange?.(value);
   };
   return {
@@ -221,9 +226,7 @@ function usePickerState({ color, defaultColor, onChange, format, defaultFormat, 
     formats,
     value: formatHsva(hsva, currentFormat),
     set(next) {
-      const stripped = strip(next);
-      setHsva(stripped);
-      emit(stripped, currentFormat);
+      emit(strip(next), currentFormat);
     },
     setFormat(next) {
       if (next === currentFormat) return;
