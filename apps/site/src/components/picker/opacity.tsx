@@ -11,7 +11,7 @@ import { usePickerColor } from './picker-color';
 /** The film starts half dense: `#rrggbb80`, the scene and the color both in view. */
 export const START_ALPHA = 0.5;
 
-/** The glass over the Opacity scene (COLOR_PICKER §8.8). */
+/** The glass over the Opacity scene (COLOR_PICKER §8.8): fine straight prism ribs, the owner's pick A. */
 export const OPACITY_GLASS: GlassLook = {
   size: 0.75,
   shape: 'lines',

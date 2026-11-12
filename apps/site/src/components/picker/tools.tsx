@@ -9,19 +9,19 @@ import type { FlutedScene, GlassLook } from './fluted-glass';
 import { GlassCard } from './glass-card';
 import { usePickerColor } from './picker-color';
 
-/** The glass over the Tools flowers (COLOR_PICKER §8.8). */
+/** The glass over the Tools flowers (COLOR_PICKER §8.8): thin prism ribs, the owner's pick B. */
 export const TOOLS_GLASS: GlassLook = {
-  size: 0.8,
+  size: 0.7,
   shape: 'lines',
-  distortionShape: 'cascade',
-  distortion: 0.75,
+  distortionShape: 'prism',
+  distortion: 0.4,
   angle: 0,
   shift: 0,
-  blur: 0.2,
-  edges: 0.5,
+  blur: 0,
+  edges: 0.25,
   stretch: 0,
-  highlights: 0,
-  shadows: 0.3,
+  highlights: 0.12,
+  shadows: 0.2,
   grainMixer: 0,
   grainOverlay: 0,
 };
