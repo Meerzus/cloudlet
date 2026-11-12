@@ -26,6 +26,14 @@ export function PickerGetStarted() {
               <CodeBlock file={START.file} code={START.code} />
             </div>
           </li>
+          <li className="gs-step">
+            <span className="gs-step-number" aria-hidden="true">3</span>
+            <div className="min-w-0">
+              <h3>Need a palette?</h3>
+              <p>{START.paletteNote}</p>
+              <PackageManagerCommand command={START.paletteCommand} className="mt-4" />
+            </div>
+          </li>
         </ol>
       </div>
     </section>

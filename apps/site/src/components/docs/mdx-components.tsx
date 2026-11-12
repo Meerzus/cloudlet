@@ -8,6 +8,7 @@ import { Callout } from './callout';
 import { CodeBlock, type CodeBlockProps } from './code-block';
 import { DemoBlock, type DemoItem } from './demo-block';
 import { GetStartedCode, GetStartedTabs, InstallCommand } from './get-started-code';
+import { PaletteDemo } from './palette-demo';
 import { PickerDemo } from './picker-demo';
 import { Table } from './table';
 import { StyleEditor } from './style-editor/style-editor';
@@ -86,6 +87,7 @@ export function getMDXComponents(): MDXComponents {
     GetStartedTabs,
     GetStartedCode,
     InstallCommand,
+    PaletteDemo,
     PickerDemo,
     StyleEditor,
   };

@@ -34,7 +34,7 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 
 ### Color palette
 
-- `npx shadcn@latest add @cloudlet/color-palette` adds `components/ui/color-palette/color-palette.tsx`
+- `npx shadcn@latest add https://cloudlet.dev/r/color-palette.json` adds `components/ui/color-palette/color-palette.tsx`
   and `color-palette.css`, and installs the color picker with it as a registry dependency.
 - `ColorPalette` is a row of one to `max` colors (4 by default), each a `ColorPicker`. The add button
   appends the last color turned in OKLCH hue and opens its picker at once; a color is removed with
@@ -46,19 +46,30 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 - Keyboard and screen readers: the palette is a named group with one Tab stop; ← and → move between
   the swatches and the add button, Home and End jump to the ends. Each swatch is named "Color 2 of 3,
   #2f8f9d", and a removal is announced.
-- About 3.4 KB min+gzip on top of the color picker (JS and CSS), measured by
+- About 3.5 KB min+gzip on top of the color picker (JS and CSS), measured by
   `npm run size:color-palette`.
 
 ### Website
 
-- [/color-picker](https://cloudlet.dev/color-picker): a landscape painted in one WebGL 2 shader whose
-  sun is the picker's swatch — the lightness of the picked color sets the time of day, and `?c=` keeps
-  the color in the address. Below it: combinations of the picked color in OKLCH with three printed
-  posters, the inline panel with a keyboard cheat sheet and a reduce-motion switch, the install
-  command and an example, and a FAQ.
+- [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". The hero is grainy
+  airbrushed paper recolored in one WebGL 2 shader by the color in the open panel beside the headline;
+  the picked color bleeds out of the panel and the paper drifts slowly. The page keeps a palette of up
+  to four colors whose first is the page color, and `?c=` keeps the palette in the address. Below the
+  hero:
+  - Palette: the color palette beside a card of viscous paint recolored by its colors, with harmonies
+    (complement, split complement, analogous, tints) as hints that fill it;
+  - Opacity: a film of the page color over a scene behind fluted glass, as dense as the alpha of an
+    inline panel, with the value and a Copy button;
+  - Tools: flowers behind fluted glass to take a color from with a click, or with the arrows and Enter,
+    in every browser; the compact picker and the same color in four formats, each copied by a click;
+  - the inline panel with a keyboard cheat sheet and a reduce-motion switch, the two install commands
+    and an example, and a FAQ.
+
+  The fluted glass is Paper Shaders' `FlutedGlass` (Apache-2.0), loaded when its section comes near.
 - [/color-picker/docs](https://cloudlet.dev/color-picker/docs): install, use, every prop and label,
   formats and their exact output, eyedropper and copy, keyboard and screen readers, styling, placement
-  limits and reduced motion, with a live example. It is also in `llms.txt`, `llms-full.txt`, as
+  limits and reduced motion, then the palette's install, use, props, keyboard and labels, each with a
+  live example. It is also in `llms.txt`, `llms-full.txt`, as
   [Markdown](https://cloudlet.dev/color-picker/docs.md), in search and in the sitemap.
 - The header switches between Toaster and Color picker; its logo and Docs link follow the current
   component.

@@ -12,9 +12,9 @@ import { Footer } from '@/components/site/footer';
 import { START_SCRIPT } from '@/lib/picker-start';
 import { COLOR_PICKER_PATH, SITE_URL } from '@/lib/site';
 
-const TITLE = 'Cloudlet Color Picker — a swatch that opens into a picker';
+const TITLE = 'Cloudlet Color Picker — pick a color, paint the page';
 const DESCRIPTION =
-  'A color picker for React and shadcn: a round swatch that morphs into hex, rgb, hsl and oklch, optional opacity, the eyedropper and the keyboard. One registry item, no dependencies.';
+  'A color picker for React: hex, rgb, hsl and oklch, an eyedropper and full keyboard support, and a palette of up to four colors built on it. shadcn items with no dependencies.';
 
 export const metadata: Metadata = {
   title: TITLE,

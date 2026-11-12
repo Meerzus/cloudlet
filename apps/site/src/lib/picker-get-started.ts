@@ -1,4 +1,4 @@
-import { COLOR_PICKER_COMMAND } from './site';
+import { COLOR_PALETTE_COMMAND, COLOR_PICKER_COMMAND } from './site';
 
 /**
  * The color picker landing's Get started. The snippet is copied verbatim from registry/README.md,
@@ -29,4 +29,6 @@ export function AccentField() {
   );
 }`,
   source: 'registry/README.md',
+  paletteCommand: COLOR_PALETTE_COMMAND,
+  paletteNote: 'For a set of colors, the palette holds one to four of them, each its own picker, and brings the picker along if you skipped step 1.',
 } as const;

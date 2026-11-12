@@ -1,4 +1,4 @@
-/** The color picker landing's FAQ (COLOR_PICKER §8.5): draft copy for the owner's review. */
+/** The color picker landing's FAQ (COLOR_PICKER §8.10): copy for the owner's review. */
 export const PICKER_FAQ = [
   {
     id: 'registry',
@@ -16,7 +16,13 @@ export const PICKER_FAQ = [
     id: 'eyedropper',
     question: 'Where is the eyedropper in Safari and Firefox?',
     answer:
-      'It appears only where the browser has the EyeDropper API (Chromium browsers today). Elsewhere the button is not rendered at all, rather than shown disabled.',
+      'The button in the panel appears only where the browser has the EyeDropper API, Chromium browsers today; in Safari and Firefox it is not rendered at all, rather than shown disabled. Picking from your own image works everywhere: draw it on a canvas and read the pixel, as the flowers above do.',
+  },
+  {
+    id: 'palette',
+    question: 'How do I let people pick more than one color?',
+    answer:
+      'Add the palette: one to four swatches in a row, each a full picker, with a button to add a color and Delete to remove one. It takes and gives back an array in one format, sends every color with a form under one name, and is a single Tab stop with the arrows inside.',
   },
   {
     id: 'overflow',

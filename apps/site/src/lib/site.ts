@@ -61,6 +61,9 @@ export const SHADCN_COMMAND = `npx shadcn@latest add ${REGISTRY_ITEM_URL}`;
 /** The color picker's registry item: source files only, no npm package (COLOR_PICKER §1). */
 export const COLOR_PICKER_ITEM_URL = `${SITE_URL}/r/color-picker.json`;
 export const COLOR_PICKER_COMMAND = `npx shadcn@latest add ${COLOR_PICKER_ITEM_URL}`;
+/** The color palette's registry item: it lists the color picker as a registry dependency (COLOR_PALETTE §1). */
+export const COLOR_PALETTE_ITEM_URL = `${SITE_URL}/r/color-palette.json`;
+export const COLOR_PALETTE_COMMAND = `npx shadcn@latest add ${COLOR_PALETTE_ITEM_URL}`;
 /**
  * What the published package adds to an app, min+gzip bytes (`release:verify` of the
  * `1.2.0` tarball, `artifacts/size/report.json`): its own JavaScript on first load (`start`, before

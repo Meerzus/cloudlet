@@ -2,7 +2,7 @@
 // while scripts/voiceover-log.mjs records what VoiceOver speaks. A step log with timestamps and the
 // focused element lets each scenario's speech be read off the speech log. macOS only.
 //
-//   node scripts/voiceover-safari-run.mjs [--only arrival,pill-island,slider,...,picker] [--out-dir dir] [--site URL]
+//   node scripts/voiceover-safari-run.mjs [--only arrival,pill-island,slider,...,picker,palette] [--out-dir dir] [--site URL]
 //
 // Needs the lab served on 127.0.0.1:4173 (node scripts/serve-csp.mjs) for the Toaster's scenarios; the
 // color picker's (`picker`) serves the site's static export itself (npm run build:site), or uses --site,
@@ -32,7 +32,7 @@ const stepsFile = `${dir}/voiceover-safari-${stamp}-steps.jsonl`;
 /** Time for VoiceOver to finish a phrase before the next key. */
 const SPEAK = 2500;
 /** WebDriver key codes. */
-const KEYS = { Enter: '\uE007', Escape: '\uE00C', Tab: '\uE004', Shift: '\uE008', ArrowLeft: '\uE012', ArrowRight: '\uE014', ArrowUp: '\uE013', ArrowDown: '\uE015', Home: '\uE011', End: '\uE010' };
+const KEYS = { Enter: '\uE007', Escape: '\uE00C', Tab: '\uE004', Shift: '\uE008', ArrowLeft: '\uE012', ArrowRight: '\uE014', ArrowUp: '\uE013', ArrowDown: '\uE015', Home: '\uE011', End: '\uE010', Delete: '\uE017' };
 
 const pause = (ms) => new Promise((settle) => setTimeout(settle, ms));
 let session = null;
@@ -216,6 +216,24 @@ const scenarios = {
     await step(name, 'Escape (“Open the example picker”, collapsed, button)', () => press('Escape'));
     await note(name, 'swatch after Escape', await js(`const s = document.querySelector('${swatch}'); return { focused: s === document.activeElement, expanded: s.getAttribute('aria-expanded') }`));
   },
+  // The color palette (COLOR_PALETTE §4) on the same docs page: add, change, remove. One Tab stop
+  // for the row; each swatch says its place and value; a removal is announced and focus moves on.
+  palette: async (name) => {
+    const row = '.docs-palette-demo [role="group"]';
+    const current = () => js(`return [...document.querySelectorAll('${row} .color-picker > .color-picker-swatch')].map((s) => s.getAttribute('aria-label'))`);
+    await step(name, 'load /color-picker/docs', () => go(pickerPage));
+    await step(name, 'focus the first swatch (“Color 1 of 3, #245cdb”, button, Example palette, group)', () => focus(`${row} .color-picker > .color-picker-swatch`));
+    await step(name, '→ (“Color 2 of 3, #f2b84b”)', () => press('ArrowRight'));
+    await step(name, 'End (“Add color”, button)', () => press('End'));
+    await step(name, 'Enter — add (“Color picker”; “Saturation …, Brightness …”, slider)', () => press('Enter'));
+    await note(name, 'swatches after adding', await current());
+    await step(name, '→ in the new color’s area (“Saturation …”, one percent more)', () => press('ArrowRight'));
+    await step(name, 'Escape (“Color 4 of 4, #…”, button)', () => press('Escape'));
+    await note(name, 'swatches after the change', await current());
+    await step(name, 'Delete — remove (“Color removed”; “Color 3 of 3, #2f8f9d”)', () => press('Delete'));
+    await note(name, 'swatches and live region after removing', await js(`return { swatches: [...document.querySelectorAll('${row} .color-picker > .color-picker-swatch')].map((s) => s.getAttribute('aria-label')), live: document.querySelector('${row} > .color-palette-sr-only')?.textContent ?? null }`));
+    await step(name, 'Home (“Color 1 of 3, #245cdb”)', () => press('Home'));
+  },
   'long-body': async (name) => {
     const rect = await wd('GET', at('/window/rect'));
     await wd('POST', at('/window/rect'), { width: 420, height: 820 });
@@ -244,7 +262,7 @@ for (const name of selected) if (!scenarios[name]) throw new Error(`Unknown scen
 const children = [];
 async function main() {
   await mkdir(dir, { recursive: true });
-  if (selected.includes('picker')) {
+  if (selected.includes('picker') || selected.includes('palette')) {
     let site = values.site;
     if (!site) {
       const { serve } = await import('../apps/site/scripts/serve-out.mjs');

@@ -98,6 +98,9 @@ try {
         '@/components/ui/toaster': [resolve(root, 'registry/cloudlet/toaster.tsx')],
         // The color picker registry item installs the site's own files at these paths.
         '@/components/ui/color-picker/color-picker': [resolve(root, 'apps/site/src/components/ui/color-picker/color-picker.tsx')],
+        '@/components/ui/color-palette/color-palette': [resolve(root, 'apps/site/src/components/ui/color-palette/color-palette.tsx')],
+        '@/components/ui/color-picker/color': [resolve(root, 'apps/site/src/components/ui/color-picker/color.ts')],
+        '@/components/ui/color-picker/morph': [resolve(root, 'apps/site/src/components/ui/color-picker/morph.ts')],
         '@/lib/spring': [resolve(root, 'apps/site/src/lib/spring.ts')],
       },
     },

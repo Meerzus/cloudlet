@@ -12,7 +12,7 @@ const docs = defineDocs({
   dir: 'content/color-picker',
   docs: {
     postprocess: {
-      includeProcessedMarkdown: { headingIds: false, mdxAsPlaceholder: ['Callout', 'InstallCommand', 'PickerDemo'] },
+      includeProcessedMarkdown: { headingIds: false, mdxAsPlaceholder: ['Callout', 'InstallCommand', 'PickerDemo', 'PaletteDemo'] },
     },
   },
 });

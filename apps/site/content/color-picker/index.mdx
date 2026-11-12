@@ -1,6 +1,6 @@
 ---
 title: Color picker
-description: A round swatch that morphs into a full picker — hex, rgb, hsl and oklch, optional opacity, the eyedropper, the keyboard and a screen reader — installed as source with the shadcn CLI.
+description: A round swatch that morphs into a full picker — hex, rgb, hsl and oklch, optional opacity, the eyedropper, the keyboard and a screen reader — and a palette of up to four of them, installed as source with the shadcn CLI.
 ---
 
 `ColorPicker` is a swatch that opens into the picker; `ColorPickerPanel` is the same picker in the flow of the page, for forms and sidebars. Both edit a color given as a CSS string and give back a string in the format you allow. They have no dependencies besides React.
@@ -151,3 +151,77 @@ export function MotionSetting({ reduce, children }: { reduce: boolean; children:
   return <div data-reduced-motion={reduce ? "" : undefined}>{children}</div>;
 }
 ```
+
+## Palette
+
+`ColorPalette` keeps a set of one to four colors in a row of swatches. Every swatch is a `ColorPicker`; a button adds a color, Delete or a small × removes one. It edits an array of CSS strings the way the picker edits one.
+
+<PaletteDemo />
+
+### Install the palette
+
+The palette is its own registry item. It lists the color picker as a registry dependency, so the CLI adds the picker too if your project does not have it yet:
+
+<InstallCommand command="npx shadcn@latest add https://cloudlet.dev/r/color-palette.json" />
+
+| File | What it holds |
+| --- | --- |
+| `components/ui/color-palette/color-palette.tsx` | `ColorPalette`, its props and labels |
+| `components/ui/color-palette/color-palette.css` | The styles, imported by the component itself |
+
+### Use the palette
+
+Pass `colors` and `onChange` to control it. `onChange` receives every color in the current format, in the reader's order, after any change, addition or removal; switching the format in one picker switches it for the whole palette and re-emits all of them. With `name`, the palette renders one hidden input per color, so `FormData.getAll()` gives back the array:
+
+```tsx title="brand-palette.tsx"
+"use client";
+
+import { useState } from "react";
+import { ColorPalette } from "@/components/ui/color-palette/color-palette";
+
+export function BrandPalette() {
+  const [colors, setColors] = useState<string[]>(["#245cdb", "#f2b84b"]);
+  return (
+    <form action={(data) => console.log(data.getAll("brand"))}>
+      <ColorPalette colors={colors} onChange={setColors} max={3} name="brand" labels={{ group: "Brand palette" }} />
+      <button type="submit">Save</button>
+    </form>
+  );
+}
+```
+
+A new color starts from the last one, turned around the OKLCH hue wheel by a full turn divided by `max` (a square of four at the default), and its picker opens at once. A grey has no hue to turn, so the new color steps in lightness instead.
+
+### Palette props
+
+`ColorPaletteProps`; every prop is optional.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `colors` | `readonly string[]` | — | The colors (controlled): one to `max` strings in hex, `rgb()`, `hsl()` or `oklch()`. An empty array shows one default color. |
+| `defaultColors` | `readonly string[]` | — | The initial colors when the palette owns them. |
+| `onChange` | `(colors: string[]) => void` | — | Called with every color in `format` on any change, addition or removal. |
+| `max` | `number` | `4` | The most colors the palette holds; the add button is gone at this count. |
+| `format` | `ColorFormat` | — | The output format of every color (controlled); pair it with `onFormatChange`. |
+| `defaultFormat` | `ColorFormat` | the first of `formats` | The initial format when the palette owns it. |
+| `onFormatChange` | `(format: ColorFormat) => void` | — | Called when the reader picks another format in any picker. |
+| `formats` | `readonly ColorFormat[]` | all four | The formats every picker offers. A single entry hides the switch. |
+| `alpha` | `boolean` | `false` | Shows the opacity slider in every picker. |
+| `name` | `string` | — | Renders one `<input type="hidden">` per color under this name. |
+| `labels` | `Partial<ColorPaletteLabels>` | `DEFAULT_PALETTE_LABELS` | Names and announcements; anything left out keeps its English default. |
+| `className` | `string` | — | Added to the palette's row. |
+
+### Palette keyboard and labels
+
+The palette is one Tab stop: ← and → move between the swatches and the add button, Home and End jump to the ends, Enter or Space opens the focused swatch's picker, and Delete or Backspace removes its color while more than one is left. After a removal, focus moves to the neighbouring swatch and a screen reader hears `labels.removed`; after an addition, focus is already in the new color's picker. Each swatch says its place and value, "Color 2 of 3, #2f8f9d". In forced-colors mode the swatches, the add button and the × draw borders in system colors.
+
+| Key | Default | Where |
+| --- | --- | --- |
+| `group` | `Palette` | the group's name |
+| `color` | `Color {n} of {total}` | each swatch's name, before its value |
+| `add` | `Add color` | the add button |
+| `remove` | `Remove color` | the × on a swatch |
+| `removed` | `Color removed` | the announcement after a removal |
+| `picker` | `{}` | `labels` of every swatch's picker (its `open` is ignored: the swatch is named by `color`) |
+
+On touch screens, which have no hover, the × stays in view on every swatch. Under `prefers-reduced-motion: reduce` or inside `data-reduced-motion`, swatches appear and go without their springs.

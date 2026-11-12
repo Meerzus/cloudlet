@@ -3,13 +3,13 @@
  * The color picker landing's Open Graph and Twitter card (COLOR_PICKER §8.7): the hero at the brand
  * color, 1200×630, shot once in headless Chromium (SwiftShader for the shader) from the static
  * export and committed like the Toaster's card — as JPEG, since the film grain makes a PNG five times heavier. The header gives way to the name of the
- * component; the copy, the landscape and the sun stay as the page draws them.
+ * component; the copy, the material and the open panel stay as the page draws them.
  *
  *   npm run build && npm run build:site
  *   node apps/site/scripts/og-color-picker.mjs
  *
  * Writes src/app/color-picker/opengraph-image.jpg and twitter-image.jpg. Run it again when the hero
- * changes (its media is due to be replaced).
+ * changes.
  */
 import { copyFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { serve } from './serve-out.mjs';
 
-/** The brand color: the first of the curated start colors, a warm dusk. */
+/** The brand color: the first of the curated start colors, a warm orange. */
 const BRAND = 'ff6a3d';
 const ROUTE = resolve(fileURLToPath(new URL('../src/app/color-picker', import.meta.url)));
 const ICON = readFileSync(new URL('./brand/icon.svg', import.meta.url), 'utf8');
@@ -28,7 +28,7 @@ try {
   browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1, reducedMotion: 'reduce', colorScheme: 'light' });
   await page.goto(`http://127.0.0.1:${server.address().port}/color-picker?c=${BRAND}`, { waitUntil: 'networkidle' });
-  if ((await page.locator('.cp-hero').getAttribute('data-flat')) !== null) throw new Error('No WebGL 2: the hero fell back to the flat sky');
+  if ((await page.locator('.cp-hero').getAttribute('data-flat')) !== null) throw new Error('No WebGL 2: the hero fell back to the flat background');
   await page.addStyleTag({ content: '.site-header, .site-edge, .chapters, nextjs-portal { display: none !important; } .cp-hero { min-height: 630px; margin-top: 0; }' });
   await page.evaluate((icon) => {
     const label = document.createElement('div');

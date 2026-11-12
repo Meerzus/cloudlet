@@ -60,7 +60,7 @@ export function Keyboards() {
         <h2 id="keyboards-title" className="cp-section-title">built for keyboards</h2>
         <p className="cp-section-lede">
           Every part of the picker answers the keys, and a screen reader hears what changed: “Saturation 40%, Brightness
-          80%”, “Hue 48°”. Try it here — this panel paints the sky above.
+          80%”, “Hue 48°”. Try it here — this panel paints the page.
         </p>
         <div className="cp-keyboards">
           <ColorPickerPanel color={value} onChange={pick} className="cp-keyboards-panel" />

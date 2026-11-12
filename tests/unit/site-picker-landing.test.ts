@@ -4,7 +4,7 @@ import { parseColor, rgbToOklch } from '../../apps/site/src/components/ui/color-
 import { harmoniesOf } from '../../apps/site/src/lib/harmonies';
 import { PICKER_FAQ } from '../../apps/site/src/lib/picker-faq';
 import { PICKER_GET_STARTED } from '../../apps/site/src/lib/picker-get-started';
-import { COLOR_PICKER_COMMAND, SITE_URL } from '../../apps/site/src/lib/site';
+import { COLOR_PALETTE_COMMAND, COLOR_PICKER_COMMAND, SITE_URL } from '../../apps/site/src/lib/site';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url));
 const oklch = (hex: string) => rgbToOklch(parseColor(hex)!);
@@ -15,6 +15,9 @@ describe('color picker landing (COLOR_PICKER §8.1, §8.5)', () => {
     expect(fences(read(PICKER_GET_STARTED.source).toString('utf8'))).toContain(PICKER_GET_STARTED.code);
     expect(PICKER_GET_STARTED.command).toBe(COLOR_PICKER_COMMAND);
     expect(COLOR_PICKER_COMMAND).toBe(`npx shadcn@latest add ${SITE_URL}/r/color-picker.json`);
+    // The second command installs the palette, which brings the picker as a registry dependency.
+    expect(PICKER_GET_STARTED.paletteCommand).toBe(COLOR_PALETTE_COMMAND);
+    expect(COLOR_PALETTE_COMMAND).toBe(`npx shadcn@latest add ${SITE_URL}/r/color-palette.json`);
   });
 
   it('turns the harmonies in OKLCH, the base first: the hue moves, lightness stays, tints climb toward white', () => {
@@ -39,7 +42,7 @@ describe('color picker landing (COLOR_PICKER §8.1, §8.5)', () => {
     expect([...page.matchAll(/\{ id: '([a-z-]+)'/g)].map((match) => match[1])).toEqual(['hero', 'palette', 'opacity', 'tools', 'keyboards', 'get-started', 'faq']);
   });
 
-  it('answers the five questions of the spec', () => {
-    expect(PICKER_FAQ.map((item) => item.id)).toEqual(['registry', 'oklch', 'eyedropper', 'overflow', 'labels']);
+  it('answers the six questions of the spec', () => {
+    expect(PICKER_FAQ.map((item) => item.id)).toEqual(['registry', 'oklch', 'eyedropper', 'palette', 'overflow', 'labels']);
   });
 });

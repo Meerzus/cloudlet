@@ -50,6 +50,7 @@ const RENDERERS: Record<string, (data: PlaceholderData) => string> = {
   Demos: ({ children }) => children.trim(),
   /** The live example of the color picker docs: nothing to read away from the page. */
   PickerDemo: () => `Live example at ${SITE_URL}${COLOR_PICKER_DOCS_PATH}: the swatch and the inline panel on one color.`,
+  PaletteDemo: () => `Live example at ${SITE_URL}${COLOR_PICKER_DOCS_PATH}#palette: a palette of three colors and the array it gives back.`,
   /** The shareable editor contract stays useful away from the interactive page. */
   StyleEditor: () => `Style editor at ${DOCS_URL}/styling#style-editor: set the tokens on a live Toaster and copy the CSS. The query string carries the values — one parameter per token name without the \`--cloudlet-\` prefix (\`background\`, \`background-dark\`, \`pill-radius\`, \`font-family\`, …); dark-theme colors use the \`-dark\` suffix, and the preview follows the site theme.`,
 };

@@ -15,8 +15,9 @@ const FRAMES = {
   hero: [1280, 2560],
   'hero-tall': [720, 1440],
   palette: [1280, 2560],
-  opacity: [1280, 2560],
-  tools: [1280, 2560],
+  // Behind the fluted glass the frame is blurred and the shader draws the ribs: one width is enough.
+  opacity: [1280],
+  tools: [1280],
 };
 
 const site = resolve(dirname(fileURLToPath(import.meta.url)), '..');
