@@ -20,9 +20,12 @@ const validateItem = ajv.getSchema('https://ui.shadcn.com/schema/registry-item.j
 const source = await readJSON('registry/registry.json');
 const candidate = await readJSON('packages/toast/package.json');
 assert(validateCatalog(source), JSON.stringify(validateCatalog.errors));
-assert.deepEqual(source.items.map((entry) => entry.name), ['toaster', 'color-picker']);
+assert.deepEqual(source.items.map((entry) => entry.name), ['toaster', 'color-picker', 'color-palette']);
 assert.deepEqual(source.items[0].dependencies, [`${candidate.name}@${candidate.version}`]);
 assert.equal(source.items[1].dependencies, undefined);
+// The palette brings the picker through the @cloudlet namespace (the shadcn directory), no npm dependencies.
+assert.equal(source.items[2].dependencies, undefined);
+assert.deepEqual(source.items[2].registryDependencies, ['@cloudlet/color-picker']);
 const result = spawnSync(process.execPath, [resolve(root, 'registry/tooling/node_modules/shadcn/dist/index.js'), 'build', 'registry/registry.json', '--output', 'registry/r'], { cwd: root, stdio: 'inherit' });
 assert.equal(result.status, 0, 'shadcn build failed');
 const item = await readJSON('registry/r/toaster.json');
@@ -47,15 +50,26 @@ for (const file of picker.files.filter((entry) => !entry.path.endsWith('.css')))
   assert(specifiers.every((specifier) => ['react', '@/lib/spring', './color', './morph', './color-picker.css'].includes(specifier)), `${file.path}: ${specifiers}`);
 }
 assert(picker.files[1].content.includes('var(--ring'));
+// The palette: its component and stylesheet; it may import React, the picker's modules, lib/spring and its CSS.
+const palette = await readJSON('registry/r/color-palette.json');
+assert(validateItem(palette), JSON.stringify(validateItem.errors));
+assert.deepEqual(palette.files.map((file) => [file.path.split('/').pop(), file.type]), [['color-palette.tsx', 'registry:ui'], ['color-palette.css', 'registry:ui']]);
+assert.deepEqual(palette.registryDependencies, ['@cloudlet/color-picker']);
+const paletteComponent = palette.files[0].content;
+assert(paletteComponent.startsWith("'use client';"));
+assert(paletteComponent.includes("import './color-palette.css';"));
+const paletteImports = [...paletteComponent.matchAll(/^import [^'"]*['"]([^'"]+)['"]/gm)].map((match) => match[1]);
+assert(paletteImports.every((specifier) => ['react', '@/lib/spring', '@/components/ui/color-picker/color-picker', '@/components/ui/color-picker/color', '@/components/ui/color-picker/morph', './color-palette.css'].includes(specifier)), `color-palette.tsx: ${paletteImports}`);
+assert(palette.files[1].content.includes('var(--ring'));
 // The catalog lists items without their source: the CLI reads `content` from `/r/<item>.json`, and the
 // shadcn registry index rejects a catalog whose files carry `content`.
-const catalog = { ...source, items: [item, picker].map((entry) => ({ ...entry, files: entry.files.map(({ content, ...file }) => file) })) };
+const catalog = { ...source, items: [item, picker, palette].map((entry) => ({ ...entry, files: entry.files.map(({ content, ...file }) => file) })) };
 assert(validateCatalog(catalog), JSON.stringify(validateCatalog.errors));
 assert(catalog.items.every((entry) => entry.files.every((file) => !('content' in file))));
 await writeFile(resolve(root, 'registry/r/registry.json'), JSON.stringify(catalog, null, 2) + '\n');
 // The site serves the built catalog at `/r/*.json`; tests/unit/site-registry.test.ts keeps the copies equal.
 await mkdir(resolve(root, 'apps/site/public/r'), { recursive: true });
-for (const name of ['registry.json', 'toaster.json', 'color-picker.json']) await copyFile(resolve(root, `registry/r/${name}`), resolve(root, `apps/site/public/r/${name}`));
+for (const name of ['registry.json', 'toaster.json', 'color-picker.json', 'color-palette.json']) await copyFile(resolve(root, `registry/r/${name}`), resolve(root, `apps/site/public/r/${name}`));
 const evidence = {
   date: '2026-10-16',
   shadcn: (await readJSON('registry/tooling/node_modules/shadcn/package.json')).version,
@@ -64,7 +78,7 @@ const evidence = {
     `https://ui.shadcn.com/schema/${name}.json`,
     createHash('sha256').update(await readFile(resolve(root, `registry/schema/${name}.json`))).digest('hex'),
   ]))),
-  checks: { officialCatalogSchema: 'passed', officialItemSchema: 'passed', shadcnBuild: 'passed', clientDirective: 'passed', publicRuntimeOnly: 'passed', explicitCssImports: 'passed', colorPickerFiles: 'passed', colorPickerImports: 'passed' },
+  checks: { officialCatalogSchema: 'passed', officialItemSchema: 'passed', shadcnBuild: 'passed', clientDirective: 'passed', publicRuntimeOnly: 'passed', explicitCssImports: 'passed', colorPickerFiles: 'passed', colorPickerImports: 'passed', colorPaletteFiles: 'passed', colorPaletteImports: 'passed' },
 };
 await mkdir(resolve(root, 'artifacts/integration/registry'), { recursive: true });
 await writeFile(resolve(root, 'artifacts/integration/registry/build.json'), JSON.stringify(evidence, null, 2) + '\n');

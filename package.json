@@ -40,7 +40,8 @@
     "test:managers": "node scripts/package-managers.mjs",
     "registry:build": "node scripts/registry-build.mjs",
     "test:registry": "node scripts/registry-check.mjs",
-    "size:color-picker": "node scripts/measure-color-picker.mjs"
+    "size:color-picker": "node scripts/measure-color-picker.mjs",
+    "size:color-palette": "node scripts/measure-color-palette.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

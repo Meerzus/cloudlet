@@ -32,6 +32,23 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   `data-reduced-motion`, it opens without the morph.
 - About 9 KB min+gzip with React external (JS and CSS), measured by `npm run size:color-picker`.
 
+### Color palette
+
+- `npx shadcn@latest add @cloudlet/color-palette` adds `components/ui/color-palette/color-palette.tsx`
+  and `color-palette.css`, and installs the color picker with it as a registry dependency.
+- `ColorPalette` is a row of one to `max` colors (4 by default), each a `ColorPicker`. The add button
+  appends the last color turned in OKLCH hue and opens its picker at once; a color is removed with
+  Delete or Backspace, or the pointer's × on the swatch, down to one. Swatches grow in and fold away
+  on springs, instantly under reduced motion or inside a `data-reduced-motion` ancestor.
+- `colors`/`defaultColors` and `onChange` take and return an array of strings in `format`; the format
+  switch in any picker changes every color. `name` adds one hidden input per color, `labels`
+  translates the palette and, through `labels.picker`, its pickers.
+- Keyboard and screen readers: the palette is a named group with one Tab stop; ← and → move between
+  the swatches and the add button, Home and End jump to the ends. Each swatch is named "Color 2 of 3,
+  #2f8f9d", and a removal is announced.
+- About 3.4 KB min+gzip on top of the color picker (JS and CSS), measured by
+  `npm run size:color-palette`.
+
 ### Website
 
 - [/color-picker](https://cloudlet.dev/color-picker): a landscape painted in one WebGL 2 shader whose

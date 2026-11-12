@@ -75,7 +75,7 @@ const registryServer = createServer(async (request, response) => {
     response.end(tarBytes);
     return;
   }
-  if (path === '/r/toaster.json' || path === '/r/color-picker.json' || path === '/r/registry.json') {
+  if (['/r/toaster.json', '/r/color-picker.json', '/r/color-palette.json', '/r/registry.json'].includes(path)) {
     response.setHeader('Content-Type', 'application/json');
     response.end(await readFile(resolve(root, `registry${path}`)));
     return;
@@ -132,10 +132,23 @@ try {
   report.checks.runtimeInstalledFromExactTarballByShadcn = 'passed';
   report.checks.publicImportsAndClientDirective = 'passed';
   report.checks.aliasesAndCss = 'passed';
-  // The color picker: five source files, no dependencies, its own CSS import, the consumer's lib alias.
-  const dependenciesBeforePicker = (await readJSON(join(consumer, 'package.json'))).dependencies;
-  await run(process.execPath, [resolve(root, 'registry/tooling/node_modules/shadcn/dist/index.js'), 'add', `${origin}/r/color-picker.json`, '--yes', '--overwrite', '--cwd', consumer], consumer, 'shadcn-add-color-picker');
-  assert.deepEqual((await readJSON(join(consumer, 'package.json'))).dependencies, dependenciesBeforePicker);
+  // The color palette, which brings the color picker as its registry dependency `@cloudlet/color-picker`:
+  // the consumer points the @cloudlet namespace (in the shadcn directory: cloudlet.dev) at this server.
+  const componentsJson = await readJSON(join(consumer, 'components.json'));
+  await writeFile(join(consumer, 'components.json'), JSON.stringify({ ...componentsJson, registries: { '@cloudlet': `${origin}/r/{name}.json` } }, null, 2) + '\n');
+  const dependenciesBeforePalette = (await readJSON(join(consumer, 'package.json'))).dependencies;
+  await assert.rejects(readFile(join(consumer, 'components/ui/color-picker/color-picker.tsx'), 'utf8'));
+  const requestsBeforePalette = requests.length;
+  await run(process.execPath, [resolve(root, 'registry/tooling/node_modules/shadcn/dist/index.js'), 'add', `${origin}/r/color-palette.json`, '--yes', '--overwrite', '--cwd', consumer], consumer, 'shadcn-add-color-palette');
+  assert(requests.slice(requestsBeforePalette).some((request) => request.path === '/r/color-picker.json'), 'the palette must fetch the picker as its dependency');
+  assert.deepEqual((await readJSON(join(consumer, 'package.json'))).dependencies, dependenciesBeforePalette);
+  const installedPalette = await readFile(join(consumer, 'components/ui/color-palette/color-palette.tsx'), 'utf8');
+  await readFile(join(consumer, 'components/ui/color-palette/color-palette.css'), 'utf8');
+  assert(installedPalette.startsWith("'use client'"));
+  assert(installedPalette.includes("import './color-palette.css';"));
+  assert(installedPalette.includes("from '@/components/ui/color-picker/color-picker'"));
+  report.checks.colorPaletteInstalledWithPickerDependency = 'passed';
+  // The color picker came with it: five source files, no dependencies, its own CSS import, the consumer's lib alias.
   const installedPicker = await readFile(join(consumer, 'components/ui/color-picker/color-picker.tsx'), 'utf8');
   for (const file of ['color-picker.css', 'color.ts', 'morph.ts']) await readFile(join(consumer, 'components/ui/color-picker', file), 'utf8');
   assert((await readFile(join(consumer, 'lib/spring.ts'), 'utf8')).includes('export function springRetarget'));
@@ -231,14 +244,42 @@ try {
       await page.waitForFunction((before) => document.querySelector('input[name="accent"]').value !== before, inlineBefore);
       const inlineAfter = await field.inputValue();
       assert.match(inlineAfter, /^oklch\(.+ \/ 0\.\d+\)$/);
+      // The installed palette: one Tab stop, the add button opens the new color's picker, Escape returns to
+      // its swatch, Delete removes it and hands the focus on; one hidden input per color travels with the form.
+      const palette = page.getByRole('group', { name: 'Accent palette', exact: true });
+      const paletteSwatches = palette.getByRole('button', { name: /^Color \d of \d, / });
+      assert.equal(await paletteSwatches.count(), 2);
+      assert.equal(await palette.locator('[tabindex="0"]').count(), 1);
+      await palette.getByRole('button', { name: 'Add color', exact: true }).click();
+      const palettePicker = page.getByRole('dialog', { name: 'Palette picker', exact: true });
+      await palettePicker.waitFor();
+      await page.waitForFunction(() => document.activeElement?.classList.contains('color-picker-area'));
+      await page.waitForFunction(() => document.querySelector('[data-registry-palette]')?.textContent?.split(' ').length === 3);
+      await page.waitForFunction(() => document.querySelector('[aria-label="Accent palette"]').getAnimations({ subtree: true }).every((animation) => animation.playState !== 'running'));
+      await page.screenshot({ path: resolve(evidencePath, `${name}-color-palette.png`), fullPage: true });
+      await page.keyboard.press('Escape');
+      await palettePicker.waitFor({ state: 'detached' });
+      const third = paletteSwatches.nth(2);
+      assert(await third.evaluate((element) => element === document.activeElement));
+      const paletteAdded = await page.locator('[data-registry-palette]').textContent();
+      assert.equal(await page.locator('form[aria-label="Palette form"] input[type="hidden"][name="palette"]').count(), 3);
+      await page.keyboard.press('Delete');
+      await page.waitForFunction(() => document.querySelector('[data-registry-palette]')?.textContent?.split(' ').length === 2);
+      assert(await paletteSwatches.nth(1).evaluate((element) => element === document.activeElement));
+      await page.keyboard.press('ArrowLeft');
+      assert(await paletteSwatches.nth(0).evaluate((element) => element === document.activeElement));
+      const paletteAfter = await page.locator('[data-registry-palette]').textContent();
+      assert.equal(paletteAfter, '#ff6a3d #2f8f9d');
+      assert.equal(await page.locator('form[aria-label="Palette form"] input[type="hidden"][name="palette"]').count(), 2);
       assert.deepEqual(errors, []);
       await page.screenshot({ path: resolve(evidencePath, `${name}-dark.png`), fullPage: true });
-      report.browsers.push({ name, version: browser.version(), browserReactVersion, status: 'passed', beforeMount: 'passed', hydrationErrors: errors, explicitRuntimeCss: 'passed', light, dark, wrapperContext: 'passed', settledTransition: 'passed', colorPicker: { pickerBackground, fieldBackground, picked, inlineBefore, inlineAfter } });
+      report.browsers.push({ name, version: browser.version(), browserReactVersion, status: 'passed', beforeMount: 'passed', hydrationErrors: errors, explicitRuntimeCss: 'passed', light, dark, wrapperContext: 'passed', settledTransition: 'passed', colorPicker: { pickerBackground, fieldBackground, picked, inlineBefore, inlineAfter }, colorPalette: { added: paletteAdded, after: paletteAfter } });
       await page.close();
     } finally { await browser.close(); }
   }
   report.checks.browserThemeHydration = 'passed';
   report.checks.colorPickerInBrowsers = 'passed';
+  report.checks.colorPaletteInBrowsers = 'passed';
   await cp(join(consumer, 'package-lock.json'), resolve(evidencePath, 'installed-package-lock.json'));
   await cp(join(consumer, 'package.json'), resolve(evidencePath, 'installed-package.json'));
   await cp(join(consumer, 'components'), resolve(evidencePath, 'installed-components'), { recursive: true });

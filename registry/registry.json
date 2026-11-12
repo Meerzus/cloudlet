@@ -51,6 +51,26 @@
         }
       ],
       "docs": "Import ColorPicker (or ColorPickerPanel) from components/ui/color-picker/color-picker; it imports its own color-picker.css. color/onChange take any hex, rgb(), hsl() or oklch() string and return one in `format` (hex by default); `formats` limits the switch, `alpha` adds opacity, `name` adds a hidden input. Styles read the shadcn tokens --background, --foreground, --border, --ring and --muted. The panel is not portalled: give an `overflow: hidden` ancestor `overflow: visible`."
+    },
+    {
+      "name": "color-palette",
+      "type": "registry:ui",
+      "title": "Cloudlet Color Palette",
+      "description": "One to four colors in a row, each a Cloudlet color picker: an add button that opens the new color's picker at once, removal with Delete or the pointer's ×, one Tab stop with arrow keys, springs that grow and fold the swatches. Installs the color picker with it.",
+      "registryDependencies": [
+        "@cloudlet/color-picker"
+      ],
+      "files": [
+        {
+          "path": "apps/site/src/components/ui/color-palette/color-palette.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "apps/site/src/components/ui/color-palette/color-palette.css",
+          "type": "registry:ui"
+        }
+      ],
+      "docs": "Import ColorPalette from components/ui/color-palette/color-palette; it imports its own color-palette.css and the color picker it is built on. colors/onChange take and return an array of hex, rgb(), hsl() or oklch() strings in `format`; `max` caps the count (4 by default), `name` adds one hidden input per color, `labels.picker` translates the pickers. Styles read the shadcn tokens --background, --foreground, --border and --ring."
     }
   ]
 }

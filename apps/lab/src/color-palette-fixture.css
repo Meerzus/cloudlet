@@ -1,0 +1,5 @@
+/* The color palette stand (?fixture=color-palette); the tokens and the chrome come from color-picker-fixture.css. */
+.lab-cpal-stage { display: flex; align-items: flex-start; height: 24rem; margin: 0; }
+.lab-cpal-readout { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 13px; }
+.lab-cpal-readout dt { color: var(--lab-cp-muted); }
+.lab-cpal-readout dd { margin: 0; font: 400 12px/1.4 ui-monospace, monospace; overflow-wrap: anywhere; }
