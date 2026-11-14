@@ -1,4 +1,4 @@
-// Exports the generated landing materials of /color-picker (material-<frame>.png)
+// Exports the generated landing material of /color-picker (material-<frame>.png)
 // to AVIF + WebP at two widths. sharp-cli runs through npx, outside the
 // workspace, so it never enters package.json or the lock file. A source
 // narrower than a target width is exported at its own width, never enlarged.
@@ -13,12 +13,6 @@ import { fileURLToPath } from 'node:url';
 const SHARP = 'sharp-cli@6.1.0';
 const QUALITY = { avif: 55, webp: 80 };
 const FRAMES = {
-  hero: [1280, 2560],
-  'hero-tall': [720, 1440],
-  palette: [1280, 2560],
-  // Behind the fluted glass the frame is blurred and the shader draws the ribs: one width is enough.
-  opacity: [1280],
-  tools: [1280],
   // The long frame under the whole page (1280×3840): phones take the narrow one.
   page: [640, 1280],
 };

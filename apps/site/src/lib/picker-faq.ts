@@ -16,7 +16,7 @@ export const PICKER_FAQ = [
     id: 'eyedropper',
     question: 'Where is the eyedropper in Safari and Firefox?',
     answer:
-      'The button in the panel appears only where the browser has the EyeDropper API, Chromium browsers today; in Safari and Firefox it is not rendered at all, rather than shown disabled. Picking from your own image works everywhere: draw it on a canvas and read the pixel, as the flowers above do.',
+      'The button in the panel appears only where the browser has the EyeDropper API, Chromium browsers today; in Safari and Firefox it is not rendered at all, rather than shown disabled. Picking from your own image works everywhere: draw it on a canvas and read the pixel, or work it out from your own data, as the paint above does: its color comes from the frame and the ramp, not from a screenshot.',
   },
   {
     id: 'palette',

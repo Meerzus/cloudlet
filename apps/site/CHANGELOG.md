@@ -56,16 +56,15 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   the picked color bleeds out of the panel and the paper drifts slowly. The page keeps a palette of up
   to four colors whose first is the page color, and `?c=` keeps the palette in the address. Below the
   hero:
-  - Palette: the color palette beside a card of viscous paint recolored by its colors, with harmonies
-    (complement, split complement, analogous, tints) as hints that fill it;
-  - Opacity: a film of the page color over a scene behind fluted glass, as dense as the alpha of an
-    inline panel, with the value and a Copy button;
-  - Tools: flowers behind fluted glass to take a color from with a click, or with the arrows and Enter,
-    in every browser; the compact picker and the same color in four formats, each copied by a click;
+  - Palette: the color palette with harmonies (complement, split complement, analogous, tints) as
+    hints that fill it; once the palette is yours, the whole page is painted in its colors;
+  - Opacity: a film of the page color over the page's paint, as dense as the alpha of an inline
+    panel, open under the section's text, with the value and a Copy button;
+  - Tools: a click anywhere on the paint around the controls takes the color it shows there, or the
+    arrows and Enter do, in every browser (worked out from the picture and the colors, not a
+    screenshot); the compact picker and the same color in four formats, each copied by a click;
   - the inline panel with a keyboard cheat sheet and a reduce-motion switch, the two install commands
     and an example, and a FAQ.
-
-  The fluted glass is Paper Shaders' `FlutedGlass` (Apache-2.0), loaded when its section comes near.
 - [/color-picker/docs](https://cloudlet.dev/color-picker/docs): install, use, every prop and label,
   formats and their exact output, eyedropper and copy, keyboard and screen readers, styling, placement
   limits and reduced motion, then the palette's install, use, props, keyboard and labels, each with a

@@ -1,10 +1,12 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
-import { boxRects, CALM_HEADER, CALM_REACH, CALM_TEXT, calmMap, lineRects } from '@/lib/paint-calm';
+import { boxRects, CALM_HEADER, CALM_REACH, CALM_TEXT, calmMap, lineRects, type CalmMap } from '@/lib/paint-calm';
+import { tileSize } from '@/lib/paint-layout';
+import { paintColorAt, readPixels, type Pixels } from '@/lib/paint-sample';
 import { softwareGL } from '@/lib/picker-motion';
 import { flatLut, flatOf, pageRamp, rampLut, themeOf } from '@/lib/picker-ramp';
-import { PaintRenderer, type BleedOrigin, type PaintLayout } from './paint-renderer';
+import { LIFT, PaintRenderer, type BleedOrigin, type PaintLayout } from './paint-renderer';
 import { usePickerColor, type ChangeSource } from './picker-color';
 
 const REDUCED = '(prefers-reduced-motion: reduce)';
@@ -33,8 +35,11 @@ export function bleedOrigin(source: ChangeSource): BleedOrigin {
  */
 export function PaintPage() {
   const state = usePickerColor();
-  const { hex, started, change } = state;
+  const { hex, started, change, paint } = state;
   const ramp = pageRamp(state);
+  /** What the probe reads: the paint on screen now (the effects below keep these current). */
+  const current = useRef<{ hex: string; lut: Uint8Array | null; calm: CalmMap | null }>({ hex, lut: null, calm: null });
+  current.current.hex = hex;
   const [mode, setMode] = useState<PaintMode>('fixed');
   const [ready, setReady] = useState(false);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -48,10 +53,15 @@ export function PaintPage() {
     const element = canvas.current;
     if (!started || !element) return;
     const root = document.documentElement;
+    /** Without the frame the page shows one flat color: that is what a click on it takes. */
+    const flat = () => flatOf(current.current.hex, themeOf(root))!;
     const instance = PaintRenderer.create(element, flatLut(flatOf(hex, themeOf(root))!));
     if (!instance) {
       setMode('flat');
-      return;
+      paint.current = { colorAt: flat };
+      return () => {
+        paint.current = null;
+      };
     }
     renderer.current = instance;
     // One full-screen pass on a software WebGL costs 60–80 ms: there the paint covers the page and stands still.
@@ -73,6 +83,7 @@ export function PaintPage() {
       const headerCalm = kind === 'fixed' && header > 0 ? calmMap(boxRects(document.querySelectorAll(CALM_HEADER), 0, 0), viewport.width, header + CALM_REACH) : null;
       if (kind === 'page') element.style.height = `${pageHeight}px`;
       const layout: PaintLayout = { mode: kind, viewport, pageHeight, calm, headerCalm };
+      current.current.calm = calm;
       instance.setScroll(window.scrollY);
       instance.setLayout(layout);
       root.dataset.cpPaint = kind;
@@ -117,8 +128,27 @@ export function PaintPage() {
     img?.addEventListener('load', load);
     load();
 
+    // The color under a point, worked out as the shader draws it (lib/paint-sample.ts); the frame's pixels are read once.
+    // Keyed by the source: a wider window can swap the <picture>'s candidate, and the texture with it.
+    let pixels: { src: string; data: Pixels | null } | null = null;
+    let gone = false;
+    paint.current = {
+      colorAt(x, pageY) {
+        const { lut, calm } = current.current;
+        if (gone || !lut || !img || img.naturalWidth === 0) return flat();
+        if (pixels?.src !== img.currentSrc) pixels = { src: img.currentSrc, data: readPixels(img) };
+        const frame = pixels.data;
+        if (!frame) return flat();
+        const { phase, flow, invert } = instance.flowState;
+        const viewport = { width: root.clientWidth, height: window.innerHeight };
+        const layout = { width: viewport.width, tile: tileSize(viewport, img.naturalWidth / img.naturalHeight), phase, flow };
+        return paintColorAt(x, pageY, { frame, layout, calm, lift: LIFT, invert, lut });
+      },
+    };
+
     const lost = (event: Event) => {
       event.preventDefault();
+      gone = true;
       delete root.dataset.cpPaint;
       setMode('flat');
     };
@@ -135,6 +165,7 @@ export function PaintPage() {
       img?.removeEventListener('load', load);
       element.removeEventListener('webglcontextlost', lost);
       element.style.height = '';
+      paint.current = null;
       delete root.dataset.cpPaint;
       instance.destroy();
       renderer.current = null;
@@ -146,6 +177,7 @@ export function PaintPage() {
     const instance = renderer.current;
     if (!started || !instance) return;
     if (!ready) {
+      current.current.lut = null;
       instance.paint(flatLut(flatOf(hex, themeOf(document.documentElement))!), null);
       return;
     }
@@ -155,7 +187,9 @@ export function PaintPage() {
       const source = from ?? document.querySelector(HERO_PANEL);
       origin = source ? bleedOrigin(source) : null;
     }
-    instance.paint(rampLut(ramp.stops), origin);
+    const lut = rampLut(ramp.stops);
+    current.current.lut = lut;
+    instance.paint(lut, origin);
     shown.current = true;
   }, [hex, ramp, ready, started, change]);
 

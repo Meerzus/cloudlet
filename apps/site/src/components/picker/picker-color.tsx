@@ -34,6 +34,14 @@ interface PickerColor {
   readonly pick: (value: string, from?: ChangeSource) => void;
   /** Sets the whole palette; its first color becomes the page color. */
   readonly setPalette: (colors: readonly string[], from?: ChangeSource) => void;
+  /** The page's paint, once it draws: the color it shows under a point (Tools takes it). */
+  readonly paint: MutableRefObject<PaintProbe | null>;
+}
+
+/** What the page's paint tells the sections about itself. */
+export interface PaintProbe {
+  /** The color the paint shows under a point of the page (CSS px from its top-left), `#rrggbb`. */
+  readonly colorAt: (x: number, pageY: number) => string;
 }
 
 /** Where a color was chosen: a control on the page, or a point in page coordinates (CSS px from its top-left). */
@@ -105,6 +113,7 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
   const [rest, setRest] = useState<readonly string[] | null>(null);
   const [started, setStarted] = useState(false);
   const change = useRef<PickerChange>({ bleed: true, from: null });
+  const paint = useRef<PaintProbe | null>(null);
   const changed = useRef(false);
   // Keyed by hex: a format switch re-emits the same color in other words, and the ramps stay.
   const hex = useMemo(() => (heroRamp(value) ? toHex(value)! : START_COLORS[0]), [value]);
@@ -153,6 +162,7 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
       own,
       started,
       change,
+      paint,
       pick(next, from) {
         change.current = { bleed: isJump(), from: from ?? null };
         changed.current = true;

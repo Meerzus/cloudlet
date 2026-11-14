@@ -246,6 +246,15 @@ export class PaintRenderer {
     } else this.schedule();
   }
 
+  /**
+   * The flow and the scene as the paint shows them now, for working out the color under a point
+   * (lib/paint-sample.ts): the cycle's phase, its amplitude (0 while the picture stands still) and
+   * whether the frame is read upside down.
+   */
+  get flowState(): { readonly phase: number; readonly flow: number; readonly invert: boolean } {
+    return { phase: (this.clock % CYCLE_MS) / CYCLE_MS, flow: this.hasFrame && this.moving ? FLOW : 0, invert: this.invert };
+  }
+
   /** Whether frames keep coming without a change: the flow runs. */
   get looping(): boolean {
     return this.active && this.moving && this.hasFrame && this.layout?.mode === 'fixed';

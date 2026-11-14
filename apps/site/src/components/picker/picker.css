@@ -88,10 +88,8 @@ html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
   font: 0.875em var(--font-geist-mono), ui-monospace, monospace;
 }
 
-/* --- Palette (§8.5): the palette and its hints beside a card of paint recolored by it. --- */
-.cp-palette { display: grid; align-items: center; gap: 2.5rem; margin-top: 2.5rem; }
-@media (min-width: 768px) { .cp-palette { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 3rem; } }
-.cp-palette-controls { display: flex; flex-direction: column; gap: 2.5rem; }
+/* --- Palette (§8.5): the palette and its hints; the page's paint shows it. --- */
+.cp-palette { display: flex; flex-direction: column; gap: 2.5rem; margin-top: 2.5rem; }
 .cp-palette-row { align-self: start; }
 .cp-hints-title { margin-bottom: 0.75rem; font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
 .cp-hints-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -119,25 +117,6 @@ html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
   box-shadow: 0 0 0 2px var(--background), inset 0 0 0 1px rgb(0 0 0 / 0.12);
 }
 .cp-hint-chip + .cp-hint-chip { margin-left: -0.375rem; }
-.cp-palette-card {
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 4 / 3;
-  border-radius: 1.5rem;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.06), 0 24px 48px -24px rgb(0 0 0 / 0.28);
-  transition: background 320ms ease;
-}
-.cp-palette-canvas {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 400ms ease;
-}
-.cp-palette-card[data-ready] .cp-palette-canvas { opacity: 1; }
-.cp-palette-card[data-flat] .cp-palette-canvas { display: none; }
 
 /* --- Built for keyboards (§8.5) --- */
 .cp-keyboards { display: grid; align-items: start; gap: 2rem; margin-top: 2.5rem; }
@@ -198,22 +177,24 @@ html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
 }
 .cp-switch[aria-checked='true'] .cp-switch-thumb { transform: translateX(1rem); }
 
-/* --- Opacity and Tools (§8.6–§8.8): a frame in its own colors behind fluted glass. --- */
-.cp-glass-layout { display: grid; align-items: center; gap: 2.5rem; margin-top: 2.5rem; }
-@media (min-width: 768px) { .cp-glass-layout { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 3rem; } }
-.cp-glass-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 2rem; min-width: 0; }
-.cp-glass-card {
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 4 / 3;
-  border-radius: 1.5rem;
-  background: color-mix(in oklab, var(--foreground) 6%, var(--background));
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.06), 0 24px 48px -24px rgb(0 0 0 / 0.28);
+/* --- Opacity and Tools (§8.6–§8.7): no pictures of their own; the film and the pick lie on the page's paint. --- */
+.cp-film-section, .cp-pick-section { position: relative; }
+.cp-section-content { position: relative; z-index: 1; }
+.cp-section-layout { margin-top: 2.5rem; }
+.cp-section-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 2rem; min-width: 0; }
+/* The film opens under the copy (a mask from the paint's calm map) and fades in and out at the section's edges. */
+.cp-film {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--cp-color, #ff6a3d);
+  pointer-events: none;
+  mask-image: var(--cp-film-mask, linear-gradient(#000, #000)), linear-gradient(to bottom, transparent, #000 6rem, #000 calc(100% - 6rem), transparent);
+  mask-size: var(--cp-film-mask-size, 100% 100%), 100% 100%;
+  mask-repeat: no-repeat;
+  mask-composite: intersect;
+  transition: background-color 320ms ease;
 }
-.cp-glass-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.cp-glass-host { position: absolute; inset: 0; opacity: 0; transition: opacity 400ms ease; }
-.cp-glass-card[data-glass] .cp-glass-host { opacity: 1; }
-.cp-film { position: absolute; inset: 0; background: var(--cp-color, #ff6a3d); pointer-events: none; transition: background-color 320ms ease; }
 .cp-copy-value { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
 .cp-copy-text {
   font: 500 clamp(1.5rem, 3.5vw, 2rem) / 1.1 var(--font-geist-mono), ui-monospace, monospace;
@@ -247,9 +228,12 @@ html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
 .cp-format-name { flex: 0 0 3.25rem; font-size: 0.8125rem; color: var(--muted-foreground); }
 .cp-format[data-copied]::after { content: 'copied' / ''; margin-left: auto; font-size: 0.8125rem; color: var(--foreground); }
 .cp-format-value { min-width: 0; font: 0.875rem var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.cp-frame-pick { position: absolute; inset: 0; width: 100%; cursor: crosshair; border-radius: inherit; outline: none; }
-.cp-frame-pick:focus-visible { box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--ring) 80%, transparent); }
-/* The crosshair shows while the card has keyboard focus: the arrows move it, Enter takes its color. */
+/* Tools: a click on the paint anywhere in the section takes its color; the button is that for the keyboard. */
+.cp-pick-section { cursor: crosshair; }
+.cp-pick-section [data-paint-skip] { cursor: auto; }
+.cp-paint-pick { position: absolute; inset: 0; z-index: 0; width: 100%; cursor: crosshair; outline: none; }
+.cp-paint-pick:focus-visible { box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--ring) 80%, transparent); }
+/* The crosshair shows while the paint has keyboard focus: the arrows move it, Enter takes its color. */
 .cp-aim {
   position: absolute;
   width: 2.25rem;
@@ -262,11 +246,11 @@ html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
   transition: opacity 150ms ease;
 }
 .cp-aim::after { content: ''; position: absolute; inset: 50% auto auto 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 9999px; background: #fff; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35); }
-.cp-frame-pick:focus-visible .cp-aim { opacity: 1; }
+.cp-paint-pick:focus-visible .cp-aim { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
-  .cp-hero-panel, .cp-hint, .cp-palette-card, .cp-palette-canvas, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb,
-  .cp-glass-host, .cp-film, .cp-copy-button, .cp-format, .cp-aim { transition: none; }
+  .cp-hero-panel, .cp-hint, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb,
+  .cp-film, .cp-copy-button, .cp-format, .cp-aim { transition: none; }
 }
 @media (forced-colors: active) {
   .cp-hint-chip { forced-color-adjust: none; }
@@ -276,7 +260,7 @@ html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
   .cp-keys kbd { border: 1px solid CanvasText; }
   .cp-keys kbd[data-pressed] { background: Highlight; color: HighlightText; }
   .cp-film { forced-color-adjust: none; }
-  .cp-frame-pick:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
+  .cp-paint-pick:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
 }
 
 /* --- The foot (§8.8): no rule over the footer; the paint softens under it into a progressive blur. --- */

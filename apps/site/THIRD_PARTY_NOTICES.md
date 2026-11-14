@@ -7,9 +7,8 @@ device geometry, edge-ring palettes and the foldable's fold animation from **rea
 device frame styles are themselves adapted from **Marvel devices.css**
 (https://github.com/marvelapp/devices.css). The source's per-device markup was replaced by one
 parametric shell that morphs between devices; values were transcribed, not the files copied whole.
-The fluted glass on the color picker landing (the Opacity and Tools sections) is drawn by **Paper
-Shaders** (`@paper-design/shaders`, see below). These notices cover only the site; the `@cloudlet/toast`
-package and the registry items contain no third-party code.
+These notices cover only the site; the `@cloudlet/toast` package and the registry items contain no
+third-party code.
 
 ## react-mockframe
 
@@ -51,27 +50,3 @@ furnished to do so, subject to the above copyright notice and this permission
 notice being included in all copies or substantial portions of the Software.
 ```
 
-## Paper Shaders
-
-`@paper-design/shaders` 0.0.82 (https://github.com/paper-design/shaders), a dependency of the site
-only, loaded in a chunk of its own by `src/components/picker/fluted-glass.ts`. That file modifies
-Paper's FlutedGlass fragment shader at run time: it adds two uniforms (`u_drift`, `u_zoom`) and one
-line after the ribs bend the coordinates, so the picture can slide behind glass that stays in place.
-The shader is otherwise used as published.
-
-```text
-Paper Shaders
-Copyright 2026 Paper
-
-Powered by Paper Shaders:
-https://shaders.paper.design
-
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
-compliance with the License. You may obtain a copy of the License at
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under the License is
-distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-implied. See the License for the specific language governing permissions and limitations under the
-License.
-```
