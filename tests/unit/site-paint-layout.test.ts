@@ -96,12 +96,15 @@ describe('the paper under the copy (COLOR_PICKER §8.2)', () => {
     const map = calmMap(lines, 1440, 3000);
     expect(calmAt(map, 300, 420)).toBe(1);
     expect(calmAt(map, 100, 470)).toBe(1);
+    // The far end of the long line, with no line under it, is still at full lift (it was at 0.75 with a 32 px reach).
+    expect(calmAt(map, 695, 405)).toBe(1);
+    expect(calmAt(map, 695, 435)).toBe(1);
     // Past the line's end the paper falls off softly…
     const edge = [700, 740, 780, 820, 860].map((x) => calmAt(map, x, 420));
     for (let index = 1; index < edge.length; index += 1) expect(edge[index]!).toBeLessThanOrEqual(edge[index - 1]!);
     expect(edge[1]!).toBeGreaterThan(0.3);
     // …is all but gone a little over 150 px away, and gone past the blur's reach.
-    expect(calmAt(map, 300, 400 - 190)).toBeLessThan(0.05);
+    expect(calmAt(map, 300, 400 - 206)).toBeLessThan(0.05);
     expect(calmAt(map, 300, 400 - 240)).toBe(0);
     expect(calmAt(map, 1200, 2000)).toBe(0);
   });

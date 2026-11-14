@@ -111,7 +111,9 @@ export function paletteRamp(inputs: readonly string[]): Ramp | null {
     scene: sceneOf(first.l),
     invert: false,
     stops: [
-      { at: 0, color: hex(darkest.l * 0.4, darkest.c * 0.6, darkest.h) },
+      // A night deep enough for the dark theme's text whatever the palette: a palette of pastels alone left
+      // its darkest end at L 0.36, and the lifted paper under the copy at 4:1.
+      { at: 0, color: hex(Math.min(0.12, darkest.l * 0.4), darkest.c * 0.6, darkest.h) },
       ...inner,
       { at: 1, color: hex(lightest.l + (1 - lightest.l) * 0.75, lightest.c * 0.25, lightest.h) },
     ],
@@ -179,9 +181,19 @@ export const THEME_FOREGROUND: Record<Scene, string> = {
 export const FLAT_AMOUNT = 0.35;
 
 /**
+ * How light the flat background may get: at most this in the dark theme, at least this in the light
+ * one. The muted text of either theme keeps 4.5:1 on it (a white page color in the dark theme mixed
+ * to L 0.48, where the muted text had 3.4:1). picker.css clamps the same.
+ */
+export const FLAT_LIGHTNESS: Record<Scene, { readonly min: number; readonly max: number }> = {
+  light: { min: 0.64, max: 1 },
+  dark: { min: 0, max: 0.4 },
+};
+
+/**
  * The flat background of the page before the paint draws, and for good without WebGL 2 (§8.3): the
- * picked color mixed into the theme's background in OKLCH. picker.css writes the same
- * `color-mix(in oklch, var(--cp-color) 35%, var(--background))`.
+ * picked color mixed into the theme's background in OKLCH, its lightness kept within FLAT_LIGHTNESS.
+ * picker.css writes the same `color-mix(in oklch, var(--cp-color) 35%, var(--background))`, clamped.
  */
 export function flatOf(input: string, theme: Scene): string | null {
   const rgba = opaque(input);
@@ -195,7 +207,8 @@ export function flatOf(input: string, theme: Scene): string | null {
     const gap = ((((background.h - color.h) % 360) + 540) % 360) - 180;
     hue = color.h + gap * (1 - FLAT_AMOUNT);
   }
-  return hex(mix(color.l, background.l), mix(color.c, background.c), hue);
+  const { min, max } = FLAT_LIGHTNESS[theme];
+  return hex(Math.min(max, Math.max(min, mix(color.l, background.l))), mix(color.c, background.c), hue);
 }
 
 /** The scene the theme picks (§8.2): the dark theme reads the frame upside down. */

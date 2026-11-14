@@ -92,22 +92,33 @@ describe('color picker ramps (COLOR_PICKER §8.2)', () => {
 
   it("the theme's ink reads over the lifted paper: the lights in the light theme, the shadows in the dark one", () => {
     const ink = { light: parseColor(THEME_FOREGROUND.light)!, dark: parseColor(THEME_FOREGROUND.dark)! };
-    const palettes = [['#1b1f4a', '#0f3d5c', '#3b2a6b'], ['#f7d6e0', '#f2b84b', '#9be7a8'], ['#000000', '#ffffff'], ['#ffff00', '#0000ff', '#ff00ff', '#00ffff']];
+    // The muted text of each theme (globals.css --muted-foreground): ledes and table cells.
+    const muted = { light: parseColor('oklch(0.2 0.05 255)')!, dark: parseColor('oklch(0.82 0.03 255)')! };
+    const palettes = [['#1b1f4a', '#0f3d5c', '#3b2a6b'], ['#f7d6e0', '#f2b84b', '#9be7a8'], ['#fff3c4', '#f7d6e0', '#dff5e1'], ['#000000', '#ffffff'], ['#ffff00', '#0000ff', '#ff00ff', '#00ffff']];
     const ramps = [...GRID.map((color) => heroRamp(color)!), ...palettes.map((colors) => paletteRamp(colors)!)];
     for (const [index, { stops }] of ramps.entries()) {
       // The shader lifts the frame's brightness under the copy to LIFT at least, read upside down in the dark
       // theme; at the edge of a line's paper the lift has begun to fall.
       for (const t of [LIFT - 0.02, LIFT, 1]) expect(contrast(ink.light, sampleRamp(stops, t)), `${index} light at ${t}`).toBeGreaterThanOrEqual(5);
       for (const t of [0, 1 - LIFT, 1 - LIFT + 0.02]) expect(contrast(ink.dark, sampleRamp(stops, t)), `${index} dark at ${t}`).toBeGreaterThanOrEqual(5);
+      for (const t of [LIFT - 0.02, LIFT, 1]) expect(contrast(muted.light, sampleRamp(stops, t)), `${index} muted light at ${t}`).toBeGreaterThanOrEqual(4.5);
+      for (const t of [0, 1 - LIFT, 1 - LIFT + 0.02]) expect(contrast(muted.dark, sampleRamp(stops, t)), `${index} muted dark at ${t}`).toBeGreaterThanOrEqual(4.5);
     }
   });
 
   it('the flat background mixes the color into the theme and keeps the ink readable', () => {
-    for (const color of GRID) {
+    // The muted text of each theme (globals.css --muted-foreground): the lede, the table cells.
+    const muted = { light: 'oklch(0.2 0.05 255)', dark: 'oklch(0.82 0.03 255)' };
+    for (const color of [...GRID, '#ffffff', '#000000', '#ffff00']) {
       for (const theme of ['light', 'dark'] as const) {
-        expect(contrast(parseColor(THEME_FOREGROUND[theme])!, parseColor(flatOf(color, theme)!)!), `${color} ${theme}`).toBeGreaterThanOrEqual(4.5);
+        const flat = parseColor(flatOf(color, theme)!)!;
+        expect(contrast(parseColor(THEME_FOREGROUND[theme])!, flat), `${color} ${theme}`).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(parseColor(muted[theme])!, flat), `${color} ${theme} muted`).toBeGreaterThanOrEqual(4.5);
       }
     }
+    // A white page color in the dark theme stays a night, a black one in the light theme stays paper.
+    expect(oklch(flatOf('#ffffff', 'dark')!).l).toBeLessThanOrEqual(0.401);
+    expect(oklch(flatOf('#000000', 'light')!).l).toBeGreaterThanOrEqual(0.639);
     // 35 % of the color: an orange tints the light theme's paper and the dark theme's night.
     expect(oklch(flatOf('#ff6a3d', 'light')!).l).toBeGreaterThan(0.8);
     expect(oklch(flatOf('#ff6a3d', 'dark')!).l).toBeLessThan(0.5);

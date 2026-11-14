@@ -22,8 +22,8 @@ export interface CalmMap {
   readonly scale: number;
 }
 
-/** The copy whose lines get paper under them: the hero's, the sections' and the footer's. */
-export const CALM_TEXT = '.cp-hero-copy, .cp-section :is(h2, h3, p, th, td, summary, label, .cp-copy-text), .docs-footer';
+/** The copy whose lines get paper under them: the hero's, the sections' (code blocks and buttons with words included) and the footer's. */
+export const CALM_TEXT = '.cp-hero-copy, .cp-section :is(h2, h3, p, pre, th, td, summary, label, .cp-copy-text, button:not(.cp-paint-pick)), .docs-footer';
 
 /** The header's controls: the paper is lifted under each of them, not in a strip across the window. */
 export const CALM_HEADER = '.site-header :is(a, button)';
@@ -33,8 +33,12 @@ export const CALM_REACH = 240;
 /** CSS px per texel, at least; a very long page takes coarser texels to stay within MAX_TEXELS rows. */
 const SCALE = 6;
 const MAX_TEXELS = 4096;
-/** Paper reaches this far past a line at full lift (CSS px), then fades over about as much again. */
-const PAD = 32;
+/**
+ * Paper reaches this far past a line before it fades (CSS px). 48 and not 32: with 32 the blur left the
+ * far end of a paragraph's long line at three quarters of the lift, which an all-pastel palette in the
+ * dark theme showed as 3.7:1 under the line's last words.
+ */
+const PAD = 48;
 /** The fade: three box blurs each way of this radius (CSS px) come close to a gaussian. */
 const BLUR = 64;
 /** Lift of the blurred field: the core under a line stays at full lift after the blur. */

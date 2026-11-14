@@ -7,14 +7,22 @@
  */
 html:has(.cp-site) { background: var(--background); }
 
-/* The flat background: shown until the paint draws, and for good without WebGL 2. flatOf in lib/picker-ramp.ts mixes the same. */
-html:has(.cp-paint) { background: color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background)); }
+/* The flat background: shown until the paint draws, and for good without WebGL 2. flatOf in lib/picker-ramp.ts mixes the same,
+   lightness clamped per theme (FLAT_LIGHTNESS) so the muted text keeps 4.5:1; a browser without relative colors keeps the plain mix. */
+html:has(.cp-paint) {
+  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background));
+  background: oklch(from color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background)) max(l, 0.64) c h);
+}
+html.dark:has(.cp-paint) { background: oklch(from color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background)) min(l, 0.4) c h); }
 .cp-paint { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
 .cp-paint[data-mode='page'] { position: absolute; inset: 0 0 auto; height: 100%; }
 .cp-paint[data-mode='flat'] { display: none; }
 html:has(.cp-paint) main, .cp-paint-footer { position: relative; z-index: 1; }
 /* The header lies on lifted paper over a fixed paint: its own tint would only grey it. */
 html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
+/* On a software WebGL the paint is drawn once over the whole page and cannot lift its paper under the header
+   (which stays at the window's top): the tint does that work there, dense behind the controls, fading below them. */
+html[data-cp-paint='page'] .site-edge-tint { background: linear-gradient(to bottom, color-mix(in oklab, var(--background) 88%, transparent) 55%, transparent); }
 
 .cp-hero {
   position: relative;
