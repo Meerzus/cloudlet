@@ -5,7 +5,7 @@ import { PaintRenderer } from '../../apps/site/src/components/picker/paint-rende
 import { Palette } from '../../apps/site/src/components/picker/palette';
 import { PickerColorProvider } from '../../apps/site/src/components/picker/picker-color';
 import { PickerHero } from '../../apps/site/src/components/picker/picker-hero';
-import { lineRects } from '../../apps/site/src/lib/paint-calm';
+import { calmAt, lineRects, type CalmMap } from '../../apps/site/src/lib/paint-calm';
 import { heroRamp, paletteRamp, rampLut } from '../../apps/site/src/lib/picker-ramp';
 import { START_GLOBAL } from '../../apps/site/src/lib/picker-start';
 
@@ -145,6 +145,30 @@ describe('the paint under the page (COLOR_PICKER §8.2–§8.3)', () => {
     fireEvent.keyDown(hue, { key: 'ArrowRight' });
     await settle();
     expect(lastPaint(renderer)[1]).toBeNull();
+  });
+
+  it("the paper is lifted under the header's controls, not in a strip across the window", () => {
+    const renderer = setup();
+    global[START_GLOBAL] = '#ff6a3d';
+    vi.spyOn(root, 'clientWidth', 'get').mockReturnValue(1440);
+    const header = document.createElement('header');
+    header.className = 'site-header';
+    header.innerHTML = '<a id="logo" href="/">Cloudlet</a><button id="theme" type="button">Theme</button>';
+    document.body.append(header);
+    // Own boxes on each element (a spy would replace the shared prototype's method).
+    const place = (element: Element, box: DOMRect) => Object.defineProperty(element, 'getBoundingClientRect', { value: () => box });
+    place(header, rect(0, 0, 1440, 56));
+    place(header.querySelector('#logo')!, rect(24, 14, 110, 28));
+    place(header.querySelector('#theme')!, rect(1360, 12, 32, 32));
+    render(<PickerColorProvider><PaintPage /></PickerColorProvider>);
+    const map = (renderer.setLayout.mock.calls.at(-1)![0] as { headerCalm: CalmMap }).headerCalm;
+    expect(calmAt(map, 80, 28)).toBe(1);
+    // A lone icon button: nearly full before the shader's smoothstep.
+    expect(calmAt(map, 1376, 28)).toBeGreaterThan(0.85);
+    // Between the logo and the theme, and below the header's shoulder: the painting itself.
+    expect(calmAt(map, 720, 28)).toBe(0);
+    expect(calmAt(map, 80, 290)).toBe(0);
+    header.remove();
   });
 
   it('without WebGL 2 the flat background stays and nothing is drawn', () => {

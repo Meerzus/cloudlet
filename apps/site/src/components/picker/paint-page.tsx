@@ -1,7 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
-import { CALM_TEXT, calmMap, lineRects } from '@/lib/paint-calm';
+import { boxRects, CALM_HEADER, CALM_REACH, CALM_TEXT, calmMap, lineRects } from '@/lib/paint-calm';
 import { softwareGL } from '@/lib/picker-motion';
 import { flatLut, flatOf, pageRamp, rampLut, themeOf } from '@/lib/picker-ramp';
 import { PaintRenderer, type BleedOrigin, type PaintLayout } from './paint-renderer';
@@ -27,7 +27,7 @@ export function bleedOrigin(source: ChangeSource): BleedOrigin {
 /**
  * The paint under the whole color picker landing (COLOR_PICKER §8.2–§8.3): the long frame recolored
  * by the page color's ramp — or by the palette's once the visitor made it theirs — with the paper
- * lifted under every line of copy and under the header. The theme picks the scene: the dark theme
+ * lifted under every line of copy and under the header's controls. The theme picks the scene: the dark theme
  * reads the frame upside down. A jump spreads out of the control that made it; dragging a handle
  * repaints at once. Without WebGL 2 the flat background of picker.css stays.
  */
@@ -67,10 +67,12 @@ export function PaintPage() {
     const measure = () => {
       const viewport = { width: root.clientWidth, height: window.innerHeight };
       const pageHeight = root.scrollHeight;
-      const header = document.querySelector('.site-header')?.getBoundingClientRect().height ?? 0;
       const calm = calmMap(lineRects(document.querySelectorAll(CALM_TEXT), window.scrollX, window.scrollY), viewport.width, pageHeight);
+      // The header stays at the window's top: its controls get a map of their own, in window coordinates.
+      const header = document.querySelector('.site-header')?.getBoundingClientRect().bottom ?? 0;
+      const headerCalm = kind === 'fixed' && header > 0 ? calmMap(boxRects(document.querySelectorAll(CALM_HEADER), 0, 0), viewport.width, header + CALM_REACH) : null;
       if (kind === 'page') element.style.height = `${pageHeight}px`;
-      const layout: PaintLayout = { mode: kind, viewport, pageHeight, header, calm };
+      const layout: PaintLayout = { mode: kind, viewport, pageHeight, calm, headerCalm };
       instance.setScroll(window.scrollY);
       instance.setLayout(layout);
       root.dataset.cpPaint = kind;

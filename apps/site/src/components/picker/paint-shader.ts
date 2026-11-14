@@ -3,7 +3,7 @@
  * over a full-screen triangle, drawn in page coordinates. The long frame (form, light and grain, no
  * color of its own) lies along the page as lib/paint-layout.ts says — tiles mirrored at every seam,
  * a slow warp, the flow — and is read as brightness; under the copy (the calm map) and under the
- * header its paper is lifted toward the ramp's end; the brightness picks a color from a 256-entry
+ * header's controls (a second map, in window coordinates) its paper is lifted toward the ramp's end; the brightness picks a color from a 256-entry
  * ramp, read upside down in the dark theme; a new ramp spreads out of the control that chose it with
  * a noisy edge; a still grain lies on top. Own code, MIT like the rest of the site.
  */
@@ -29,7 +29,8 @@ uniform float uWidth;         // the window's width, CSS px
 uniform vec2 uTile;           // one copy of the frame on the page, CSS px
 uniform float uPhase;         // flow cycle, [0, 1)
 uniform float uFlow;          // flow amplitude, in frame uv
-uniform float uHeader;        // the fixed header's height, CSS px: the paper is lifted under it too; 0 for none
+uniform sampler2D uHeaderCalm; // where the header's controls sit (window coordinates)
+uniform vec2 uHeaderCalmSize; // its extent, CSS px; 0 for none
 uniform float uInvert;        // 1 reads the frame upside down (the dark theme)
 uniform float uLift;          // the frame's brightness under the copy, at least
 uniform vec4 uOrigin;         // the bleed's rectangle in page coordinates: centre and half size, CSS px
@@ -95,9 +96,9 @@ void main() {
 
   float luminance = dot(texture(uMaterial, uv).rgb, vec3(0.2126, 0.7152, 0.0722));
 
-  // The paper under the copy and the header, lifted with a soft shoulder (about 150 px).
+  // The paper under the copy and the header's controls, lifted with a soft shoulder (about 150 px).
   float calm = smoothstep(0.0, 1.0, texture(uCalm, page / uCalmSize).r);
-  if (uHeader > 0.0) calm = max(calm, 1.0 - smoothstep(uHeader * 0.6, uHeader * 1.9, css.y));
+  if (css.y < uHeaderCalmSize.y) calm = max(calm, smoothstep(0.0, 1.0, texture(uHeaderCalm, css / uHeaderCalmSize).r));
   luminance = mix(luminance, max(luminance, uLift), calm);
   float at = mix(luminance, 1.0 - luminance, uInvert);
 

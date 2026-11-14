@@ -17,9 +17,10 @@ export interface PaintLayout {
   readonly viewport: Size;
   /** The page's height, CSS px: the canvas' height in `page` mode. */
   readonly pageHeight: number;
-  /** The fixed header's height, CSS px: the paper is lifted under it in `fixed` mode. */
-  readonly header: number;
+  /** The paper under the copy, in page coordinates. */
   readonly calm: CalmMap;
+  /** The paper under the header's controls, in window coordinates (the header stays put): `fixed` mode only. */
+  readonly headerCalm: CalmMap | null;
 }
 
 /** Length of a bleed (§8.3). */
@@ -47,7 +48,8 @@ const UNIFORMS = [
   'uTile',
   'uPhase',
   'uFlow',
-  'uHeader',
+  'uHeaderCalm',
+  'uHeaderCalmSize',
   'uInvert',
   'uLift',
   'uOrigin',
@@ -109,6 +111,7 @@ export class PaintRenderer {
   private readonly material: WebGLTexture | null;
   private readonly luts: [WebGLTexture | null, WebGLTexture | null];
   private readonly calm: WebGLTexture | null;
+  private readonly headerCalm: WebGLTexture | null;
   private to: Uint8Array;
   private layout: PaintLayout | null = null;
   private aspect = 1 / 3;
@@ -148,6 +151,8 @@ export class PaintRenderer {
     this.upload(1, lut);
     this.calm = texture(gl, gl.LINEAR);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, 1, 1, 0, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array([0]));
+    this.headerCalm = texture(gl, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, 1, 1, 0, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array([0]));
   }
 
   /** Puts the decoded long frame (an <img>, a bitmap) under the ramp; redraws once. */
@@ -176,6 +181,10 @@ export class PaintRenderer {
     if (layout.calm !== this.layout?.calm) {
       gl.bindTexture(gl.TEXTURE_2D, this.calm);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, layout.calm.width, layout.calm.height, 0, gl.RED, gl.UNSIGNED_BYTE, layout.calm.data);
+    }
+    if (layout.headerCalm && layout.headerCalm !== this.layout?.headerCalm) {
+      gl.bindTexture(gl.TEXTURE_2D, this.headerCalm);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, layout.headerCalm.width, layout.headerCalm.height, 0, gl.RED, gl.UNSIGNED_BYTE, layout.headerCalm.data);
     }
     this.layout = layout;
     this.stale = true;
@@ -248,7 +257,7 @@ export class PaintRenderer {
     const { gl } = this;
     gl.deleteProgram(this.program);
     if (this.vao) gl.deleteVertexArray(this.vao);
-    for (const handle of [this.material, this.calm, ...this.luts]) if (handle) gl.deleteTexture(handle);
+    for (const handle of [this.material, this.calm, this.headerCalm, ...this.luts]) if (handle) gl.deleteTexture(handle);
   }
 
   /** Distance from the origin's centre to the farthest corner of the window, CSS px. */
@@ -314,7 +323,7 @@ export class PaintRenderer {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.useProgram(this.program);
     gl.bindVertexArray(this.vao);
-    [this.material, this.luts[0], this.luts[1], this.calm].forEach((handle, unit) => {
+    [this.material, this.luts[0], this.luts[1], this.calm, this.headerCalm].forEach((handle, unit) => {
       gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, handle);
     });
@@ -322,6 +331,9 @@ export class PaintRenderer {
     gl.uniform1i(u.uFrom, 1);
     gl.uniform1i(u.uTo, 2);
     gl.uniform1i(u.uCalm, 3);
+    gl.uniform1i(u.uHeaderCalm, 4);
+    const header = fixed ? layout.headerCalm : null;
+    gl.uniform2f(u.uHeaderCalmSize, header ? header.width * header.scale : 0, header ? header.height * header.scale : 0);
     gl.uniform2f(u.uCalmSize, layout.calm.width * layout.calm.scale, layout.calm.height * layout.calm.scale);
     gl.uniform2f(u.uSize, this.canvas.width, this.canvas.height);
     gl.uniform1f(u.uDpr, this.scale);
@@ -330,7 +342,6 @@ export class PaintRenderer {
     gl.uniform2f(u.uTile, tile.width, tile.height);
     gl.uniform1f(u.uPhase, (this.clock % CYCLE_MS) / CYCLE_MS);
     gl.uniform1f(u.uFlow, this.hasFrame && this.moving ? FLOW : 0);
-    gl.uniform1f(u.uHeader, fixed ? layout.header : 0);
     gl.uniform1f(u.uInvert, this.invert ? 1 : 0);
     gl.uniform1f(u.uLift, LIFT);
     gl.uniform4f(u.uOrigin, origin.x + origin.width / 2, origin.y + origin.height / 2, origin.width / 2, origin.height / 2);

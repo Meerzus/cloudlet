@@ -25,6 +25,11 @@ export interface CalmMap {
 /** The copy whose lines get paper under them: the hero's, the sections' and the footer's. */
 export const CALM_TEXT = '.cp-hero-copy, .cp-section :is(h2, h3, p, th, td, summary, label, .cp-copy-text), .docs-footer';
 
+/** The header's controls: the paper is lifted under each of them, not in a strip across the window. */
+export const CALM_HEADER = '.site-header :is(a, button)';
+/** How far the paper under a box reaches past it, CSS px, at most: a map this much taller than the header holds all of it. */
+export const CALM_REACH = 240;
+
 /** CSS px per texel, at least; a very long page takes coarser texels to stay within MAX_TEXELS rows. */
 const SCALE = 6;
 const MAX_TEXELS = 4096;
@@ -49,6 +54,16 @@ export function lineRects(elements: Iterable<Element>, scrollX: number, scrollY:
         if (box.width > 1 && box.height > 1) rects.push({ x: box.left + scrollX, y: box.top + scrollY, width: box.width, height: box.height });
       }
     }
+  }
+  return rects;
+}
+
+/** The boxes of `elements` that are shown, shifted by the scroll (pass 0, 0 for window coordinates). */
+export function boxRects(elements: Iterable<Element>, scrollX: number, scrollY: number): PageRect[] {
+  const rects: PageRect[] = [];
+  for (const element of elements) {
+    const box = element.getBoundingClientRect();
+    if (box.width > 1 && box.height > 1) rects.push({ x: box.left + scrollX, y: box.top + scrollY, width: box.width, height: box.height });
   }
   return rects;
 }
