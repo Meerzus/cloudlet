@@ -177,23 +177,19 @@ html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
 }
 .cp-switch[aria-checked='true'] .cp-switch-thumb { transform: translateX(1rem); }
 
-/* --- Opacity and Tools (§8.6–§8.7): no pictures of their own; the film and the pick lie on the page's paint. --- */
-.cp-film-section, .cp-pick-section { position: relative; }
+/* --- Opacity and Tools (§8.6–§8.7): no pictures of their own; the veil and the pick lie on the page's paint. --- */
+.cp-veil-section, .cp-pick-section { position: relative; }
 .cp-section-content { position: relative; z-index: 1; }
 .cp-section-layout { margin-top: 2.5rem; }
 .cp-section-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 2rem; min-width: 0; }
-/* The film opens under the copy (a mask from the paint's calm map) and fades in and out at the section's edges. */
-.cp-film {
+/* Opacity: the theme's background over the paint at 1 − alpha, fading in and out at the section's edges. */
+.cp-veil {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: var(--cp-color, #ff6a3d);
+  background: var(--background);
   pointer-events: none;
-  mask-image: var(--cp-film-mask, linear-gradient(#000, #000)), linear-gradient(to bottom, transparent, #000 6rem, #000 calc(100% - 6rem), transparent);
-  mask-size: var(--cp-film-mask-size, 100% 100%), 100% 100%;
-  mask-repeat: no-repeat;
-  mask-composite: intersect;
-  transition: background-color 320ms ease;
+  mask-image: linear-gradient(to bottom, transparent, #000 8rem, #000 calc(100% - 8rem), transparent);
 }
 .cp-copy-value { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
 .cp-copy-text {
@@ -250,7 +246,7 @@ html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .cp-hero-panel, .cp-hint, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb,
-  .cp-film, .cp-copy-button, .cp-format, .cp-aim { transition: none; }
+  .cp-copy-button, .cp-format, .cp-aim { transition: none; }
 }
 @media (forced-colors: active) {
   .cp-hint-chip { forced-color-adjust: none; }
@@ -259,7 +255,6 @@ html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
   .cp-switch[aria-checked='true'] .cp-switch-track { background: Highlight; }
   .cp-keys kbd { border: 1px solid CanvasText; }
   .cp-keys kbd[data-pressed] { background: Highlight; color: HighlightText; }
-  .cp-film { forced-color-adjust: none; }
   .cp-paint-pick:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
 }
 

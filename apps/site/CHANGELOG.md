@@ -58,8 +58,8 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   hero:
   - Palette: the color palette with harmonies (complement, split complement, analogous, tints) as
     hints that fill it; once the palette is yours, the whole page is painted in its colors;
-  - Opacity: a film of the page color over the page's paint, as dense as the alpha of an inline
-    panel, open under the section's text, with the value and a Copy button;
+  - Opacity: within the section the page's paint is as opaque as the alpha of an inline panel, with
+    the value and a Copy button;
   - Tools: a click anywhere on the paint around the controls takes the color it shows there, or the
     arrows and Enter do, in every browser (worked out from the picture and the colors, not a
     screenshot); the compact picker and the same color in four formats, each copied by a click;

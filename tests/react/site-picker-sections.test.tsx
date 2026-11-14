@@ -1,11 +1,10 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { useLayoutEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { filmMask, Opacity, START_ALPHA } from '../../apps/site/src/components/picker/opacity';
+import { Opacity, START_ALPHA } from '../../apps/site/src/components/picker/opacity';
 import { Palette } from '../../apps/site/src/components/picker/palette';
 import { PickerColorProvider, usePickerColor, type PaintProbe } from '../../apps/site/src/components/picker/picker-color';
 import { START_AIM, Tools } from '../../apps/site/src/components/picker/tools';
-import type { CalmMap } from '../../apps/site/src/lib/paint-calm';
 import { START_GLOBAL } from '../../apps/site/src/lib/picker-start';
 
 const root = document.documentElement;
@@ -32,11 +31,7 @@ const withPaint = (children: ReactNode) => render(<PickerColorProvider><WithPain
 beforeEach(() => {
   global[START_GLOBAL] = '#ff6a3d';
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} }));
-  // jsdom has no canvas: the film then has no windows under the copy.
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
-  // jsdom lays nothing out: no line boxes for the film's windows.
-  Object.defineProperty(Range.prototype, 'getClientRects', { configurable: true, value: () => [] });
   window.history.replaceState(null, '', '/color-picker');
 });
 
@@ -58,35 +53,35 @@ describe('the sections have no pictures of their own (COLOR_PICKER §8.5–§8.7
 });
 
 describe('Opacity (COLOR_PICKER §8.6)', () => {
-  it('the alpha sets the film over the section and never the page color', () => {
+  it('the alpha sets how much of the paint shows within the section, and never the page color', () => {
     render(<PickerColorProvider><Opacity /></PickerColorProvider>);
-    const film = screen.getByTestId('opacity-film');
-    // On the paint within the section, under its copy and its panel.
-    expect(film.parentElement).toHaveAttribute('id', 'opacity');
-    expect(film.nextElementSibling).toContainElement(screen.getByRole('group', { name: 'Film color' }));
-    expect(film.style.opacity).toBe(String(START_ALPHA));
+    // The theme's background over the paint at 1 − alpha, within the section, under its copy and panel.
+    const veil = screen.getByTestId('opacity-veil');
+    expect(veil.parentElement).toHaveAttribute('id', 'opacity');
+    expect(veil.nextElementSibling).toContainElement(screen.getByRole('group', { name: 'Paint color' }));
+    expect(veil.style.opacity).toBe(String(1 - START_ALPHA));
     expect(screen.getByTestId('copy-value')).toHaveTextContent('#ff6a3d80');
-    const alpha = screen.getByRole('slider', { name: 'Film opacity' });
+    const alpha = screen.getByRole('slider', { name: 'Paint opacity' });
     fireEvent.keyDown(alpha, { key: 'End' });
-    expect(film.style.opacity).toBe('1');
+    expect(veil.style.opacity).toBe('0');
     expect(screen.getByTestId('copy-value')).toHaveTextContent(/^#ff6a3d$/);
     fireEvent.keyDown(alpha, { key: 'Home' });
-    expect(film.style.opacity).toBe('0');
+    expect(veil.style.opacity).toBe('1');
     expect(screen.getByTestId('copy-value')).toHaveTextContent('#ff6a3d00');
     expect(page()).toBe('#ff6a3d');
   });
 
   it('shows the value with its alpha in every format, and the alpha stays as the format changes', () => {
     render(<PickerColorProvider><Opacity /></PickerColorProvider>);
-    const panel = screen.getByRole('group', { name: 'Film color' });
+    const panel = screen.getByRole('group', { name: 'Paint color' });
     const radios = within(within(panel).getByRole('group', { name: 'Format' })).getAllByRole('radio');
     const seen: Record<string, string> = {};
     for (const [index, format] of ['hex', 'rgb', 'hsl', 'oklch'].entries()) {
       fireEvent.click(radios[index]!);
       seen[format] = screen.getByTestId('copy-value').textContent ?? '';
       // Only the alpha moved under a rounding format: the page color holds.
-      fireEvent.keyDown(screen.getByRole('slider', { name: 'Film opacity' }), { key: 'ArrowLeft' });
-      fireEvent.keyDown(screen.getByRole('slider', { name: 'Film opacity' }), { key: 'ArrowRight' });
+      fireEvent.keyDown(screen.getByRole('slider', { name: 'Paint opacity' }), { key: 'ArrowLeft' });
+      fireEvent.keyDown(screen.getByRole('slider', { name: 'Paint opacity' }), { key: 'ArrowRight' });
       expect(page(), format).toBe('#ff6a3d');
     }
     expect(seen['hex']).toBe('#ff6a3d80');
@@ -95,12 +90,12 @@ describe('Opacity (COLOR_PICKER §8.6)', () => {
     expect(seen['oklch']).toMatch(/^oklch\([\d.]+% [\d.]+ [\d.]+ \/ 0\.5\)$/);
   });
 
-  it('moving the panel’s color paints the page, the film keeps its density', () => {
+  it('moving the panel’s color paints the page, the paint keeps its opacity', () => {
     render(<PickerColorProvider><Opacity /></PickerColorProvider>);
     fireEvent.keyDown(screen.getByRole('slider', { name: 'Hue' }), { key: 'ArrowRight', shiftKey: true });
     expect(page()).not.toBe('#ff6a3d');
     // The panel says the alpha back in hex: 0x80 / 255.
-    expect(Number(screen.getByTestId('opacity-film').style.opacity)).toBeCloseTo(START_ALPHA, 2);
+    expect(Number(screen.getByTestId('opacity-veil').style.opacity)).toBeCloseTo(1 - START_ALPHA, 2);
   });
 
   it('copies the value with its alpha', async () => {
@@ -110,25 +105,6 @@ describe('Opacity (COLOR_PICKER §8.6)', () => {
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Copy #ff6a3d80' })));
     expect(writeText).toHaveBeenCalledWith('#ff6a3d80');
     expect(screen.getByText('Copied #ff6a3d80')).toBeInTheDocument();
-  });
-
-  it('the film opens under the copy as the paint’s paper is lifted there: clear at full calm, solid away from it', () => {
-    let written: Uint8ClampedArray | null = null;
-    vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValue({
-      createImageData: (width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4) }),
-      putImageData: (image: { data: Uint8ClampedArray }) => {
-        written = image.data;
-      },
-    } as never);
-    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,AAAA');
-    const map: CalmMap = { data: new Uint8Array([255, 128, 0]), width: 3, height: 1, scale: 6 };
-    const mask = filmMask(map)!;
-    expect(mask).toEqual({ image: 'data:image/png;base64,AAAA', width: 18, height: 6 });
-    const alpha = [...written!].filter((_, index) => index % 4 === 3);
-    expect(alpha[0]).toBe(0);
-    expect(alpha[1]).toBeGreaterThan(100);
-    expect(alpha[1]).toBeLessThan(155);
-    expect(alpha[2]).toBe(255);
   });
 });
 
