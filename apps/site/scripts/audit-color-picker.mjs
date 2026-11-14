@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 /**
- * Accessibility audit of the color picker on the static export (COLOR_PICKER §5, §10; task C09).
+ * Accessibility audit of the color picker on the static export (COLOR_PICKER §5, §8.2, §10).
  * audit-landing.mjs covers both routes at rest; this one opens every picker and checks what a
- * keyboard and screen reader user meets, and measures the hero's text against the shader's pixels.
+ * keyboard and screen reader user meets, and measures the landing's text against the paint's pixels.
  *
- * 1. Hero contrast by pixels (Chromium with SwiftShader): axe cannot see a canvas, so for every curated
- *    start color plus the extremes and the colors either side of the scene threshold the hero is
- *    shot with its text made transparent once the material has drawn (`data-ready`), and each text
- *    box (headline, lede, header) is compared with the pixels under it; the score is the 1st
- *    percentile of the per-pixel ratio (a few grain pixels may fall below). Text ≥ 4.5:1. The same
- *    again with WebGL 2 taken away: the flat background (`data-flat`) must hold the ink too.
+ * 1. Contrast by pixels over the whole landing: axe cannot see a canvas, so the page is walked one
+ *    screen at a time (the paint is fixed to the window) and every line of text on the screen — the
+ *    hero, the sections, the header, the footer — is compared with a shot of the same screen with all
+ *    text made transparent; the score is the 1st percentile of the per-pixel ratio (a few grain pixels
+ *    may fall below). Text ≥ 4.5:1. Both themes, desktop and phone, reduced motion (a still paint), for
+ *    every curated start color, the extremes, and a few palettes (dark, light, high-contrast); the
+ *    Opacity section also at 20 % and 80 %. Three ways the paint can be drawn:
+ *    - `fixed`: a GPU Chromium (ANGLE on Metal), the canvas fixed to the window — what visitors see;
+ *    - `page`: Chromium with SwiftShader, the canvas over the whole page, drawn once (software WebGL);
+ *    - `flat`: WebGL 2 taken away, a flat background of the page color.
  * 2. Every picker on /color-picker and /color-picker/docs, desktop 1440×900 and phone 390×844, light
  *    and dark: Enter on the swatch opens a named dialog with focus in the area; axe on the open panel;
  *    the panel inside the viewport; arrows, Shift and Home/End against the promised values
@@ -21,8 +25,10 @@
  *
  *   npm run build && npm run build:site
  *   node apps/site/scripts/audit-color-picker.mjs <out-dir> [--browser chromium|webkit] [--skip-contrast] [--skip-pickers]
+ *     [--modes fixed,page,flat] [--quick]
  *
- * Writes color-picker-<browser>.json (with an ARIA snapshot of each open panel); exits 1 on any failure.
+ * --quick measures three colors and one palette instead of all. Writes color-picker-<browser>.json
+ * (with an ARIA snapshot of each open panel); exits 1 on any failure.
  */
 import AxeBuilder from '@axe-core/playwright';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -31,43 +37,106 @@ import { chromium, webkit } from '@playwright/test';
 import { serve } from './serve-out.mjs';
 
 /** The curated start colors, read from lib/picker-start.ts so the list cannot drift. */
-const START_COLORS = [.../START_COLORS = \[([^\]]+)\]/u.exec(readFileSync(new URL('../src/lib/picker-start.ts', import.meta.url), 'utf8'))[1].matchAll(/'(#[0-9a-f]{6})'/gu)].map((match) => match[1]);
-/**
- * Not curated, but reachable: the extremes, a greyish blue, and colors just under and over the
- * scene threshold (OKLCH L 0.445 / 0.455), where each ink meets the least room.
- */
-const EXTRA_COLORS = ['#3d5a80', '#ffffff', '#000000', '#ffff00', '#808080', '#0b5693', '#105996', '#99291d', '#336128'];
+const START_COLORS = [.../START_COLORS = \[([^\]]+)\]/u.exec(readFileSync(new URL('../src/lib/picker-start.ts', import.meta.url), 'utf8'))[1].matchAll(/'(#[0-9a-f]{6})'/gu)].map((match) => match[1].slice(1));
+/** Not curated, but reachable: the extremes, a greyish blue, mid grey, pure yellow, deep red and green. */
+const EXTRA_COLORS = ['3d5a80', 'ffffff', '000000', 'ffff00', '808080', '0b5693', '99291d', '336128'];
+/** Palettes someone made (a link with more than one color is the visitor's own): the paint takes their ramp. */
+const PALETTES = { 'palette-dark': '1b1f4a,3b2a6b,0f3d5c', 'palette-light': 'fff3c4,f7d6e0,dff5e1', 'palette-contrast': '000000,ffffff,ff0000,0000ff' };
 const DESKTOP = { viewport: { width: 1440, height: 900 } };
 const PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 };
 const TEXT_MIN = 4.5;
-const RING_MIN = 3;
 /** WCAG 2.5.8 (AA): a target at least 24 px across through its centre, both ways. */
 const TARGET_MIN = 24;
 
 const args = process.argv.slice(2);
-const browserFlag = args.indexOf('--browser');
-const engine = { chromium, webkit }[browserFlag >= 0 ? args.splice(browserFlag, 2)[1] : 'chromium'];
+const option = (name, fallback) => {
+  const index = args.indexOf(name);
+  return index >= 0 ? args.splice(index, 2)[1] : fallback;
+};
+const engine = { chromium, webkit }[option('--browser', 'chromium')];
+const modes = option('--modes', 'fixed,page,flat').split(',');
 const skipContrast = args.includes('--skip-contrast');
 const skipPickers = args.includes('--skip-pickers');
+const quick = args.includes('--quick');
 const [outDir] = args.filter((arg) => !arg.startsWith('--'));
 if (!outDir || !engine) {
-  console.error('Usage: node apps/site/scripts/audit-color-picker.mjs <out-dir> [--browser chromium|webkit] [--skip-contrast] [--skip-pickers]');
+  console.error('Usage: node apps/site/scripts/audit-color-picker.mjs <out-dir> [--browser chromium|webkit] [--skip-contrast] [--skip-pickers] [--modes fixed,page,flat] [--quick]');
   process.exit(2);
 }
 const out = resolve(outDir);
 mkdirSync(out, { recursive: true });
 const server = await serve();
 const base = `http://127.0.0.1:${server.address().port}`;
-const report = { contrast: [], pickers: [] };
+const report = { contrast: [], overContent: [], pickers: [] };
 const failures = [];
 const fail = (where, what) => {
   failures.push(`${where}: ${what}`);
   console.log(`  FAIL ${where}: ${what}`);
 };
 
-// --- 1. Hero contrast -----------------------------------------------------------------------------
+// --- 1. Contrast over the whole landing -----------------------------------------------------------
 
-/** In the page: per-pixel contrast of each text box (or ring) against a shot of the hero without its text. */
+/**
+ * In the page: every line of visible text on the screen, grouped by its element, with the ink it is
+ * drawn in (the element's color, its alpha times the opacity of its ancestors). Lines cut by the
+ * window's edge are left to the screen that shows them whole.
+ */
+const textTargets = (page) =>
+  page.evaluate(() => {
+    const height = window.innerHeight;
+    const width = document.documentElement.clientWidth;
+    // Lines that have scrolled under the fixed header are blurred behind it, not read there.
+    const under = document.querySelector('.site-header')?.getBoundingClientRect().bottom ?? 0;
+    const groups = new Map();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const parent = node.parentElement;
+      if (!parent || !node.textContent.trim() || parent.closest('script, style, noscript, nextjs-portal, [hidden], [aria-hidden="true"] svg')) continue;
+      const style = getComputedStyle(parent);
+      // Not rendered: a closed answer (<details> keeps its content in a content-visibility: hidden slot).
+      if (style.visibility !== 'visible' || !parent.checkVisibility({ contentVisibilityAuto: true, visibilityProperty: true })) continue;
+      // A visually hidden label (sr-only: 1 px, clipped) still reports its full line boxes.
+      const own = parent.getBoundingClientRect();
+      if (own.width <= 1 || own.height <= 1) continue;
+      let opacity = 1;
+      for (let element = parent; element; element = element.parentElement) opacity *= Number(getComputedStyle(element).opacity);
+      if (opacity < 0.05) continue;
+      // What the boxes are clipped to: every scrolling or clipping ancestor (a code block that scrolls sideways).
+      let clip = { left: 0, top: 0, right: width, bottom: height };
+      for (let element = parent; element && element !== document.body; element = element.parentElement) {
+        const { overflowX, overflowY } = getComputedStyle(element);
+        if (overflowX === 'visible' && overflowY === 'visible') continue;
+        const r = element.getBoundingClientRect();
+        clip = { left: Math.max(clip.left, r.left), top: Math.max(clip.top, r.top), right: Math.min(clip.right, r.right), bottom: Math.min(clip.bottom, r.bottom) };
+      }
+      const inHeader = Boolean(parent.closest('.site-header'));
+      if (!inHeader) clip.top = Math.max(clip.top, under);
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const boxes = [];
+      for (const { left, top, right, bottom, width: w, height: h } of range.getClientRects()) {
+        if (w <= 2 || h <= 2 || top < clip.top || bottom > clip.bottom) continue;
+        const box = { left: Math.max(left, clip.left), top, right: Math.min(right, clip.right), bottom };
+        // Mostly cut off sideways: left to a wider window.
+        if (box.right - box.left < w * 0.5) continue;
+        // Something else on top of the line (a panel that opened over it, a sticky bar): not this text's background.
+        const hit = document.elementFromPoint((box.left + box.right) / 2, (top + bottom) / 2);
+        if (hit && !parent.contains(hit) && !hit.contains(parent)) continue;
+        boxes.push(box);
+      }
+      if (boxes.length === 0) continue;
+      let group = groups.get(parent);
+      if (!group) {
+        const where = parent.closest('.site-header') ? 'header' : parent.closest('footer, .docs-footer, .cp-paint-footer') ? 'footer' : parent.closest('section[id]')?.id ?? (parent.closest('.cp-hero') ? 'hero' : 'page');
+        group = { header: inHeader, label: `${where} ${parent.tagName.toLowerCase()} “${parent.textContent.trim().replace(/\s+/gu, ' ').slice(0, 28)}”`, color: style.color, opacity, boxes: [] };
+        groups.set(parent, group);
+      }
+      group.boxes.push(...boxes);
+    }
+    return [...groups.values()];
+  });
+
+/** In the page: per-pixel contrast of each text box against a shot of the screen without its text. */
 const measure = (page, shot, targets) =>
   page.evaluate(async ({ shot, targets }) => {
     const image = new Image();
@@ -78,7 +147,7 @@ const measure = (page, shot, targets) =>
     canvas.height = image.height;
     const context = canvas.getContext('2d', { willReadFrequently: true });
     context.drawImage(image, 0, 0);
-    const scale = image.width / window.innerWidth;
+    const scale = image.width / document.documentElement.clientWidth;
     const { data } = context.getImageData(0, 0, image.width, image.height);
     // A CSS color (oklch included) as straight sRGB with alpha, through a 1×1 canvas.
     const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
@@ -89,128 +158,170 @@ const measure = (page, shot, targets) =>
       const [r, g, b, a] = probe.getImageData(0, 0, 1, 1).data;
       return { r, g, b, a: a / 255 };
     };
-    const lum = (r, g, b) => {
-      const lin = (v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
-      return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-    };
-    return targets.map(({ label, color, boxes, ring }) => {
-      // A two-tone ring scores, per pixel, the band that stands out more.
-      const inks = (Array.isArray(color) ? color : [color]).map(rgba);
+    const lin = (v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    const lum = (r, g, b) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    return targets.map(({ label, color, opacity, boxes }) => {
+      const ink = rgba(color);
+      const alpha = ink.a * opacity;
       const ratios = [];
-      const inRing = (x, y) => ring && boxes.some((box) => {
-        const dx = Math.max(box.left - x, 0, x - box.right);
-        const dy = Math.max(box.top - y, 0, y - box.bottom);
-        const d = Math.hypot(dx, dy);
-        return d >= ring.offset && d <= ring.offset + ring.width;
-      });
       for (const box of boxes) {
-        const pad = ring ? ring.offset + ring.width : 0;
-        const x0 = Math.max(0, Math.floor((box.left - pad) * scale));
-        const x1 = Math.min(image.width, Math.ceil((box.right + pad) * scale));
-        const y0 = Math.max(0, Math.floor((box.top - pad) * scale));
-        const y1 = Math.min(image.height, Math.ceil((box.bottom + pad) * scale));
+        const x0 = Math.max(0, Math.floor(box.left * scale));
+        const x1 = Math.min(image.width, Math.ceil(box.right * scale));
+        const y0 = Math.max(0, Math.floor(box.top * scale));
+        const y1 = Math.min(image.height, Math.ceil(box.bottom * scale));
         for (let y = y0; y < y1; y += 1) {
           for (let x = x0; x < x1; x += 1) {
-            if (ring && !inRing(x / scale, y / scale)) continue;
             const index = (y * image.width + x) * 4;
             const bg = [data[index], data[index + 1], data[index + 2]];
-            ratios.push(Math.max(...inks.map((ink) => {
-              const fg = [ink.r, ink.g, ink.b].map((channel, i) => channel * ink.a + bg[i] * (1 - ink.a));
-              const [lighter, darker] = [lum(...fg), lum(...bg)].sort((p, q) => q - p);
-              return (lighter + 0.05) / (darker + 0.05);
-            })));
+            const fg = [ink.r, ink.g, ink.b].map((channel, i) => channel * alpha + bg[i] * (1 - alpha));
+            const [lighter, darker] = [lum(...fg), lum(...bg)].sort((p, q) => q - p);
+            ratios.push((lighter + 0.05) / (darker + 0.05));
           }
         }
       }
       ratios.sort((p, q) => p - q);
       const at = (share) => ratios[Math.min(ratios.length - 1, Math.floor(ratios.length * share))] ?? 0;
-      return { label, pixels: ratios.length, p1: Math.round(at(0.01) * 100) / 100, min: Math.round((ratios[0] ?? 0) * 100) / 100, ring: Boolean(ring) };
+      return { label, pixels: ratios.length, p1: Math.round(at(0.01) * 100) / 100, min: Math.round((ratios[0] ?? 0) * 100) / 100 };
     });
   }, { shot, targets });
 
-/** The text boxes to score: tight line boxes of the hero's copy and of the header's labels. */
-const textTargets = (page) =>
-  page.evaluate(() => {
-    // The line boxes of the element's text nodes: not its icons, and not a visually hidden label (1 px, clipped).
-    const lines = (element) => {
-      const boxes = [];
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        // A visually hidden label (sr-only: 1 px, clipped) still reports its full line boxes.
-        const parent = node.parentElement.getBoundingClientRect();
-        if (!node.textContent.trim() || parent.width <= 1 || parent.height <= 1) continue;
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        for (const { left, top, right, bottom, width, height } of range.getClientRects()) if (width > 2 && height > 2) boxes.push({ left, top, right, bottom });
-      }
-      return boxes;
-    };
-    const targets = [];
-    for (const [label, selector] of [['headline', '.cp-hero-title'], ['lede', '.cp-hero-lede']]) {
-      const element = document.querySelector(selector);
-      if (element) targets.push({ label, color: getComputedStyle(element).color, boxes: lines(element) });
-    }
-    for (const element of document.querySelectorAll('.site-header a, .site-header button')) {
-      const text = element.textContent?.trim();
-      const boxes = lines(element);
-      if (!text || boxes.length === 0 || getComputedStyle(element).visibility === 'hidden') continue;
-      targets.push({ label: `header “${text.slice(0, 20)}”`, color: getComputedStyle(element).color, boxes });
-    }
-    return targets;
-  });
-
-/** Takes WebGL 2 away before the page runs: the hero must keep its flat background. */
+/** Takes WebGL 2 away before the page runs: the landing must keep its flat background. */
 const NO_WEBGL = () => {
   const original = HTMLCanvasElement.prototype.getContext;
   HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
     return type === 'webgl2' ? null : original.call(this, type, ...rest);
   };
 };
+/** Hides the glyphs only: `color` stays, so borders and fills drawn in currentColor stay too. */
+/** Everything under the header but the paint: the page's content. */
+const BARE = 'main *, footer *, .cp-paint-footer *';
+const HIDE_TEXT = '*, *::before, *::after { -webkit-text-fill-color: transparent !important; text-shadow: none !important; text-decoration-color: transparent !important; caret-color: transparent !important; }';
 
-async function heroContrast(browser) {
-  for (const flat of [false, true]) {
+/** How the paint ended up drawn, once it has settled: 'fixed', 'page' or 'flat'; null when it never drew. */
+const settledMode = (page) =>
+  page
+    .waitForFunction(() => {
+      const canvas = document.querySelector('.cp-paint');
+      if (canvas?.dataset.mode === 'flat') return 'flat';
+      const img = document.querySelector('picture img[src*="material-page"]');
+      const mode = document.documentElement.dataset.cpPaint;
+      return mode && img?.complete && img.naturalWidth > 0 ? mode : false;
+    }, null, { timeout: 15_000 })
+    .then((handle) => handle.jsonValue())
+    .catch(() => null);
+
+/** Scores one screen at the current scroll position. */
+async function scoreScreen(page, meta, where) {
+  const targets = await textTargets(page);
+  const style = await page.addStyleTag({ content: HIDE_TEXT });
+  await page.waitForTimeout(60);
+  const shot = (await page.screenshot()).toString('base64');
+  // The header against the paint alone (§8.2): the page's content hidden, the paint and the Opacity veil kept.
+  // Content that scrolls under the header is scored apart (`overContent`), as a note rather than a gate.
+  const bare = await page.addStyleTag({ content: `${BARE} { visibility: hidden !important; } .cp-paint, .cp-veil { visibility: visible !important; }` });
+  await page.waitForTimeout(60);
+  const paintShot = (await page.screenshot()).toString('base64');
+  await bare.evaluate((node) => node.remove());
+  await style.evaluate((node) => node.remove());
+  const header = targets.filter((target) => target.header);
+  const results = [
+    ...(await measure(page, shot, targets.filter((target) => !target.header))),
+    ...(await measure(page, paintShot, header)),
+  ];
+  for (const result of await measure(page, shot, header)) {
+    if (result.pixels && result.p1 < TEXT_MIN) report.overContent.push({ ...meta, ...result });
+  }
+  let saved = false;
+  for (const result of results) {
+    if (result.pixels === 0) continue;
+    const entry = { ...meta, ...result, passed: result.p1 >= TEXT_MIN };
+    report.contrast.push(entry);
+    if (entry.passed) continue;
+    fail(where, `${result.label} ${result.p1}:1 at the 1st percentile (needs ${TEXT_MIN}:1)`);
+    // The screen as measured (text hidden) and as seen, to look at what failed.
+    if (!saved) {
+      saved = true;
+      const name = where.replace(/[^a-z0-9]+/giu, '-');
+      writeFileSync(join(out, `${name}.png`), Buffer.from(shot, 'base64'));
+      await page.screenshot({ path: join(out, `${name}-seen.png`) });
+    }
+  }
+}
+
+const scrollTo = async (page, y) => {
+  await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), y);
+  // The paint follows on the next frames (and the page mode needs none); the header settles.
+  await page.waitForTimeout(250);
+};
+
+/** Sets the Opacity section's panel to an alpha in tens (Home, then Shift+→). */
+async function setAlpha(page, percent) {
+  const slider = page.locator('#opacity .color-picker-alpha');
+  await slider.focus();
+  await page.keyboard.press('Home');
+  for (let step = 0; step < percent / 10; step += 1) await page.keyboard.press('Shift+ArrowRight');
+  await page.evaluate(() => document.activeElement?.blur());
+}
+
+async function landingContrast(mode) {
+  const browser = await chromium.launch({
+    args: mode === 'fixed' ? ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+  });
+  const colors = quick ? ['ff6a3d', 'ffffff', '1b1f4a'] : [...START_COLORS, ...EXTRA_COLORS];
+  const palettes = quick ? { 'palette-contrast': PALETTES['palette-contrast'] } : mode === 'page' ? {} : PALETTES;
+  // The software paint shares the shader with the fixed one: the curated colors are enough there.
+  const cases = [...(mode === 'page' && !quick ? START_COLORS : colors).map((color) => [color, color]), ...Object.entries(palettes).map(([name, list]) => [name, list])];
+  try {
     for (const [device, options] of Object.entries({ desktop: DESKTOP, phone: PHONE })) {
       for (const colorScheme of ['light', 'dark']) {
         const context = await browser.newContext({ ...options, colorScheme, reducedMotion: 'reduce' });
-        if (flat) await context.addInitScript(NO_WEBGL);
+        if (mode === 'flat') await context.addInitScript(NO_WEBGL);
         const page = await context.newPage();
-        for (const color of [...START_COLORS, ...EXTRA_COLORS]) {
-          await page.goto(`${base}/color-picker?c=${color.slice(1)}`, { waitUntil: 'networkidle' });
-          const where = `contrast ${flat ? 'flat ' : ''}${device}-${colorScheme} ${color}`;
-          const state = await page
-            .waitForSelector(flat ? '.cp-hero[data-flat]' : '.cp-hero[data-ready]', { timeout: 10_000 })
-            .then(() => 'ok')
-            .catch(async () => ((await page.locator('.cp-hero').getAttribute('data-flat')) !== null ? 'flat' : 'not ready'));
-          if (state !== 'ok') {
-            fail(where, state === 'flat' ? 'the hero fell back to the flat background (no WebGL 2)' : flat ? 'the hero did not fall back without WebGL 2' : 'the material never drew');
+        const errors = [];
+        page.on('pageerror', (error) => errors.push(String(error)));
+        for (const [name, c] of cases) {
+          await page.goto(`${base}/color-picker?c=${c}`, { waitUntil: 'networkidle' });
+          const where = `contrast ${mode} ${device}-${colorScheme} ${name}`;
+          const drawn = await settledMode(page);
+          if (drawn !== mode) {
+            fail(where, `the paint was drawn as ${drawn ?? 'nothing'}, not ${mode}`);
             continue;
           }
-          await page.waitForTimeout(150);
-          const targets = await textTargets(page);
-          const style = await page.addStyleTag({
-            content: '.cp-hero-copy, .cp-hero-copy *, .site-header, .site-header * { color: transparent !important; text-shadow: none !important; }',
-          });
-          await page.waitForTimeout(100);
-          const shot = (await page.screenshot()).toString('base64');
-          await style.evaluate((node) => node.remove());
-          const scene = await page.evaluate(() => document.documentElement.getAttribute('data-cp-scene'));
-          for (const result of await measure(page, shot, targets)) {
-            const min = result.ring ? RING_MIN : TEXT_MIN;
-            const entry = { flat, device, colorScheme, color, scene, ...result, passed: result.p1 >= min };
-            report.contrast.push(entry);
-            if (!entry.passed) fail(where, `${result.label} ${result.p1}:1 at the 1st percentile (needs ${min}:1)`);
+          await page.waitForTimeout(200);
+          const meta = { mode, device, colorScheme, color: name };
+          const total = await page.evaluate(() => document.documentElement.scrollHeight);
+          const height = options.viewport.height;
+          // Screens overlap by a quarter so that every line is whole on one of them.
+          const step = Math.round(height * 0.75);
+          let screens = 0;
+          for (let y = 0; ; y += step, screens += 1) {
+            await scrollTo(page, Math.min(y, total - height));
+            await scoreScreen(page, { ...meta, y }, `${where} @${y}`);
+            if (y + height >= total) break;
           }
+          // The Opacity section between 0 and 100 %: the theme's background over the paint, part-way.
+          for (const percent of [20, 80]) {
+            await setAlpha(page, percent);
+            await page.locator('#opacity').evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+            await page.waitForTimeout(250);
+            await scoreScreen(page, { ...meta, alpha: percent }, `${where} opacity ${percent} %`);
+          }
+          process.stdout.write('.');
         }
+        process.stdout.write('\n');
+        if (errors.length) fail(`contrast ${mode} ${device}-${colorScheme}`, `page errors: ${errors.join(' | ')}`);
         await context.close();
       }
     }
+  } finally {
+    await browser.close();
   }
-  for (const flat of [false, true]) {
-    const entries = report.contrast.filter((entry) => entry.flat === flat);
-    const passed = entries.filter((entry) => entry.passed).length;
-    const worst = [...entries].sort((p, q) => p.p1 - q.p1)[0];
-    console.log(`hero contrast${flat ? ' (flat, no WebGL 2)' : ''}: ${passed}/${entries.length} passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme} ${worst?.color}, ${worst?.scene})`);
-  }
+  const entries = report.contrast.filter((entry) => entry.mode === mode);
+  const passed = entries.filter((entry) => entry.passed).length;
+  const worst = [...entries].sort((p, q) => p.p1 - q.p1)[0];
+  console.log(`contrast (${mode}): ${passed}/${entries.length} lines passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme} ${worst?.color})`);
+  const over = report.overContent.filter((entry) => entry.mode === mode);
+  if (over.length) console.log(`  note: ${over.length} header labels under 4.5:1 while content scrolls under the header (not on the paint)`);
 }
 
 // --- 2. Pickers -------------------------------------------------------------------------------------
@@ -449,12 +560,17 @@ async function pickers(browser) {
   }
 }
 
-const browser = await engine.launch(engine === chromium ? { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } : {});
 try {
-  if (!skipContrast && engine === chromium) await heroContrast(browser);
-  if (!skipPickers) await pickers(browser);
+  if (!skipContrast && engine === chromium) for (const mode of modes) await landingContrast(mode);
+  if (!skipPickers) {
+    const browser = await engine.launch(engine === chromium ? { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } : {});
+    try {
+      await pickers(browser);
+    } finally {
+      await browser.close();
+    }
+  }
 } finally {
-  await browser.close();
   server.close();
 }
 report.failures = failures;

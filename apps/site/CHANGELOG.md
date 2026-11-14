@@ -51,11 +51,14 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 
 ### Website
 
-- [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". The hero is grainy
-  airbrushed paper recolored in one WebGL 2 shader by the color in the open panel beside the headline;
-  the picked color bleeds out of the panel and the paper drifts slowly. The page keeps a palette of up
-  to four colors whose first is the page color, and `?c=` keeps the palette in the address. Below the
-  hero:
+- [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
+  airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
+  open panel beside the headline paints it, a new color bleeds out of the control that made it, and
+  the paint drifts slowly (it stands still under reduced motion). The theme picks the scene, the dark
+  theme reading the paint the other way round; the paper lifts under every line of text, so the copy
+  keeps the theme's colors at 4.5:1 or more, and the footer sits over a soft blur of the paint. Without
+  WebGL 2 the page keeps a flat background of the color. The page keeps a palette of up to four colors
+  whose first is the page color, and `?c=` keeps the palette in the address. Below the headline:
   - Palette: the color palette with harmonies (complement, split complement, analogous, tints) as
     hints that fill it; once the palette is yours, the whole page is painted in its colors;
   - Opacity: within the section the page's paint is as opaque as the alpha of an inline panel, with
@@ -72,7 +75,7 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   [Markdown](https://cloudlet.dev/color-picker/docs.md), in search and in the sitemap.
 - The header switches between Toaster and Color picker; its logo and Docs link follow the current
   component.
-- `/color-picker` and its docs share a link card made from the hero.
+- `/color-picker` and its docs share a link card made from the top of the page.
 - The style editor on [/toaster/docs/styling](https://cloudlet.dev/toaster/docs/styling) uses the
   color picker in hex, and the site no longer depends on `react-colorful`.
 
