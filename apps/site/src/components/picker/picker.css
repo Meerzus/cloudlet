@@ -1,34 +1,27 @@
 /*
- * The color picker landing (app/color-picker, COLOR_PICKER §8). The picked color lives on <html>:
- * `--cp-color` and `data-cp-scene` (dark or light), written before first paint by START_SCRIPT
- * (lib/picker-start.ts) and then by picker-color.tsx; `data-cp-top` says the header sits on the hero.
+ * The color picker landing (app/color-picker, COLOR_PICKER §8). The picked color lives on <html> as
+ * `--cp-color`, written before first paint by START_SCRIPT (lib/picker-start.ts) and then by
+ * picker-color.tsx. One paint lies under the whole page (paint-page.tsx): a canvas fixed to the window
+ * (`data-cp-paint="fixed"` on <html>) or, on a software WebGL, one over the whole page ("page").
+ * Text and controls keep the theme's tokens: the theme picks the paint's scene.
  */
 html:has(.cp-site) { background: var(--background); }
 
-/* The flat background: shown until the material draws, and for good without WebGL 2. FLAT_MIX in lib/picker-ramp.ts mixes the same. */
+/* The flat background: shown until the paint draws, and for good without WebGL 2. flatOf in lib/picker-ramp.ts mixes the same. */
+html:has(.cp-paint) { background: color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background)); }
+.cp-paint { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.cp-paint[data-mode='page'] { position: absolute; inset: 0 0 auto; height: 100%; }
+.cp-paint[data-mode='flat'] { display: none; }
+html:has(.cp-paint) main, .cp-paint-footer { position: relative; z-index: 1; }
+/* The header lies on lifted paper over a fixed paint: its own tint would only grey it. */
+html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
+
 .cp-hero {
-  --cp-ink: oklch(0.985 0.005 250);
   position: relative;
-  isolation: isolate;
   min-height: 100svh;
-  /* Under the sticky header: the material runs to the top edge. */
+  /* Under the sticky header: the paint runs to the top edge. */
   margin-top: -3.5rem;
-  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 55%, black);
-  color: var(--cp-ink);
 }
-html[data-cp-scene='light'] .cp-hero {
-  --cp-ink: oklch(0.17 0.02 260);
-  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 60%, white);
-}
-.cp-hero-canvas {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.cp-hero[data-flat] .cp-hero-canvas { display: none; }
 
 /* Copy on the frame's paper, the panel open beside it (§8.4). */
 .cp-hero-inner {
@@ -54,7 +47,6 @@ html[data-cp-scene='light'] .cp-hero {
   margin-top: 1.5rem;
   font-size: 1.125rem;
   line-height: 1.5;
-  color: var(--cp-ink);
   text-wrap: pretty;
 }
 .cp-hero-panel { transition: opacity 240ms ease; }
@@ -73,31 +65,7 @@ html[data-cp-scene='light'] .cp-hero {
   .cp-hero-lede { font-size: 1rem; }
 }
 
-/* The header over the hero takes the hero's ink: light tokens over a dark scene, dark ones over a light scene. */
-html[data-cp-top] .site-header {
-  --foreground: oklch(0.985 0.005 250);
-  --muted-foreground: oklch(0.9 0.01 250);
-  --accent: oklch(1 0 0 / 0.14);
-  --accent-foreground: oklch(0.985 0.005 250);
-  --background: oklch(0.2 0.03 265);
-  --glass-border: oklch(1 0 0 / 0.2);
-  color: var(--foreground);
-}
-html[data-cp-top][data-cp-scene='light'] .site-header {
-  --foreground: oklch(0.17 0.02 260);
-  --muted-foreground: oklch(0.24 0.03 260);
-  --accent: oklch(1 0 0 / 0.45);
-  --accent-foreground: oklch(0.17 0.02 260);
-  --background: oklch(0.985 0.008 240);
-  --glass-border: oklch(1 0 0 / 0.55);
-}
-html[data-cp-top] .site-edge-tint { opacity: 0; }
-
-/* --- The neutral sections (§8.6): a few percent of the picked color, changing over 320 ms. --- */
-.cp-tint {
-  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 5%, var(--background));
-  transition: background-color 320ms ease;
-}
+/* --- The sections over the paint --- */
 .cp-section-title {
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 600;
@@ -297,7 +265,7 @@ html[data-cp-top] .site-edge-tint { opacity: 0; }
 .cp-frame-pick:focus-visible .cp-aim { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
-  .cp-hero-panel, .cp-tint, .cp-hint, .cp-palette-card, .cp-palette-canvas, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb,
+  .cp-hero-panel, .cp-hint, .cp-palette-card, .cp-palette-canvas, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb,
   .cp-glass-host, .cp-film, .cp-copy-button, .cp-format, .cp-aim { transition: none; }
 }
 @media (forced-colors: active) {
@@ -309,4 +277,13 @@ html[data-cp-top] .site-edge-tint { opacity: 0; }
   .cp-keys kbd[data-pressed] { background: Highlight; color: HighlightText; }
   .cp-film { forced-color-adjust: none; }
   .cp-frame-pick:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
+}
+
+/* --- The foot (§8.8): no rule over the footer; the paint softens under it into a progressive blur. --- */
+.cp-paint-footer { padding-top: 6rem; }
+.cp-paint-footer .docs-footer { position: relative; border-top: 0; }
+.cp-paint-footer-tint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, color-mix(in oklab, var(--background) 22%, transparent), transparent);
 }

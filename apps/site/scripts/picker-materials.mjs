@@ -2,7 +2,8 @@
 // to AVIF + WebP at two widths. sharp-cli runs through npx, outside the
 // workspace, so it never enters package.json or the lock file. A source
 // narrower than a target width is exported at its own width, never enlarged.
-//   node apps/site/scripts/picker-materials.mjs <materials-dir>
+// Frame names after the directory export only those frames.
+//   node apps/site/scripts/picker-materials.mjs <materials-dir> [frame ...]
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -18,16 +19,21 @@ const FRAMES = {
   // Behind the fluted glass the frame is blurred and the shader draws the ribs: one width is enough.
   opacity: [1280],
   tools: [1280],
+  // The long frame under the whole page (1280×3840): phones take the narrow one.
+  page: [640, 1280],
 };
 
 const site = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = resolve(process.argv[2] ?? '');
+const only = process.argv.slice(3);
+for (const frame of only) if (!(frame in FRAMES)) throw new Error(`Unknown frame ${frame}`);
 const target = join(site, 'public/picker');
 mkdirSync(target, { recursive: true });
 
 const pngWidth = (file) => readFileSync(file).readUInt32BE(16);
 
 for (const [frame, widths] of Object.entries(FRAMES)) {
+  if (only.length && !only.includes(frame)) continue;
   const input = join(source, `material-${frame}.png`);
   if (!existsSync(input)) throw new Error(`Missing ${input}`);
   const width = pngWidth(input);

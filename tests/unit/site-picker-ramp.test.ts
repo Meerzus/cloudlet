@@ -1,7 +1,8 @@
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import { formatColor, oklchToRgb, parseColor, rgbToOklch, type Rgba } from '../../apps/site/src/components/ui/color-picker/color';
-import { contrast, flatLut, flatOf, heroRamp, INK, LUT_SIZE, paletteRamp, rampLut, sampleRamp, sceneOf } from '../../apps/site/src/lib/picker-ramp';
+import { LIFT } from '../../apps/site/src/components/picker/paint-renderer';
+import { contrast, flatLut, flatOf, heroRamp, LUT_SIZE, pageRamp, paletteRamp, rampLut, sampleRamp, sceneOf, THEME_FOREGROUND, themeOf } from '../../apps/site/src/lib/picker-ramp';
 import { colorFromSearch, paletteFromSearch, paletteParam, START_COLORS, START_GLOBAL, START_SCRIPT, startColor } from '../../apps/site/src/lib/picker-start';
 
 /** Runs the inline start script against a fake <html> and returns what it left there. */
@@ -14,7 +15,7 @@ function runStartScript(search: string, random = 0) {
     setAttribute: (name: string, value: string) => void (attributes[name] = value),
   };
   runInNewContext(START_SCRIPT, { window, location: { search }, document: { documentElement }, Math: Object.assign(Object.create(Math), { random: () => random }) });
-  return { color: properties['--cp-color'], scene: attributes['data-cp-scene'], global: window[START_GLOBAL] };
+  return { color: properties['--cp-color'], attributes, global: window[START_GLOBAL] };
 }
 
 const oklch = (color: string | Rgba) => rgbToOklch(typeof color === 'string' ? parseColor(color)! : color);
@@ -89,17 +90,39 @@ describe('color picker ramps (COLOR_PICKER §8.2)', () => {
     }
   });
 
-  it('the scene ink reads over the calm end of the ramp: the lights of a light scene, the shadows of a dark one', () => {
-    const ink = { light: parseColor(INK.light)!, dark: parseColor(INK.dark)! };
-    for (const color of GRID) {
-      const { scene, invert, stops } = heroRamp(color)!;
-      // The shader lifts the frame's brightness under the copy to 0.8 at least (calmLuminance), read upside down in a dark
-      // scene; grain moves it a few percent either way.
-      const calm = invert ? [0, 0.12, 0.22] : [0.78, 0.9, 1];
-      for (const t of calm) expect(contrast(ink[scene], sampleRamp(stops, t)), `${color} at ${t}`).toBeGreaterThanOrEqual(5);
-      // The flat background before the material, and without WebGL 2.
-      expect(contrast(ink[scene], parseColor(flatOf(color)!)!), `${color} flat`).toBeGreaterThanOrEqual(4.5);
+  it("the theme's ink reads over the lifted paper: the lights in the light theme, the shadows in the dark one", () => {
+    const ink = { light: parseColor(THEME_FOREGROUND.light)!, dark: parseColor(THEME_FOREGROUND.dark)! };
+    const palettes = [['#1b1f4a', '#0f3d5c', '#3b2a6b'], ['#f7d6e0', '#f2b84b', '#9be7a8'], ['#000000', '#ffffff'], ['#ffff00', '#0000ff', '#ff00ff', '#00ffff']];
+    const ramps = [...GRID.map((color) => heroRamp(color)!), ...palettes.map((colors) => paletteRamp(colors)!)];
+    for (const [index, { stops }] of ramps.entries()) {
+      // The shader lifts the frame's brightness under the copy to LIFT at least, read upside down in the dark
+      // theme; at the edge of a line's paper the lift has begun to fall.
+      for (const t of [LIFT - 0.02, LIFT, 1]) expect(contrast(ink.light, sampleRamp(stops, t)), `${index} light at ${t}`).toBeGreaterThanOrEqual(5);
+      for (const t of [0, 1 - LIFT, 1 - LIFT + 0.02]) expect(contrast(ink.dark, sampleRamp(stops, t)), `${index} dark at ${t}`).toBeGreaterThanOrEqual(5);
     }
+  });
+
+  it('the flat background mixes the color into the theme and keeps the ink readable', () => {
+    for (const color of GRID) {
+      for (const theme of ['light', 'dark'] as const) {
+        expect(contrast(parseColor(THEME_FOREGROUND[theme])!, parseColor(flatOf(color, theme)!)!), `${color} ${theme}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+    // 35 % of the color: an orange tints the light theme's paper and the dark theme's night.
+    expect(oklch(flatOf('#ff6a3d', 'light')!).l).toBeGreaterThan(0.8);
+    expect(oklch(flatOf('#ff6a3d', 'dark')!).l).toBeLessThan(0.5);
+    expect(flatOf('nope', 'light')).toBeNull();
+  });
+
+  it('the theme picks the scene, and an own palette paints the page', () => {
+    const root = (classes: string[]) => ({ classList: { contains: (name: string) => classes.includes(name) } }) as unknown as Element;
+    expect(themeOf(root(['light']))).toBe('light');
+    expect(themeOf(root([]))).toBe('light');
+    expect(themeOf(root(['dark']))).toBe('dark');
+    const ramp = heroRamp('#ff6a3d')!;
+    const palette = paletteRamp(['#ff6a3d', '#2f8f9d'])!;
+    expect(pageRamp({ ramp, paletteRamp: palette, own: false })).toBe(ramp);
+    expect(pageRamp({ ramp, paletteRamp: palette, own: true })).toBe(palette);
   });
 
   it('lays a palette out by lightness and builds its ends from the darkest and the lightest', () => {
@@ -176,14 +199,14 @@ describe('color picker landing start (COLOR_PICKER §8.2)', () => {
     expect(runStartScript('?c=2f8f9d%2Cff6a3d').color).toBe('#2f8f9d');
   });
 
-  it('the start script picks the same color and scene as the hero will', () => {
+  it('the start script picks the same color as the page will and leaves the scene to the theme', () => {
     const grid: string[] = [];
     for (let r = 0; r < 256; r += 51) for (let g = 0; g < 256; g += 51) for (let b = 0; b < 256; b += 51) grid.push(`#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`);
     for (const hex of [...grid, ...GRID]) {
       const run = runStartScript(`?c=${hex.slice(1)}`);
       expect(run.color, hex).toBe(hex);
       expect(run.global, hex).toBe(hex);
-      expect(run.scene, hex).toBe(heroRamp(hex)!.scene);
+      expect(run.attributes, hex).toEqual({});
     }
     expect(runStartScript('?c=F50').color).toBe('#ff5500');
     START_COLORS.forEach((_, index) => {

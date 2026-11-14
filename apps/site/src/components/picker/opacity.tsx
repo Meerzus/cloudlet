@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { formatColor, parseColor, type ColorFormat } from '@/components/ui/color-picker/color';
 import { ColorPickerPanel } from '@/components/ui/color-picker/color-picker';
 import { CopyValue } from './copy-value';
@@ -41,6 +41,8 @@ export function Opacity() {
   const rgb = useMemo(() => parseColor(hex)!, [hex]);
   const value = formatColor({ ...rgb, a: alpha }, format);
 
+  const panel = useRef<HTMLDivElement>(null);
+
   const change = (next: string) => {
     const rgba = parseColor(next);
     if (!rgba) return;
@@ -48,7 +50,7 @@ export function Opacity() {
     // hsl() and oklch() round: the same color read back can move a channel by a digit, and only
     // the alpha moved then. A real move of the color paints the page.
     const moved = Math.abs(rgba.r - rgb.r) + Math.abs(rgba.g - rgb.g) + Math.abs(rgba.b - rgb.b) >= 4 / 255;
-    if (moved) pick(formatColor({ ...rgba, a: 1 }, format));
+    if (moved) pick(formatColor({ ...rgba, a: 1 }, format), panel.current ?? undefined);
   };
 
   return (
@@ -61,7 +63,7 @@ export function Opacity() {
         </p>
         <div className="cp-glass-layout">
           <div className="cp-glass-controls">
-            <div role="group" aria-label="Film color">
+            <div ref={panel} role="group" aria-label="Film color">
               <ColorPickerPanel
                 alpha
                 color={value}

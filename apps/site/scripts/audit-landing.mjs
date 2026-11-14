@@ -61,7 +61,7 @@ const homeStops = (page) =>
   page.evaluate((points) => {
     const stops = [];
     // The color picker landing wraps its neutral sections in a tinted block.
-    for (const section of document.querySelectorAll('main > section, main > .cp-tint > section, footer')) {
+    for (const section of document.querySelectorAll('main > section, footer')) {
       const top = section.getBoundingClientRect().top + window.scrollY;
       const label = section.id || section.tagName.toLowerCase();
       stops.push({ label, y: Math.max(0, top - 80) });

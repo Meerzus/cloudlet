@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Keyboards } from '@/components/picker/keyboards';
 import { Opacity } from '@/components/picker/opacity';
+import { PaintFooter } from '@/components/picker/paint-footer';
+import { PaintPage } from '@/components/picker/paint-page';
 import { Palette } from '@/components/picker/palette';
 import { PickerColorProvider } from '@/components/picker/picker-color';
 import { PickerFaq } from '@/components/picker/picker-faq';
@@ -8,7 +10,6 @@ import { PickerGetStarted } from '@/components/picker/picker-get-started';
 import { PickerHero } from '@/components/picker/picker-hero';
 import { Tools } from '@/components/picker/tools';
 import { Chapters, type ChapterList } from '@/components/site/chapters';
-import { Footer } from '@/components/site/footer';
 import { START_SCRIPT } from '@/lib/picker-start';
 import { COLOR_PICKER_PATH, SITE_URL } from '@/lib/site';
 
@@ -37,24 +38,23 @@ const CHAPTERS: ChapterList = [
 export default function ColorPickerHome() {
   return (
     <>
-      {/* Before the hero's markup: the start color and its scene are on <html> before first paint. */}
+      {/* Before the page's markup: the start color is on <html> before first paint. */}
       <script dangerouslySetInnerHTML={{ __html: START_SCRIPT }} />
       <PickerColorProvider>
         <main>
           <PickerHero />
-          {/* The neutral sections carry a few percent of the picked color (picker.css). */}
-          <div className="cp-tint">
-            <Palette />
-            <Opacity />
-            <Tools />
-            <Keyboards />
-            <PickerGetStarted />
-            <PickerFaq />
-          </div>
+          <Palette />
+          <Opacity />
+          <Tools />
+          <Keyboards />
+          <PickerGetStarted />
+          <PickerFaq />
         </main>
+        {/* One picture under the whole page: the hero is its top (§8.2). */}
+        <PaintPage />
       </PickerColorProvider>
       <Chapters chapters={CHAPTERS} />
-      <Footer />
+      <PaintFooter />
     </>
   );
 }

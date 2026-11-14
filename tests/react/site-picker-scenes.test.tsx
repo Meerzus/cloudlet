@@ -23,7 +23,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   delete global[START_GLOBAL];
-  root.removeAttribute('data-cp-scene');
   root.style.removeProperty('--cp-color');
   vi.restoreAllMocks();
   window.history.replaceState(null, '', '/');
@@ -56,7 +55,6 @@ describe('color picker landing scenes (COLOR_PICKER §8.5)', () => {
     // The palette's first color moves the page, and the palette still follows.
     editSwatch(0, '#f2b84b');
     expect(root.style.getPropertyValue('--cp-color')).toBe('#f2b84b');
-    expect(root.dataset['cpScene']).toBe('light');
     expect(swatches()).toEqual(['#f2b84b', ...followersOf('#f2b84b')]);
     // Editing another color makes the palette the visitor's: it no longer follows the page color.
     editSwatch(2, '#123456');
@@ -64,7 +62,7 @@ describe('color picker landing scenes (COLOR_PICKER §8.5)', () => {
     expect(own).toEqual(['#f2b84b', followersOf('#f2b84b')[0], '#123456']);
     typeInto(within(screen.getByRole('group', { name: 'Page color' })).getByRole('textbox', { name: 'Color value' }), '#1b1f4a');
     expect(swatches()).toEqual(['#1b1f4a', ...own.slice(1)]);
-    expect(root.dataset['cpScene']).toBe('dark');
+    expect(root.style.getPropertyValue('--cp-color')).toBe('#1b1f4a');
   });
 
   it('Palette: a format switch keeps it following, the smallest nudge of another color makes it the visitor\'s', () => {

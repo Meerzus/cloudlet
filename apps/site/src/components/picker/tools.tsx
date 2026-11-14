@@ -50,6 +50,7 @@ export function Tools() {
   const [aim, setAim] = useState<{ x: number; y: number }>(START_AIM);
   const [taken, setTaken] = useState<string | null>(null);
   const hint = useId();
+  const swatch = useRef<HTMLDivElement>(null);
   const rgb = useMemo(() => parseColor(hex)!, [hex]);
   const { copied, copy } = useCopy();
 
@@ -62,7 +63,8 @@ export function Tools() {
     const glass = scene.current;
     const point = framePoint(x, y, box, { width: source.width, height: source.height }, glass?.drift, glass?.zoom);
     const color = averageHex(source.data, source.width, source.height, Math.round(point.u * (source.width - 1)), Math.round(point.v * (source.height - 1)), 2);
-    pick(color);
+    // The new paint spreads out of the point it was taken at, in page coordinates.
+    pick(color, { x: box.left + x + window.scrollX, y: box.top + y + window.scrollY });
     setTaken(color);
   };
 
@@ -97,8 +99,8 @@ export function Tools() {
         </p>
         <div className="cp-glass-layout">
           <div className="cp-glass-controls">
-            <div className="cp-tools-picker">
-              <ColorPicker color={value} onChange={pick} labels={{ open: 'Open the tools picker', panel: 'Tools picker' }} />
+            <div ref={swatch} className="cp-tools-picker">
+              <ColorPicker color={value} onChange={(next) => pick(next, swatch.current ?? undefined)} labels={{ open: 'Open the tools picker', panel: 'Tools picker' }} />
               <p className="text-sm text-muted-foreground">The swatch as you get it: it opens into the picker.</p>
             </div>
             <div role="group" aria-labelledby="tools-formats-title">

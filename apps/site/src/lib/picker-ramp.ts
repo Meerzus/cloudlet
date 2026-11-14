@@ -7,10 +7,13 @@ import { formatColor, oklchToRgb, parseColor, rgbToOklch, type Rgba } from '@/co
  * interpolated in OKLab and handed to the shader as a 256-entry lookup table.
  */
 
-/** The picked color's lightness decides the scene: a dark scene takes light ink, a light one dark ink. */
+/**
+ * Dark or light. A ramp's scene is the picked color's lightness and shapes its stops; the page's scene —
+ * which end of the ramp is paper under the copy — is the site's theme (`themeOf`, §8.2).
+ */
 export type Scene = 'dark' | 'light';
 
-/** OKLCH lightness under which a color makes a dark scene. START_SCRIPT repeats the rule in ES5. */
+/** OKLCH lightness under which a color makes a dark scene. */
 export const DARK_BELOW = 0.45;
 
 /** One stop: its place on the ramp in [0, 1] and its color as `#rrggbb`. */
@@ -25,12 +28,6 @@ export interface Ramp {
   readonly invert: boolean;
   readonly stops: readonly RampStop[];
 }
-
-/** The ink of each scene, as picker.css writes it for the hero's copy and the header over it. */
-export const INK: Record<Scene, string> = {
-  light: 'oklch(0.17 0.02 260)',
-  dark: 'oklch(0.985 0.005 250)',
-};
 
 /** Entries of the lookup table the shader samples. */
 export const LUT_SIZE = 256;
@@ -166,23 +163,46 @@ export function flatLut(color: string): Uint8Array {
   return out;
 }
 
-/**
- * The flat background the hero shows before the material draws, and for good without WebGL 2
- * (§8.3): the picked color mixed in OKLCH toward black in a dark scene, toward white in a light one.
- * picker.css writes the same `color-mix(in oklch, …)` per `data-cp-scene`.
- */
-export const FLAT_MIX: Record<Scene, { readonly amount: number; readonly toward: 'black' | 'white' }> = {
-  dark: { amount: 0.55, toward: 'black' },
-  light: { amount: 0.6, toward: 'white' },
+/** The site's `--background` of each theme (globals.css), for the flat background below. */
+export const THEME_BACKGROUND: Record<Scene, string> = {
+  light: 'oklch(0.985 0.008 240)',
+  dark: 'oklch(0.2 0.045 265)',
 };
 
-export function flatOf(input: string): string | null {
+/** The site's `--foreground` of each theme (globals.css): the ink of the copy over the paint. */
+export const THEME_FOREGROUND: Record<Scene, string> = {
+  light: 'oklch(0.13 0.04 258)',
+  dark: 'oklch(0.97 0.01 250)',
+};
+
+/** Share of the picked color in the flat background; the rest is the theme's background. */
+export const FLAT_AMOUNT = 0.35;
+
+/**
+ * The flat background of the page before the paint draws, and for good without WebGL 2 (§8.3): the
+ * picked color mixed into the theme's background in OKLCH. picker.css writes the same
+ * `color-mix(in oklch, var(--cp-color) 35%, var(--background))`.
+ */
+export function flatOf(input: string, theme: Scene): string | null {
   const rgba = opaque(input);
   if (!rgba) return null;
-  const { l, c, h } = rgbToOklch(rgba);
-  const { amount, toward } = FLAT_MIX[sceneOf(l)];
-  return hex(l * amount + (toward === 'white' ? 1 - amount : 0), c * amount, h);
+  const color = rgbToOklch(rgba);
+  const background = rgbToOklch(parseColor(THEME_BACKGROUND[theme])!);
+  const mix = (p: number, q: number) => p * FLAT_AMOUNT + q * (1 - FLAT_AMOUNT);
+  // Hue along the shorter arc; a grey has no hue of its own and takes the background's.
+  let hue = background.h;
+  if (color.c > 1e-4) {
+    const gap = ((((background.h - color.h) % 360) + 540) % 360) - 180;
+    hue = color.h + gap * (1 - FLAT_AMOUNT);
+  }
+  return hex(mix(color.l, background.l), mix(color.c, background.c), hue);
 }
+
+/** The scene the theme picks (§8.2): the dark theme reads the frame upside down. */
+export const themeOf = (root: Element): Scene => (root.classList.contains('dark') ? 'dark' : 'light');
+
+/** The ramp that paints the page: the palette's once the visitor made it theirs, the page color's until then. */
+export const pageRamp = (state: { readonly ramp: Ramp; readonly paletteRamp: Ramp; readonly own: boolean }): Ramp => (state.own ? state.paletteRamp : state.ramp);
 
 /** WCAG 2 contrast ratio of two sRGB colors. */
 export function contrast(p: Rgba, q: Rgba): number {

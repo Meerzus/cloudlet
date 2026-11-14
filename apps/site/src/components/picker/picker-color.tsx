@@ -28,12 +28,22 @@ interface PickerColor {
   readonly own: boolean;
   /** The start color is known: before that the server's first curated color stands in. */
   readonly started: boolean;
-  /** Whether the latest change should bleed (a jump) or repaint at once (a slider moved). */
-  readonly bleed: MutableRefObject<boolean>;
-  /** Sets the page color (the palette's first). */
-  readonly pick: (value: string) => void;
+  /** How the latest change shows: a jump bleeds out of where it was made, a slider moved repaints at once. */
+  readonly change: MutableRefObject<PickerChange>;
+  /** Sets the page color (the palette's first); `from` is the control or the point it was picked at. */
+  readonly pick: (value: string, from?: ChangeSource) => void;
   /** Sets the whole palette; its first color becomes the page color. */
-  readonly setPalette: (colors: readonly string[]) => void;
+  readonly setPalette: (colors: readonly string[], from?: ChangeSource) => void;
+}
+
+/** Where a color was chosen: a control on the page, or a point in page coordinates (CSS px from its top-left). */
+export type ChangeSource = Element | { readonly x: number; readonly y: number };
+
+export interface PickerChange {
+  /** A jump (typing, the eyedropper, a hint, a click on the paint): the new paint spreads; false for a slider. */
+  readonly bleed: boolean;
+  /** Where it spreads from; null leaves it to the reader (the hero's panel). */
+  readonly from: ChangeSource | null;
 }
 
 const PickerColorContext = createContext<PickerColor | null>(null);
@@ -86,8 +96,7 @@ const isJump = () => document.activeElement?.getAttribute('role') !== 'slider';
  * The landing's state (COLOR_PICKER §8.5): a palette of one to four colors whose first is the page
  * color — the hero's panel, the inline panel in Built for keyboards and the Palette section read and
  * set it. Until the visitor edits the palette its other colors follow the page color by a harmony.
- * The page color lives on <html> too — `--cp-color` and `data-cp-scene` — for the flat background,
- * the ink and the tint of the neutral sections.
+ * The page color lives on <html> too, as `--cp-color`, for the flat background of the page.
  */
 export function PickerColorProvider({ children }: { children: ReactNode }) {
   // The server renders the first curated color; the start script has already painted the real one on <html>.
@@ -95,7 +104,7 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
   /** The palette after the first color, once the visitor owns it; null while it follows the page color. */
   const [rest, setRest] = useState<readonly string[] | null>(null);
   const [started, setStarted] = useState(false);
-  const bleed = useRef(true);
+  const change = useRef<PickerChange>({ bleed: true, from: null });
   const changed = useRef(false);
   // Keyed by hex: a format switch re-emits the same color in other words, and the ramps stay.
   const hex = useMemo(() => (heroRamp(value) ? toHex(value)! : START_COLORS[0]), [value]);
@@ -123,11 +132,8 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useLayoutEffect(() => {
-    if (!started) return;
-    const root = document.documentElement;
-    root.style.setProperty('--cp-color', hex);
-    root.setAttribute('data-cp-scene', ramp.scene);
-  }, [hex, ramp, started]);
+    if (started) document.documentElement.style.setProperty('--cp-color', hex);
+  }, [hex, started]);
 
   const linkKey = own ? paletteKey : hex;
   useEffect(() => {
@@ -146,16 +152,16 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
       paletteRamp: ownRamp,
       own,
       started,
-      bleed,
-      pick(next) {
-        bleed.current = isJump();
+      change,
+      pick(next, from) {
+        change.current = { bleed: isJump(), from: from ?? null };
         changed.current = true;
         setValue(next);
       },
-      setPalette(colors) {
+      setPalette(colors, from) {
         const [first, ...others] = colors.slice(0, PALETTE_MAX);
         if (first === undefined) return;
-        bleed.current = isJump();
+        change.current = { bleed: isJump(), from: from ?? null };
         changed.current = true;
         setValue(first);
         // An untouched palette stays a harmony while only its first color (or the format) changes:

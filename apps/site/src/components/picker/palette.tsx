@@ -24,7 +24,7 @@ const bands = (stops: readonly { readonly at: number; readonly color: string }[]
  * new color spreads out of the palette; dragging a handle repaints at once.
  */
 export function Palette() {
-  const { hex, palette, paletteHex, paletteRamp, started, bleed, setPalette } = usePickerColor();
+  const { hex, palette, paletteHex, paletteRamp, started, change, setPalette } = usePickerColor();
   const hints = useMemo(() => harmoniesOf(hex), [hex]);
   const [flat, setFlat] = useState(false);
   const [near, setNear] = useState(false);
@@ -133,9 +133,9 @@ export function Palette() {
     const instance = renderer.current;
     if (!instance || !ready) return;
     const still = window.matchMedia(REDUCED).matches;
-    instance.paint({ lut: rampLut(paletteRamp.stops), invert: paletteRamp.invert }, (bleed.current || !shown.current) && !still);
+    instance.paint({ lut: rampLut(paletteRamp.stops), invert: paletteRamp.invert }, (change.current.bleed || !shown.current) && !still);
     shown.current = true;
-  }, [paletteRamp, ready, bleed]);
+  }, [paletteRamp, ready, change]);
 
   return (
     <section ref={section} id="palette" aria-labelledby="palette-title" className="cp-section">
@@ -148,7 +148,7 @@ export function Palette() {
         <div className="cp-palette">
           <div className="cp-palette-controls">
             <div ref={row} className="cp-palette-row">
-              <ColorPalette colors={palette} onChange={setPalette} labels={{ group: 'Page palette' }} />
+              <ColorPalette colors={palette} onChange={(colors) => setPalette(colors, row.current ?? undefined)} labels={{ group: 'Page palette' }} />
             </div>
             <div className="cp-hints" role="group" aria-labelledby="palette-hints-title">
               <h3 id="palette-hints-title" className="cp-hints-title">
@@ -161,7 +161,7 @@ export function Palette() {
                       type="button"
                       className="cp-hint"
                       aria-pressed={hint.colors.length === paletteHex.length && hint.colors.every((color, index) => color === paletteHex[index])}
-                      onClick={() => setPalette(hint.colors)}
+                      onClick={() => setPalette(hint.colors, row.current ?? undefined)}
                     >
                       <span className="cp-hint-chips" aria-hidden="true">
                         {hint.colors.map((color, index) => (

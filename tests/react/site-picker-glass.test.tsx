@@ -48,7 +48,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   delete global[START_GLOBAL];
-  root.removeAttribute('data-cp-scene');
   root.style.removeProperty('--cp-color');
   vi.restoreAllMocks();
   window.history.replaceState(null, '', '/');
