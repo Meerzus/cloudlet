@@ -38,6 +38,8 @@ uniform float uOriginRadius;  // its corner radius, CSS px
 uniform float uBleed;         // 0: all uFrom; 1: all uTo; between: the spread's reach as a share of uReach
 uniform float uReach;         // CSS px from the rectangle to the farthest visible corner, plus the edge
 uniform float uGrain;         // amplitude of the still grain
+uniform sampler2D uStir;      // the cursor's stirring (paint-fluid.ts), window uv: rg where the paint here flowed from
+uniform float uStirOn;        // 1 while the paint is stirred or settling
 
 out vec4 outColor;
 
@@ -77,7 +79,14 @@ float roundBox(vec2 p, vec2 half_, float radius) {
 
 void main() {
   vec2 css = vec2(gl_FragCoord.x, uSize.y - gl_FragCoord.y) / uDpr;
-  vec2 page = vec2(css.x, uScroll + css.y);
+  vec2 actual = vec2(css.x, uScroll + css.y);
+  // The paint here, or where the cursor's stirring carried it from; the paper and the bleed stay where they are.
+  vec2 page = actual;
+  if (uStirOn > 0.5) {
+    vec2 window_ = uSize / uDpr;
+    vec2 from = texture(uStir, vec2(css.x, window_.y - css.y) / window_).xy;
+    page += vec2(from.x, -from.y) * window_;
+  }
 
   // One copy across the window from the page's top, mirrored at every seam, warped below the first screens.
   vec2 uv = vec2(0.5 + (page.x - uWidth * 0.5) / uTile.x, page.y / uTile.y);
@@ -97,15 +106,15 @@ void main() {
   float luminance = dot(texture(uMaterial, uv).rgb, vec3(0.2126, 0.7152, 0.0722));
 
   // The paper under the copy and the header's controls, lifted with a soft shoulder (about 150 px).
-  float calm = smoothstep(0.0, 1.0, texture(uCalm, page / uCalmSize).r);
+  float calm = smoothstep(0.0, 1.0, texture(uCalm, actual / uCalmSize).r);
   if (css.y < uHeaderCalmSize.y) calm = max(calm, smoothstep(0.0, 1.0, texture(uHeaderCalm, css / uHeaderCalmSize).r));
   luminance = mix(luminance, max(luminance, uLift), calm);
   float at = mix(luminance, 1.0 - luminance, uInvert);
 
   vec3 color = texture(uTo, vec2(at, 0.5)).rgb;
   if (uBleed < 1.0) {
-    float distance_ = roundBox(page - uOrigin.xy, uOrigin.zw, uOriginRadius);
-    float edge = (fbm(page / 150.0) - 0.5) * 220.0;
+    float distance_ = roundBox(actual - uOrigin.xy, uOrigin.zw, uOriginRadius);
+    float edge = (fbm(actual / 150.0) - 0.5) * 220.0;
     float spread = 1.0 - smoothstep(-18.0, 18.0, distance_ + edge - uBleed * uReach);
     color = mix(texture(uFrom, vec2(at, 0.5)).rgb, color, spread);
   }

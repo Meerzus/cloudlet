@@ -1,6 +1,7 @@
 import { CYCLE_MS, FLOW, FLOW_FPS, tileSize, type Size } from '@/lib/paint-layout';
 import type { CalmMap, PageRect } from '@/lib/paint-calm';
 import { LUT_SIZE } from '@/lib/picker-ramp';
+import { PaintFluid } from './paint-fluid';
 import { PAINT_FRAGMENT, PAINT_VERTEX } from './paint-shader';
 
 /** Where a new ramp spreads from: a control's box in page coordinates (a point is an empty box), with its corner radius. */
@@ -57,6 +58,8 @@ const UNIFORMS = [
   'uBleed',
   'uReach',
   'uGrain',
+  'uStir',
+  'uStirOn',
 ] as const;
 type Uniform = (typeof UNIFORMS)[number];
 
@@ -131,6 +134,8 @@ export class PaintRenderer {
   private clock = 0;
   private lastTick: number | null = null;
   private lastDraw = 0;
+  /** The paint as a liquid the cursor stirs, created on its first move (a mouse or a trackpad, the canvas fixed, motion on). */
+  private fluid: PaintFluid | null | undefined;
 
   private constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -187,6 +192,7 @@ export class PaintRenderer {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, layout.headerCalm.width, layout.headerCalm.height, 0, gl.RED, gl.UNSIGNED_BYTE, layout.headerCalm.data);
     }
     this.layout = layout;
+    this.fluid?.resize(viewport.width, viewport.height);
     this.stale = true;
     this.draw(performance.now());
   }
@@ -194,6 +200,7 @@ export class PaintRenderer {
   /** The page's scroll, CSS px: a `fixed` canvas draws the part of the page in the window. */
   setScroll(y: number) {
     if (y === this.scroll) return;
+    this.fluid?.scroll(y - this.scroll);
     this.scroll = y;
     if (this.layout?.mode === 'fixed') this.touch();
   }
@@ -223,12 +230,49 @@ export class PaintRenderer {
     this.touch();
   }
 
+  /** The cursor moved to (x, y), CSS px in the window: it stirs the paint. */
+  pointerMove(x: number, y: number) {
+    const fluid = this.inkFluid();
+    if (!fluid) return;
+    fluid.move(x, y);
+    this.touch();
+  }
+
+  /** A click at (x, y), CSS px in the window: a swirl round it. */
+  pointerDown(x: number, y: number) {
+    const fluid = this.inkFluid();
+    if (!fluid) return;
+    fluid.click(x, y);
+    this.touch();
+  }
+
+  /** The cursor left the window. */
+  pointerLeave() {
+    this.fluid?.leave();
+  }
+
+  /** Where the paint shown at (x, y), CSS px in the window, was stirred from: a shift in CSS px. */
+  stirredAt(x: number, y: number): { readonly x: number; readonly y: number } {
+    return this.fluid && this.moving && this.layout?.mode === 'fixed' ? this.fluid.offsetAt(x, y) : { x: 0, y: 0 };
+  }
+
+  /** The fluid, created on demand; null where there is none (no float targets, still or page-sized paint). */
+  private inkFluid(): PaintFluid | null {
+    if (!this.moving || !this.active || this.layout?.mode !== 'fixed') return null;
+    if (this.fluid === undefined) {
+      this.fluid = PaintFluid.create(this.gl);
+      this.fluid?.resize(this.layout.viewport.width, this.layout.viewport.height);
+    }
+    return this.fluid;
+  }
+
   /** Motion off (reduced motion, a software WebGL): a still frame at the start of the cycle, no loop, no bleed. */
   setMoving(moving: boolean) {
     this.moving = moving;
     if (!moving) {
       this.clock = 0;
       this.settle();
+      this.fluid?.reset();
     }
     this.touch();
   }
@@ -267,6 +311,7 @@ export class PaintRenderer {
     gl.deleteProgram(this.program);
     if (this.vao) gl.deleteVertexArray(this.vao);
     for (const handle of [this.material, this.calm, this.headerCalm, ...this.luts]) if (handle) gl.deleteTexture(handle);
+    this.fluid?.destroy();
   }
 
   /** Distance from the origin's centre to the farthest corner of the window, CSS px. */
@@ -328,11 +373,15 @@ export class PaintRenderer {
     const fixed = layout.mode === 'fixed';
     const tile = tileSize(layout.viewport, this.aspect);
     const origin = this.origin ?? { x: 0, y: 0, width: 0, height: 0, radius: 0 };
+    // The liquid moves first, in its own targets; then the paint reads where it carried each point from.
+    const stirring = fixed && this.moving && this.fluid ? this.fluid.awake(now) : false;
+    if (stirring) this.fluid!.step(now);
 
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.useProgram(this.program);
     gl.bindVertexArray(this.vao);
-    [this.material, this.luts[0], this.luts[1], this.calm, this.headerCalm].forEach((handle, unit) => {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    [this.material, this.luts[0], this.luts[1], this.calm, this.headerCalm, stirring ? this.fluid!.field : null].forEach((handle, unit) => {
       gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, handle);
     });
@@ -341,6 +390,8 @@ export class PaintRenderer {
     gl.uniform1i(u.uTo, 2);
     gl.uniform1i(u.uCalm, 3);
     gl.uniform1i(u.uHeaderCalm, 4);
+    gl.uniform1i(u.uStir, 5);
+    gl.uniform1f(u.uStirOn, stirring ? 1 : 0);
     const header = fixed ? layout.headerCalm : null;
     gl.uniform2f(u.uHeaderCalmSize, header ? header.width * header.scale : 0, header ? header.height * header.scale : 0);
     gl.uniform2f(u.uCalmSize, layout.calm.width * layout.calm.scale, layout.calm.height * layout.calm.scale);
@@ -360,7 +411,7 @@ export class PaintRenderer {
     gl.uniform1f(u.uGrain, this.hasFrame ? GRAIN : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.lastDraw = now;
-    this.stale = this.bleedStart !== null;
+    this.stale = this.bleedStart !== null || (stirring && this.fluid!.awake());
     this.schedule();
   }
 }

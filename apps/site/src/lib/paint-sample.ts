@@ -32,6 +32,8 @@ export interface PaintSample {
   readonly invert: boolean;
   /** The ramp on screen, as the shader's lookup table (rampLut). */
   readonly lut: Uint8Array;
+  /** Where the cursor's stirring carried the paint at this point from: a shift in CSS px (none when still). */
+  readonly stirred?: { readonly x: number; readonly y: number };
 }
 
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
@@ -91,7 +93,8 @@ export function lutAt(lut: Uint8Array, t: number): readonly [number, number, num
 
 /** The paint's color under a point of the page (CSS px from its top-left), as `#rrggbb`. */
 export function paintColorAt(x: number, pageY: number, sample: PaintSample): string {
-  const [u, v] = frameUv(x, pageY, sample.layout);
+  // The paint flowed here from a little way off; the paper stays where the copy is.
+  const [u, v] = frameUv(x + (sample.stirred?.x ?? 0), pageY + (sample.stirred?.y ?? 0), sample.layout);
   let bright = frameLuminance(sample.frame, u, v);
   if (sample.calm) {
     const calm = smoothstep(0, 1, calmLinear(sample.calm, x, pageY));

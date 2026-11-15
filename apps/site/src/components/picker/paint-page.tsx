@@ -12,6 +12,11 @@ import { usePickerColor, type ChangeSource } from './picker-color';
 const REDUCED = '(prefers-reduced-motion: reduce)';
 /** Where a jump with no source of its own spreads from, and the frame's first appearance: the hero's panel. */
 const HERO_PANEL = '.cp-hero-panel';
+/** A mouse or a trackpad: on a touch screen a finger scrolls the page, so it stirs nothing. */
+const FINE_POINTER = '(hover: hover) and (pointer: fine)';
+/** Where a click does not swirl the paint: in Tools it takes the color under the point, which must hold still. */
+const NO_SWIRL = '#tools';
+
 
 /** How the paint is drawn: on a canvas fixed to the window, on one over the whole page (software WebGL), or not at all (flat). */
 export type PaintMode = 'fixed' | 'page' | 'flat';
@@ -104,6 +109,21 @@ export function PaintPage() {
     const scroll = () => instance.setScroll(window.scrollY);
     window.addEventListener('scroll', scroll, { passive: true });
 
+    // The cursor stirs the paint like a liquid: a mouse or a trackpad only.
+    const fine = window.matchMedia(FINE_POINTER);
+    const mouse = (event: PointerEvent) => event.pointerType === 'mouse' && fine.matches;
+    const move = (event: PointerEvent) => {
+      if (mouse(event)) instance.pointerMove(event.clientX, event.clientY);
+    };
+    const down = (event: PointerEvent) => {
+      const still = event.target instanceof Element && event.target.closest(NO_SWIRL) !== null;
+      if (mouse(event) && !still) instance.pointerDown(event.clientX, event.clientY);
+    };
+    const leave = () => instance.pointerLeave();
+    window.addEventListener('pointermove', move, { passive: true });
+    window.addEventListener('pointerdown', down, { passive: true });
+    root.addEventListener('pointerleave', leave);
+
     // The theme picks the scene, shown at once.
     const theme = () => instance.setInvert(themeOf(root) === 'dark');
     const watchTheme = new MutationObserver(theme);
@@ -142,7 +162,9 @@ export function PaintPage() {
         const { phase, flow, invert } = instance.flowState;
         const viewport = { width: root.clientWidth, height: window.innerHeight };
         const layout = { width: viewport.width, tile: tileSize(viewport, img.naturalWidth / img.naturalHeight), phase, flow };
-        return paintColorAt(x, pageY, { frame, layout, calm, lift: LIFT, invert, lut });
+        // The paint shows what the cursor stirred there: read where it came from.
+        const stirred = instance.stirredAt(x - window.scrollX, pageY - window.scrollY);
+        return paintColorAt(x, pageY, { frame, layout, calm, lift: LIFT, invert, lut, stirred });
       },
     };
 
@@ -160,6 +182,9 @@ export function PaintPage() {
       resize.disconnect();
       window.removeEventListener('resize', remeasure);
       window.removeEventListener('scroll', scroll);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerdown', down);
+      root.removeEventListener('pointerleave', leave);
       watchTheme.disconnect();
       document.removeEventListener('visibilitychange', visible);
       img?.removeEventListener('load', load);

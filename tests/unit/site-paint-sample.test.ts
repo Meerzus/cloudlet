@@ -68,6 +68,16 @@ describe('the color under a point of the paint (COLOR_PICKER §8.7)', () => {
     expect(calmLinear(calm, centre, centre)).toBeCloseTo(calmAt(calm, centre, centre), 6);
   });
 
+  it('reads the paint where the cursor stirred it from, and the paper where the copy is', () => {
+    const split = frame(40, 120, (x) => (x < 20 ? 0 : 255));
+    // The dark left half, carried 1000 px to the right: a point on the light right shows dark paint.
+    expect(paintColorAt(1100, 300, sample({ frame: split, stirred: { x: -1000, y: 0 } }))).toBe('#000000');
+    expect(paintColorAt(1100, 300, sample({ frame: split }))).toBe('#ffffff');
+    // Under the copy the paper is lifted whatever paint flowed in.
+    const calm = calmMap([{ x: 400, y: 200, width: 400, height: 40 }], viewport.width, 1600);
+    expect(channel(paintColorAt(600, 220, sample({ frame: split, calm, stirred: { x: -500, y: 0 } })))).toBeGreaterThanOrEqual(Math.floor(0.97 * 255) - 1);
+  });
+
   it('follows the page’s layout: a frame dark on its left and light on its right reads so across the window', () => {
     // 1200 px wide window, the frame spans it: x = 100 falls on the dark left, x = 1100 on the light right.
     const split = frame(40, 120, (x) => (x < 20 ? 0 : 255));

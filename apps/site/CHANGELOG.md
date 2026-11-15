@@ -54,7 +54,10 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and
-  the paint drifts slowly (it stands still under reduced motion). The theme picks the scene, the dark
+  the paint drifts slowly (it stands still under reduced motion). A mouse or a trackpad stirs the paint
+  like a liquid: it swirls behind the cursor in its own colors and settles back within a few seconds,
+  and a click sets a swirl going; the paper under the text holds still, a click in Tools takes the
+  color the stirred paint shows, and touch screens, reduced motion and a software WebGL keep it still. The theme picks the scene, the dark
   theme reading the paint the other way round; the paper lifts under every line of text, so the copy
   keeps the theme's colors at 4.5:1 or more, and the footer sits over a soft blur of the paint. Without
   WebGL 2 the page keeps a flat background of the color. The page keeps a palette of up to four colors

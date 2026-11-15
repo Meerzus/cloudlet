@@ -22,6 +22,10 @@ function fakeRenderer() {
     setScroll: vi.fn(),
     setLayout: vi.fn(),
     setFrame: vi.fn(),
+    stirredAt: vi.fn(() => ({ x: 0, y: 0 })),
+    pointerMove: vi.fn(),
+    pointerDown: vi.fn(),
+    pointerLeave: vi.fn(),
     destroy: vi.fn(),
   };
 }
@@ -169,6 +173,55 @@ describe('the paint under the page (COLOR_PICKER §8.2–§8.3)', () => {
     expect(calmAt(map, 720, 28)).toBe(0);
     expect(calmAt(map, 80, 290)).toBe(0);
     header.remove();
+  });
+
+  describe('the cursor stirs the paint', () => {
+    /** A pointer event as the browser sends it (jsdom's has no pointerType of its own). */
+    function pointer(target: EventTarget, type: 'pointermove' | 'pointerdown', pointerType: string, x: number, y: number) {
+      const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+      Object.defineProperty(event, 'pointerType', { value: pointerType });
+      target.dispatchEvent(event);
+    }
+    const finePointer = () =>
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('pointer: fine'), media: query, addEventListener() {}, removeEventListener() {} }));
+
+    it('follows a mouse in window coordinates and splashes on a click, but not a finger', async () => {
+      finePointer();
+      const renderer = setup();
+      global[START_GLOBAL] = '#ff6a3d';
+      render(<PickerColorProvider><PaintPage /></PickerColorProvider>);
+      await settle();
+      pointer(document.body, 'pointermove', 'touch', 10, 20);
+      pointer(document.body, 'pointerdown', 'touch', 10, 20);
+      expect(renderer.pointerMove).not.toHaveBeenCalled();
+      expect(renderer.pointerDown).not.toHaveBeenCalled();
+      pointer(document.body, 'pointermove', 'mouse', 300, 200);
+      pointer(document.body, 'pointerdown', 'mouse', 300, 200);
+      expect(renderer.pointerMove).toHaveBeenLastCalledWith(300, 200);
+      expect(renderer.pointerDown).toHaveBeenLastCalledWith(300, 200);
+    });
+
+    it('stirs nothing on a touch screen', async () => {
+      const renderer = setup();
+      global[START_GLOBAL] = '#ff6a3d';
+      render(<PickerColorProvider><PaintPage /></PickerColorProvider>);
+      await settle();
+      pointer(document.body, 'pointermove', 'mouse', 300, 200);
+      expect(renderer.pointerMove).not.toHaveBeenCalled();
+    });
+
+    it("stirs Tools' paint too, but a click there takes the color under it without a swirl", async () => {
+      finePointer();
+      const renderer = setup();
+      global[START_GLOBAL] = '#ff6a3d';
+      render(<PickerColorProvider><section id="tools"><p id="inside">tools</p></section><PaintPage /></PickerColorProvider>);
+      await settle();
+      const inside = document.querySelector('#inside')!;
+      pointer(inside, 'pointermove', 'mouse', 300, 200);
+      pointer(inside, 'pointerdown', 'mouse', 300, 200);
+      expect(renderer.pointerMove).toHaveBeenLastCalledWith(300, 200);
+      expect(renderer.pointerDown).not.toHaveBeenCalled();
+    });
   });
 
   it('without WebGL 2 the flat background stays and nothing is drawn', () => {
