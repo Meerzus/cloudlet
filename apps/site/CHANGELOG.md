@@ -76,8 +76,13 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   limits and reduced motion, then the palette's install, use, props, keyboard and labels, each with a
   live example. It is also in `llms.txt`, `llms-full.txt`, as
   [Markdown](https://cloudlet.dev/docs/components/color-picker.md), in search and in the sitemap.
-- The header switches between Toaster and Color picker; its logo and Docs link follow the current
-  component.
+- The header's Components button opens a panel of the kit's components: Toaster, Color picker and
+  Color palette, each with a line of description, the current one marked. The panel grows out of the
+  button on springs and shrinks back into it, a second press mid-way turns it around, and under
+  reduced motion it appears at once. It opens on a click or a tap; Tab and the arrow keys move through
+  it, and Escape, a press outside, focus leaving it or a new page close it. The logo leads to the
+  kit's own page, Docs to the current component's docs or to `/docs`, and the header no longer links
+  to the Playground (the Toaster's landing does).
 - `/color-picker` and its docs share a link card made from the top of the page.
 - The style editor on [/docs/components/toaster/styling](https://cloudlet.dev/docs/components/toaster/styling) uses the
   color picker in hex, and the site no longer depends on `react-colorful`.

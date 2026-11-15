@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Header } from '../../apps/site/src/components/site/header';
 
@@ -6,41 +7,158 @@ const route = vi.hoisted(() => ({ pathname: '/toaster' }));
 vi.mock('next/navigation', () => ({ usePathname: () => route.pathname }));
 vi.mock('@/components/site/theme-toggle', () => ({ ThemeToggle: () => null }));
 
-// jsdom has no ResizeObserver; the switch's sliding highlight only re-measures on it.
-beforeEach(() => vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} }));
+// jsdom has no ResizeObserver (the edge blur and segment highlights re-measure on it) and no Web
+// Animations API, so the panel opens and closes at once, as under reduced motion.
+beforeEach(() => {
+  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+  route.pathname = '/toaster';
+});
 
-describe('site header (COLOR_PICKER §8.1)', () => {
-  it('switches between the components and follows the current one', () => {
-    route.pathname = '/docs/components/toaster/styling';
-    const { unmount } = render(<Header />);
-    let components = within(screen.getByRole('navigation', { name: 'Components' }));
-    expect(components.getByRole('link', { name: 'Toaster' })).toHaveAttribute('aria-current', 'page');
-    expect(components.getByRole('link', { name: 'Color picker' })).toHaveAttribute('href', '/color-picker');
-    const primary = within(screen.getByRole('navigation', { name: 'Primary' }));
-    expect(primary.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', '/docs/components/toaster');
-    expect(primary.getByRole('link', { name: 'Playground' })).toHaveAttribute('href', '/toaster/playground');
-    unmount();
+const trigger = () => screen.getByRole('button', { name: 'Components' });
+const panel = () => screen.queryByRole('navigation', { name: 'Components' });
+const primary = () => within(screen.getByRole('navigation', { name: 'Primary' }));
 
-    route.pathname = '/docs/components/color-picker';
-    render(<Header />);
-    components = within(screen.getByRole('navigation', { name: 'Components' }));
-    expect(components.getByRole('link', { name: 'Color picker' })).toHaveAttribute('aria-current', 'page');
-    expect(components.getByRole('link', { name: 'Toaster' })).not.toHaveAttribute('aria-current');
-    const picker = within(screen.getByRole('navigation', { name: 'Primary' }));
-    expect(picker.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', '/docs/components/color-picker');
-    expect(picker.queryByRole('link', { name: 'Playground' })).toBeNull();
-  });
-
-  it("leads Docs to the docs of the whole kit from the kit's own pages", () => {
-    for (const pathname of ['/', '/docs', '/docs/installation']) {
+describe('site header', () => {
+  it('leads the logo to the kit and has no Playground link', () => {
+    for (const pathname of ['/toaster', '/toaster/playground', '/color-picker', '/docs']) {
       route.pathname = pathname;
       const { unmount } = render(<Header />);
-      const primary = within(screen.getByRole('navigation', { name: 'Primary' }));
-      expect(primary.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', '/docs');
-      // The switch shows the two landings only; the palette is not in it.
-      const components = within(screen.getByRole('navigation', { name: 'Components' }));
-      expect(components.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/toaster', '/color-picker']);
+      expect(screen.getByRole('link', { name: 'Cloudlet' })).toHaveAttribute('href', '/');
+      expect(screen.queryByRole('link', { name: 'Playground' })).toBeNull();
       unmount();
     }
+  });
+
+  it('leads Docs to the docs of the page’s component, or of the whole kit', () => {
+    const cases = {
+      '/toaster': '/docs/components/toaster',
+      '/docs/components/toaster/styling': '/docs/components/toaster',
+      '/color-picker': '/docs/components/color-picker',
+      '/': '/docs',
+      '/docs': '/docs',
+      '/docs/installation': '/docs',
+    };
+    for (const [pathname, docs] of Object.entries(cases)) {
+      route.pathname = pathname;
+      const { unmount } = render(<Header />);
+      expect(primary().getByRole('link', { name: 'Docs' })).toHaveAttribute('href', docs);
+      unmount();
+    }
+  });
+});
+
+describe('Components panel', () => {
+  it('opens and closes on the button, with aria-expanded and aria-controls', async () => {
+    const user = userEvent.setup();
+    render(<Header />);
+    expect(trigger()).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger()).not.toHaveAttribute('aria-controls');
+    expect(panel()).toBeNull();
+
+    await user.click(trigger());
+    expect(trigger()).toHaveAttribute('aria-expanded', 'true');
+    expect(panel()).not.toBeNull();
+    expect(trigger()).toHaveAttribute('aria-controls', panel()!.id);
+
+    await user.click(trigger());
+    expect(trigger()).toHaveAttribute('aria-expanded', 'false');
+    expect(panel()).toBeNull();
+  });
+
+  it('lists the three components with their addresses and marks the current one', async () => {
+    const user = userEvent.setup();
+    route.pathname = '/docs/components/color-picker';
+    render(<Header />);
+    await user.click(trigger());
+    const links = within(panel()!).getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/toaster', '/color-picker', '/color-picker#palette']);
+    expect(within(panel()!).getByRole('link', { name: /^Color picker/ })).toHaveAttribute('aria-current', 'page');
+    expect(within(panel()!).getByRole('link', { name: /^Toaster/ })).not.toHaveAttribute('aria-current');
+    expect(within(panel()!).getByRole('link', { name: /^Color palette/ })).not.toHaveAttribute('aria-current');
+    // Each item carries its line of description.
+    expect(within(panel()!).getByRole('link', { name: /^Toaster/ })).toHaveTextContent('Notifications that stack softly');
+  });
+
+  it('marks no component on the kit’s own pages', async () => {
+    const user = userEvent.setup();
+    route.pathname = '/docs';
+    render(<Header />);
+    await user.click(trigger());
+    for (const link of within(panel()!).getAllByRole('link')) expect(link).not.toHaveAttribute('aria-current');
+  });
+
+  it('closes on Escape and returns focus to the button', async () => {
+    const user = userEvent.setup();
+    render(<Header />);
+    await user.click(trigger());
+    await user.tab();
+    expect(within(panel()!).getByRole('link', { name: /^Toaster/ })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(panel()).toBeNull();
+    expect(trigger()).toHaveFocus();
+  });
+
+  it('moves between the links with Tab and the arrow keys', async () => {
+    const user = userEvent.setup();
+    render(<Header />);
+    await user.click(trigger());
+    const [toaster, picker, palette] = within(panel()!).getAllByRole('link');
+    await user.tab();
+    expect(toaster).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(picker).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(palette).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(toaster).toHaveFocus();
+    await user.keyboard('{ArrowUp}');
+    expect(palette).toHaveFocus();
+    await user.keyboard('{Home}');
+    expect(toaster).toHaveFocus();
+  });
+
+  it('closes on a press outside', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Header />
+        <p>Page</p>
+      </>,
+    );
+    await user.click(trigger());
+    await user.click(screen.getByText('Page'));
+    expect(panel()).toBeNull();
+    expect(trigger()).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('closes when focus leaves the panel', async () => {
+    const user = userEvent.setup();
+    render(<Header />);
+    await user.click(trigger());
+    await user.tab(); // Toaster
+    await user.tab(); // Color picker
+    await user.tab(); // Color palette
+    await user.tab(); // Docs, outside the panel
+    expect(primary().getByRole('link', { name: 'Docs' })).toHaveFocus();
+    expect(panel()).toBeNull();
+  });
+
+  it('closes on a link, so a section of the same page closes it too', async () => {
+    const user = userEvent.setup();
+    route.pathname = '/color-picker';
+    render(<Header />);
+    await user.click(trigger());
+    await user.click(within(panel()!).getByRole('link', { name: /^Color palette/ }));
+    expect(panel()).toBeNull();
+  });
+
+  it('closes on a new page', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Header />);
+    await user.click(trigger());
+    expect(panel()).not.toBeNull();
+    route.pathname = '/color-picker';
+    act(() => rerender(<Header />));
+    expect(panel()).toBeNull();
   });
 });
