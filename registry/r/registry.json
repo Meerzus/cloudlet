@@ -21,7 +21,7 @@
           "type": "registry:ui"
         }
       ],
-      "docs": "Import Toaster into a client owner and pass its controller. Import @cloudlet/toast/styles.css once before the local toaster.css (the wrapper already imports both). The owner creates/disposes its controller; do not share one across requests. See https://cloudlet.dev/toaster/docs for lifecycle, theme and SSR.",
+      "docs": "Import Toaster into a client owner and pass its controller. Import @cloudlet/toast/styles.css once before the local toaster.css (the wrapper already imports both). The owner creates/disposes its controller; do not share one across requests. See https://cloudlet.dev/docs/components/toaster for lifecycle, theme and SSR.",
       "type": "registry:ui"
     },
     {

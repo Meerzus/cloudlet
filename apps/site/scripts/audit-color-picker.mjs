@@ -14,7 +14,7 @@
  *    - `fixed`: a GPU Chromium (ANGLE on Metal), the canvas fixed to the window — what visitors see;
  *    - `page`: Chromium with SwiftShader, the canvas over the whole page, drawn once (software WebGL);
  *    - `flat`: WebGL 2 taken away, a flat background of the page color.
- * 2. Every picker on /color-picker and /color-picker/docs, desktop 1440×900 and phone 390×844, light
+ * 2. Every picker on /color-picker and /docs/components/color-picker, desktop 1440×900 and phone 390×844, light
  *    and dark: Enter on the swatch opens a named dialog with focus in the area; axe on the open panel;
  *    the panel inside the viewport; arrows, Shift and Home/End against the promised values
  *    ("Saturation 40%, Brightness 80%", "Hue 48°", "Opacity 50%"); the Tab order inside the panel;
@@ -545,7 +545,7 @@ async function pickers(browser) {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(String(error)));
-    for (const path of ['/color-picker?c=ff6a3d', '/color-picker/docs']) {
+    for (const path of ['/color-picker?c=ff6a3d', '/docs/components/color-picker']) {
       await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(600);
       const triggers = page.locator('main .color-picker > .color-picker-swatch');

@@ -17,7 +17,7 @@ import { chromium } from '@playwright/test';
 import { serve } from './serve-out.mjs';
 
 const LIGHTHOUSE = 'lighthouse@13.5.0';
-const PATHS = ['/toaster/docs', '/toaster/docs/notifications'];
+const PATHS = ['/docs/components/toaster', '/docs/components/toaster/notifications'];
 const THRESHOLDS = { performance: 0.9, accessibility: 1, cls: 0.01 };
 
 const [outDir, ...only] = process.argv.slice(2);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Walks /toaster/docs in headless Chromium against the static export: every page of
+ * Walks /docs/components/toaster in headless Chromium against the static export: every page of
  * the sidebar opens with a clean console, the drawer and the table of contents work, Copy copies
  * the example, and axe finds no violations with the drawer closed and open. Getting started:
  * the Installation tabs switch from the keyboard and copy their example, the demo button on Quick
@@ -77,7 +77,7 @@ async function copyBlock(page, figure) {
 
 /** Installation: npm / shadcn tabs from the keyboard, each tab's example copies verbatim. */
 async function installation(page, base, still, failures) {
-  await page.goto(`${base}/toaster/docs/installation`);
+  await page.goto(`${base}/docs/components/toaster/installation`);
   await wait(page, 600);
   await still('installation');
   const result = { axe: await axe(page), tabs: [] };
@@ -106,7 +106,7 @@ async function installation(page, base, still, failures) {
 
 /** Quick start: the demo button is enabled after mount, the page says what the snippets assume, and it shows the toast. */
 async function quickStart(page, base, phone, still, failures) {
-  await page.goto(`${base}/toaster/docs/quick-start`);
+  await page.goto(`${base}/docs/components/toaster/quick-start`);
   await wait(page, 600);
   await still('quick-start');
   const result = { axe: { page: await axe(page) } };
@@ -143,7 +143,7 @@ const GUIDES = ['notifications', 'operations', 'positioning'];
 async function guides(page, base, still, failures) {
   const result = {};
   for (const slug of GUIDES) {
-    await page.goto(`${base}/toaster/docs/${slug}`);
+    await page.goto(`${base}/docs/components/toaster/${slug}`);
     await wait(page, 600);
     await page.screenshot({ path: still.path(`full-${slug}`), fullPage: true });
     const entry = { axe: { page: await axe(page) }, runs: [], groups: [], folds: [] };
@@ -151,7 +151,7 @@ async function guides(page, base, still, failures) {
     for (const [index, id] of ids.entries()) {
       // dismiss-all clears what the demo before it (overflow) left; every other demo starts from an empty stack.
       if (id !== 'dismiss-all') {
-        await page.goto(`${base}/toaster/docs/${slug}`);
+        await page.goto(`${base}/docs/components/toaster/${slug}`);
         await wait(page, 600);
       }
       const trigger = page.locator(`.docs-demo-trigger[data-demo="${id}"]`);
@@ -174,7 +174,7 @@ async function guides(page, base, still, failures) {
         entry.axe.toast = await axe(page);
       }
     }
-    await page.goto(`${base}/toaster/docs/${slug}`);
+    await page.goto(`${base}/docs/components/toaster/${slug}`);
     await wait(page, 600);
     entry.groups = await groups(page, slug, still, failures);
     entry.folds = await folds(page, slug, still, failures);
@@ -361,7 +361,7 @@ async function styleEditor(page, base, still, failures, previousUrl) {
   if (result.back.actual !== previousUrl) fail('Back', result.back);
 
   // Links from before the amendments carry theme=dark: it is now a foreign parameter, the preview keeps the site theme.
-  await page.goto(`${base}/toaster/docs/styling?pill-radius=12px&theme=dark`);
+  await page.goto(`${base}/docs/components/toaster/styling?pill-radius=12px&theme=dark`);
   await page.waitForFunction(() => document.querySelector('.docs-style-editor input[type="range"][aria-valuetext="12px"]'));
   await islandOpen();
   result.oldLink = { radius: await radius.inputValue(), theme: (await stage()).island?.theme };
@@ -377,7 +377,7 @@ async function integration(page, base, still, failures) {
   const result = {};
   for (const slug of INTEGRATION) {
     const previousUrl = page.url();
-    await page.goto(`${base}/toaster/docs/${slug}${slug === 'styling' ? '?foo=1#style-editor' : ''}`);
+    await page.goto(`${base}/docs/components/toaster/${slug}${slug === 'styling' ? '?foo=1#style-editor' : ''}`);
     await wait(page, 600);
     await page.screenshot({ path: still.path(`full-${slug}`), fullPage: true });
     const layout = await page.evaluate(() => {
@@ -419,7 +419,7 @@ async function reference(page, base, phone, still, failures) {
   const result = {};
   const ids = new Map();
   for (const slug of REFERENCE) {
-    await page.goto(`${base}/toaster/docs/api/${slug}`);
+    await page.goto(`${base}/docs/components/toaster/api/${slug}`);
     await wait(page, 600);
     await page.screenshot({ path: still.path(`full-api-${slug}`), fullPage: true });
     const layout = await page.evaluate(() => ({
@@ -428,13 +428,13 @@ async function reference(page, base, phone, still, failures) {
       tables: document.querySelectorAll('table[data-reference]').length,
       // A Prop · Type · Default · Description row: a card on phones, a grid line on wider screens.
       rows: getComputedStyle(document.querySelector('table[data-grid="4"] tbody tr') ?? document.body).display,
-      links: [...document.querySelectorAll('article a[href^="/toaster/docs"], article a[href^="#"]')].map((link) => link.getAttribute('href') ?? ''),
+      links: [...document.querySelectorAll('article a[href^="/docs/components/toaster"], article a[href^="#"]')].map((link) => link.getAttribute('href') ?? ''),
     }));
     const entry = { ...layout, links: layout.links.length, axe: await axe(page), brokenLinks: [] };
     if (entry.overflow > 0 || entry.scrollingTables > 0) failures.push(`reference ${slug}: overflow ${entry.overflow}px, ${entry.scrollingTables} scrolling tables`);
     if (entry.tables === 0 || entry.rows !== (phone ? 'block' : 'grid')) failures.push(`reference ${slug}: ${entry.tables} tables, rows ${entry.rows}`);
     for (const href of new Set(layout.links)) {
-      const [path, hash] = href.startsWith('#') ? [`/toaster/docs/api/${slug}`, href.slice(1)] : href.split('#');
+      const [path, hash] = href.startsWith('#') ? [`/docs/components/toaster/api/${slug}`, href.slice(1)] : href.split('#');
       if (!hash) continue;
       if (!ids.has(path)) {
         const html = await page.evaluate(async (url) => (await fetch(url)).text(), path);
@@ -450,7 +450,7 @@ async function reference(page, base, phone, still, failures) {
 
 /** The word typed into the search, and the page it must find first. */
 const SEARCH_QUERY = 'reduced motion';
-const SEARCH_PAGE = { name: 'Accessibility', path: '/toaster/docs/accessibility' };
+const SEARCH_PAGE = { name: 'Accessibility', path: '/docs/components/toaster/accessibility' };
 
 /** The open search window, if any: its state, the options and the active one. */
 async function searchState(page) {
@@ -477,7 +477,7 @@ async function searchState(page) {
 async function search(page, base, phone, still, failures) {
   const result = {};
   const fail = (step, state) => failures.push(`search ${step}: ${JSON.stringify(state)}`);
-  await page.goto(`${base}/toaster/docs`);
+  await page.goto(`${base}/docs/components/toaster`);
   await wait(page, 600);
   const button = phone ? page.locator('.docs-mobile-bar .docs-search-compact') : page.locator('.docs-sidebar .docs-search');
 
@@ -576,7 +576,7 @@ async function search(page, base, phone, still, failures) {
 
 /** The output for agents is served next to the pages, as text and Markdown. */
 async function agents(page, base, failures) {
-  const files = { '/llms.txt': '# Cloudlet', '/llms-full.txt': '# Introduction', '/toaster/docs.md': '# Introduction', '/toaster/docs/accessibility.md': '# Accessibility', '/toaster/docs/api/toaster.md': '# Toaster props', '/r/toaster.json': '{' };
+  const files = { '/llms.txt': '# Cloudlet', '/llms-full.txt': '# Introduction', '/docs/components/toaster.md': '# Introduction', '/docs/components/toaster/accessibility.md': '# Accessibility', '/docs/components/toaster/api/toaster.md': '# Toaster props', '/r/toaster.json': '{' };
   const result = {};
   for (const [path, start] of Object.entries(files)) {
     result[path] = await page.evaluate(async (url) => {
@@ -614,7 +614,7 @@ async function run(name, scenario, base, out) {
   const pending = new Set();
   page.on('response', (response) => {
     const path = new URL(response.url()).pathname;
-    if (response.status() === 404 && path.startsWith('/toaster/docs/')) pending.add(path);
+    if (response.status() === 404 && path.startsWith('/docs/components/toaster/')) pending.add(path);
     else if (response.status() >= 400) console_.push(`${response.status()} ${path}`);
   });
   page.on('console', (message) => {
@@ -628,7 +628,7 @@ async function run(name, scenario, base, out) {
   const still = async (step) => page.screenshot({ path: still.path(step), fullPage: false });
   still.path = (step) => join(out, `${name}-${step}.png`);
 
-  await page.goto(`${base}/toaster/docs`);
+  await page.goto(`${base}/docs/components/toaster`);
   await wait(page, 800);
   const report = { name, pages: [], axe: {}, quiet: null, toc: null, copy: null, drawer: null, installation: null, quickStart: null, guides: null, integration: null, reference: null, search: null, agents: null };
 
@@ -644,7 +644,7 @@ async function run(name, scenario, base, out) {
 
   // Every sidebar page opens, with the right title and a clean console.
   const links = await sidebarLinks(page);
-  for (const link of links.filter((item) => item.href.startsWith('/toaster/docs'))) {
+  for (const link of links.filter((item) => item.href.startsWith('/docs/components/toaster'))) {
     await page.goto(`${base}${link.href}`);
     await wait(page, 500);
     const h1 = await page.locator('article h1').textContent();
@@ -652,7 +652,7 @@ async function run(name, scenario, base, out) {
     if (!ok) failures.push(`${link.href}: h1 "${h1}" for sidebar "${link.name}"`);
     report.pages.push({ ...link, h1: h1?.trim(), ok });
   }
-  await page.goto(`${base}/toaster/docs`);
+  await page.goto(`${base}/docs/components/toaster`);
   await wait(page, 500);
 
   // Table of contents: the first entry points at a heading on the page; on phones it is a disclosure.
@@ -700,7 +700,7 @@ async function run(name, scenario, base, out) {
   report.axe.searchEmpty = report.search.axeEmpty;
   report.axe.searchResults = report.search.axeResults;
   report.agents = await agents(page, base, failures);
-  await page.goto(`${base}/toaster/docs`);
+  await page.goto(`${base}/docs/components/toaster`);
   await wait(page, 500);
 
   // Phones: the drawer opens from Menu with the keyboard, lists the sidebar, closes on Escape and

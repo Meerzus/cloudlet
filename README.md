@@ -18,7 +18,7 @@ tests. The first one is the **Toaster**, `@cloudlet/toast`: one stack of notific
 to a single pill and opens into the Island, a surface with a slider over every notification. Its
 [README](packages/toast/README.md) has the quickstart.
 
-**Documentation: https://cloudlet.dev/toaster/docs**
+**Documentation: https://cloudlet.dev/docs**
 
 ```sh
 npm install @cloudlet/toast
@@ -29,7 +29,7 @@ npm install @cloudlet/toast
 | Path | Contents |
 |---|---|
 | `packages/toast` | `@cloudlet/toast`: notification and operation controller, React adapter, the stack/Island shell, public types, CSS and its own build |
-| `apps/site` | The website at cloudlet.dev: landing page, Playground and the documentation at `/toaster/docs` |
+| `apps/site` | The website at cloudlet.dev: landing page, Playground and the documentation at `/docs` |
 | `apps/lab` | The interactive laboratory and the isolated fixtures the browser tests run on ([README](apps/lab/README.md)) |
 | `registry` | The shadcn registry item: a thin client wrapper and a CSS theme bridge ([README](registry/README.md)) |
 | `fixtures` | Installed-archive consumers: Vite/React 18.2 and 19, Next App/Pages, size measurement |

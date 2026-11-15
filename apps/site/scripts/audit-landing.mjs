@@ -173,7 +173,7 @@ try {
     page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
     page.on('pageerror', (error) => errors.push(String(error)));
     const entry = (report[name] = { errors, checks: [] });
-    for (const path of ['/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/color-picker/docs']) {
+    for (const path of ['/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/docs/components/color-picker']) {
       await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(600);
       const stops = path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
@@ -186,7 +186,7 @@ try {
       }
     }
     entry.keyboard = {};
-    for (const path of ['/toaster', '/toaster/playground', '/color-picker', '/color-picker/docs']) {
+    for (const path of ['/toaster', '/toaster/playground', '/color-picker', '/docs/components/color-picker']) {
       entry.keyboard[path] = await keyboard(page, path);
       if (entry.keyboard[path].failures.length) failed = true;
     }

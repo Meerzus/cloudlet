@@ -199,7 +199,7 @@ const scenarios = {
   picker: async (name) => {
     const swatch = '.docs-picker-demo .color-picker > .color-picker-swatch';
     const panel = '.docs-picker-demo .color-picker [role="dialog"]';
-    await step(name, 'load /color-picker/docs', () => go(pickerPage));
+    await step(name, 'load /docs/components/color-picker', () => go(pickerPage));
     await step(name, 'focus the swatch (“Open the example picker”, collapsed, button)', () => focus(swatch));
     await step(name, 'Enter (“Example picker”; “Saturation 84%, Brightness 86%”, slider)', () => press('Enter'));
     await step(name, '→ (“Saturation 85%, Brightness 86%”)', () => press('ArrowRight'));
@@ -221,7 +221,7 @@ const scenarios = {
   palette: async (name) => {
     const row = '.docs-palette-demo [role="group"]';
     const current = () => js(`return [...document.querySelectorAll('${row} .color-picker > .color-picker-swatch')].map((s) => s.getAttribute('aria-label'))`);
-    await step(name, 'load /color-picker/docs', () => go(pickerPage));
+    await step(name, 'load /docs/components/color-picker', () => go(pickerPage));
     await step(name, 'focus the first swatch (“Color 1 of 3, #245cdb”, button, Example palette, group)', () => focus(`${row} .color-picker > .color-picker-swatch`));
     await step(name, '→ (“Color 2 of 3, #f2b84b”)', () => press('ArrowRight'));
     await step(name, 'End (“Add color”, button)', () => press('End'));
@@ -270,7 +270,7 @@ async function main() {
       children.push({ kill: () => server.close() });
       site = `http://127.0.0.1:${server.address().port}`;
     }
-    pickerPage = `${site.replace(/\/$/u, '')}/color-picker/docs`;
+    pickerPage = `${site.replace(/\/$/u, '')}/docs/components/color-picker`;
   }
   const driver = spawn('safaridriver', ['-p', String(port)], { stdio: 'ignore' });
   children.push(driver);
