@@ -1,4 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -74,9 +74,9 @@ export function undocumented(names, documents) {
   return names.filter((name) => !new RegExp(`(?<![\\w$])${name.replaceAll('$', '\\$')}(?![\\w$])`, 'u').test(code));
 }
 
-/** Checks `entry` against every `.mdx` file under `content`; returns the counts and the missing names. */
+/** Checks `entry` against every `.mdx` file under `content`, or against `content` itself when it is one page; returns the counts and the missing names. */
 export async function checkCoverage(entry, content) {
-  const files = (await readdir(content, { recursive: true })).filter((file) => file.endsWith('.mdx')).sort();
+  const files = (await stat(content)).isFile() ? [content] : (await readdir(content, { recursive: true })).filter((file) => file.endsWith('.mdx')).sort();
   const documents = await Promise.all(files.map((file) => readFile(resolve(content, file), 'utf8')));
   const names = await exportedNames(entry);
   return { names: names.length, files: files.length, missing: undocumented(names, documents) };
@@ -84,10 +84,10 @@ export async function checkCoverage(entry, content) {
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-  const [entry = 'packages/toast/src/index.ts', content = 'apps/site/content/docs/en'] = process.argv.slice(2);
+  const [entry = 'packages/toast/src/index.ts', content = 'apps/site/content/docs/en/components/toaster'] = process.argv.slice(2);
   const result = await checkCoverage(resolve(root, entry), resolve(root, content));
   if (result.missing.length) {
-    console.error(`Documentation coverage: ${result.missing.length} of ${result.names} exports of ${entry} are not mentioned in code in ${content}/**/*.mdx:`);
+    console.error(`Documentation coverage: ${result.missing.length} of ${result.names} exports of ${entry} are not mentioned in code in ${content.endsWith('.mdx') ? content : `${content}/**/*.mdx`}:`);
     for (const name of result.missing) console.error(`  ${name}`);
     process.exit(1);
   }

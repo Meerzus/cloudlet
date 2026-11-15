@@ -57,7 +57,7 @@ export function NotificationOwner() {
 }
 ```
 
-Mount one Toaster per controller. Separate owners create separate controllers; the item adds no singleton. Rendering Toaster on the server emits no host or notification HTML. Initial client HTML matches server output, and notifications created before Toaster mounts appear after attachment. Existing applications can instead pass their own stable controller and lifecycle owner. See the [documentation](https://cloudlet.dev/toaster/docs) for the stack, timing, handles, operations and disposal.
+Mount one Toaster per controller. Separate owners create separate controllers; the item adds no singleton. Rendering Toaster on the server emits no host or notification HTML. Initial client HTML matches server output, and notifications created before Toaster mounts appear after attachment. Existing applications can instead pass their own stable controller and lifecycle owner. See the [documentation](https://cloudlet.dev/docs/components/toaster) for the stack, timing, handles, operations and disposal.
 
 The wrapper explicitly imports `@cloudlet/toast/styles.css` followed by `./toaster.css`; retain that order. For Next Pages Router, where global CSS must be imported from the custom App, move those two imports into `pages/_app.tsx` in the same order and remove them from the copied wrapper. The installed item is application-owned source; this import-location adaptation is required for Pages and is separate from the App Router registry fixture.
 

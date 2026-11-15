@@ -29,7 +29,7 @@ cloudlet.show({
 
 A form has one to three fields. Each is `'text'` for one line or `'textarea'` for several; a textarea starts at three rows and grows to six, then scrolls.
 
-Every field needs a `label`. Screen readers read it, and it is the hint inside the empty field unless you set a `placeholder`. The rest is optional: `defaultValue`, `required`, `maxLength`, `autoComplete` and `inputMode` for the on-screen keyboard. [Types](/toaster/docs/api/types#primaryaction) lists them all.
+Every field needs a `label`. Screen readers read it, and it is the hint inside the empty field unless you set a `placeholder`. The rest is optional: `defaultValue`, `required`, `maxLength`, `autoComplete` and `inputMode` for the on-screen keyboard. [Types](/docs/components/toaster/api/types#primaryaction) lists them all.
 
 ## Checks before sending
 
@@ -55,11 +55,11 @@ cloudlet.show({
 });
 ```
 
-A message under a field marks it invalid and moves focus to the first such field. Editing a field clears its message. The texts for the built-in checks are `messages.fieldRequired` and `messages.fieldTooLong` in [`createCloudlet`](/toaster/docs/api/create-cloudlet), ready for translation.
+A message under a field marks it invalid and moves focus to the first such field. Editing a field clears its message. The texts for the built-in checks are `messages.fieldRequired` and `messages.fieldTooLong` in [`createCloudlet`](/docs/components/toaster/api/create-cloudlet), ready for translation.
 
 ## Sending
 
-Sending works like a [command](/toaster/docs/operations#actions). While `run` is pending, the button shows a spinner, the fields turn read-only and a second send is refused. When `run` returns or resolves, the notification closes with the reason `action-success`. When it throws or rejects, the text stays, the message from `errorMessage(error)` appears under the form and is announced, and the user can send again.
+Sending works like a [command](/docs/components/toaster/operations#actions). While `run` is pending, the button shows a spinner, the fields turn read-only and a second send is refused. When `run` returns or resolves, the notification closes with the reason `action-success`. When it throws or rejects, the text stays, the message from `errorMessage(error)` appears under the form and is announced, and the user can send again.
 
 ```tsx demo="form-retry"
 let tries = 0;
@@ -90,7 +90,7 @@ While a form holds unsent text:
 
 - its time stands still (the pause reason `'draft'`), even with a `duration`;
 - a press outside does not collapse the Island; Escape and the pill still do;
-- a notification arriving with [attention](/toaster/docs/positioning) waits in the stack instead of taking the Island over;
+- a notification arriving with [attention](/docs/components/toaster/positioning) waits in the stack instead of taking the Island over;
 - the collapsed pill adds `labels.draft` to its name, so a screen reader says there is a draft.
 
 `NotificationSnapshot.draft` tells your code the same; the text itself stays inside Cloudlet.
@@ -105,6 +105,6 @@ Focus never moves into a field on its own: a new notification, an auto-opened Is
 
 ## Next steps
 
-- [Operations & cancellation](/toaster/docs/operations#actions): commands and links, the other primary actions.
-- [Accessibility](/toaster/docs/accessibility): what is announced and how focus moves.
-- [Types](/toaster/docs/api/types#primaryaction): every field of `FormAction` and `FormField`.
+- [Operations & cancellation](/docs/components/toaster/operations#actions): commands and links, the other primary actions.
+- [Accessibility](/docs/components/toaster/accessibility): what is announced and how focus moves.
+- [Types](/docs/components/toaster/api/types#primaryaction): every field of `FormAction` and `FormField`.

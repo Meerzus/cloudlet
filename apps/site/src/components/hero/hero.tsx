@@ -21,7 +21,7 @@ import {
 } from '@/lib/frame-protocol';
 import { DEVICE_IDS, type DeviceId, type FoldPose } from '@/lib/devices';
 import { playIntro, type IntroRun } from '@/lib/intro';
-import { DOCS_PATH, GITHUB_URL, PLAYGROUND_PATH } from '@/lib/site';
+import { GITHUB_URL, PLAYGROUND_PATH, TOASTER_DOCS_PATH } from '@/lib/site';
 import { cn } from '@/lib/utils';
 import { DeviceStage, type StageFrame } from './device-stage';
 import { FoldToggle } from './fold-toggle';
@@ -271,7 +271,7 @@ export function Hero() {
               <Link href={PLAYGROUND_PATH}>Open playground</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href={DOCS_PATH}>Read the docs</Link>
+              <Link href={TOASTER_DOCS_PATH}>Read the docs</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <ExternalLink href={GITHUB_URL}>

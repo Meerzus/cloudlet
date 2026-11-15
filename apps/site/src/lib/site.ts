@@ -1,16 +1,21 @@
 /** Public origin of the site: the apex is canonical, `www` redirects to it. */
 export const SITE_URL = 'https://cloudlet.dev';
 /**
- * The site is the Toaster's corner of an umbrella: the landing, the
- * documentation and the Playground live under `/toaster`; the root redirects there (vercel.json)
- * until it becomes the umbrella's own page.
+ * The Toaster's landing and Playground live under `/toaster`; the root redirects there
+ * (vercel.json) until it becomes the kit's own page.
  */
 export const TOASTER_PATH = '/toaster';
 export const PLAYGROUND_PATH = `${TOASTER_PATH}/playground`;
 /** The color picker's landing (COLOR_PICKER §8): a registry item, no npm package. */
 export const COLOR_PICKER_PATH = '/color-picker';
-/** The color picker's documentation: one page. */
-export const COLOR_PICKER_DOCS_PATH = `${COLOR_PICKER_PATH}/docs`;
+/** The documentation of the whole kit: one tree, one sidebar (`content/docs/en`). */
+export const DOCS_PATH = '/docs';
+/** Where the READMEs point for documentation; tests/unit/site-readmes.test.ts holds them to it. */
+export const DOCS_URL = `${SITE_URL}${DOCS_PATH}`;
+/** The Toaster's page in the docs; its guides and reference live under it. */
+export const TOASTER_DOCS_PATH = `${DOCS_PATH}/components/toaster`;
+/** The color picker's page in the docs (the palette is a section of it). */
+export const COLOR_PICKER_DOCS_PATH = `${DOCS_PATH}/components/color-picker`;
 /** The family's components, in the header's switch order: landing, docs and (Toaster only) Playground. */
 export interface SiteComponent {
   readonly id: 'toaster' | 'color-picker';
@@ -22,12 +27,19 @@ export interface SiteComponent {
   readonly playground?: string;
 }
 export const COMPONENTS: readonly SiteComponent[] = [
-  { id: 'toaster', name: 'Toaster', short: 'Toaster', path: TOASTER_PATH, docs: `${TOASTER_PATH}/docs`, playground: `${TOASTER_PATH}/playground` },
+  { id: 'toaster', name: 'Toaster', short: 'Toaster', path: TOASTER_PATH, docs: TOASTER_DOCS_PATH, playground: `${TOASTER_PATH}/playground` },
   { id: 'color-picker', name: 'Color picker', short: 'Picker', path: COLOR_PICKER_PATH, docs: COLOR_PICKER_DOCS_PATH },
 ];
-/** The component a path belongs to; anything else (the root, unknown paths) is the Toaster's. */
+/** `pathname` is `path` or a page under it. */
+export function isUnder(pathname: string, path: string): boolean {
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+/**
+ * The component a path belongs to: its landing, its pages and its page in the docs. Anything else
+ * (the root, the kit's docs pages, unknown paths) is the Toaster's.
+ */
 export function componentOf(pathname: string): SiteComponent {
-  return COMPONENTS.find((component) => pathname === component.path || pathname.startsWith(`${component.path}/`)) ?? COMPONENTS[0]!;
+  return COMPONENTS.find((component) => isUnder(pathname, component.path) || isUnder(pathname, component.docs)) ?? COMPONENTS[0]!;
 }
 /**
  * Search engines are welcome since 1.0.0: pages carry no `noindex`, `robots.txt` and `sitemap.xml`
@@ -45,25 +57,36 @@ export const GITHUB_URL = 'https://github.com/Meerzus/cloudlet';
 export const LICENSE_URL = `${GITHUB_URL}/blob/main/LICENSE`;
 /** The package source on GitHub: for links to code, not documentation. */
 export const README_URL = `${GITHUB_URL}/tree/main/packages/toast#readme`;
-/** The documentation section of the site. */
-export const DOCS_PATH = `${TOASTER_PATH}/docs`;
-/** Where the READMEs point for documentation; tests/unit/site-readmes.test.ts holds them to it. */
-export const DOCS_URL = `${SITE_URL}${DOCS_PATH}`;
-/** Reading pages: no sky, no Lenis, no cloud footer. */
+/** Reading pages, everything under `/docs`: no sky, no Lenis, no cloud footer. */
 export function isQuietPath(pathname: string): boolean {
-  return [DOCS_PATH, COLOR_PICKER_DOCS_PATH].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  return isUnder(pathname, DOCS_PATH);
 }
 /** Stable versions are npm's `latest`; prereleases would go under `next`. */
 export const INSTALL_COMMAND = 'npm install @cloudlet/toast';
-/** The shadcn registry item, served from `public/r/`. */
-export const REGISTRY_ITEM_URL = `${SITE_URL}/r/toaster.json`;
-export const SHADCN_COMMAND = `npx shadcn@latest add ${REGISTRY_ITEM_URL}`;
+/** The kit's registry items, in the order the docs list them; `registry/registry.json` names them the same. */
+export const REGISTRY_ITEMS = ['toaster', 'color-picker', 'color-palette'] as const;
+export type RegistryItem = (typeof REGISTRY_ITEMS)[number];
+/** The namespace the shadcn CLI resolves through its registry directory. */
+export const REGISTRY_NAMESPACE = '@cloudlet';
+/** A registry item's address, served from `public/r/`. */
+export function registryItemUrl(item: RegistryItem): string {
+  return `${SITE_URL}/r/${item}.json`;
+}
+/** `npx shadcn@latest add @cloudlet/<item>`: the form for a CLI that knows the namespace. */
+export function registryCommand(item: RegistryItem): string {
+  return `npx shadcn@latest add ${REGISTRY_NAMESPACE}/${item}`;
+}
+/** `npx shadcn@latest add https://cloudlet.dev/r/<item>.json`: the same item by its address, for any CLI. */
+export function registryUrlCommand(item: RegistryItem): string {
+  return `npx shadcn@latest add ${registryItemUrl(item)}`;
+}
+/** The Toaster's registry item: a wrapper over the npm package. */
+export const REGISTRY_ITEM_URL = registryItemUrl('toaster');
+export const SHADCN_COMMAND = registryUrlCommand('toaster');
 /** The color picker's registry item: source files only, no npm package (COLOR_PICKER §1). */
-export const COLOR_PICKER_ITEM_URL = `${SITE_URL}/r/color-picker.json`;
-export const COLOR_PICKER_COMMAND = `npx shadcn@latest add ${COLOR_PICKER_ITEM_URL}`;
+export const COLOR_PICKER_COMMAND = registryUrlCommand('color-picker');
 /** The color palette's registry item: it lists the color picker as a registry dependency (COLOR_PALETTE §1). */
-export const COLOR_PALETTE_ITEM_URL = `${SITE_URL}/r/color-palette.json`;
-export const COLOR_PALETTE_COMMAND = `npx shadcn@latest add ${COLOR_PALETTE_ITEM_URL}`;
+export const COLOR_PALETTE_COMMAND = registryUrlCommand('color-palette');
 /**
  * What the published package adds to an app, min+gzip bytes (`release:verify` of the
  * `1.2.0` tarball, `artifacts/size/report.json`): its own JavaScript on first load (`start`, before

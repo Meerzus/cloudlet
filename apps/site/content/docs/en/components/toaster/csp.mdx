@@ -23,7 +23,7 @@ export function Notifications({ nonce }: { nonce: string }) {
 }
 ```
 
-`nonce` and every other prop are listed in [Toaster props](/toaster/docs/api/toaster).
+`nonce` and every other prop are listed in [Toaster props](/docs/components/toaster/api/toaster).
 
 ## A policy that works
 
@@ -46,7 +46,7 @@ Cloudlet's integration tests run production Vite and Next.js builds under this p
 
 ## Next.js App Router
 
-In Next.js, a `proxy.ts` generates a nonce for each request and puts it into the `Content-Security-Policy` header and an `x-nonce` request header, as described in the [Next.js CSP guide](https://nextjs.org/docs/app/guides/content-security-policy). Next.js applies it to its own scripts. The client component that owns the controller, set up in [SSR & Next.js](/toaster/docs/ssr#nextjs-app-router), takes the nonce and hands it to the Toaster:
+In Next.js, a `proxy.ts` generates a nonce for each request and puts it into the `Content-Security-Policy` header and an `x-nonce` request header, as described in the [Next.js CSP guide](https://nextjs.org/docs/app/guides/content-security-policy). Next.js applies it to its own scripts. The client component that owns the controller, set up in [SSR & Next.js](/docs/components/toaster/ssr#nextjs-app-router), takes the nonce and hands it to the Toaster:
 
 ```tsx title="components/notification-owner.tsx"
 'use client';
@@ -95,5 +95,5 @@ A nonce exists only for a request, so pages that use it are rendered dynamically
 
 ## Next steps
 
-- [SSR & Next.js](/toaster/docs/ssr): where the controller lives on the server and in the browser.
-- [Styling](/toaster/docs/styling): the stylesheet, tokens and class names.
+- [SSR & Next.js](/docs/components/toaster/ssr): where the controller lives on the server and in the browser.
+- [Styling](/docs/components/toaster/styling): the stylesheet, tokens and class names.

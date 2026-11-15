@@ -21,12 +21,9 @@ describe('site umbrella (launch P01)', () => {
 
   it('redirects the root to /toaster temporarily, until the root is the umbrella page', () => {
     expect(pathRedirects[0]).toEqual({ source: '/', destination: TOASTER_PATH, permanent: false });
-    // The addresses the preview had before the umbrella keep working.
-    expect(pathRedirects.slice(1)).toEqual([
-      { source: '/docs', destination: `${TOASTER_PATH}/docs`, permanent: true },
-      { source: '/docs/:path*', destination: `${TOASTER_PATH}/docs/:path*`, permanent: true },
-      { source: '/playground', destination: `${TOASTER_PATH}/playground`, permanent: true },
-    ]);
+    // The playground's address from before the umbrella keeps working; the docs' former
+    // addresses are held by site-docs-redirects.test.ts.
+    expect(pathRedirects.at(-1)).toEqual({ source: '/playground', destination: `${TOASTER_PATH}/playground`, permanent: true });
     expect(TOASTER_PATH).toBe('/toaster');
     expect(SITE_URL).toBe('https://cloudlet.dev');
   });

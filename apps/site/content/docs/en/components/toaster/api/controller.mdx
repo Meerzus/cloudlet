@@ -25,17 +25,17 @@ The controller is what `createCloudlet()` and `useCloudlet()` return. Its type i
 
 `show(spec: ReactNotificationSpec): AdmissionResult`
 
-`ReactNotificationSpec` is `NotificationSpec<ReactNode>`: the content of a notification plus its identity. Only `title` is required. A new notification goes on top of the stack; [Notifications & time](/toaster/docs/notifications) shows each field in use.
+`ReactNotificationSpec` is `NotificationSpec<ReactNode>`: the content of a notification plus its identity. Only `title` is required. A new notification goes on top of the stack; [Notifications & time](/docs/components/toaster/notifications) shows each field in use.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `title` | `string` | — | Required, non-empty. Always plain text, never markup. |
 | `id` | `string` | generated | Your own ID, unique among the live notifications of this controller. A taken ID is rejected with `id-conflict`. |
 | `kind` | `NotificationKind` | `'info'` | `'info'`, `'success'`, `'loading'`, `'warning'` or `'error'`: the icon, the colour and the default time. |
-| `description` | `Description<ReactNode>` | — | Text under the title: `{ kind: 'text', text }` or `{ kind: 'rich', content, announcement }`. See [Types](/toaster/docs/api/types#description). |
+| `description` | `Description<ReactNode>` | — | Text under the title: `{ kind: 'text', text }` or `{ kind: 'rich', content, announcement }`. See [Types](/docs/components/toaster/api/types#description). |
 | `icon` | `ReactNode` | the glyph of `kind` | A decorative icon that replaces the status glyph. |
-| `progress` | `Progress` | — | A ring around the icon, indeterminate or with a `value` from 0 to 1. See [Types](/toaster/docs/api/types#progress). |
-| `action` | `PrimaryAction` | — | One command or link button. See [Types](/toaster/docs/api/types#primaryaction). |
+| `progress` | `Progress` | — | A ring around the icon, indeterminate or with a `value` from 0 to 1. See [Types](/docs/components/toaster/api/types#progress). |
+| `action` | `PrimaryAction` | — | One command or link button. See [Types](/docs/components/toaster/api/types#primaryaction). |
 | `priority` | `Priority` | `'normal'` | `'normal'` or `'high'`. Stored with the record; it does not reorder the stack. |
 | `announcementPriority` | `AnnouncementPriority` | `'polite'` | `'polite'`, `'assertive'` or `'off'`. An error does not become assertive on its own. |
 | `duration` | `Duration` | by kind | Readable milliseconds ≥ 0, or `null` to stay until closed. By default passive `info` and `success` get 6000 ms; `loading`, `warning`, `error` and any notification with an action stay. |
@@ -119,7 +119,7 @@ Returns the handle of the live notification with this ID, or `undefined`: for an
 
 `track<T>(source: PromiseLike<T> | ReactOperationFactory<T>, options: ReactTrackOptions<T>): OperationHandle<T>`
 
-Shows a `loading` notification with the `pending` content, then replaces it with the result. The source is a promise you already have, or a factory `(context) => T | PromiseLike<T>` that Cloudlet calls once per attempt with a `ReactOperationContext`: `signal` (an `AbortSignal`), `token` and `attempt` (1, 2, …). Only a factory can be retried. A source that is neither a function nor a thenable throws a `TypeError`. [Operations & cancellation](/toaster/docs/operations) walks through it.
+Shows a `loading` notification with the `pending` content, then replaces it with the result. The source is a promise you already have, or a factory `(context) => T | PromiseLike<T>` that Cloudlet calls once per attempt with a `ReactOperationContext`: `signal` (an `AbortSignal`), `token` and `attempt` (1, 2, …). Only a factory can be retried. A source that is neither a function nor a thenable throws a `TypeError`. [Operations & cancellation](/docs/components/toaster/operations) walks through it.
 
 `ReactTrackOptions<T>` is `TrackOptions<T, ReactNode, AbortSignal>`:
 
@@ -137,7 +137,7 @@ Shows a `loading` notification with the `pending` content, then replaces it with
 
 `NotificationContent` is the part of a spec that describes what is shown: `title`, `description`, `icon`, `progress`, `action`, `announcementPriority`, `duration` and `attention`, with the meaning they have in `show`. Tracked operations cannot have a `dedupeKey`.
 
-A mapping function that throws or returns invalid content gives a safe fallback title from [`messages`](/toaster/docs/api/create-cloudlet#messages) and a `mapper-error` diagnostic. The business operation runs even when the notification is rejected, and nothing about the notification ever changes its result.
+A mapping function that throws or returns invalid content gives a safe fallback title from [`messages`](/docs/components/toaster/api/create-cloudlet#messages) and a `mapper-error` diagnostic. The business operation runs even when the notification is rejected, and nothing about the notification ever changes its result.
 
 ### OperationHandle
 
@@ -194,7 +194,7 @@ Closes the notification at once, with the close reason `programmatic`. A late re
 
 `clear(): ClearResult`
 
-Closes every notification (close reason `clear`) and collapses the Island. The missed count stays until `acknowledgeOverflow()`. The Island's own clear button ([`clearAll`](/toaster/docs/api/toaster#props)) does both at once, with the close reason `clear-button`.
+Closes every notification (close reason `clear`) and collapses the Island. The missed count stays until `acknowledgeOverflow()`. The Island's own clear button ([`clearAll`](/docs/components/toaster/api/toaster#props)) does both at once, with the close reason `clear-button`.
 
 | Status | Fields | Meaning |
 |---|---|---|
@@ -259,7 +259,7 @@ export function NotificationCount() {
 | `island` | `IslandSnapshot` | `{ open, reason, current }`: `reason` is `'user'` or `'attention'` and `current` the visible slide, both `null` while collapsed. |
 | `overflow` | `OverflowSnapshot` | The missed count and whether it is unacknowledged. |
 
-Each `NotificationSnapshot` is described on [Types](/toaster/docs/api/types#notificationsnapshot).
+Each `NotificationSnapshot` is described on [Types](/docs/components/toaster/api/types#notificationsnapshot).
 
 ## subscribe and onEvent
 
@@ -294,7 +294,7 @@ Every `SemanticEvent` has the `EventBase` fields `controller`, `sequence` (a gro
 | `'action-failed'` | `handle`, `token`, `message` | A command action failed; the card stays and can be retried. |
 | `'overflow'` | `count` | A notification was rejected because the stack was full. |
 | `'overflow-acknowledged'` | `count` | The missed count was acknowledged. |
-| `'diagnostic'` | `diagnostic` | A contained problem; see [`onDiagnostic`](/toaster/docs/api/create-cloudlet#ondiagnostic). |
+| `'diagnostic'` | `diagnostic` | A contained problem; see [`onDiagnostic`](/docs/components/toaster/api/create-cloudlet#ondiagnostic). |
 | `'disposed'` | — | The last event of the controller. |
 
 Events carry no business values or errors. Opening and collapsing the Island is not an event: read `snapshot.island`.

@@ -3,7 +3,7 @@ title: Styling
 description: Theme Cloudlet with tokens and class names, and try them in the Style editor.
 ---
 
-Cloudlet uses one external stylesheet and CSS tokens scoped to `.cloudlet-host`. The editor below lets you try them on a live Toaster and copy the CSS; every setting is a Toaster prop listed in [Toaster props](/toaster/docs/api/toaster).
+Cloudlet uses one external stylesheet and CSS tokens scoped to `.cloudlet-host`. The editor below lets you try them on a live Toaster and copy the CSS; every setting is a Toaster prop listed in [Toaster props](/docs/components/toaster/api/toaster).
 
 ## Style editor
 
@@ -11,9 +11,9 @@ Cloudlet uses one external stylesheet and CSS tokens scoped to `.cloudlet-host`.
 
 ## The stylesheet
 
-Import `@cloudlet/toast/styles.css` once, from your global CSS entry or root layout (see [Installation](/toaster/docs/installation#import-the-styles)). Rules and resets are scoped to `.cloudlet-host`.
+Import `@cloudlet/toast/styles.css` once, from your global CSS entry or root layout (see [Installation](/docs/components/toaster/installation#import-the-styles)). Rules and resets are scoped to `.cloudlet-host`.
 
-Keep it external under a strict Content Security Policy; [Content Security Policy](/toaster/docs/csp) has the rest of the setup.
+Keep it external under a strict Content Security Policy; [Content Security Policy](/docs/components/toaster/csp) has the rest of the setup.
 
 Put overrides in a stylesheet imported after Cloudlet's. Use tokens and class names to change the look; the renderer controls width, height, position, transform and clip path.
 
@@ -31,7 +31,7 @@ Set tokens on `.cloudlet-host`. Text uses `--cloudlet-font-family` (`system-ui, 
 | `--cloudlet-tail-offset` | `4px` | How far each tail peeks out from behind the one in front. |
 | `--cloudlet-tail-scale` | `.9` | Scale of the first tail relative to the pill; the second is scaled again. |
 | `--cloudlet-control-min-size` | `44px` | Touch target of buttons and links. |
-| `--cloudlet-viewport-gutter` | `16px` | Gap to the viewport edge; see [Offsets](/toaster/docs/positioning#offsets). |
+| `--cloudlet-viewport-gutter` | `16px` | Gap to the viewport edge; see [Offsets](/docs/components/toaster/positioning#offsets). |
 | `--cloudlet-z-index` | `1000` | Stacking order of the fixed host. |
 
 The safe-area insets are tokens too: `--cloudlet-safe-top`, `--cloudlet-safe-right`, `--cloudlet-safe-bottom` and `--cloudlet-safe-left` default to the browser's `env(safe-area-inset-*)`.
@@ -84,7 +84,7 @@ Dark surfaces use a more specific selector, so `.cloudlet-host` alone changes li
 }
 ```
 
-The tokens must reach the portal: define them on `:root` or on an ancestor of the [container](/toaster/docs/positioning#portal-container), not on a wrapper around your React tree, which does not contain the default portal on `document.body`. This is the approach of the shadcn registry item's `toaster.css`, which maps `--popover`, `--popover-foreground`, `--muted-foreground`, `--border`, `--ring`, `--accent` and `--font-sans`.
+The tokens must reach the portal: define them on `:root` or on an ancestor of the [container](/docs/components/toaster/positioning#portal-container), not on a wrapper around your React tree, which does not contain the default portal on `document.body`. This is the approach of the shadcn registry item's `toaster.css`, which maps `--popover`, `--popover-foreground`, `--muted-foreground`, `--border`, `--ring`, `--accent` and `--font-sans`.
 
 ## Theme
 
@@ -132,7 +132,7 @@ export function Notifications() {
 }
 ```
 
-The parts are `host`, `stack`, `pill`, `tail`, `badge`, `island`, `header`, `icon`, `title`, `close`, `body`, `description`, `actions`, `action`, `indicator`, `clear` and `overflow`; [classNames](/toaster/docs/api/toaster#classnames) says which element each one is.
+The parts are `host`, `stack`, `pill`, `tail`, `badge`, `island`, `header`, `icon`, `title`, `close`, `body`, `description`, `actions`, `action`, `indicator`, `clear` and `overflow`; [classNames](/docs/components/toaster/api/toaster#classnames) says which element each one is.
 
 Cloudlet's own rules use two classes, such as `.cloudlet-host .cloudlet-action`, so a selector with a single class of yours loses to them on the properties they set. Write rules at least as specific, or style through the tokens:
 
@@ -157,5 +157,5 @@ The host also exposes its state as data attributes you can select on: `data-stat
 
 ## Next steps
 
-- [Toaster props](/toaster/docs/api/toaster): every prop with its type and default.
-- [Positioning & offsets](/toaster/docs/positioning): where the stack sits, and rendering it into an element of yours.
+- [Toaster props](/docs/components/toaster/api/toaster): every prop with its type and default.
+- [Positioning & offsets](/docs/components/toaster/positioning): where the stack sits, and rendering it into an element of yours.

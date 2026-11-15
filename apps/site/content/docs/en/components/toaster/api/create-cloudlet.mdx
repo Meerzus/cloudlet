@@ -3,7 +3,7 @@ title: createCloudlet
 description: Create a controller, the object that owns every notification, its timing and its operations.
 ---
 
-`createCloudlet` is the package's only factory. It returns the controller your application keeps for a session: the object behind every `show`, `track` and `dismiss`. This page lists its options; the methods are on [Controller](/toaster/docs/api/controller).
+`createCloudlet` is the package's only factory. It returns the controller your application keeps for a session: the object behind every `show`, `track` and `dismiss`. This page lists its options; the methods are on [Controller](/docs/components/toaster/api/controller).
 
 ```ts title="signature"
 import type { ControllerOptions, ReactCloudletController } from '@cloudlet/toast';
@@ -29,7 +29,7 @@ export const cloudlet = createCloudlet({
 
 - **Nothing outside the object.** Creating or importing a controller touches no `window` or `document`, starts no timer, adds no listener and runs no operation. It is safe in a module, in a server render and in a test.
 - **One controller, one host.** A controller is shown by exactly one `<Toaster>` at a time. A second Toaster of the same controller does not attach and reports a `second-host` diagnostic. Separate controllers are fully independent, even with the same notification IDs.
-- **A controller lives for a session.** One per browser session or server request, disposed only when it is finished for good: see [When to dispose](/toaster/docs/ssr#when-to-dispose).
+- **A controller lives for a session.** One per browser session or server request, disposed only when it is finished for good: see [When to dispose](/docs/components/toaster/ssr#when-to-dispose).
 - **Wrong options throw.** An options object of the wrong shape, or a callback that is not a function, throws a `TypeError`; an out-of-range number throws a `RangeError`. These are programming errors, so they are the only failures of the API that throw instead of returning a result.
 
 The result type is `ReactCloudletController`, which is `CloudletController<ReactNode, AbortSignal>`: slots (rich descriptions, icons) are React nodes, and operations get a native `AbortSignal`.
@@ -46,11 +46,11 @@ The result type is `ReactCloudletController`, which is `CloudletController<React
 | `onOverflow` | `(overflow: OverflowSnapshot) => void` | — | Called when the stack is full (100 records) and a new notification is rejected. Receives the current missed count, never the rejected payload. |
 | `onDiagnostic` | `(diagnostic: Diagnostic) => void` | — | Called for problems Cloudlet handled on its own, such as a mapping function that threw. Local data only; nothing is logged or sent anywhere. |
 
-A user preference such as "do not close notifications on a timer" can change while the application runs: pass it to [`<Toaster autoDismiss>`](/toaster/docs/api/toaster#props), which applies it without a new controller. The option here is the default when the prop is left out.
+A user preference such as "do not close notifications on a timer" can change while the application runs: pass it to [`<Toaster autoDismiss>`](/docs/components/toaster/api/toaster#props), which applies it without a new controller. The option here is the default when the prop is left out.
 
 ### messages
 
-`FallbackMessages`: the texts the controller puts on a notification when there is nothing else to show. Pass the fields you want to change; the rest keep their English default. Labels of the controls and spoken texts are localized elsewhere, see [Labels & announcements](/toaster/docs/api/labels).
+`FallbackMessages`: the texts the controller puts on a notification when there is nothing else to show. Pass the fields you want to change; the rest keep their English default. Labels of the controls and spoken texts are localized elsewhere, see [Labels & announcements](/docs/components/toaster/api/labels).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
@@ -72,7 +72,7 @@ A user preference such as "do not close notifications on a timer" can change whi
 | `count` | `number` | Notifications rejected because the stack was full, since the last acknowledgement; `0` at first. |
 | `pending` | `boolean` | `true` while there is a count the user has not acknowledged. |
 
-[Capacity and overflow](/toaster/docs/notifications#capacity-and-overflow) explains when the count grows and resets. If `onOverflow` throws, the error becomes a `callback-error` diagnostic.
+[Capacity and overflow](/docs/components/toaster/notifications#capacity-and-overflow) explains when the count grows and resets. If `onOverflow` throws, the error becomes a `callback-error` diagnostic.
 
 ### onDiagnostic
 
@@ -102,5 +102,5 @@ A `Diagnostic` describes something that went wrong in your callbacks or content 
 
 ## Next steps
 
-- [Controller](/toaster/docs/api/controller): every method and its result.
-- [Toaster props](/toaster/docs/api/toaster): the component that shows this controller.
+- [Controller](/docs/components/toaster/api/controller): every method and its result.
+- [Toaster props](/docs/components/toaster/api/toaster): the component that shows this controller.

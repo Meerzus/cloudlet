@@ -3,9 +3,10 @@ import { defineDocs } from 'fumadocs-mdx/macro';
 import { DOCS_PATH } from './site';
 
 /**
- * The documentation's content source: MDX pages under
- * `content/docs/en`, English without a URL prefix. A future language adds a sibling folder
- * and a `[lang]` segment; the page tree, slugs and order come from `meta.json` files.
+ * The documentation's content source, the whole kit in one tree: MDX pages under
+ * `content/docs/en` (the kit's pages, `components/toaster/**`, `components/color-picker.mdx`),
+ * English without a URL prefix. A future language adds a sibling folder and a `[lang]` segment;
+ * the page tree, slugs and order come from `meta.json` files.
  *
  * `defineDocs` is a compile-time macro of fumadocs-mdx: the bundler turns it into imports of
  * the content files, so there is no generated `.source` folder to check in.
@@ -16,7 +17,7 @@ const docs = defineDocs({
     // The Markdown of each page for agents, `page.data.getText('processed')`; the
     // MDX components stay placeholders that `docs-markdown.ts` expands into text and code.
     postprocess: {
-      includeProcessedMarkdown: { headingIds: false, mdxAsPlaceholder: ['Callout', 'GetStartedTabs', 'GetStartedCode', 'InstallCommand', 'Demos', 'StyleEditor'] },
+      includeProcessedMarkdown: { headingIds: false, mdxAsPlaceholder: ['Callout', 'GetStartedTabs', 'GetStartedCode', 'InstallCommand', 'Demos', 'StyleEditor', 'PickerDemo', 'PaletteDemo'] },
     },
   },
 });

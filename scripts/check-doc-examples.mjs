@@ -6,8 +6,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-/** The site's documentation pages: every ```ts / ```tsx fence of the Toaster's and the color picker's docs is checked too. */
-const DOCS_CONTENTS = ['apps/site/content/docs', 'apps/site/content/color-picker'];
+/** The site's documentation pages: every ```ts / ```tsx fence of the kit's docs is checked too. */
+const DOCS_CONTENTS = ['apps/site/content/docs'];
 const mdxPages = (await Promise.all(DOCS_CONTENTS.map(async (dir) => (await readdir(resolve(root, dir), { recursive: true })).map((file) => `${dir}/${file}`)))).flat()
   .filter((entry) => entry.endsWith('.mdx'))
   .map((entry) => entry.replaceAll('\\', '/'))

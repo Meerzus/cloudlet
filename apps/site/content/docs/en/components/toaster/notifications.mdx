@@ -39,7 +39,7 @@ Call `show` from an event: a click, a finished request, a message from the serve
 | `info` | 6 seconds | A neutral notice |
 | `warning` | Stays until closed | Something the user should look at |
 | `error` | Stays until closed | Something failed |
-| `loading` | Stays until closed | Work in progress; [operations](/toaster/docs/operations) set it for you |
+| `loading` | Stays until closed | Work in progress; [operations](/docs/components/toaster/operations) set it for you |
 
 <Demos>
 
@@ -84,7 +84,7 @@ cloudlet.show({
 });
 ```
 
-Rich content is a React node with a separate plain-text `announcement`: screen readers hear the announcement, never text extracted from the node. Rich content must not be interactive; buttons and links belong in the [action](/toaster/docs/operations#actions).
+Rich content is a React node with a separate plain-text `announcement`: screen readers hear the announcement, never text extracted from the node. Rich content must not be interactive; buttons and links belong in the [action](/docs/components/toaster/operations#actions).
 
 ```tsx demo="rich-description"
 cloudlet.show({
@@ -155,7 +155,7 @@ An explicit `id` that is already live is an `id-conflict`, even when the `dedupe
 
 Every accepted notification goes straight into the stack, newest on top. At rest the stack is one pill: the top notification, tails for the ones behind it and a badge with the total. `priority` is kept on the record but does not reorder the stack.
 
-Activating the pill opens the Island on the top notification. A notification that arrives while the Island is open joins the top of the stack without taking over the slide you are reading. Closing the current slide moves to the next older notification, then to a newer one, and collapses the Island after the last. Some notifications open the Island on their own, or bring an open Island to themselves after a short delay; [Positioning & offsets](/toaster/docs/positioning#attention) explains when.
+Activating the pill opens the Island on the top notification. A notification that arrives while the Island is open joins the top of the stack without taking over the slide you are reading. Closing the current slide moves to the next older notification, then to a newer one, and collapses the Island after the last. Some notifications open the Island on their own, or bring an open Island to themselves after a short delay; [Positioning & offsets](/docs/components/toaster/positioning#attention) explains when.
 
 ```tsx demo="burst"
 for (const name of ['Cumulus', 'Stratus', 'Cirrus', 'Nimbus', 'Altocumulus']) {
@@ -163,7 +163,7 @@ for (const name of ['Cumulus', 'Stratus', 'Cirrus', 'Nimbus', 'Altocumulus']) {
 }
 ```
 
-With two or more notifications, the Island's dots row ends with **Clear all**. The first press only arms it: it turns red and reads "Clear 5". A second press within 3 seconds closes every notification (close reason `clear-button`) and the missed count with them. To keep the button out, pass [`clearAll={false}`](/toaster/docs/api/toaster#props) to the Toaster.
+With two or more notifications, the Island's dots row ends with **Clear all**. The first press only arms it: it turns red and reads "Clear 5". A second press within 3 seconds closes every notification (close reason `clear-button`) and the missed count with them. To keep the button out, pass [`clearAll={false}`](/docs/components/toaster/api/toaster#props) to the Toaster.
 
 `getSnapshot()` describes the same state for your own UI: `notifications` in admission order, `stack` with the same handles newest first (`stack[0]` is the pill), `island` with `open`, `reason` and `current`, and `overflow`. `subscribe` tells you when it changed.
 
@@ -229,4 +229,4 @@ export function Notifications() {
 
 ## Next steps
 
-- [Operations & cancellation](/toaster/docs/operations): notifications that follow a promise, retry it and cancel it.
+- [Operations & cancellation](/docs/components/toaster/operations): notifications that follow a promise, retry it and cancel it.

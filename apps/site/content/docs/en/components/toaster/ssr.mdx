@@ -105,7 +105,7 @@ export function NotificationOwner({ children }: { children: ReactNode }) {
 }
 ```
 
-Under a strict Content Security Policy the owner also passes the request's nonce to the Toaster: [Content Security Policy](/toaster/docs/csp#nextjs-app-router) shows how.
+Under a strict Content Security Policy the owner also passes the request's nonce to the Toaster: [Content Security Policy](/docs/components/toaster/csp#nextjs-app-router) shows how.
 
 The root layout imports the stylesheet once and wraps the application in the owner:
 
@@ -146,7 +146,7 @@ export function SaveButton() {
 
 `useCloudlet()` throws while the controller is `null`, so keep it for components that render only after the owner has mounted, such as content of a dialog the user opens.
 
-The shadcn registry item works a little differently: its wrapper renders the Provider and the Toaster for a controller you pass in, and the `notification-owner.tsx` of [Installation](/toaster/docs/installation#the-shadcn-registry-item) renders it once that controller exists.
+The shadcn registry item works a little differently: its wrapper renders the Provider and the Toaster for a controller you pass in, and the `notification-owner.tsx` of [Installation](/docs/components/toaster/installation#the-shadcn-registry-item) renders it once that controller exists.
 
 ### React Strict Mode
 
@@ -173,15 +173,15 @@ export default function App({ Component, pageProps }: AppProps) {
 }
 ```
 
-With the shadcn wrapper, its two CSS imports move into `_app` too, in the order given in [Installation](/toaster/docs/installation#the-shadcn-registry-item).
+With the shadcn wrapper, its two CSS imports move into `_app` too, in the order given in [Installation](/docs/components/toaster/installation#the-shadcn-registry-item).
 
 Both routers need a matching pair of `react` and `react-dom`, in the range Cloudlet supports.
 
 ## Vite and other client-only apps
 
-A single-page application without server rendering has nothing to hydrate. Create the controller once at module scope of the client entry and render the Provider and the Toaster there, as in the [Quick start](/toaster/docs/quick-start#mount-the-toaster). With Vite's SSR mode, the server entry follows [One controller per session or request](#one-controller-per-session-or-request).
+A single-page application without server rendering has nothing to hydrate. Create the controller once at module scope of the client entry and render the Provider and the Toaster there, as in the [Quick start](/docs/components/toaster/quick-start#mount-the-toaster). With Vite's SSR mode, the server entry follows [One controller per session or request](#one-controller-per-session-or-request).
 
 ## Next steps
 
-- [Content Security Policy](/toaster/docs/csp): the request's nonce and a policy Cloudlet works under.
-- [Toaster props](/toaster/docs/api/toaster): `container`, `nonce` and every other prop.
+- [Content Security Policy](/docs/components/toaster/csp): the request's nonce and a policy Cloudlet works under.
+- [Toaster props](/docs/components/toaster/api/toaster): `container`, `nonce` and every other prop.

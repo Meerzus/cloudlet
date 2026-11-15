@@ -10,7 +10,7 @@ interface MdFile {
   history?: string[];
 }
 
-/** Reference pages live in `content/docs/<lang>/api/`. */
+/** Reference pages live in an `api/` folder (`content/docs/<lang>/components/toaster/api/`). */
 const REFERENCE_PAGE = /[\\/]api[\\/][^\\/]+\.mdx$/u;
 
 const text = (node: MdNode): string => node.value ?? (node.children ?? []).map(text).join('');
