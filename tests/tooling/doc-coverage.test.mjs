@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import test from 'node:test';
 import { checkCoverage, codeText, exportedNames, undocumented } from '../../scripts/check-doc-coverage.mjs';
 
@@ -73,5 +73,13 @@ test('fails with the list of exports the documentation does not mention', async 
     const passed = spawnSync(process.execPath, [script, join(directory, 'src/index.ts'), join(directory, 'docs')], { encoding: 'utf8' });
     assert.equal(passed.status, 0, passed.stderr);
     assert.match(passed.stdout, /all 6 exports .* documented in 2 pages/u);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('checks one page given by a relative path', async () => {
+  const directory = await fixture('Use `createThing` with `ThingProps`, `PublicName`, `ThingKind`, `NestedToken` and `Description`.\n');
+  try {
+    const page = relative(process.cwd(), join(directory, 'docs/api/page.mdx'));
+    assert.deepEqual(await checkCoverage(join(directory, 'src/index.ts'), page), { names: 6, files: 1, missing: [] });
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

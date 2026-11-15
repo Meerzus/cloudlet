@@ -76,7 +76,7 @@ export function undocumented(names, documents) {
 
 /** Checks `entry` against every `.mdx` file under `content`, or against `content` itself when it is one page; returns the counts and the missing names. */
 export async function checkCoverage(entry, content) {
-  const files = (await stat(content)).isFile() ? [content] : (await readdir(content, { recursive: true })).filter((file) => file.endsWith('.mdx')).sort();
+  const files = (await stat(content)).isFile() ? [resolve(content)] : (await readdir(content, { recursive: true })).filter((file) => file.endsWith('.mdx')).sort();
   const documents = await Promise.all(files.map((file) => readFile(resolve(content, file), 'utf8')));
   const names = await exportedNames(entry);
   return { names: names.length, files: files.length, missing: undocumented(names, documents) };
