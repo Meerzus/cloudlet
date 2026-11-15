@@ -1070,6 +1070,12 @@ html[data-device='foldable'] .fs-status {
   background: color-mix(in oklch, var(--background) 60%, transparent);
 }
 
+/* ---------- Theme button on phones: its icon follows <html data-theme> (set before first paint) ---------- */
+.theme-cycle > [data-theme-icon] { grid-area: 1 / 1; display: none; }
+:root:not([data-theme='light'], [data-theme='dark']) .theme-cycle > [data-theme-icon='system'],
+:root[data-theme='light'] .theme-cycle > [data-theme-icon='light'],
+:root[data-theme='dark'] .theme-cycle > [data-theme-icon='dark'] { display: block; }
+
 /* ---------- Segmented controls: one highlight slides under the active segment ---------- */
 /* Placed by useSegmentIndicator (translate + width); the transition turns on once it has landed. */
 .segment-indicator {

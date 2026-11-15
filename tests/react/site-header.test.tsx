@@ -162,3 +162,57 @@ describe('Components panel', () => {
     expect(panel()).toBeNull();
   });
 });
+
+describe('Star on GitHub', () => {
+  const star = () => primary().getByRole('link', { name: /^Star on GitHub/ });
+
+  it('replaces the GitHub icon and leads to the repository in a new tab', () => {
+    render(<Header stars={undefined} />);
+    expect(star()).toHaveAttribute('href', 'https://github.com/Meerzus/cloudlet');
+    expect(star()).toHaveAttribute('target', '_blank');
+    expect(screen.queryByRole('link', { name: 'Cloudlet on GitHub' })).toBeNull();
+  });
+
+  it('shows no count without one or below 100 stars', () => {
+    for (const stars of [undefined, 41, 99]) {
+      const { unmount } = render(<Header stars={stars} />);
+      expect(star()).toHaveAccessibleName('Star on GitHub');
+      expect(star()).not.toHaveTextContent(/\d/);
+      unmount();
+    }
+  });
+
+  it('shows the count from 100 stars, in its name too', () => {
+    render(<Header stars={1234} />);
+    expect(star()).toHaveAccessibleName('Star on GitHub, 1.2k stars');
+    expect(star()).toHaveTextContent('1.2k');
+  });
+});
+
+describe('theme button on phones', () => {
+  it('cycles System → Light → Dark → System, naming the current theme and the next', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} }));
+    const { setThemePreference } = await import('../../apps/site/src/lib/theme');
+    setThemePreference('system');
+    const { ThemeToggle } = await vi.importActual<typeof import('../../apps/site/src/components/site/theme-toggle')>(
+      '../../apps/site/src/components/site/theme-toggle',
+    );
+    const user = userEvent.setup();
+    render(<ThemeToggle />);
+    const cycle = () => screen.getByRole('button', { name: /, switch to/ });
+
+    const seen: [string | undefined, string | null][] = [];
+    for (let step = 0; step < 4; step += 1) {
+      seen.push([document.documentElement.dataset['theme'], cycle().getAttribute('aria-label')]);
+      if (step < 3) await user.click(cycle());
+    }
+    expect(seen).toEqual([
+      ['system', 'System theme, switch to light theme'],
+      ['light', 'Light theme, switch to dark theme'],
+      ['dark', 'Dark theme, switch to system theme'],
+      ['system', 'System theme, switch to light theme'],
+    ]);
+    // The three segments stay for wider screens and follow the same preference.
+    expect(screen.getByRole('button', { name: 'System theme' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});

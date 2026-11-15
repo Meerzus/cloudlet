@@ -209,7 +209,7 @@ export function ComponentsMenu({ className }: { className?: string }) {
         aria-expanded={phase === 'open'}
         aria-controls={phase === 'closed' ? undefined : id}
         onClick={() => setPhase((now) => (now === 'open' ? 'closing' : 'open'))}
-        className="components-trigger relative z-[3] inline-flex h-8 items-center gap-1 rounded-full px-3 text-sm font-medium outline-none transition-[color,background-color] hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/60 aria-expanded:bg-accent aria-expanded:text-accent-foreground max-sm:px-2.5"
+        className="components-trigger relative z-[3] inline-flex h-8 items-center gap-1 rounded-full px-3 text-sm font-medium outline-none transition-[color,background-color] hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/60 aria-expanded:bg-accent aria-expanded:text-accent-foreground max-sm:px-2.5 max-[23.75rem]:px-2"
       >
         Components
         <ChevronDown className="components-chevron size-3.5 opacity-60" aria-hidden="true" />

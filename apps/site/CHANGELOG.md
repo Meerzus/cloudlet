@@ -83,6 +83,12 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   it, and Escape, a press outside, focus leaving it or a new page close it. The logo leads to the
   kit's own page, Docs to the current component's docs or to `/docs`, and the header no longer links
   to the Playground (the Toaster's landing does).
+- Star on GitHub replaces the GitHub icon in the header: the star and "Star", the whole "Star on
+  GitHub" on wide screens, the star alone on phones. From 100 stars it shows the count (`128`,
+  `1.2k`), read from GitHub when the site is built; the browser never asks GitHub.
+- On phones the theme switch is one button that cycles System, Light and Dark, and the header with
+  the logo, Components, Docs, the theme and Star fits one line down to 320 px; a larger system font
+  moves the right-hand buttons to a second line instead of off the screen.
 - `/color-picker` and its docs share a link card made from the top of the page.
 - The style editor on [/docs/components/toaster/styling](https://cloudlet.dev/docs/components/toaster/styling) uses the
   color picker in hex, and the site no longer depends on `react-colorful`.
