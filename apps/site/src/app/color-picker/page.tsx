@@ -8,9 +8,9 @@ import { PickerColorProvider } from '@/components/picker/picker-color';
 import { PickerFaq } from '@/components/picker/picker-faq';
 import { PickerGetStarted } from '@/components/picker/picker-get-started';
 import { PickerHero } from '@/components/picker/picker-hero';
+import { StartColorScript } from '@/components/picker/start-color-script';
 import { Tools } from '@/components/picker/tools';
 import { Chapters, type ChapterList } from '@/components/site/chapters';
-import { START_SCRIPT } from '@/lib/picker-start';
 import { COLOR_PICKER_PATH, SITE_URL } from '@/lib/site';
 
 const TITLE = 'Cloudlet Color Picker — pick a color, paint the page';
@@ -39,7 +39,7 @@ export default function ColorPickerHome() {
   return (
     <>
       {/* Before the page's markup: the start color is on <html> before first paint. */}
-      <script dangerouslySetInnerHTML={{ __html: START_SCRIPT }} />
+      <StartColorScript />
       <PickerColorProvider>
         <main>
           <PickerHero />
