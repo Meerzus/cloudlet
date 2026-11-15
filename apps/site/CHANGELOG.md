@@ -71,16 +71,32 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
     screenshot); the compact picker and the same color in four formats, each copied by a click;
   - the inline panel with a keyboard cheat sheet and a reduce-motion switch, the two install commands
     and an example, and a FAQ.
-- [/color-picker/docs](https://cloudlet.dev/color-picker/docs): install, use, every prop and label,
+- [/docs/components/color-picker](https://cloudlet.dev/docs/components/color-picker): install, use, every prop and label,
   formats and their exact output, eyedropper and copy, keyboard and screen readers, styling, placement
   limits and reduced motion, then the palette's install, use, props, keyboard and labels, each with a
   live example. It is also in `llms.txt`, `llms-full.txt`, as
-  [Markdown](https://cloudlet.dev/color-picker/docs.md), in search and in the sitemap.
+  [Markdown](https://cloudlet.dev/docs/components/color-picker.md), in search and in the sitemap.
 - The header switches between Toaster and Color picker; its logo and Docs link follow the current
   component.
 - `/color-picker` and its docs share a link card made from the top of the page.
-- The style editor on [/toaster/docs/styling](https://cloudlet.dev/toaster/docs/styling) uses the
+- The style editor on [/docs/components/toaster/styling](https://cloudlet.dev/docs/components/toaster/styling) uses the
   color picker in hex, and the site no longer depends on `react-colorful`.
+
+### Documentation
+
+- The documentation is one tree for the whole kit at [/docs](https://cloudlet.dev/docs), with one
+  sidebar: Getting started, Components, then the Toaster's own pages. The Toaster's pages moved to
+  `/docs/components/toaster/…` with their slugs, the Color picker's page to
+  `/docs/components/color-picker`.
+- Two new pages open the tree. [Introduction](https://cloudlet.dev/docs) says what Cloudlet is, how
+  engines (npm packages) differ from simple components (source through the shadcn registry) and which
+  components there are. [Installation](https://cloudlet.dev/docs/installation) adds any item as
+  `@cloudlet/<item>` or by its URL and installs an engine from npm, with every command in your
+  package manager.
+- The former addresses (`/toaster/docs/…`, `/color-picker/docs` and their `.md` pages) redirect
+  permanently to the new ones. Search, `llms.txt`, `llms-full.txt`, the `.md` pages and the sitemap
+  follow the new sidebar; `llms.txt` opens with a line about the kit.
+- The READMEs, the security policy and the issue template link to the new addresses.
 
 ### Fixes
 
