@@ -89,6 +89,11 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 - On phones the theme switch is one button that cycles System, Light and Dark, and the header with
   the logo, Components, Docs, the theme and Star fits one line down to 320 px; a larger system font
   moves the right-hand buttons to a second line instead of off the screen.
+- Both footers, the cloud bank of the Toaster's landing and the one-line footer of the docs and the Color
+  picker's page, carry the
+  same row of links: Cloudlet (the kit's page), Toaster, Color picker, Color palette, Docs, GitHub and
+  the MIT License. On phones the row wraps without separating dots, and every link is at least 24 px
+  tall.
 - `/color-picker` and its docs share a link card made from the top of the page.
 - The style editor on [/docs/components/toaster/styling](https://cloudlet.dev/docs/components/toaster/styling) uses the
   color picker in hex, and the site no longer depends on `react-colorful`.
