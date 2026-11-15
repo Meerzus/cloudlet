@@ -5,12 +5,17 @@ import { cn } from '@/lib/utils';
 import { SEGMENT_STYLE, useSegmentIndicator } from './use-segment-indicator';
 import { COMPONENTS, type SiteComponent } from '@/lib/site';
 
+/** The components with a landing of their own; the palette is a section of the color picker's. */
+const LANDINGS = COMPONENTS.filter((component) => component.id !== 'color-palette');
+/** The name on the narrowest phones, where the header has no room for the full one. */
+const SHORT: Partial<Record<SiteComponent['id'], string>> = { 'color-picker': 'Picker' };
+
 /**
  * Toaster · Color picker in the header (COLOR_PICKER §8.1): a link to each component's landing, the
  * current one marked with `aria-current` and the site's sliding highlight.
  */
 export function ComponentSwitch({ current, className }: { current: SiteComponent; className?: string }) {
-  const active = COMPONENTS.findIndex((component) => component.id === current.id);
+  const active = LANDINGS.findIndex((component) => component.id === current.id);
   const { group, indicator } = useSegmentIndicator<HTMLElement>(active);
   return (
     <nav
@@ -20,7 +25,7 @@ export function ComponentSwitch({ current, className }: { current: SiteComponent
       className={cn('relative flex rounded-full border border-glass-border bg-background/40 p-0.5', className)}
     >
       <span ref={indicator} aria-hidden="true" className="segment-indicator inset-y-0.5 bg-background shadow-sm dark:bg-white/15 dark:shadow-none" />
-      {COMPONENTS.map((component) => (
+      {LANDINGS.map((component) => (
         <Link
           key={component.id}
           href={component.path}
@@ -35,7 +40,7 @@ export function ComponentSwitch({ current, className }: { current: SiteComponent
         >
           {/* Below 380 px the header cannot fit the full names next to Docs and the theme. */}
           <span className="max-[379px]:hidden">{component.name}</span>
-          <span className="hidden max-[379px]:inline">{component.short}</span>
+          <span className="hidden max-[379px]:inline">{SHORT[component.id] ?? component.name}</span>
         </Link>
       ))}
     </nav>

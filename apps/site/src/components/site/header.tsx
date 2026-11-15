@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { componentOf, GITHUB_URL } from '@/lib/site';
+import { COMPONENTS, componentOf, docsPathOf, GITHUB_URL, PLAYGROUND_PATH } from '@/lib/site';
 import { Button } from '@/components/ui/button';
 import { ComponentSwitch } from './component-switch';
 import { EdgeBlur } from './edge-blur';
@@ -14,9 +14,12 @@ import { ThemeToggle } from './theme-toggle';
  * No backdrop of its own: the page blurs progressively under the top edge (`.site-edge`, z-40,
  * with a faint background tint) and the header sits on it (z-50). The logo, Docs and Playground
  * follow the component of the page (Toaster or Color picker), which the switch next to the logo picks.
+ * The kit's own pages keep the Toaster's logo, switch and Playground, but Docs leads to the docs of
+ * the whole kit.
  */
 export function Header() {
-  const component = componentOf(usePathname());
+  const pathname = usePathname();
+  const component = componentOf(pathname) ?? COMPONENTS[0]!;
   return (
     <>
       <EdgeBlur edge="top" height="min(7rem, 10svh)" className="site-edge z-40">
@@ -35,11 +38,11 @@ export function Header() {
           <ComponentSwitch current={component} className="mr-auto" />
           <nav aria-label="Primary" className="flex items-center gap-1 sm:gap-2">
             <Button asChild variant="ghost" size="sm">
-              <Link href={component.docs}>Docs</Link>
+              <Link href={docsPathOf(pathname)}>Docs</Link>
             </Button>
-            {component.playground ? (
+            {component.id === 'toaster' ? (
               <Button asChild variant="ghost" size="sm" className="max-sm:hidden">
-                <Link href={component.playground}>Playground</Link>
+                <Link href={PLAYGROUND_PATH}>Playground</Link>
               </Button>
             ) : null}
             <ThemeToggle />

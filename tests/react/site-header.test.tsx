@@ -30,4 +30,17 @@ describe('site header (COLOR_PICKER §8.1)', () => {
     expect(picker.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', '/docs/components/color-picker');
     expect(picker.queryByRole('link', { name: 'Playground' })).toBeNull();
   });
+
+  it("leads Docs to the docs of the whole kit from the kit's own pages", () => {
+    for (const pathname of ['/', '/docs', '/docs/installation']) {
+      route.pathname = pathname;
+      const { unmount } = render(<Header />);
+      const primary = within(screen.getByRole('navigation', { name: 'Primary' }));
+      expect(primary.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', '/docs');
+      // The switch shows the two landings only; the palette is not in it.
+      const components = within(screen.getByRole('navigation', { name: 'Components' }));
+      expect(components.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/toaster', '/color-picker']);
+      unmount();
+    }
+  });
 });

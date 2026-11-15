@@ -97,6 +97,8 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   permanently to the new ones. Search, `llms.txt`, `llms-full.txt`, the `.md` pages and the sitemap
   follow the new sidebar; `llms.txt` opens with a line about the kit.
 - The READMEs, the security policy and the issue template link to the new addresses.
+- On the kit's own pages (Introduction, Installation) Docs in the header leads to the kit's
+  Introduction instead of the Toaster's page.
 
 ### Fixes
 
