@@ -27,7 +27,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:tooling": "node --test tests/tooling/local-candidate.test.mjs tests/tooling/doc-coverage.test.mjs tests/tooling/release-notes.test.mjs",
-    "check:docs": "node scripts/check-doc-examples.mjs && node scripts/check-doc-coverage.mjs",
+    "check:docs": "node scripts/check-doc-examples.mjs && node scripts/check-doc-coverage.mjs && node scripts/check-doc-coverage.mjs apps/site/src/components/ui/color-picker/color-picker.tsx apps/site/content/color-picker && node scripts/check-doc-coverage.mjs apps/site/src/components/ui/color-palette/color-palette.tsx apps/site/content/color-picker",
     "release:verify": "node scripts/verify-release.mjs",
     "test:e2e": "playwright test",
     "check:package": "node scripts/check-package.mjs",
@@ -40,7 +40,8 @@
     "test:managers": "node scripts/package-managers.mjs",
     "registry:build": "node scripts/registry-build.mjs",
     "test:registry": "node scripts/registry-check.mjs",
-    "size:color-picker": "node scripts/measure-color-picker.mjs"
+    "size:color-picker": "node scripts/measure-color-picker.mjs",
+    "size:color-palette": "node scripts/measure-color-palette.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

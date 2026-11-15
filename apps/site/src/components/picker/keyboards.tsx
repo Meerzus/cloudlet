@@ -26,6 +26,8 @@ export function Keyboards() {
   const section = useRef<HTMLElement>(null);
   const [pressed, setPressed] = useState<ReadonlySet<string>>(new Set());
   const [still, setStill] = useState(false);
+  /** The control a jump spreads out of. */
+  const from = (selector: string) => section.current?.querySelector(selector) ?? undefined;
 
   useEffect(() => {
     const host = section.current;
@@ -60,10 +62,10 @@ export function Keyboards() {
         <h2 id="keyboards-title" className="cp-section-title">built for keyboards</h2>
         <p className="cp-section-lede">
           Every part of the picker answers the keys, and a screen reader hears what changed: “Saturation 40%, Brightness
-          80%”, “Hue 48°”. Try it here — this panel paints the sky above.
+          80%”, “Hue 48°”. Try it here — this panel paints the page.
         </p>
         <div className="cp-keyboards">
-          <ColorPickerPanel color={value} onChange={pick} className="cp-keyboards-panel" />
+          <ColorPickerPanel color={value} onChange={(next) => pick(next, from('.cp-keyboards-panel'))} className="cp-keyboards-panel" />
           <table className="cp-keys">
             <caption className="sr-only">Keyboard shortcuts</caption>
             <tbody>
@@ -83,7 +85,7 @@ export function Keyboards() {
           </table>
         </div>
         <div className="cp-motion-demo" data-reduced-motion={still ? '' : undefined}>
-          <ColorPicker color={value} onChange={pick} labels={{ open: 'Open the motion demo picker', panel: 'Motion demo picker' }} />
+          <ColorPicker color={value} onChange={(next) => pick(next, from('.cp-motion-demo'))} labels={{ open: 'Open the motion demo picker', panel: 'Motion demo picker' }} />
           <button type="button" role="switch" aria-checked={still} className="cp-switch" onClick={() => setStill((current) => !current)}>
             <span className="cp-switch-track" aria-hidden="true">
               <span className="cp-switch-thumb" />

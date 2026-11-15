@@ -2,9 +2,11 @@
 // while scripts/voiceover-log.mjs records what VoiceOver speaks. A step log with timestamps and the
 // focused element lets each scenario's speech be read off the speech log. macOS only.
 //
-//   node scripts/voiceover-safari-run.mjs [--only arrival,pill-island,slider,...] [--out-dir dir]
+//   node scripts/voiceover-safari-run.mjs [--only arrival,pill-island,slider,...,picker,palette] [--out-dir dir] [--site URL]
 //
-// Needs the lab served on 127.0.0.1:4173 (node scripts/serve-csp.mjs), VoiceOver on with AppleScript
+// Needs the lab served on 127.0.0.1:4173 (node scripts/serve-csp.mjs) for the Toaster's scenarios; the
+// color picker's (`picker`) serves the site's static export itself (npm run build:site), or uses --site,
+// VoiceOver on with AppleScript
 // control (see scripts/voiceover-log.mjs) and Safari Settings > Developer > Allow remote automation.
 // Safari runs the session in its own automation window; do not touch the keyboard or mouse meanwhile.
 import { spawn } from 'node:child_process';
@@ -18,6 +20,7 @@ const { values } = parseArgs({
     'out-dir': { type: 'string', default: 'artifacts/release/manual/1.0.0' },
     port: { type: 'string', default: '4448' },
     settle: { type: 'string', default: '15000' },
+    site: { type: 'string' },
   },
 });
 const base = 'http://127.0.0.1:4173/';
@@ -28,7 +31,8 @@ const speechFile = `${dir}/voiceover-safari-${stamp}.jsonl`;
 const stepsFile = `${dir}/voiceover-safari-${stamp}-steps.jsonl`;
 /** Time for VoiceOver to finish a phrase before the next key. */
 const SPEAK = 2500;
-const KEYS = { Enter: '', Escape: '', Tab: '', ArrowLeft: '', ArrowRight: '', Home: '', End: '' };
+/** WebDriver key codes. */
+const KEYS = { Enter: '\uE007', Escape: '\uE00C', Tab: '\uE004', Shift: '\uE008', ArrowLeft: '\uE012', ArrowRight: '\uE014', ArrowUp: '\uE013', ArrowDown: '\uE015', Home: '\uE011', End: '\uE010', Delete: '\uE017' };
 
 const pause = (ms) => new Promise((settle) => setTimeout(settle, ms));
 let session = null;
@@ -53,18 +57,23 @@ async function go(route) {
     await js(`window.accessibilityFixture?.reset(); window.attentionFixture?.clear(); document.activeElement?.blur?.()`);
     return;
   }
-  await wd('POST', at('/url'), { url: base + route });
+  await wd('POST', at('/url'), { url: /^https?:/u.test(route) ? route : base + route });
   loaded = route;
   await pause(Number(values.settle));
 }
 const js = (script, ...args) => wd('POST', at('/execute/sync'), { script, args });
-const press = (key) => wd('POST', at('/actions'), {
-  actions: [{ type: 'key', id: 'keyboard', actions: [{ type: 'keyDown', value: KEYS[key] }, { type: 'keyUp', value: KEYS[key] }] }],
-});
-/** What the keyboard focus is on, as a short label. */
+/** Presses a key, or a chord such as 'Shift+ArrowUp' (modifiers held around the key). */
+const press = (chord) => {
+  const keys = chord.split('+').map((key) => KEYS[key]);
+  return wd('POST', at('/actions'), {
+    actions: [{ type: 'key', id: 'keyboard', actions: [...keys.map((value) => ({ type: 'keyDown', value })), ...keys.reverse().map((value) => ({ type: 'keyUp', value }))] }],
+  });
+};
+/** What the keyboard focus is on, as a short label; a slider's or radio's value follows its name. */
 const focused = () => js(`const e = document.activeElement;
   if (!e || e === document.body) return 'body';
-  return (e.tagName.toLowerCase() + ' ' + (e.getAttribute('aria-label') || e.textContent || '').trim().replace(/\\s+/g, ' ')).slice(0, 90);`);
+  const value = e.getAttribute('aria-valuetext') || (e.type === 'radio' ? e.value + (e.checked ? ' (checked)' : '') : '');
+  return (e.tagName.toLowerCase() + ' ' + (e.getAttribute('aria-label') || e.textContent || '').trim().replace(/\\s+/g, ' ') + (value ? ' = ' + value : '')).slice(0, 90);`);
 /** Focuses the first element matching a selector, optionally with exact text; VoiceOver follows keyboard focus. */
 const focus = (selector, text) => js(`const found = [...document.querySelectorAll(arguments[0])]
   .find(e => arguments[1] === null || e.textContent.trim() === arguments[1]);
@@ -89,6 +98,9 @@ async function step(scenario, label, action) {
 const note = (scenario, label, value) => appendFile(stepsFile, `${JSON.stringify({ at: new Date().toISOString(), scenario, step: label, value })}\n`);
 
 const clearButton = () => focus('button', 'Clear notifications');
+
+/** The color picker's docs page; set in main() once the site is served. */
+let pickerPage = '';
 
 const scenarios = {
   arrival: async (name) => {
@@ -182,6 +194,46 @@ const scenarios = {
     });
     await note(name, 'back on the stand', await js('return { visibility: document.visibilityState, records: window.accessibilityFixture.snapshot().stack.length }'));
   },
+  // The color picker (COLOR_PICKER §5) on its docs page: each step names what VoiceOver should say,
+  // as the docs and the Keyboards cheat sheet promise ("Saturation 40%, Brightness 80%", "Hue 48°").
+  picker: async (name) => {
+    const swatch = '.docs-picker-demo .color-picker > .color-picker-swatch';
+    const panel = '.docs-picker-demo .color-picker [role="dialog"]';
+    await step(name, 'load /color-picker/docs', () => go(pickerPage));
+    await step(name, 'focus the swatch (“Open the example picker”, collapsed, button)', () => focus(swatch));
+    await step(name, 'Enter (“Example picker”; “Saturation 84%, Brightness 86%”, slider)', () => press('Enter'));
+    await step(name, '→ (“Saturation 85%, Brightness 86%”)', () => press('ArrowRight'));
+    await step(name, 'Shift+↑ (“Saturation 85%, Brightness 96%”)', () => press('Shift+ArrowUp'));
+    await step(name, 'Tab (“Hue 222°”, Hue, slider)', () => press('Tab'));
+    await step(name, '→ (“Hue 223°”)', () => press('ArrowRight'));
+    await step(name, 'Shift+Tab ×2 (“Color value”, text field)', async () => { await press('Shift+Tab'); await pause(SPEAK); await press('Shift+Tab'); });
+    await step(name, 'Tab ×3 (“hex”, radio button, 1 of 4, Format)', async () => { for (const _ of [1, 2, 3]) { await press('Tab'); await pause(600); } });
+    await step(name, '→ (“rgb”, selected radio button, 2 of 4)', () => press('ArrowRight'));
+    await note(name, 'value field after the format switch', await js(`return document.querySelector('${panel} .color-picker-value')?.value ?? null`));
+    await step(name, 'Tab (“Copy”, button; no eyedropper in Safari)', () => press('Tab'));
+    await step(name, 'Enter on copy (“Copied”)', () => press('Enter'));
+    await note(name, 'live region after copy', await js(`return document.querySelector('${panel} [aria-live]')?.textContent ?? null`));
+    await step(name, 'Escape (“Open the example picker”, collapsed, button)', () => press('Escape'));
+    await note(name, 'swatch after Escape', await js(`const s = document.querySelector('${swatch}'); return { focused: s === document.activeElement, expanded: s.getAttribute('aria-expanded') }`));
+  },
+  // The color palette (COLOR_PALETTE §4) on the same docs page: add, change, remove. One Tab stop
+  // for the row; each swatch says its place and value; a removal is announced and focus moves on.
+  palette: async (name) => {
+    const row = '.docs-palette-demo [role="group"]';
+    const current = () => js(`return [...document.querySelectorAll('${row} .color-picker > .color-picker-swatch')].map((s) => s.getAttribute('aria-label'))`);
+    await step(name, 'load /color-picker/docs', () => go(pickerPage));
+    await step(name, 'focus the first swatch (“Color 1 of 3, #245cdb”, button, Example palette, group)', () => focus(`${row} .color-picker > .color-picker-swatch`));
+    await step(name, '→ (“Color 2 of 3, #f2b84b”)', () => press('ArrowRight'));
+    await step(name, 'End (“Add color”, button)', () => press('End'));
+    await step(name, 'Enter — add (“Color picker”; “Saturation …, Brightness …”, slider)', () => press('Enter'));
+    await note(name, 'swatches after adding', await current());
+    await step(name, '→ in the new color’s area (“Saturation …”, one percent more)', () => press('ArrowRight'));
+    await step(name, 'Escape (“Color 4 of 4, #…”, button)', () => press('Escape'));
+    await note(name, 'swatches after the change', await current());
+    await step(name, 'Delete — remove (“Color removed”; “Color 3 of 3, #2f8f9d”)', () => press('Delete'));
+    await note(name, 'swatches and live region after removing', await js(`return { swatches: [...document.querySelectorAll('${row} .color-picker > .color-picker-swatch')].map((s) => s.getAttribute('aria-label')), live: document.querySelector('${row} > .color-palette-sr-only')?.textContent ?? null }`));
+    await step(name, 'Home (“Color 1 of 3, #245cdb”)', () => press('Home'));
+  },
   'long-body': async (name) => {
     const rect = await wd('GET', at('/window/rect'));
     await wd('POST', at('/window/rect'), { width: 420, height: 820 });
@@ -210,6 +262,16 @@ for (const name of selected) if (!scenarios[name]) throw new Error(`Unknown scen
 const children = [];
 async function main() {
   await mkdir(dir, { recursive: true });
+  if (selected.includes('picker') || selected.includes('palette')) {
+    let site = values.site;
+    if (!site) {
+      const { serve } = await import('../apps/site/scripts/serve-out.mjs');
+      const server = await serve();
+      children.push({ kill: () => server.close() });
+      site = `http://127.0.0.1:${server.address().port}`;
+    }
+    pickerPage = `${site.replace(/\/$/u, '')}/color-picker/docs`;
+  }
   const driver = spawn('safaridriver', ['-p', String(port)], { stdio: 'ignore' });
   children.push(driver);
   for (let attempt = 0; ; attempt += 1) {

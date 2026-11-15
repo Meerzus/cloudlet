@@ -6,11 +6,11 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-/** The site's documentation pages: every ```ts / ```tsx fence of content/docs is checked too. */
-const DOCS_CONTENT = 'apps/site/content/docs';
-const mdxPages = (await readdir(resolve(root, DOCS_CONTENT), { recursive: true }))
+/** The site's documentation pages: every ```ts / ```tsx fence of the Toaster's and the color picker's docs is checked too. */
+const DOCS_CONTENTS = ['apps/site/content/docs', 'apps/site/content/color-picker'];
+const mdxPages = (await Promise.all(DOCS_CONTENTS.map(async (dir) => (await readdir(resolve(root, dir), { recursive: true })).map((file) => `${dir}/${file}`)))).flat()
   .filter((entry) => entry.endsWith('.mdx'))
-  .map((entry) => `${DOCS_CONTENT}/${entry.replaceAll('\\', '/')}`)
+  .map((entry) => entry.replaceAll('\\', '/'))
   .sort();
 // The root README carries no code: it points to the package README and the site.
 const documents = ['packages/toast/README.md', 'registry/README.md', ...mdxPages];
@@ -98,6 +98,9 @@ try {
         '@/components/ui/toaster': [resolve(root, 'registry/cloudlet/toaster.tsx')],
         // The color picker registry item installs the site's own files at these paths.
         '@/components/ui/color-picker/color-picker': [resolve(root, 'apps/site/src/components/ui/color-picker/color-picker.tsx')],
+        '@/components/ui/color-palette/color-palette': [resolve(root, 'apps/site/src/components/ui/color-palette/color-palette.tsx')],
+        '@/components/ui/color-picker/color': [resolve(root, 'apps/site/src/components/ui/color-picker/color.ts')],
+        '@/components/ui/color-picker/morph': [resolve(root, 'apps/site/src/components/ui/color-picker/morph.ts')],
         '@/lib/spring': [resolve(root, 'apps/site/src/lib/spring.ts')],
       },
     },

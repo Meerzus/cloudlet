@@ -2,19 +2,21 @@ import { renderToString } from 'react-dom/server';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PickerColorProvider } from '../../apps/site/src/components/picker/picker-color';
+import { PaintPage } from '../../apps/site/src/components/picker/paint-page';
 import { PickerHero } from '../../apps/site/src/components/picker/picker-hero';
-import { START_COLORS, START_GLOBAL } from '../../apps/site/src/lib/landscape';
+import { START_COLORS, START_GLOBAL } from '../../apps/site/src/lib/picker-start';
 
 const root = document.documentElement;
 const global = window as unknown as Record<string, unknown>;
 const Hero = () => (
   <PickerColorProvider>
     <PickerHero />
+    <PaintPage />
   </PickerColorProvider>
 );
 
 beforeEach(() => {
-  // jsdom has no WebGL 2, no media queries and no intersection observer: the hero falls back to the flat sky.
+  // jsdom has no WebGL 2, no media queries and no intersection observer: the page falls back to the flat background.
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} }));
   vi.stubGlobal('IntersectionObserver', class { observe() {} disconnect() {} });
@@ -25,26 +27,41 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   delete global[START_GLOBAL];
-  root.removeAttribute('data-cp-hour');
-  root.removeAttribute('data-cp-top');
   root.style.removeProperty('--cp-color');
 });
 
-describe('color picker landing hero (COLOR_PICKER §8.2–8.3)', () => {
-  it('renders on the server with the first curated color and paints the swatch from <html>', () => {
+const panel = () => screen.getByRole('group', { name: 'Page color' });
+
+describe('color picker landing hero and its paint (COLOR_PICKER §8.2–8.4)', () => {
+  it('renders on the server with the copy, the open panel and the page frame for the shader', () => {
     const html = renderToString(<Hero />);
-    expect(html).toContain('pick a color');
-    expect(html).toContain('aria-label="Pick the sky color"');
-    // The start script has set --cp-color by the time this markup paints.
-    expect(html).toContain('var(--cp-color)');
+    expect(html).toContain('pick a color,');
+    expect(html).toContain('paint the page');
+    expect(html).toContain('One shadcn item, no dependencies.');
+    expect(html).toContain('aria-label="Page color"');
+    expect(html).toContain('color-picker-inline');
+    // No swatch to click: the panel is open from the start.
+    expect(html).not.toContain('aria-expanded');
+    // The hero has no canvas of its own: one paint under the page, its long frame AVIF first, WebP behind it.
+    expect(html.match(/<canvas/g)).toHaveLength(1);
+    expect(html).toContain('class="cp-paint"');
+    expect(html).toContain('material-page-640.avif');
+    expect(html).toContain('src="/picker/material-page-1280.webp"');
+    expect(html).not.toContain('material-hero');
+    // Until the start color is known the panel stays hidden (picker.css): the section is not started.
+    expect(html).not.toContain('data-started');
   });
 
-  it('takes the color the start script picked and keeps the flat sky without WebGL 2', () => {
+  it('takes the color the start script picked and keeps the flat background without WebGL 2', () => {
     global[START_GLOBAL] = '#1b1f4a';
     render(<Hero />);
-    expect(root.dataset['cpHour']).toBe('night');
     expect(root.style.getPropertyValue('--cp-color')).toBe('#1b1f4a');
-    expect(document.querySelector('.cp-hero')).toHaveAttribute('data-flat');
+    // The scene is the theme's: nothing about it on <html>.
+    expect(root).not.toHaveAttribute('data-cp-scene');
+    expect(root).not.toHaveAttribute('data-cp-paint');
+    expect(document.querySelector('.cp-paint')).toHaveAttribute('data-mode', 'flat');
+    expect(document.querySelector('.cp-hero')).toHaveAttribute('data-started');
+    expect(within(panel()).getByRole('textbox', { name: 'Color value' })).toHaveValue('#1b1f4a');
     // Nothing changed yet: the address stays as it was.
     expect(window.location.search).toBe('');
   });
@@ -58,10 +75,9 @@ describe('color picker landing hero (COLOR_PICKER §8.2–8.3)', () => {
   });
 
   it('starts from ?c= after a client navigation, when the start script did not run', () => {
-    window.history.replaceState(null, '', '/color-picker?c=0f3d5c');
+    window.history.replaceState(null, '', '/color-picker?c=f2b84b');
     render(<Hero />);
-    expect(root.dataset['cpHour']).toBe('storm');
-    expect(root.style.getPropertyValue('--cp-color')).toBe('#0f3d5c');
+    expect(root.style.getPropertyValue('--cp-color')).toBe('#f2b84b');
   });
 
   it('starts from a curated color without ?c=', () => {
@@ -69,15 +85,20 @@ describe('color picker landing hero (COLOR_PICKER §8.2–8.3)', () => {
     expect(START_COLORS).toContain(root.style.getPropertyValue('--cp-color'));
   });
 
-  it('a picked color repaints the page and lands in ?c=', async () => {
+  it('a color typed into the panel repaints the page and lands in ?c=', async () => {
     global[START_GLOBAL] = '#1b1f4a';
     render(<Hero />);
-    fireEvent.click(screen.getByRole('button', { name: 'Pick the sky color' }));
-    const field = within(screen.getByRole('dialog', { name: 'Sky color' })).getByRole('textbox', { name: 'Color value' });
+    const field = within(panel()).getByRole('textbox', { name: 'Color value' });
     fireEvent.change(field, { target: { value: '#f2b84b' } });
-    expect(root.dataset['cpHour']).toBe('day');
     expect(root.style.getPropertyValue('--cp-color')).toBe('#f2b84b');
     await act(() => new Promise((resolve) => setTimeout(resolve, 300)));
     expect(window.location.search).toBe('?c=f2b84b');
+  });
+
+  it('the panel has no opacity: that lives in its own section', () => {
+    global[START_GLOBAL] = '#ff6a3d';
+    render(<Hero />);
+    expect(within(panel()).queryByRole('slider', { name: /Opacity/ })).toBeNull();
+    expect(within(panel()).getByRole('slider', { name: /Hue/ })).toBeInTheDocument();
   });
 });

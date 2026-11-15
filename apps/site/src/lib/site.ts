@@ -9,6 +9,26 @@ export const TOASTER_PATH = '/toaster';
 export const PLAYGROUND_PATH = `${TOASTER_PATH}/playground`;
 /** The color picker's landing (COLOR_PICKER §8): a registry item, no npm package. */
 export const COLOR_PICKER_PATH = '/color-picker';
+/** The color picker's documentation: one page. */
+export const COLOR_PICKER_DOCS_PATH = `${COLOR_PICKER_PATH}/docs`;
+/** The family's components, in the header's switch order: landing, docs and (Toaster only) Playground. */
+export interface SiteComponent {
+  readonly id: 'toaster' | 'color-picker';
+  readonly name: string;
+  /** The name on the narrowest phones, where the header has no room for the full one. */
+  readonly short: string;
+  readonly path: string;
+  readonly docs: string;
+  readonly playground?: string;
+}
+export const COMPONENTS: readonly SiteComponent[] = [
+  { id: 'toaster', name: 'Toaster', short: 'Toaster', path: TOASTER_PATH, docs: `${TOASTER_PATH}/docs`, playground: `${TOASTER_PATH}/playground` },
+  { id: 'color-picker', name: 'Color picker', short: 'Picker', path: COLOR_PICKER_PATH, docs: COLOR_PICKER_DOCS_PATH },
+];
+/** The component a path belongs to; anything else (the root, unknown paths) is the Toaster's. */
+export function componentOf(pathname: string): SiteComponent {
+  return COMPONENTS.find((component) => pathname === component.path || pathname.startsWith(`${component.path}/`)) ?? COMPONENTS[0]!;
+}
 /**
  * Search engines are welcome since 1.0.0: pages carry no `noindex`, `robots.txt` and `sitemap.xml`
  * are static files of the export. `false` brings back `noindex, nofollow` on every page; then
@@ -31,7 +51,7 @@ export const DOCS_PATH = `${TOASTER_PATH}/docs`;
 export const DOCS_URL = `${SITE_URL}${DOCS_PATH}`;
 /** Reading pages: no sky, no Lenis, no cloud footer. */
 export function isQuietPath(pathname: string): boolean {
-  return pathname === DOCS_PATH || pathname.startsWith(`${DOCS_PATH}/`);
+  return [DOCS_PATH, COLOR_PICKER_DOCS_PATH].some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 /** Stable versions are npm's `latest`; prereleases would go under `next`. */
 export const INSTALL_COMMAND = 'npm install @cloudlet/toast';
@@ -41,6 +61,9 @@ export const SHADCN_COMMAND = `npx shadcn@latest add ${REGISTRY_ITEM_URL}`;
 /** The color picker's registry item: source files only, no npm package (COLOR_PICKER §1). */
 export const COLOR_PICKER_ITEM_URL = `${SITE_URL}/r/color-picker.json`;
 export const COLOR_PICKER_COMMAND = `npx shadcn@latest add ${COLOR_PICKER_ITEM_URL}`;
+/** The color palette's registry item: it lists the color picker as a registry dependency (COLOR_PALETTE §1). */
+export const COLOR_PALETTE_ITEM_URL = `${SITE_URL}/r/color-palette.json`;
+export const COLOR_PALETTE_COMMAND = `npx shadcn@latest add ${COLOR_PALETTE_ITEM_URL}`;
 /**
  * What the published package adds to an app, min+gzip bytes (`release:verify` of the
  * `1.2.0` tarball, `artifacts/size/report.json`): its own JavaScript on first load (`start`, before
@@ -48,7 +71,7 @@ export const COLOR_PICKER_COMMAND = `npx shadcn@latest add ${COLOR_PICKER_ITEM_U
  * and the whole delta over a React-only app. The landing leads with `start`, always named as
  * JavaScript on first load; tests/unit/site-drift.test.ts holds them to the latest size report.
  */
-export const PACKAGE_SIZE = { version: '1.2.0', start: 9337, lazy: 23084, javascript: 32421, css: 4079, total: 36907 } as const;
+export const PACKAGE_SIZE = { version: '1.2.0', start: 9336, lazy: 23240, javascript: 32576, css: 4079, total: 37062 } as const;
 /** Bytes as the landing prints them: whole kilobytes, one decimal under ten. */
 export function formatKB(bytes: number): string {
   const kb = bytes / 1000;

@@ -3,7 +3,7 @@
  * After `next build`: moves the Markdown of each page from `out/llms.mdx/` to its
  * address next to the page (`out/toaster/docs.md`, `out/toaster/docs/<slug>.md`) — a route handler cannot live
  * beside the `/docs/[[...slug]]` pages — and checks the output for agents: every page of
- * `content/docs/en` has its `.md`, is listed in `llms.txt` and is in `llms-full.txt`; no runnable
+ * `content/docs/en` and of the color picker's `content/color-picker` has its `.md`, is listed in `llms.txt` and is in `llms-full.txt`; no runnable
  * meta, MDX component or placeholder is left. Styling explains the live editor and its URL
  * parameters in both Markdown outputs. Exits 1 with the list of problems.
  */
@@ -15,9 +15,12 @@ const SITE = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const OUT = join(SITE, 'out');
 const STAGING = join(OUT, 'llms.mdx');
 const CONTENT = join(SITE, 'content/docs/en');
+const PICKER_CONTENT = join(SITE, 'content/color-picker');
 const SITE_URL = /export const SITE_URL = '([^']+)'/u.exec(readFileSync(join(SITE, 'src/lib/site.ts'), 'utf8'))?.[1];
 /** `/toaster/docs`, as `src/lib/site.ts` builds it (TOASTER_PATH + '/docs'). */
 const DOCS_PATH = `${/export const TOASTER_PATH = '([^']+)'/u.exec(readFileSync(join(SITE, 'src/lib/site.ts'), 'utf8'))?.[1]}/docs`;
+/** `/color-picker/docs` (COLOR_PICKER_PATH + '/docs'). */
+const PICKER_DOCS_PATH = `${/export const COLOR_PICKER_PATH = '([^']+)'/u.exec(readFileSync(join(SITE, 'src/lib/site.ts'), 'utf8'))?.[1]}/docs`;
 
 const problems = [];
 if (!existsSync(STAGING)) {
@@ -43,9 +46,9 @@ const full = read('llms-full.txt');
 const LEFTOVERS = [
   [/demo="|demo-note/u, 'runnable meta'],
   [/\0/u, 'placeholder'],
-  [/<(Callout|GetStartedTabs|GetStartedCode|StyleEditor)\b/u, 'MDX component'],
+  [/<(Callout|GetStartedTabs|GetStartedCode|StyleEditor|PickerDemo|PaletteDemo|InstallCommand)\b/u, 'MDX component'],
 ];
-const urls = pageUrls(CONTENT);
+const urls = [...pageUrls(CONTENT), ...pageUrls(PICKER_CONTENT, PICKER_DOCS_PATH)];
 for (const url of urls) {
   const markdown = read(`${url.slice(1)}.md`);
   if (!markdown) continue;
@@ -57,6 +60,9 @@ for (const url of urls) {
   for (const [pattern, what] of LEFTOVERS) if (pattern.test(markdown)) problems.push(`${url}.md: ${what} left`);
 }
 for (const [pattern, what] of LEFTOVERS) if (pattern.test(full)) problems.push(`llms-full.txt: ${what} left`);
+// Crawlers get the same pages as agents: every documented page is in the sitemap.
+const sitemap = read('sitemap.xml');
+for (const url of urls) if (!sitemap.includes(`<loc>${SITE_URL}${url}</loc>`)) problems.push(`sitemap.xml does not list ${url}`);
 
 const editorDescription = `Style editor at ${SITE_URL}${DOCS_PATH}/styling#style-editor: set the tokens on a live Toaster and copy the CSS. The query string carries the values — one parameter per token name without the \`--cloudlet-\` prefix (\`background\`, \`background-dark\`, \`pill-radius\`, \`font-family\`, …); dark-theme colors use the \`-dark\` suffix, and the preview follows the site theme.`;
 for (const [file, markdown] of [[`${DOCS_PATH.slice(1)}/styling.md`, read(`${DOCS_PATH.slice(1)}/styling.md`)], ['llms-full.txt', full]]) {

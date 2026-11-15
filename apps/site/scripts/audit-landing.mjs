@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * axe on the static export of the landings: the Toaster's `/`, `/playground` and `/frame`, and `/color-picker`,
+ * axe on the static export of the landings: the Toaster's `/`, `/playground` and `/frame`, `/color-picker` and its docs,
  * desktop 1440×900 and phone 390×844, light and dark, with motion and with reduced motion.
  * Scenes are pinned and fade text in and out, so the home page is checked at every section
  * and at points inside scenes 2 and 3, not only at the top. Text caught mid-fade (opacity
@@ -10,7 +10,7 @@
  *   npm run build && npm run build:site
  *   node apps/site/scripts/audit-landing.mjs <out-dir> [--base URL] [--browser chromium|firefox|webkit] [scenario ...]
  *
- * Besides axe, on `/`, `/playground` and `/color-picker`: a keyboard pass (Tab from the top until focus leaves the
+ * Besides axe, on `/`, `/playground`, `/color-picker` and its docs: a keyboard pass (Tab from the top until focus leaves the
  * page or cycles; every stop must show a focus ring and be scrolled into view) and, with reduced
  * motion, the still layout (no Lenis, no pin spacers, sky and scenes untransformed).
  *
@@ -61,7 +61,7 @@ const homeStops = (page) =>
   page.evaluate((points) => {
     const stops = [];
     // The color picker landing wraps its neutral sections in a tinted block.
-    for (const section of document.querySelectorAll('main > section, main > .cp-tint > section, footer')) {
+    for (const section of document.querySelectorAll('main > section, footer')) {
       const top = section.getBoundingClientRect().top + window.scrollY;
       const label = section.id || section.tagName.toLowerCase();
       stops.push({ label, y: Math.max(0, top - 80) });
@@ -173,7 +173,7 @@ try {
     page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
     page.on('pageerror', (error) => errors.push(String(error)));
     const entry = (report[name] = { errors, checks: [] });
-    for (const path of ['/toaster', '/toaster/playground', '/toaster/frame', '/color-picker']) {
+    for (const path of ['/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/color-picker/docs']) {
       await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(600);
       const stops = path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
@@ -186,7 +186,7 @@ try {
       }
     }
     entry.keyboard = {};
-    for (const path of ['/toaster', '/toaster/playground', '/color-picker']) {
+    for (const path of ['/toaster', '/toaster/playground', '/color-picker', '/color-picker/docs']) {
       entry.keyboard[path] = await keyboard(page, path);
       if (entry.keyboard[path].failures.length) failed = true;
     }

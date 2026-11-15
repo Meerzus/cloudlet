@@ -12,8 +12,8 @@ export function CloudletIcon({ idPrefix, ...props }: SVGProps<SVGSVGElement> & {
   const cut = (
     <>
       <rect x="-50" y="-80" width="250" height="250" fill="#fff" />
-      <path d={PILL} stroke="#000" strokeWidth="11" />
-      <rect x="-50" y="65" width="250" height="80" />
+      <path d={PILL} fill="#000" stroke="#000" strokeWidth="11" />
+      <rect x="-50" y="65" width="250" height="80" fill="#000" />
     </>
   );
   return (
@@ -28,7 +28,7 @@ export function CloudletIcon({ idPrefix, ...props }: SVGProps<SVGSVGElement> & {
         </mask>
         <mask id={id('big')} maskUnits="userSpaceOnUse" x="-50" y="-80" width="250" height="250">
           {cut}
-          <circle cx="42" cy="63" r="27.5" />
+          <circle cx="42" cy="63" r="27.5" fill="#000" />
         </mask>
       </defs>
       <rect width="32" height="32" rx="8" fill={`url(#${id('tile')})`} />

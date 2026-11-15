@@ -21,6 +21,12 @@ async function mount() {
     const { ColorPickerFixture } = await import('./color-picker-fixture.js');
     if (!active) return;
     root.render(<StrictMode><ColorPickerFixture /></StrictMode>);
+  } else if (fixture === 'color-palette') {
+    await import('./color-picker-fixture.css');
+    await import('./color-palette-fixture.css');
+    const { ColorPaletteFixture } = await import('./color-palette-fixture.js');
+    if (!active) return;
+    root.render(<StrictMode><ColorPaletteFixture /></StrictMode>);
   } else if (fixture === 'visual') {
     await import('./visual-fixture.css');
     const { createVisualFixture } = await import('./visual-fixture.js');

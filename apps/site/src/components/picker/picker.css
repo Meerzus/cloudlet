@@ -1,43 +1,46 @@
 /*
- * The color picker landing (app/color-picker, COLOR_PICKER §8). The picked color lives on <html>:
- * `--cp-color` and `data-cp-hour`, written before first paint by START_SCRIPT (lib/landscape.ts) and
- * then by picker-hero.tsx; `data-cp-top` says the header sits on the hero.
+ * The color picker landing (app/color-picker, COLOR_PICKER §8). The picked color lives on <html> as
+ * `--cp-color`, written before first paint by START_SCRIPT (lib/picker-start.ts) and then by
+ * picker-color.tsx. One paint lies under the whole page (paint-page.tsx): a canvas fixed to the window
+ * (`data-cp-paint="fixed"` on <html>) or, on a software WebGL, one over the whole page ("page").
+ * Text and controls keep the theme's tokens: the theme picks the paint's scene.
  */
 html:has(.cp-site) { background: var(--background); }
 
-/* The flat sky: shown until the landscape draws, and for good without WebGL 2. FLAT_SKY in lib/landscape.ts mixes the same. */
-.cp-hero {
-  --cp-ink: oklch(0.985 0.005 250);
-  --cp-ink-soft: oklch(0.985 0.005 250 / 0.86);
-  position: relative;
-  isolation: isolate;
-  min-height: 100svh;
-  /* Under the sticky header: the landscape runs to the top edge. */
-  margin-top: -3.5rem;
-  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 55%, black);
-  color: var(--cp-ink);
+/* The flat background: shown until the paint draws, and for good without WebGL 2. flatOf in lib/picker-ramp.ts mixes the same,
+   lightness clamped per theme (FLAT_LIGHTNESS) so the muted text keeps 4.5:1; a browser without relative colors keeps the plain mix. */
+html:has(.cp-paint) {
+  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background));
+  background: oklch(from color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background)) max(l, 0.64) c h);
 }
-html[data-cp-hour='day'] .cp-hero {
-  --cp-ink: oklch(0.17 0.02 260);
-  --cp-ink-soft: oklch(0.17 0.02 260 / 0.84);
-  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 60%, white);
-}
-.cp-hero-canvas {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.cp-hero[data-flat] .cp-hero-canvas { display: none; }
+html.dark:has(.cp-paint) { background: oklch(from color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background)) min(l, 0.4) c h); }
+.cp-paint { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.cp-paint[data-mode='page'] { position: absolute; inset: 0 0 auto; height: 100%; }
+.cp-paint[data-mode='flat'] { display: none; }
+html:has(.cp-paint) main, .cp-paint-footer { position: relative; z-index: 1; }
+/* The header lies on lifted paper over a fixed paint: its own tint would only grey it. */
+html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
+/* On a software WebGL the paint is drawn once over the whole page and cannot lift its paper under the header
+   (which stays at the window's top): the tint does that work there, dense behind the controls, fading below them. */
+html[data-cp-paint='page'] .site-edge-tint { background: linear-gradient(to bottom, color-mix(in oklab, var(--background) 88%, transparent) 55%, transparent); }
 
-.cp-hero-copy {
+.cp-hero {
   position: relative;
-  z-index: 1;
+  min-height: 100svh;
+  /* Under the sticky header: the paint runs to the top edge. */
+  margin-top: -3.5rem;
+}
+
+/* Copy on the frame's paper, the panel open beside it (§8.4). */
+.cp-hero-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3rem;
   max-width: 72rem;
+  min-height: 100svh;
   margin: 0 auto;
-  padding: calc(3.5rem + 12svh) 1.5rem 0;
+  padding: calc(3.5rem + 3rem) 1.5rem 3rem;
 }
 .cp-hero-title {
   max-width: 10ch;
@@ -52,64 +55,25 @@ html[data-cp-hour='day'] .cp-hero {
   margin-top: 1.5rem;
   font-size: 1.125rem;
   line-height: 1.5;
-  color: var(--cp-ink-soft);
   text-wrap: pretty;
 }
-
-/* The disc is the picker's swatch, grown to the size of a sun; the panel still morphs out of its circle. */
-.cp-hero-disc {
-  --disc: 5.5rem;
-  position: absolute;
-  z-index: 2;
-  left: calc(68% - var(--disc) / 2);
-  top: calc(34% - var(--disc) / 2);
-}
-.cp-hero-disc > .color-picker,
-.cp-hero-disc > .color-picker > .color-picker-swatch {
-  width: var(--disc);
-  height: var(--disc);
-}
-.cp-hero-disc > .color-picker > .color-picker-swatch { box-shadow: none; }
-.cp-hero-disc > .color-picker > .color-picker-swatch:focus-visible {
-  box-shadow: none;
-  outline: 3px solid var(--cp-ink);
-  outline-offset: 4px;
+.cp-hero-panel { transition: opacity 240ms ease; }
+/* Until the start color is known the panel would show the server's color: it appears with the right one. */
+.cp-hero:not([data-started]) .cp-hero-panel { opacity: 0; }
+.cp-hero-panel > .color-picker-inline {
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
 }
 @media (max-width: 639px) {
-  .cp-hero-copy { padding-top: calc(3.5rem + 7svh); }
-  .cp-hero-lede { font-size: 1rem; }
-  .cp-hero-disc {
-    --disc: 4rem;
-    left: calc(32% - var(--disc) / 2);
-    top: calc(58% - var(--disc) / 2);
+  .cp-hero-inner {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 2rem;
+    padding-top: calc(3.5rem + 5svh);
   }
+  .cp-hero-lede { font-size: 1rem; }
 }
 
-/* The header over the hero takes the hero's ink: light tokens on a day sky, dark ones otherwise. */
-html[data-cp-top] .site-header {
-  --foreground: oklch(0.985 0.005 250);
-  --muted-foreground: oklch(0.9 0.01 250);
-  --accent: oklch(1 0 0 / 0.14);
-  --accent-foreground: oklch(0.985 0.005 250);
-  --background: oklch(0.2 0.03 265);
-  --glass-border: oklch(1 0 0 / 0.2);
-  color: var(--foreground);
-}
-html[data-cp-top][data-cp-hour='day'] .site-header {
-  --foreground: oklch(0.17 0.02 260);
-  --muted-foreground: oklch(0.24 0.03 260);
-  --accent: oklch(1 0 0 / 0.45);
-  --accent-foreground: oklch(0.17 0.02 260);
-  --background: oklch(0.985 0.008 240);
-  --glass-border: oklch(1 0 0 / 0.55);
-}
-html[data-cp-top] .site-edge-tint { opacity: 0; }
-
-/* --- The neutral sections (§8.6): a few percent of the picked color, changing over 320 ms. --- */
-.cp-tint {
-  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 5%, var(--background));
-  transition: background-color 320ms ease;
-}
+/* --- The sections over the paint --- */
 .cp-section-title {
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 600;
@@ -132,87 +96,35 @@ html[data-cp-top] .site-edge-tint { opacity: 0; }
   font: 0.875em var(--font-geist-mono), ui-monospace, monospace;
 }
 
-/* --- Combinations (§8.5) --- */
-.cp-harmonies {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 2rem;
-  margin-top: 2.5rem;
-}
-.cp-harmony-name { margin-bottom: 0.75rem; font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
-.cp-harmony-swatches { display: flex; flex-direction: column; gap: 0.25rem; }
-.cp-swatch {
-  display: flex;
+/* --- Palette (§8.5): the palette and its hints; the page's paint shows it. --- */
+.cp-palette { display: flex; flex-direction: column; gap: 2.5rem; margin-top: 2.5rem; }
+.cp-palette-row { align-self: start; }
+.cp-hints-title { margin-bottom: 0.75rem; font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
+.cp-hints-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.cp-hint {
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.375rem;
-  border-radius: 0.875rem;
-  text-align: left;
+  gap: 0.625rem;
+  min-height: 2.5rem;
+  padding: 0.375rem 0.875rem 0.375rem 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 0.9375rem;
   outline: none;
-  transition: background-color 150ms ease;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
 }
-.cp-swatch:hover { background: color-mix(in oklab, var(--foreground) 6%, transparent); }
-.cp-swatch:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
-.cp-swatch-chip {
-  flex: none;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.625rem;
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 12%, transparent);
-  transition: background-color 320ms ease;
+.cp-hint:hover { background: color-mix(in oklab, var(--foreground) 9%, var(--background)); }
+.cp-hint:focus-visible { box-shadow: inset 0 0 0 1px var(--border), 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.cp-hint[aria-pressed='true'] { box-shadow: inset 0 0 0 1.5px var(--foreground); }
+.cp-hint-chips { display: inline-flex; }
+.cp-hint-chip {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2px var(--background), inset 0 0 0 1px rgb(0 0 0 / 0.12);
 }
-.cp-swatch-value {
-  min-width: 0;
-  font: 0.8125rem/1.35 var(--font-geist-mono), ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-/* Riso posters: flat paper, flat glyphs, film grain over both (a 256 px tile, scripts/grain.mjs). */
-.cp-posters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 1rem;
-  margin-top: 3.5rem;
-}
-.cp-poster {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  aspect-ratio: 4 / 5;
-  margin: 0;
-  border-radius: 1.25rem;
-  transition: background-color 320ms ease, color 320ms ease;
-}
-.cp-glyph { position: absolute; transition: color 320ms ease; }
-.cp-glyph-moon { left: 26%; top: 8%; width: 48%; }
-.cp-glyph-reflection { left: 36%; top: 48%; width: 28%; }
-.cp-glyph-drop { left: 14%; top: 12%; width: 44%; }
-.cp-glyph-star { right: 12%; top: 32%; width: 34%; }
-.cp-glyph-cloud { left: 12%; top: 16%; width: 74%; }
-.cp-glyph-star-small { right: 14%; top: 8%; width: 18%; }
-.cp-poster-grain {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: url('/picker/grain.png') 0 0 / 256px 256px;
-  mix-blend-mode: overlay;
-  opacity: 0.6;
-  pointer-events: none;
-}
-.cp-poster-caption {
-  position: absolute;
-  right: 1.25rem;
-  bottom: 1.25rem;
-  left: 1.25rem;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-.cp-poster-title { font-size: 2rem; font-weight: 600; line-height: 1; letter-spacing: -0.035em; }
-.cp-poster-meta { font: 500 0.75rem var(--font-geist-mono), ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.cp-hint-chip + .cp-hint-chip { margin-left: -0.375rem; }
 
 /* --- Built for keyboards (§8.5) --- */
 .cp-keyboards { display: grid; align-items: start; gap: 2rem; margin-top: 2.5rem; }
@@ -273,12 +185,92 @@ html[data-cp-top] .site-edge-tint { opacity: 0; }
 }
 .cp-switch[aria-checked='true'] .cp-switch-thumb { transform: translateX(1rem); }
 
+/* --- Opacity and Tools (§8.6–§8.7): no pictures of their own; the veil and the pick lie on the page's paint. --- */
+.cp-veil-section, .cp-pick-section { position: relative; }
+.cp-section-content { position: relative; z-index: 1; }
+.cp-section-layout { margin-top: 2.5rem; }
+.cp-section-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 2rem; min-width: 0; }
+/* Opacity: the theme's background over the paint at 1 − alpha, fading in and out at the section's edges. */
+.cp-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--background);
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent, #000 8rem, #000 calc(100% - 8rem), transparent);
+}
+.cp-copy-value { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+.cp-copy-text {
+  font: 500 clamp(1.5rem, 3.5vw, 2rem) / 1.1 var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.cp-copy-button, .cp-format {
+  min-height: 2.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 0.9375rem;
+  outline: none;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+.cp-copy-button { padding: 0.375rem 1rem; }
+.cp-copy-button:hover, .cp-format:hover { background: color-mix(in oklab, var(--foreground) 9%, var(--background)); }
+.cp-copy-button:focus-visible, .cp-format:focus-visible { box-shadow: inset 0 0 0 1px var(--border), 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.cp-tools-picker { display: flex; align-items: center; gap: 1rem; }
+.cp-formats { display: grid; gap: 0.5rem; }
+.cp-format {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: 0.875rem;
+  text-align: left;
+}
+.cp-format-name { flex: 0 0 3.25rem; font-size: 0.8125rem; color: var(--muted-foreground); }
+.cp-format[data-copied]::after { content: 'copied' / ''; margin-left: auto; font-size: 0.8125rem; color: var(--foreground); }
+.cp-format-value { min-width: 0; font: 0.875rem var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+/* Tools: a click on the paint anywhere in the section takes its color; the button is that for the keyboard. */
+.cp-pick-section { cursor: crosshair; }
+.cp-pick-section [data-paint-skip] { cursor: auto; }
+.cp-paint-pick { position: absolute; inset: 0; z-index: 0; width: 100%; cursor: crosshair; outline: none; }
+.cp-paint-pick:focus-visible { box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--ring) 80%, transparent); }
+/* The crosshair shows while the paint has keyboard focus: the arrows move it, Enter takes its color. */
+.cp-aim {
+  position: absolute;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -1.125rem 0 0 -1.125rem;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.95), 0 0 0 1px rgb(0 0 0 / 0.35), inset 0 0 0 3px rgb(0 0 0 / 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+.cp-aim::after { content: ''; position: absolute; inset: 50% auto auto 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 9999px; background: #fff; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35); }
+.cp-paint-pick:focus-visible .cp-aim { opacity: 1; }
+
 @media (prefers-reduced-motion: reduce) {
-  .cp-tint, .cp-swatch-chip, .cp-poster, .cp-glyph, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb { transition: none; }
+  .cp-hero-panel, .cp-hint, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb,
+  .cp-copy-button, .cp-format, .cp-aim { transition: none; }
 }
 @media (forced-colors: active) {
+  .cp-hint-chip { forced-color-adjust: none; }
+  .cp-hint[aria-pressed='true'] { outline: 2px solid Highlight; }
   .cp-switch-track { border: 1px solid CanvasText; }
   .cp-switch[aria-checked='true'] .cp-switch-track { background: Highlight; }
   .cp-keys kbd { border: 1px solid CanvasText; }
   .cp-keys kbd[data-pressed] { background: Highlight; color: HighlightText; }
+  .cp-paint-pick:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
+}
+
+/* --- The foot (§8.8): no rule over the footer; the paint softens under it into a progressive blur. --- */
+.cp-paint-footer { padding-top: 6rem; }
+.cp-paint-footer .docs-footer { position: relative; border-top: 0; }
+.cp-paint-footer-tint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, color-mix(in oklab, var(--background) 22%, transparent), transparent);
 }

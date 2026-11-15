@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
- * Smoke snapshot of the color picker landing's hero (COLOR_PICKER §8.4): headless Chromium with
- * SwiftShader renders `/color-picker?c=ff6a3d` from the static export, still (reduced motion),
- * without the copy — fonts differ between systems, the shader should not. The frame is scaled
+ * Smoke snapshot of the top of the color picker landing (COLOR_PICKER §8.2, §8.9): headless Chromium
+ * with SwiftShader renders `/color-picker?c=ff6a3d` from the static export in the light theme once
+ * the paint has drawn its frame (`data-cp-paint` on <html> and the frame decoded), still (reduced
+ * motion: no flow, no bleed), with the text hidden and the panel out of the way — fonts differ between
+ * systems, the shader should not; the paper lifted under the copy stays in. The window is scaled
  * down to 160×100 in the page, which averages the film grain away, and compared with the
  * committed reference `smoke/picker-hero.png`: it fails when more than 1 % of the pixels differ
  * by more than 24 of 255 in any channel. `--update` writes a new reference.
@@ -30,10 +32,22 @@ try {
   const errors = [];
   page.on('pageerror', (error) => errors.push(String(error)));
   await page.goto(`http://127.0.0.1:${server.address().port}/color-picker?c=ff6a3d`, { waitUntil: 'networkidle' });
-  await page.addStyleTag({ content: '.cp-hero-copy, .site-header, .site-edge, nextjs-portal { visibility: hidden !important; }' });
+  // 'page' on a software WebGL, 'fixed' on a GPU, 'flat' without WebGL 2; ready once the frame is in.
+  const mode = await page
+    .waitForFunction(() => {
+      if (document.querySelector('.cp-paint')?.dataset.mode === 'flat') return 'flat';
+      const img = document.querySelector('picture img[src*="material-page"]');
+      const paint = document.documentElement.dataset.cpPaint;
+      return paint && img?.complete && img.naturalWidth > 0 ? paint : false;
+    }, null, { timeout: 15_000 })
+    .then((handle) => handle.jsonValue())
+    .catch(() => null);
+  // Text and the panel hidden, not removed: the map of lines (and the paper under them) stays as it is.
+  await page.addStyleTag({ content: '* { -webkit-text-fill-color: transparent !important; } .cp-hero-panel, .site-header, .site-edge, .chapters, nextjs-portal { visibility: hidden !important; }' });
   await page.waitForTimeout(400);
-  const flat = await page.locator('.cp-hero').getAttribute('data-flat');
-  const shot = (await page.locator('.cp-hero').screenshot()).toString('base64');
+  const flat = mode === 'flat' ? true : null;
+  const ready = mode ? true : null;
+  const shot = (await page.screenshot()).toString('base64');
   const reference = existsSync(REFERENCE) && !update ? readFileSync(REFERENCE).toString('base64') : null;
   const result = await page.evaluate(async ({ shot, reference, size, tolerance }) => {
     const pixels = async (base64) => {
@@ -59,7 +73,10 @@ try {
   }, { shot, reference, size: SIZE, tolerance: TOLERANCE });
 
   if (flat !== null) {
-    console.error('The hero fell back to the flat sky: no WebGL 2 in this Chromium.');
+    console.error('The paint fell back to the flat background: no WebGL 2 in this Chromium.');
+    failed = true;
+  } else if (ready === null) {
+    console.error('The paint never drew its frame.');
     failed = true;
   } else if (result.different === null) {
     writeFileSync(REFERENCE, Buffer.from(result.png, 'base64'));
@@ -67,7 +84,7 @@ try {
   } else {
     const share = (result.different * 100).toFixed(2);
     failed = result.different > MAX_DIFFERENT;
-    console.log(`Hero smoke: ${share} % of pixels differ (limit ${MAX_DIFFERENT * 100} %) — ${failed ? 'FAILED' : 'passed'}`);
+    console.log(`Top-of-page smoke: ${share} % of pixels differ (limit ${MAX_DIFFERENT * 100} %) — ${failed ? 'FAILED' : 'passed'}`);
     if (failed) writeFileSync(new URL('./smoke/picker-hero.actual.png', import.meta.url), Buffer.from(result.png, 'base64'));
   }
   if (errors.length) {

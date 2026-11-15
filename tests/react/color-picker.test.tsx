@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ColorPicker } from '@/components/ui/color-picker/color-picker';
@@ -42,7 +43,7 @@ describe('ColorPicker', () => {
     expect(area(dialog)).toHaveFocus();
     expect(area(dialog)).toHaveAttribute('aria-valuetext', 'Saturation 100%, Brightness 100%');
     expect(hue(dialog)).toHaveAttribute('aria-valuenow', '120');
-    expect(hue(dialog)).toHaveAttribute('aria-valuetext', '120°');
+    expect(hue(dialog)).toHaveAttribute('aria-valuetext', 'Hue 120°');
     expect(within(dialog).queryByRole('slider', { name: 'Opacity' })).not.toBeInTheDocument();
     expect(field(dialog)).toHaveValue('#00ff00');
   });
@@ -161,7 +162,7 @@ describe('ColorPicker', () => {
     const dialog = open();
     const opacity = within(dialog).getByRole('slider', { name: 'Opacity' });
     expect(opacity).toHaveAttribute('aria-valuenow', '0.5');
-    expect(opacity).toHaveAttribute('aria-valuetext', '50%');
+    expect(opacity).toHaveAttribute('aria-valuetext', 'Opacity 50%');
     fireEvent.keyDown(opacity, { key: 'ArrowRight', shiftKey: true });
     expect(value()).toBe('#ff00009a');
     fireEvent.keyDown(opacity, { key: 'End' });
@@ -189,12 +190,40 @@ describe('ColorPicker', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: LABELS.close }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(swatch).toHaveFocus();
-    dialog = open();
-    const elsewhere = screen.getByRole('button', { name: 'Set blue' });
-    elsewhere.focus();
-    fireEvent.pointerDown(elsewhere);
+    open();
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Set blue' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(elsewhere).toHaveFocus();
+    expect(swatch).not.toHaveFocus();
+  });
+
+  it('closes when Tab leaves the panel, in either direction, and leaves focus where Tab put it', async () => {
+    const user = userEvent.setup();
+    render(<Owner />);
+    const swatch = screen.getByRole('button', { name: LABELS.open });
+    let dialog = open();
+    await user.tab();
+    expect(hue(dialog)).toHaveFocus();
+    await user.tab();
+    await user.tab();
+    expect(within(dialog).getByRole('button', { name: 'Copy' })).toHaveFocus();
+    await user.tab();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set blue' })).toHaveFocus();
+    dialog = open();
+    await user.tab({ shift: true });
+    await user.tab({ shift: true });
+    expect(within(dialog).getByRole('button', { name: LABELS.close })).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(swatch).toHaveFocus();
+  });
+
+  it('speaks the slider values in the given labels', () => {
+    render(<ColorPicker defaultColor="#cc6633" alpha labels={{ ...LABELS, saturation: 'Насыщенность', brightness: 'Яркость', hue: 'Тон', alpha: 'Непрозрачность' }} />);
+    const dialog = open();
+    expect(within(dialog).getByRole('slider', { name: 'Saturation and brightness' })).toHaveAttribute('aria-valuetext', 'Насыщенность 75%, Яркость 80%');
+    expect(within(dialog).getByRole('slider', { name: 'Тон' })).toHaveAttribute('aria-valuetext', 'Тон 20°');
+    expect(within(dialog).getByRole('slider', { name: 'Непрозрачность' })).toHaveAttribute('aria-valuetext', 'Непрозрачность 100%');
   });
 });
 

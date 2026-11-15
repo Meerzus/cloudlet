@@ -2,6 +2,8 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    // Tests render site components, and Next's types use ES2024 promises.
+    "lib": ["ES2022", "ES2024.Promise", "DOM", "DOM.Iterable"],
     "types": ["node", "vitest/globals", "vite/client"],
     "paths": { "@cloudlet/toast": ["./packages/toast/src/index.ts"], "@/*": ["./apps/site/src/*"] }
   },
