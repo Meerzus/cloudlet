@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import Link from 'next/link';
 import { gsap, ScrollTrigger } from '@/lib/gsap';
-import { DOCS_PATH, LICENSE_URL } from '@/lib/site';
+import { LICENSE_URL, TOASTER_DOCS_PATH } from '@/lib/site';
 import { WORDMARK_HALO_PAD, WORDMARK_WIDTHS, WORDMARKS } from '@/lib/wordmark.generated';
 import { ExternalLink } from './external-link';
 import { BANK, FooterClouds } from './footer-clouds';
@@ -286,7 +286,7 @@ export function Footer() {
           <span className="font-normal text-muted-foreground" aria-hidden="true">
             ·
           </span>
-          <Link href={DOCS_PATH} className={LINK}>
+          <Link href={TOASTER_DOCS_PATH} className={LINK}>
             Docs
           </Link>
         </div>

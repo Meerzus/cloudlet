@@ -2,30 +2,36 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The documentation's page tree: `meta.json` lists the pages in that order,
- * every written page is listed, and every listed page is either written or still pending.
- * A page that lands must leave PENDING, so the list below is the honest state of the series.
+ * The documentation's page tree, one for the whole kit: the root `meta.json` lists every page
+ * in sidebar order by its path, every written page is listed, and every listed page is either
+ * written or still pending. A page that lands must leave PENDING, so the list below is the honest
+ * state of the series. Pages are named by their path under `content/docs/en`.
  */
 const CONTENT = new URL('../../apps/site/content/docs/en/', import.meta.url);
+const TOASTER = 'components/toaster';
 
-/** The pages in sidebar order; `...api` inlines the Reference folder. */
+/** The pages in sidebar order; `...components/toaster/api` inlines the Toaster's Reference folder. */
 const SPEC_ORDER = [
   '---Getting started---',
   'index',
-  'installation',
-  'quick-start',
+  '---Components---',
+  `${TOASTER}/index`,
+  'components/color-picker',
+  '---Toaster---',
+  `${TOASTER}/installation`,
+  `${TOASTER}/quick-start`,
   '[Playground](/toaster/playground)',
-  '---Guides---',
-  'notifications',
-  'operations',
-  'forms',
-  'positioning',
-  'styling',
-  'ssr',
-  'csp',
-  'accessibility',
-  '---Reference---',
-  '...api',
+  '---Toaster guides---',
+  `${TOASTER}/notifications`,
+  `${TOASTER}/operations`,
+  `${TOASTER}/forms`,
+  `${TOASTER}/positioning`,
+  `${TOASTER}/styling`,
+  `${TOASTER}/ssr`,
+  `${TOASTER}/csp`,
+  `${TOASTER}/accessibility`,
+  '---Toaster reference---',
+  `...${TOASTER}/api`,
 ];
 
 const REFERENCE_PAGES = ['create-cloudlet', 'controller', 'toaster', 'labels', 'types'];
@@ -63,7 +69,7 @@ describe('site docs tree', () => {
   });
 
   it('has every written page in the tree, and every pending page still unwritten', () => {
-    const listed = new Set([...meta.pages.filter(isPage), ...REFERENCE_PAGES.map((page) => `api/${page}`)]);
+    const listed = new Set([...meta.pages.filter(isPage), ...REFERENCE_PAGES.map((page) => `${TOASTER}/api/${page}`)]);
     for (const page of written) expect(listed.has(page), `${page}.mdx is not in the page tree`).toBe(true);
     for (const page of listed) {
       if (written.includes(page)) expect(PENDING.has(page), `${page} is written: remove it from PENDING`).toBe(false);
@@ -79,9 +85,14 @@ describe('site docs tree', () => {
     }
   });
 
-  it('has the whole Getting started group written', () => {
-    const group = meta.pages.slice(meta.pages.indexOf('---Getting started---') + 1, meta.pages.indexOf('---Guides---'));
-    expect(group).toEqual(['index', 'installation', 'quick-start', '[Playground](/toaster/playground)']);
+  it('lists every page once', () => {
+    const pages = meta.pages.filter(isPage);
+    expect(new Set(pages).size).toBe(pages.length);
+  });
+
+  it("has the Toaster's first group written", () => {
+    const group = meta.pages.slice(meta.pages.indexOf('---Toaster---') + 1, meta.pages.indexOf('---Toaster guides---'));
+    expect(group).toEqual([`${TOASTER}/installation`, `${TOASTER}/quick-start`, '[Playground](/toaster/playground)']);
     for (const page of group.filter(isPage)) {
       expect(written, `${page}.mdx`).toContain(page);
       expect(PENDING.has(page), `${page} is pending`).toBe(false);
@@ -96,7 +107,8 @@ describe('site docs tree', () => {
       forms: ['form-reply', 'form-note', 'form-retry'],
       positioning: ['attention-auto', 'attention-upgrade', 'attention-stack'],
     };
-    for (const [page, demos] of Object.entries(RUNS)) {
+    for (const [name, demos] of Object.entries(RUNS)) {
+      const page = `${TOASTER}/${name}`;
       expect(written, `${page}.mdx`).toContain(page);
       expect(PENDING.has(page), `${page} is pending`).toBe(false);
       const { body } = frontmatter(page);
@@ -106,7 +118,7 @@ describe('site docs tree', () => {
   });
 
   it('sends readers to the Playground from Introduction and Quick start only', () => {
-    const nextSteps = (page: string) => frontmatter(page).body.split('## Next steps')[1] ?? '';
+    const nextSteps = (page: string) => frontmatter(`${TOASTER}/${page}`).body.split('## Next steps')[1] ?? '';
     for (const page of ['index', 'quick-start']) expect(nextSteps(page), page).toContain('](/toaster/playground)');
     for (const page of ['installation', 'notifications', 'operations', 'forms', 'positioning', 'styling', 'ssr', 'csp', 'accessibility']) {
       expect(nextSteps(page), page).not.toContain('](/toaster/playground)');
@@ -116,12 +128,13 @@ describe('site docs tree', () => {
   it('has the integration Guides written, with typechecked examples and links to the Reference', () => {
     /** Integration guides configure the Toaster rather than show a notification: no Run blocks. */
     const LINKS: Record<string, readonly string[]> = {
-      styling: ['/toaster/docs/api/toaster'],
-      ssr: ['/toaster/docs/api/toaster'],
-      csp: ['/toaster/docs/api/toaster'],
-      accessibility: ['/toaster/docs/api/toaster', '/toaster/docs/api/labels'],
+      styling: ['/docs/components/toaster/api/toaster'],
+      ssr: ['/docs/components/toaster/api/toaster'],
+      csp: ['/docs/components/toaster/api/toaster'],
+      accessibility: ['/docs/components/toaster/api/toaster', '/docs/components/toaster/api/labels'],
     };
-    for (const [page, links] of Object.entries(LINKS)) {
+    for (const [name, links] of Object.entries(LINKS)) {
+      const page = `${TOASTER}/${name}`;
       expect(written, `${page}.mdx`).toContain(page);
       expect(PENDING.has(page), `${page} is pending`).toBe(false);
       const { body } = frontmatter(page);
@@ -140,10 +153,10 @@ describe('site docs tree', () => {
       labels: 'Labels & announcements',
       types: 'Types',
     };
-    const folder = JSON.parse(readFileSync(new URL('api/meta.json', CONTENT), 'utf8')) as { pages: string[] };
+    const folder = JSON.parse(readFileSync(new URL(`${TOASTER}/api/meta.json`, CONTENT), 'utf8')) as { pages: string[] };
     expect(folder.pages).toEqual(REFERENCE_PAGES);
     for (const slug of REFERENCE_PAGES) {
-      const page = `api/${slug}`;
+      const page = `${TOASTER}/api/${slug}`;
       expect(written, `${page}.mdx`).toContain(page);
       expect(PENDING.has(page), `${page} is pending`).toBe(false);
       const { fields, body } = frontmatter(page);
@@ -154,9 +167,10 @@ describe('site docs tree', () => {
     }
   });
 
-  it('keeps Introduction with a typechecked example and the English locale only', () => {
-    expect(written).toContain('index');
-    expect(frontmatter('index').body).toMatch(/^```tsx/mu);
+  it("keeps the Toaster's page, the former Introduction, with a typechecked example and the English locale only", () => {
+    expect(written).toContain(`${TOASTER}/index`);
+    expect(frontmatter(`${TOASTER}/index`).fields['title']).toBe('Toaster');
+    expect(frontmatter(`${TOASTER}/index`).body).toMatch(/^```tsx/mu);
     const locales = readdirSync(new URL('../', CONTENT), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
     expect(locales).toEqual(['en']);
   });

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DOCS_URL, formatKB, PACKAGE_SIZE } from '../../apps/site/src/lib/site';
+import { DOCS_URL, formatKB, PACKAGE_SIZE, SITE_URL, TOASTER_PATH } from '../../apps/site/src/lib/site';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
@@ -9,8 +9,10 @@ const PUBLIC = ['README.md', 'packages/toast/README.md', 'CHANGELOG.md', 'packag
 
 describe('READMEs and changelog', () => {
   it('point to the site documentation, not to the package README', () => {
+    // Transitional: the READMEs may still name the Toaster's former docs address, which redirects to the new tree.
+    const FORMER_DOCS_URL = `${SITE_URL}${TOASTER_PATH}/docs`;
     for (const path of ['README.md', 'packages/toast/README.md']) {
-      expect(read(path), path).toContain(DOCS_URL);
+      expect([DOCS_URL, FORMER_DOCS_URL].some((url) => read(path).includes(url)), `${path} links ${DOCS_URL}`).toBe(true);
       expect(read(path), path).not.toContain('packages/toast#readme');
     }
   });

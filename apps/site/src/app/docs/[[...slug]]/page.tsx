@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { findNeighbour } from 'fumadocs-core/page-tree';
 import type { Metadata, ResolvingMetadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -6,7 +8,7 @@ import { PageNav } from '@/components/docs/page-nav';
 import { DesktopToc, MobileToc, TocProvider } from '@/components/docs/toc';
 import { markdownUrl } from '@/lib/docs-markdown';
 import { source } from '@/lib/docs-source';
-import { SITE_URL } from '@/lib/site';
+import { COLOR_PICKER_DOCS_PATH, COLOR_PICKER_PATH, SITE_URL } from '@/lib/site';
 
 interface Props {
   params: Promise<{ slug?: string[] }>;
@@ -44,6 +46,15 @@ export function generateStaticParams() {
   return source.generateParams();
 }
 
+/**
+ * The color picker's page in the docs shares its landing's card (the JPEGs next to
+ * `app/color-picker/page.tsx`); every other docs page keeps the root card it inherits.
+ */
+function pickerCard(name: 'opengraph-image' | 'twitter-image') {
+  const alt = readFileSync(join(process.cwd(), `src/app/color-picker/${name}.alt.txt`), 'utf8').trim();
+  return [{ url: `${COLOR_PICKER_PATH}/${name}.jpg`, type: 'image/jpeg', width: 1200, height: 630, alt }];
+}
+
 export async function generateMetadata({ params }: Props, parent: ResolvingMetadata): Promise<Metadata> {
   const { slug } = await params;
   const page = source.getPage(slug);
@@ -51,11 +62,14 @@ export async function generateMetadata({ params }: Props, parent: ResolvingMetad
   const title = `${page.data.title} — Cloudlet Docs`;
   // A page's own openGraph replaces the parent's whole, file-based image included: carry it over.
   const { openGraph } = await parent;
+  const picker = page.url === COLOR_PICKER_DOCS_PATH;
   // Agents and crawlers: the canonical address and the page's own Markdown.
   return {
     title,
     description: page.data.description,
-    openGraph: { title, description: page.data.description, url: page.url, images: openGraph?.images ?? [] },
+    openGraph: { title, description: page.data.description, url: page.url, images: picker ? pickerCard('opengraph-image') : (openGraph?.images ?? []) },
+    // A page's twitter replaces the root's whole too.
+    ...(picker ? { twitter: { card: 'summary_large_image', title, description: page.data.description, images: pickerCard('twitter-image') } } : {}),
     alternates: { canonical: `${SITE_URL}${page.url}`, types: { 'text/markdown': `${SITE_URL}${markdownUrl(page)}` } },
   };
 }

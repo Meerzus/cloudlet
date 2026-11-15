@@ -25,14 +25,14 @@ export function App({ nonce }: { nonce: string }) {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `position` | `'auto' \| 'top-left' \| 'top-center' \| 'top-right' \| 'bottom-left' \| 'bottom-center' \| 'bottom-right'` | `'auto'` | Which edge and side the stack sits on. `auto` is the top centre from a 48rem wide viewport and the bottom centre below it, following resizes; `-left` and `-right` are physical and stay put in RTL. [Positioning](/toaster/docs/positioning#position). Every render. |
+| `position` | `'auto' \| 'top-left' \| 'top-center' \| 'top-right' \| 'bottom-left' \| 'bottom-center' \| 'bottom-right'` | `'auto'` | Which edge and side the stack sits on. `auto` is the top centre from a 48rem wide viewport and the bottom centre below it, following resizes; `-left` and `-right` are physical and stay put in RTL. [Positioning](/docs/components/toaster/positioning#position). Every render. |
 | `theme` | `'system' \| 'light' \| 'dark'` | `'system'` | Colour scheme of the notifications; `system` follows the user's preference. Every render. |
 | `dir` | `'ltr' \| 'rtl'` | the document's `dir` | Text direction; `rtl` mirrors the layout and the swipes. Every render. |
 | `container` | `Element \| (() => Element \| null) \| null` | `document.body` | Where the portal goes: a connected HTML element of the same document, outside Shadow DOM, or a function returning one. On attach; an invalid one shows nothing and reports `invalid-container`. |
 | `offsets` | `ToasterOffsets` | — | Extra distance from the screen edges, see [below](#toasteroffsets). Every render. |
 | `nonce` | `string` | — | Nonce for the style blocks Cloudlet creates, for a strict Content Security Policy. Pass the current response's nonce. Every render. |
-| `labels` | `Partial<CloudletLabels>` | English labels | Names of the controls and regions, see [Labels & announcements](/toaster/docs/api/labels#cloudletlabels). Every render. |
-| `announcements` | `Partial<AnnouncementFormatters>` | English texts | What screen readers hear, see [Labels & announcements](/toaster/docs/api/labels#announcementformatters). Read for each announcement. |
+| `labels` | `Partial<CloudletLabels>` | English labels | Names of the controls and regions, see [Labels & announcements](/docs/components/toaster/api/labels#cloudletlabels). Every render. |
+| `announcements` | `Partial<AnnouncementFormatters>` | English texts | What screen readers hear, see [Labels & announcements](/docs/components/toaster/api/labels#announcementformatters). Read for each announcement. |
 | `attention` | `ToasterAttention` | — | Auto-open delay for this Toaster, see [below](#toasterattention). On attach. |
 | `autoDismiss` | `boolean` | the controller's `autoDismiss` | `false` keeps every notification until it is closed, `true` closes them on their timers; leaving the prop out restores the controller's option. Switching it off stops every timer, switching it on starts each one from its full duration. Every render, without a remount. |
 | `clearAll` | `boolean` | `true` | The clear button at the end of the Island's dots row, shown with two or more notifications; `false` hides it. The first press arms it, the second within 3 seconds closes every notification (close reason `clear-button`) and acknowledges the missed count. Every render. |
@@ -43,7 +43,7 @@ The Toaster attaches after mount, so the server render and the first hydration r
 
 ### ToasterOffsets
 
-Extra distance on physical edges, in CSS pixels: `left` stays left in RTL. How the fields add up with the safe area is in [Offsets](/toaster/docs/positioning#offsets).
+Extra distance on physical edges, in CSS pixels: `left` stays left in RTL. How the fields add up with the safe area is in [Offsets](/docs/components/toaster/positioning#offsets).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
@@ -118,7 +118,7 @@ Do not ship `timeScale` to production either.
 
 ### classNames
 
-`classNames` adds your classes next to the own `cloudlet-*` class of each part; it never replaces it. Empty and non-string values are ignored. How to write rules that win over Cloudlet's own is in [Class names](/toaster/docs/styling#class-names).
+`classNames` adds your classes next to the own `cloudlet-*` class of each part; it never replaces it. Empty and non-string values are ignored. How to write rules that win over Cloudlet's own is in [Class names](/docs/components/toaster/styling#class-names).
 
 | `CloudletPart` | Element |
 |---|---|
@@ -147,7 +147,7 @@ Do not ship `timeScale` to production either.
 
 `<CloudletProvider controller={cloudlet}>` makes a controller available to `useCloudlet`, `useOptionalCloudlet` and `<Toaster>` below it. It only supplies the instance: it never creates a controller and never disposes it.
 
-The controller may be `null` while it does not exist yet, for example when an effect creates it: the server render and the first client render then have no controller. Under a `null` controller `<Toaster>` renders nothing and `useOptionalCloudlet()` returns `null`, so your children can render on the server. See [SSR & Next.js](/toaster/docs/ssr).
+The controller may be `null` while it does not exist yet, for example when an effect creates it: the server render and the first client render then have no controller. Under a `null` controller `<Toaster>` renders nothing and `useOptionalCloudlet()` returns `null`, so your children can render on the server. See [SSR & Next.js](/docs/components/toaster/ssr).
 
 `CloudletProviderProps`:
 

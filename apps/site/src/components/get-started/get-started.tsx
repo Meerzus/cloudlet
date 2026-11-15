@@ -8,7 +8,7 @@ import { PackageManagerCommand } from '@/components/site/package-manager';
 import { Tabs } from '@/components/site/tabs';
 import { GET_STARTED, type GetStartedTab } from '@/lib/get-started';
 import { highlight } from '@/lib/highlight';
-import { DOCS_PATH } from '@/lib/site';
+import { TOASTER_DOCS_PATH } from '@/lib/site';
 
 export function GetStarted() {
   return (
@@ -20,7 +20,7 @@ export function GetStarted() {
         <p className="mt-4 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
           Install the package, mount one Toaster, call show. Guides and the API reference are in the{' '}
           <Link
-            href={DOCS_PATH}
+            href={TOASTER_DOCS_PATH}
             className="rounded-sm text-foreground underline underline-offset-4 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60"
           >
             docs
