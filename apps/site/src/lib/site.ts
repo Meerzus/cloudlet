@@ -63,28 +63,30 @@ export function isQuietPath(pathname: string): boolean {
 }
 /** Stable versions are npm's `latest`; prereleases would go under `next`. */
 export const INSTALL_COMMAND = 'npm install @cloudlet/toast';
-/** The shadcn registry item, served from `public/r/`. */
-export const REGISTRY_ITEM_URL = `${SITE_URL}/r/toaster.json`;
-export const SHADCN_COMMAND = `npx shadcn@latest add ${REGISTRY_ITEM_URL}`;
 /** The kit's registry items, in the order the docs list them; `registry/registry.json` names them the same. */
 export const REGISTRY_ITEMS = ['toaster', 'color-picker', 'color-palette'] as const;
 export type RegistryItem = (typeof REGISTRY_ITEMS)[number];
 /** The namespace the shadcn CLI resolves through its registry directory. */
 export const REGISTRY_NAMESPACE = '@cloudlet';
+/** A registry item's address, served from `public/r/`. */
+export function registryItemUrl(item: RegistryItem): string {
+  return `${SITE_URL}/r/${item}.json`;
+}
 /** `npx shadcn@latest add @cloudlet/<item>`: the form for a CLI that knows the namespace. */
 export function registryCommand(item: RegistryItem): string {
   return `npx shadcn@latest add ${REGISTRY_NAMESPACE}/${item}`;
 }
 /** `npx shadcn@latest add https://cloudlet.dev/r/<item>.json`: the same item by its address, for any CLI. */
 export function registryUrlCommand(item: RegistryItem): string {
-  return `npx shadcn@latest add ${SITE_URL}/r/${item}.json`;
+  return `npx shadcn@latest add ${registryItemUrl(item)}`;
 }
+/** The Toaster's registry item: a wrapper over the npm package. */
+export const REGISTRY_ITEM_URL = registryItemUrl('toaster');
+export const SHADCN_COMMAND = registryUrlCommand('toaster');
 /** The color picker's registry item: source files only, no npm package (COLOR_PICKER §1). */
-export const COLOR_PICKER_ITEM_URL = `${SITE_URL}/r/color-picker.json`;
-export const COLOR_PICKER_COMMAND = `npx shadcn@latest add ${COLOR_PICKER_ITEM_URL}`;
+export const COLOR_PICKER_COMMAND = registryUrlCommand('color-picker');
 /** The color palette's registry item: it lists the color picker as a registry dependency (COLOR_PALETTE §1). */
-export const COLOR_PALETTE_ITEM_URL = `${SITE_URL}/r/color-palette.json`;
-export const COLOR_PALETTE_COMMAND = `npx shadcn@latest add ${COLOR_PALETTE_ITEM_URL}`;
+export const COLOR_PALETTE_COMMAND = registryUrlCommand('color-palette');
 /**
  * What the published package adds to an app, min+gzip bytes (`release:verify` of the
  * `1.2.0` tarball, `artifacts/size/report.json`): its own JavaScript on first load (`start`, before
