@@ -1,11 +1,25 @@
 ---
 title: Introduction
-description: Cloudlet is a set of React components that move on springs, work from the keyboard and stay small.
+description: What Cloudlet is, how the kit is split into engines and simple components, and which components it has.
 ---
 
-Cloudlet is a set of React components for the web. Each one has its own page in these docs: how to install it, how to use it and every prop it takes.
+Cloudlet is a set of React components for the web. Each one moves on springs that can be interrupted, works from the keyboard and with a screen reader, and stays small. Every component has its own page in these docs: how to install it, how to use it and every prop it takes.
+
+## How the kit is built
+
+The components come in two kinds, and the kind decides how you install and update them.
+
+- **Engines** carry their own runtime: state, timers, animation, announcements. Each engine is an npm package under `@cloudlet/` with its own version, so you get fixes by updating the package. The Toaster is an engine: `@cloudlet/toast`. A thin shadcn registry item wraps the package when you want the component themed with your tokens.
+- **Simple components** are source code. The shadcn CLI copies their files into your project, where they are yours to read and change. They have no npm package and no version: to take a newer one, add the item again and review the diff.
+
+Both kinds are added with the shadcn CLI under the `@cloudlet` namespace; [Installation](/docs/installation) has the commands.
 
 ## Components
 
-- [Toaster](/docs/components/toaster): a notification stack that collapses to a pill and opens into the Island. An npm package, `@cloudlet/toast`.
-- [Color picker](/docs/components/color-picker): a swatch that opens into a full picker, and a palette of up to four colors. Installed as source with the shadcn CLI.
+- [Toaster](/docs/components/toaster): one notification stack that collapses to a pill and opens into the Island, with operations, retry and cancel. An engine, `@cloudlet/toast`.
+- [Color picker](/docs/components/color-picker): a round swatch that morphs into a full picker, in hex, rgb, hsl and oklch. A simple component.
+- [Color palette](/docs/components/color-picker#palette): a row of up to four color pickers, with add and remove. A simple component that brings the color picker with it.
+
+## Next steps
+
+- [Installation](/docs/installation): the shadcn CLI for every component, npm for engines.

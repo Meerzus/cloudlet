@@ -1,0 +1,37 @@
+---
+title: Installation
+description: Add any Cloudlet component with the shadcn CLI, or install an engine from npm.
+---
+
+Every component is a shadcn registry item. Engines are also npm packages, for projects that do not use shadcn/ui. The commands below are written for npm; the switch above each one shows it for pnpm, yarn or bun.
+
+## With the shadcn CLI
+
+Add an item by its name under the `@cloudlet` namespace:
+
+<InstallCommand command="npx shadcn@latest add @cloudlet/color-picker" />
+
+| Item | Component | What it adds |
+| --- | --- | --- |
+| `toaster` | [Toaster](/docs/components/toaster) | A wrapper and a theme bridge for `@cloudlet/toast`, which it adds as a dependency |
+| `color-picker` | [Color picker](/docs/components/color-picker) | The picker's source, nothing in `package.json` |
+| `color-palette` | [Color palette](/docs/components/color-picker#palette) | The palette's source, and the `color-picker` item it needs |
+
+If your CLI does not resolve the `@cloudlet` namespace, give it the item's address instead: `https://cloudlet.dev/r/<item>.json`.
+
+<InstallCommand command="npx shadcn@latest add https://cloudlet.dev/r/color-picker.json" />
+
+## With npm
+
+An engine installs as a package. The Toaster is `@cloudlet/toast`:
+
+<InstallCommand command="npm install @cloudlet/toast" />
+
+The package has React peers and one CSS file to import; [Toaster installation](/docs/components/toaster/installation) has the requirements and where the import goes.
+
+Simple components have no package: add them with the shadcn CLI.
+
+## Next steps
+
+- [Toaster](/docs/components/toaster): the stack, the Island and the controller.
+- [Color picker](/docs/components/color-picker): the swatch, the panel and the palette.

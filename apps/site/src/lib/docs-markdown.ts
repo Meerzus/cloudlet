@@ -14,9 +14,9 @@ import { COLOR_PICKER_DOCS_PATH, DOCS_PATH, isUnder, SITE_URL, TOASTER_DOCS_PATH
  * code (remark-demo-note.ts) and a `<Demos>` group is just its fences, and site links become absolute.
  */
 
-/** One line about Cloudlet, the same as the site's description. */
+/** One line about the kit at the top of `/llms.txt`; the site's own description lives in the root layout. */
 export const LLMS_SUMMARY =
-  'Cloudlet (`@cloudlet/toast`) is a React notification stack that drifts in, stacks softly and opens into a card when it matters; every motion runs on springs and every frame is interruptible.';
+  'Cloudlet is a kit of React components on interruptible springs: engines such as the Toaster ship as npm packages (`@cloudlet/toast`), simple components such as the color picker and the color palette as source through the shadcn registry (`npx shadcn@latest add @cloudlet/<item>`).';
 
 const fence = (lang: string, code: string, title?: string) => `\`\`\`${lang}${title ? ` title="${title}"` : ''}\n${code}\n\`\`\``;
 

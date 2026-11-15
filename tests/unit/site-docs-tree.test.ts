@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { INSTALL_COMMAND, REGISTRY_ITEMS, registryCommand, registryUrlCommand } from '../../apps/site/src/lib/site';
 
 /**
  * The documentation's page tree, one for the whole kit: the root `meta.json` lists every page
@@ -14,6 +15,7 @@ const TOASTER = 'components/toaster';
 const SPEC_ORDER = [
   '---Getting started---',
   'index',
+  'installation',
   '---Components---',
   `${TOASTER}/index`,
   'components/color-picker',
@@ -165,6 +167,21 @@ describe('site docs tree', () => {
       expect(body, `${page}: a Prop · Type · Default · Description table`).toMatch(/^\| (?:Prop|Option|Field) \| Type \| Default \| Description \|$/mu);
       expect(body, `${page}: Run blocks belong to the Guides`).not.toMatch(/^```\w+ demo=/mu);
     }
+  });
+
+  it("has the kit's Introduction and Installation, with commands in the forms of site.ts", () => {
+    const intro = frontmatter('index').body;
+    for (const link of ['/docs/components/toaster', '/docs/components/color-picker', '/docs/components/color-picker#palette', '/docs/installation']) {
+      expect(intro, `index: link to ${link}`).toContain(`](${link})`);
+    }
+    const installation = frontmatter('installation').body;
+    const commands = [...installation.matchAll(/<InstallCommand command="([^"]+)" \/>/gu)].map((match) => match[1]);
+    expect(commands).toEqual([registryCommand('color-picker'), registryUrlCommand('color-picker'), INSTALL_COMMAND]);
+    for (const item of REGISTRY_ITEMS) expect(installation, `installation: item ${item}`).toMatch(new RegExp(`^\\| \`${item}\` \\|`, 'mu'));
+    const registry = JSON.parse(readFileSync(new URL('../../registry/registry.json', import.meta.url), 'utf8')) as { items: { name: string }[] };
+    expect(registry.items.map((entry) => entry.name)).toEqual([...REGISTRY_ITEMS]);
+    expect(installation).toContain('`https://cloudlet.dev/r/<item>.json`');
+    expect(installation).toContain('](/docs/components/toaster/installation)');
   });
 
   it("keeps the Toaster's page, the former Introduction, with a typechecked example and the English locale only", () => {
