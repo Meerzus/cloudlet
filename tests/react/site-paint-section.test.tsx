@@ -8,6 +8,8 @@ import { heroRamp } from '../../apps/site/src/lib/picker-ramp';
 import { START_GLOBAL } from '../../apps/site/src/lib/picker-start';
 
 const mount = vi.hoisted(() => vi.fn());
+// The scene links push through the router: none is mounted here.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/' }));
 vi.mock('../../apps/site/src/components/picker/section-paint', () => ({ mountSectionPaint: mount }));
 
 const root = document.documentElement;
@@ -114,8 +116,8 @@ describe('the paint in a chapter loads as the chapter comes near', () => {
     expect(html).toContain('class="paint-section"');
     expect(html).toContain('--paint-color:#ff6a3d');
     expect(html).not.toContain('material-page');
-    expect(html).toContain('href="/color-picker"');
-    expect(html).toContain('href="/color-picker#palette"');
+    expect(html).toContain('href="/color-picker?c=ff6a3d"');
+    expect(html).toContain('href="/color-picker?c=ff6a3d#palette"');
     expect(html).toContain('Open Color picker');
     expect(html).toContain('Open Color palette');
   });

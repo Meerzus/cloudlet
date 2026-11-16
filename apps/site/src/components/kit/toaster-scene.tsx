@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react';
-import Link from 'next/link';
+import { SceneLink } from '@/components/site/scene-transition';
 import { TOASTER_PATH } from '@/lib/site';
 import { InstallCommand } from './install-command';
 import { ToasterCompare } from './toaster-compare';
@@ -25,10 +25,10 @@ export function ToasterScene() {
         </div>
         <ToasterCompare />
         <div className="kit-toaster-outro">
-          <Link href={TOASTER_PATH} className="kit-open">
+          <SceneLink scene="toaster" href={TOASTER_PATH} className="kit-open">
             Open Toaster
             <ArrowRight className="kit-open-arrow" aria-hidden="true" />
-          </Link>
+          </SceneLink>
           <InstallCommand initial="toaster" switcher={false} />
         </div>
       </div>

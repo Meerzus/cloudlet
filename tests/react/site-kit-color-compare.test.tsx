@@ -10,6 +10,8 @@ const page = vi.hoisted(() => ({
   update: vi.fn(),
   getHandle: vi.fn(),
 }));
+// The scene links push through the router: none is mounted here.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/' }));
 vi.mock('../../apps/site/src/components/picker/section-paint', () => ({ mountSectionPaint: () => ({ show() {}, destroy() {} }) }));
 vi.mock('../../apps/site/src/components/site/notifications', async (original) => ({
   ...(await original<typeof import('../../apps/site/src/components/site/notifications')>()),
@@ -116,10 +118,12 @@ describe('the color picker chapter on the kit landing', () => {
   it('links each comparison to its landing with its own command, and names no other library', () => {
     const view = chapter();
     const links = [...view.container.querySelectorAll('a')].map((link) => [link.textContent, link.getAttribute('href')]);
+    // Each opens its landing in the chapter's color, so the landing's paint goes on where the chapter's was.
     expect(links).toEqual([
-      ['Open Color picker', '/color-picker'],
-      ['Open Color palette', '/color-picker#palette'],
+      ['Open Color picker', expect.stringMatching(/^\/color-picker\?c=[\da-f]{6}$/u)],
+      ['Open Color palette', expect.stringMatching(/^\/color-picker\?c=[\da-f]{6}#palette$/u)],
     ]);
+    expect(view.container.querySelector("[data-scene-link='color-palette']")).not.toBeNull();
     const commands = [...view.container.querySelectorAll('.kit-install-command')].map((button) => button.getAttribute('aria-label'));
     expect(commands).toEqual(['Copy command: npx shadcn@latest add @cloudlet/color-picker', 'Copy command: npx shadcn@latest add @cloudlet/color-palette']);
     const words = Object.values(COLOR_SIDES).flatMap((side) => [side.label, side.note]).join(' ');

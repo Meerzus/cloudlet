@@ -86,6 +86,13 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   Island says "Accent updated" or "Palette updated" and keeps updating that one notification while it
   is on screen; loading and scrolling say nothing. Each comparison ends with Open Color picker or Open
   Color palette and its install command.
+- Open Toaster, Open Color picker and Open Color palette on the kit's page open the landing out of the
+  link itself: it grows from the link's pill to the whole window on a spring while the kit's page
+  sinks back behind it, and the browser's Back shrinks it into the same link, with the kit's page
+  where you left it. The header stays put. The color picker's landing opens in the chapter's colors
+  (`?c=`), so its paint goes on where the chapter's was; a link off screen swaps the pages with a short
+  blur. The header, its Components panel, the footers and the docs navigate as before, and with
+  reduced motion or without view transitions every link is a plain navigation.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and

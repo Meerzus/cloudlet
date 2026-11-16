@@ -3,8 +3,10 @@ import { Geist_Mono, Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
 import '@cloudlet/toast/styles.css';
 import './globals.css';
+import '@/components/site/scene-transition.css';
 import { INDEXABLE, KIT_DESCRIPTION, KIT_PATH, KIT_TITLE, METADATA_BASE } from '@/lib/site';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
+import { SceneStage } from '@/components/site/scene-transition';
 
 /* Inter's opsz axis switches headlines to its Display cut automatically. */
 const inter = Inter({ subsets: ['latin'], axes: ['opsz'], variable: '--font-inter', display: 'swap' });
@@ -42,7 +44,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <SceneStage>{children}</SceneStage>
+      </body>
     </html>
   );
 }

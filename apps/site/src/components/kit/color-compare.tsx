@@ -1,17 +1,18 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { usePickerColor } from '@/components/picker/picker-color';
 import { usePageNotifications } from '@/components/site/notifications';
+import { SceneLink } from '@/components/site/scene-transition';
 import { ColorPalette } from '@/components/ui/color-palette/color-palette';
 import { ColorPicker } from '@/components/ui/color-picker/color-picker';
 import { formatColor, parseColor } from '@/components/ui/color-picker/color';
 import { createColorReport, type ColorChangeKind } from '@/lib/color-report';
 import { harmoniesOf } from '@/lib/harmonies';
 import { PALETTE_MAX } from '@/lib/picker-start';
-import { COLOR_PALETTE_PATH, COLOR_PICKER_PATH, type RegistryItem } from '@/lib/site';
+import { SCENE_LANDINGS, withColors } from '@/lib/scene-transition';
+import type { RegistryItem } from '@/lib/site';
 import { InstallCommand } from './install-command';
 
 /** The colors one press sets on both sides: warm, cool, light and deep, all of them start colors of the color picker's landing. */
@@ -69,7 +70,6 @@ function Pair({
   title,
   lede,
   open,
-  path,
   item,
   children,
 }: {
@@ -77,10 +77,12 @@ function Pair({
   title: string;
   lede: string;
   open: string;
-  path: string;
   item: RegistryItem;
   children: ReactNode;
 }) {
+  // The landing opens in the chapter's colors, so its paint goes on where the chapter's was.
+  const { hex, own, paletteHex } = usePickerColor();
+  const href = withColors(SCENE_LANDINGS[item], own ? paletteHex : [hex]);
   return (
     <div className="kc-pair" role="group" aria-labelledby={id}>
       <div className="kc-intro">
@@ -91,10 +93,10 @@ function Pair({
       </div>
       <div className="kc-compare">{children}</div>
       <div className="kc-outro">
-        <Link href={path} className="kit-open">
+        <SceneLink scene={item} href={href} className="kit-open">
           {open}
           <ArrowRight className="kit-open-arrow" aria-hidden="true" />
-        </Link>
+        </SceneLink>
         <InstallCommand initial={item} switcher={false} />
       </div>
     </div>
@@ -129,7 +131,6 @@ function PickerPair({ note }: { note: (kind: ColorChangeKind) => void }) {
       title="Color picker"
       lede="The same accent on both sides. Pick a dot, or change either one: the other follows, and the paint takes it."
       open="Open Color picker"
-      path={COLOR_PICKER_PATH}
       item="color-picker"
     >
       <div role="group" aria-label="Set both to a color" className="kc-try">
@@ -202,7 +203,6 @@ function PalettePair({ note }: { note: (kind: ColorChangeKind) => void }) {
       title="Color palette"
       lede="One palette on both sides, up to four colors. A harmony fills both, and once it is yours the whole paint is in it."
       open="Open Color palette"
-      path={COLOR_PALETTE_PATH}
       item="color-palette"
     >
       <div role="group" aria-label="Fill both with a harmony" className="kc-try">
