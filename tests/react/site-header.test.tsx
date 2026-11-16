@@ -173,6 +173,12 @@ describe('Star on GitHub', () => {
     expect(screen.queryByRole('link', { name: 'Cloudlet on GitHub' })).toBeNull();
   });
 
+  it('is two icons, the GitHub mark and a star, with no words', () => {
+    render(<Header stars={undefined} />);
+    expect(star().querySelectorAll('svg')).toHaveLength(2);
+    expect(star()).toHaveTextContent(/^$/);
+  });
+
   it('shows no count without one or below 100 stars', () => {
     for (const stars of [undefined, 41, 99]) {
       const { unmount } = render(<Header stars={stars} />);

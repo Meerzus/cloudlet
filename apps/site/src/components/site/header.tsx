@@ -41,7 +41,7 @@ export function Header({ stars = BUILD_STARS }: { stars?: number | undefined } =
             <span className="max-md:sr-only">Cloudlet</span>
           </Link>
           <ComponentsMenu className="mr-auto" />
-          <nav aria-label="Primary" className="ml-auto flex items-center gap-1 sm:gap-2">
+          <nav aria-label="Primary" className="ml-auto flex items-center gap-1 max-[23.75rem]:gap-0.5 sm:gap-2">
             <Button asChild variant="ghost" size="sm" className="max-[23.75rem]:px-2">
               <Link href={docsPathOf(pathname)}>Docs</Link>
             </Button>
