@@ -14,32 +14,63 @@ export const DOCS_PATH = '/docs';
 export const DOCS_URL = `${SITE_URL}${DOCS_PATH}`;
 /** The Toaster's page in the docs; its guides and reference live under it. */
 export const TOASTER_DOCS_PATH = `${DOCS_PATH}/components/toaster`;
-/** The color picker's page in the docs (the palette is a section of it). */
+/** The color picker's page in the docs; the palette is a section of it until it has its own page. */
 export const COLOR_PICKER_DOCS_PATH = `${DOCS_PATH}/components/color-picker`;
-/** The family's components, in the header's switch order: landing, docs and (Toaster only) Playground. */
+/** The color palette has no landing of its own: it is a section of the color picker's. */
+export const COLOR_PALETTE_PATH = `${COLOR_PICKER_PATH}#palette`;
+/** The color palette's page in the docs: the color picker's until the palette gets its own (`/docs/components/color-palette`). */
+export const COLOR_PALETTE_DOCS_PATH = COLOR_PICKER_DOCS_PATH;
+/** A component of the kit, as the header's Components panel and the footers list it. */
 export interface SiteComponent {
-  readonly id: 'toaster' | 'color-picker';
+  readonly id: RegistryItem;
   readonly name: string;
-  /** The name on the narrowest phones, where the header has no room for the full one. */
-  readonly short: string;
+  /** One line under the name in the Components panel. */
+  readonly description: string;
+  /** Its landing, or the section of a landing it lives in. */
   readonly path: string;
+  /** Its page in the docs. */
   readonly docs: string;
-  readonly playground?: string;
 }
+/** The kit's components in the kit's order; the registry lists the same items in the same order. */
 export const COMPONENTS: readonly SiteComponent[] = [
-  { id: 'toaster', name: 'Toaster', short: 'Toaster', path: TOASTER_PATH, docs: TOASTER_DOCS_PATH, playground: `${TOASTER_PATH}/playground` },
-  { id: 'color-picker', name: 'Color picker', short: 'Picker', path: COLOR_PICKER_PATH, docs: COLOR_PICKER_DOCS_PATH },
+  {
+    id: 'toaster',
+    name: 'Toaster',
+    description: 'Notifications that stack softly and open into a card when it matters.',
+    path: TOASTER_PATH,
+    docs: TOASTER_DOCS_PATH,
+  },
+  {
+    id: 'color-picker',
+    name: 'Color picker',
+    description: 'Hex, rgb, hsl and oklch, an eyedropper and full keyboard support.',
+    path: COLOR_PICKER_PATH,
+    docs: COLOR_PICKER_DOCS_PATH,
+  },
+  {
+    id: 'color-palette',
+    name: 'Color palette',
+    description: 'Up to four colors, built on the color picker.',
+    path: COLOR_PALETTE_PATH,
+    docs: COLOR_PALETTE_DOCS_PATH,
+  },
 ];
 /** `pathname` is `path` or a page under it. */
 export function isUnder(pathname: string, path: string): boolean {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 /**
- * The component a path belongs to: its landing, its pages and its page in the docs. Anything else
- * (the root, the kit's docs pages, unknown paths) is the Toaster's.
+ * The component a page belongs to: its landing, the pages under it and its pages in the docs. The
+ * kit's own pages (the root, `/docs`, `/docs/installation`) and unknown paths belong to none. The
+ * palette lives on the color picker's landing and, for now, in its docs, so those pages are the
+ * picker's: the first component in the kit's order wins.
  */
-export function componentOf(pathname: string): SiteComponent {
-  return COMPONENTS.find((component) => isUnder(pathname, component.path) || isUnder(pathname, component.docs)) ?? COMPONENTS[0]!;
+export function componentOf(pathname: string): SiteComponent | undefined {
+  return COMPONENTS.find((component) => isUnder(pathname, component.path) || isUnder(pathname, component.docs));
+}
+/** Where Docs leads from a page: the page's component in the docs, or the docs of the whole kit. */
+export function docsPathOf(pathname: string): string {
+  return componentOf(pathname)?.docs ?? DOCS_PATH;
 }
 /**
  * Search engines are welcome since 1.0.0: pages carry no `noindex`, `robots.txt` and `sitemap.xml`

@@ -25,8 +25,11 @@ export interface CalmMap {
 /** The copy whose lines get paper under them: the hero's, the sections' (code blocks and buttons with words included) and the footer's. */
 export const CALM_TEXT = '.cp-hero-copy, .cp-section :is(h2, h3, p, pre, th, td, summary, label, .cp-copy-text, button:not(.cp-paint-pick)), .docs-footer';
 
-/** The header's controls: the paper is lifted under each of them, not in a strip across the window. */
-export const CALM_HEADER = '.site-header :is(a, button)';
+/**
+ * The header's controls: the paper is lifted under each of them, not in a strip across the window.
+ * The links in the open Components panel are left out: the panel draws its own opaque card.
+ */
+export const CALM_HEADER = '.site-header :is(a, button):not(.components-panel *)';
 /** How far the paper under a box reaches past it, CSS px, at most: a map this much taller than the header holds all of it. */
 export const CALM_REACH = 240;
 

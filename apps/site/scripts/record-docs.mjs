@@ -290,7 +290,7 @@ async function styleEditor(page, base, still, failures, previousUrl) {
   await swatch.click();
   const picker = editor.getByRole('dialog', { name: 'Background color picker' });
   await picker.waitFor();
-  await picker.getByRole('slider', { name: 'Color', exact: true }).focus();
+  await picker.getByRole('slider', { name: 'Saturation and brightness', exact: true }).focus();
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Escape');
   await picker.waitFor({ state: 'detached' });
@@ -449,7 +449,7 @@ async function reference(page, base, phone, still, failures) {
 }
 
 /** The word typed into the search, and the page it must find first. */
-const SEARCH_QUERY = 'reduced motion';
+const SEARCH_QUERY = 'live region';
 const SEARCH_PAGE = { name: 'Accessibility', path: '/docs/components/toaster/accessibility' };
 
 /** The open search window, if any: its state, the options and the active one. */
@@ -576,7 +576,7 @@ async function search(page, base, phone, still, failures) {
 
 /** The output for agents is served next to the pages, as text and Markdown. */
 async function agents(page, base, failures) {
-  const files = { '/llms.txt': '# Cloudlet', '/llms-full.txt': '# Introduction', '/docs/components/toaster.md': '# Introduction', '/docs/components/toaster/accessibility.md': '# Accessibility', '/docs/components/toaster/api/toaster.md': '# Toaster props', '/r/toaster.json': '{' };
+  const files = { '/llms.txt': '# Cloudlet', '/llms-full.txt': '# Introduction', '/docs/components/toaster.md': '# Toaster', '/docs/components/toaster/accessibility.md': '# Accessibility', '/docs/components/toaster/api/toaster.md': '# Toaster props', '/r/toaster.json': '{' };
   const result = {};
   for (const [path, start] of Object.entries(files)) {
     result[path] = await page.evaluate(async (url) => {

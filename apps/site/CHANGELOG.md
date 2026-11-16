@@ -76,8 +76,23 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   limits and reduced motion, then the palette's install, use, props, keyboard and labels, each with a
   live example. It is also in `llms.txt`, `llms-full.txt`, as
   [Markdown](https://cloudlet.dev/docs/components/color-picker.md), in search and in the sitemap.
-- The header switches between Toaster and Color picker; its logo and Docs link follow the current
-  component.
+- The header's Components button opens a panel of the kit's components: Toaster, Color picker and
+  Color palette, each with a line of description, the current one marked. The panel grows out of the
+  button on springs and shrinks back into it, a second press mid-way turns it around, and under
+  reduced motion it appears at once. It opens on a click or a tap; Tab and the arrow keys move through
+  it, and Escape, a press outside, focus leaving it or a new page close it. The logo leads to the
+  kit's own page, Docs to the current component's docs or to `/docs`, and the header no longer links
+  to the Playground (the Toaster's landing does).
+- Star on GitHub replaces the GitHub icon in the header: one button of two icons, the GitHub mark and
+  a star, on every width. From 100 stars it shows the count beside them (`128`, `1.2k`), read from
+  GitHub when the site is built; the browser never asks GitHub.
+- On phones the theme switch is one button that cycles System, Light and Dark, and the header with
+  the logo, Components, Docs, the theme and Star fits one line down to 320 px; a larger system font
+  moves the right-hand buttons to a second line instead of off the screen.
+- Both footers, the cloud bank of the Toaster's landing and the one-line footer of the docs and the
+  Color picker's page, carry the same row of links: Cloudlet (the kit's page), Toaster, Color picker,
+  Color palette, Docs, GitHub and the MIT License. On phones the row wraps without separating dots,
+  and every link is at least 24 px tall.
 - `/color-picker` and its docs share a link card made from the top of the page.
 - The style editor on [/docs/components/toaster/styling](https://cloudlet.dev/docs/components/toaster/styling) uses the
   color picker in hex, and the site no longer depends on `react-colorful`.
@@ -97,6 +112,8 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   permanently to the new ones. Search, `llms.txt`, `llms-full.txt`, the `.md` pages and the sitemap
   follow the new sidebar; `llms.txt` opens with a line about the kit.
 - The READMEs, the security policy and the issue template link to the new addresses.
+- On the kit's own pages (Introduction, Installation) Docs in the header leads to the kit's
+  Introduction instead of the Toaster's page.
 
 ### Fixes
 

@@ -1070,6 +1070,12 @@ html[data-device='foldable'] .fs-status {
   background: color-mix(in oklch, var(--background) 60%, transparent);
 }
 
+/* ---------- Theme button on phones: its icon follows <html data-theme> (set before first paint) ---------- */
+.theme-cycle > [data-theme-icon] { grid-area: 1 / 1; display: none; }
+:root:not([data-theme='light'], [data-theme='dark']) .theme-cycle > [data-theme-icon='system'],
+:root[data-theme='light'] .theme-cycle > [data-theme-icon='light'],
+:root[data-theme='dark'] .theme-cycle > [data-theme-icon='dark'] { display: block; }
+
 /* ---------- Segmented controls: one highlight slides under the active segment ---------- */
 /* Placed by useSegmentIndicator (translate + width); the transition turns on once it has landed. */
 .segment-indicator {
@@ -1296,6 +1302,38 @@ html[data-show="puppet"] .cloudlet-host { visibility: hidden; }
   .site-header { background: var(--background); }
 }
 @media print { .site-edge { display: none; } }
+
+/* The header's Components panel (components-menu.tsx): one opaque shape on the theme's popover
+   colour that grows out of the button. The box spans the button and the card and lets presses
+   through; the clip draws the shape (and limits hits to it), the filter its shadow. No backdrop
+   blur: the card is solid, so the page under it never has to be filtered. */
+.components-panel { position: absolute; z-index: 2; pointer-events: none; }
+.components-panel-shape {
+  position: absolute; inset: 0; pointer-events: auto;
+  background: var(--popover); color: var(--popover-foreground);
+}
+.components-panel[data-phase='closing'] .components-panel-shape { pointer-events: none; }
+.components-panel-card {
+  position: absolute; padding: 0.375rem; border-radius: 1rem;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.components-panel-link {
+  display: block; border-radius: 0.75rem; padding: 0.625rem 0.75rem; outline: none;
+  transition: background-color 150ms ease;
+}
+@media (hover: hover) { .components-panel-link:hover { background: var(--accent); } }
+.components-panel-link:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.components-panel-link[aria-current='page'] { background: color-mix(in oklab, var(--accent) 70%, transparent); }
+.components-chevron { transition: rotate 240ms cubic-bezier(0.32, 0.72, 0, 1); }
+.components-trigger[aria-expanded='true'] .components-chevron { rotate: 180deg; }
+@media (prefers-reduced-motion: reduce) { .components-chevron { transition: none; } }
+@media (forced-colors: active) {
+  .components-panel-shape { background: Canvas; color: CanvasText; }
+  .components-panel-card { outline: 1px solid CanvasText; outline-offset: -1px; }
+  .components-panel-link[aria-current='page'] { outline: 1px solid Highlight; }
+  /* Forced colors drop box-shadow, which draws the focus ring elsewhere. */
+  .components-panel-link:focus-visible { outline: 2px solid Highlight; outline-offset: -2px; }
+}
 
 /* ---------- Site footer ----------
    Portrait screens: the wordmark spans the width at its own aspect. Screens wider than tall: the

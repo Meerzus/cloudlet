@@ -1,13 +1,17 @@
 import { readFileSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  COLOR_PALETTE_DOCS_PATH,
+  COLOR_PALETTE_PATH,
   COLOR_PICKER_DOCS_PATH,
   COLOR_PICKER_PATH,
   COMPONENTS,
   componentOf,
   DOCS_PATH,
+  docsPathOf,
   isQuietPath,
   PLAYGROUND_PATH,
+  REGISTRY_ITEMS,
   TOASTER_DOCS_PATH,
   TOASTER_PATH,
 } from '../../apps/site/src/lib/site';
@@ -15,23 +19,51 @@ import {
 const app = (path: string) => new URL(`../../apps/site/src/app/${path}`, import.meta.url);
 
 describe('site components (COLOR_PICKER §8.1, §8.7, §9)', () => {
-  it('knows which component a page belongs to; the Toaster owns everything else', () => {
-    expect(COMPONENTS.map((component) => component.id)).toEqual(['toaster', 'color-picker']);
-    expect(DOCS_PATH).toBe('/docs');
-    expect(TOASTER_DOCS_PATH).toBe('/docs/components/toaster');
-    expect(COLOR_PICKER_DOCS_PATH).toBe('/docs/components/color-picker');
-    expect(componentOf(TOASTER_PATH).docs).toBe(TOASTER_DOCS_PATH);
-    expect(componentOf(PLAYGROUND_PATH).id).toBe('toaster');
-    expect(componentOf(`${TOASTER_DOCS_PATH}/api/toaster`).id).toBe('toaster');
-    expect(componentOf(COLOR_PICKER_PATH).docs).toBe(COLOR_PICKER_DOCS_PATH);
-    expect(componentOf(COLOR_PICKER_DOCS_PATH).id).toBe('color-picker');
-    expect(componentOf(`${COLOR_PICKER_DOCS_PATH}s`).id).toBe('toaster');
-    // The kit's own pages belong to no component; the header keeps the Toaster's.
-    expect(componentOf(DOCS_PATH).id).toBe('toaster');
-    expect(componentOf('/color-pickers').id).toBe('toaster');
-    expect(componentOf('/').id).toBe('toaster');
-    // Only the Toaster has a Playground.
-    expect(COMPONENTS.map((component) => Boolean(component.playground))).toEqual([true, false]);
+  it("lists the kit's three components in the kit's order, each with a landing and a docs page", () => {
+    expect(COMPONENTS.map(({ id, name, path, docs }) => ({ id, name, path, docs }))).toEqual([
+      { id: 'toaster', name: 'Toaster', path: '/toaster', docs: '/docs/components/toaster' },
+      { id: 'color-picker', name: 'Color picker', path: '/color-picker', docs: '/docs/components/color-picker' },
+      // The palette is a section of the picker's landing and, until its own page, of the picker's docs.
+      { id: 'color-palette', name: 'Color palette', path: '/color-picker#palette', docs: '/docs/components/color-picker' },
+    ]);
+    expect(COMPONENTS.map((component) => component.id)).toEqual([...REGISTRY_ITEMS]);
+    expect([COLOR_PALETTE_PATH, COLOR_PALETTE_DOCS_PATH]).toEqual(['/color-picker#palette', COLOR_PICKER_DOCS_PATH]);
+    for (const component of COMPONENTS) {
+      // One line in the panel: a sentence, short enough not to wrap twice.
+      expect(component.description).toMatch(/^[A-Z].*\.$/);
+      expect(component.description.length).toBeLessThanOrEqual(80);
+    }
+  });
+
+  it("knows which component a page belongs to; the kit's own pages belong to none", () => {
+    const owner = (pathname: string) => componentOf(pathname)?.id;
+    expect(owner(TOASTER_PATH)).toBe('toaster');
+    expect(owner(PLAYGROUND_PATH)).toBe('toaster');
+    expect(owner(TOASTER_DOCS_PATH)).toBe('toaster');
+    expect(owner(`${TOASTER_DOCS_PATH}/api/toaster`)).toBe('toaster');
+    expect(owner(`${TOASTER_DOCS_PATH}/styling`)).toBe('toaster');
+    expect(owner(COLOR_PICKER_PATH)).toBe('color-picker');
+    expect(owner(COLOR_PICKER_DOCS_PATH)).toBe('color-picker');
+    expect(owner('/')).toBeUndefined();
+    expect(owner(DOCS_PATH)).toBeUndefined();
+    expect(owner(`${DOCS_PATH}/installation`)).toBeUndefined();
+    expect(owner(`${COLOR_PICKER_DOCS_PATH}s`)).toBeUndefined();
+    expect(owner('/color-pickers')).toBeUndefined();
+    expect(owner('/toasters')).toBeUndefined();
+    expect(owner('/nowhere')).toBeUndefined();
+  });
+
+  it("leads Docs to the page's component in the docs, or to the docs of the whole kit", () => {
+    expect(docsPathOf(TOASTER_PATH)).toBe(TOASTER_DOCS_PATH);
+    expect(docsPathOf(PLAYGROUND_PATH)).toBe(TOASTER_DOCS_PATH);
+    expect(docsPathOf(`${TOASTER_DOCS_PATH}/styling`)).toBe(TOASTER_DOCS_PATH);
+    expect(docsPathOf(COLOR_PICKER_PATH)).toBe(COLOR_PICKER_DOCS_PATH);
+    expect(docsPathOf(COLOR_PICKER_DOCS_PATH)).toBe(COLOR_PICKER_DOCS_PATH);
+    expect(docsPathOf('/')).toBe(DOCS_PATH);
+    expect(docsPathOf(DOCS_PATH)).toBe(DOCS_PATH);
+    expect(docsPathOf(`${DOCS_PATH}/installation`)).toBe(DOCS_PATH);
+    expect(docsPathOf(`${COLOR_PICKER_DOCS_PATH}s`)).toBe(DOCS_PATH);
+    expect(docsPathOf('/nowhere')).toBe(DOCS_PATH);
   });
 
   it('reads everything under /docs quietly: no sky, no Lenis', () => {
