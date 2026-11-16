@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { KitHero } from '@/components/kit/kit-hero';
 import { KitComponents, KIT_CHAPTERS } from '@/components/kit/kit-shell';
+import { ToasterScene } from '@/components/kit/toaster-scene';
 import { Chapters } from '@/components/site/chapters';
 import { Footer } from '@/components/site/footer';
 import { KIT_PATH, SITE_URL } from '@/lib/site';
@@ -13,6 +14,7 @@ export default function KitHome() {
     <>
       <main>
         <KitHero />
+        <ToasterScene />
         <KitComponents />
       </main>
       <Chapters chapters={KIT_CHAPTERS} />

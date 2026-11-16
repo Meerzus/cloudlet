@@ -6,6 +6,7 @@ import { COMPONENTS } from '@/lib/site';
 /** The kit landing's chapters, in page order. */
 export const KIT_CHAPTERS: ChapterList = [
   { id: 'hero', label: 'Intro' },
+  { id: 'toaster', label: 'Toaster' },
   { id: 'components', label: 'Components' },
 ];
 

@@ -244,3 +244,175 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
   .kit-install-indicator { background: Highlight; forced-color-adjust: none; }
   .kit-install-items button[aria-pressed='true'] { color: HighlightText; }
 }
+
+/* ---------- The Toaster's chapter: a plain stack and Toaster on two phones, one input ---------- */
+
+.kit-toaster { position: relative; padding: clamp(3rem, 12svh, 7.5rem) 1rem clamp(3rem, 10svh, 6rem); }
+.kit-toaster-grid {
+  display: grid;
+  grid-template-areas: 'intro' 'compare' 'outro';
+  gap: 2rem;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+.kit-toaster-intro { grid-area: intro; max-width: 34rem; }
+.kit-toaster-outro { grid-area: outro; display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem; min-width: 0; }
+.kt-compare { grid-area: compare; min-width: 0; }
+@media (min-width: 64rem) {
+  .kit-toaster-grid {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    grid-template-areas: 'intro compare' 'outro compare';
+    grid-template-rows: auto 1fr;
+    column-gap: clamp(2.5rem, 5vw, 5rem);
+    row-gap: 2.25rem;
+    align-items: center;
+  }
+  .kit-toaster-intro { align-self: end; }
+  .kit-toaster-outro { align-self: start; }
+}
+
+.kit-eyebrow { font-size: 0.875rem; font-weight: 600; letter-spacing: -0.01em; color: var(--muted-foreground); }
+.kit-toaster-title {
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.kit-toaster-title > span { display: inline-block; }
+.kit-toaster-lede { margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+
+.kit-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  outline: none;
+}
+.kit-open:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.kit-open-arrow { width: 1rem; height: 1rem; transition: translate 200ms ease; }
+@media (hover: hover) { .kit-open:hover .kit-open-arrow { translate: 3px 0; } }
+
+/* One input for both phones. */
+.kt-compare { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+.kt-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+.kt-control {
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--background) 88%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 8px 24px -16px rgb(0 0 0 / 0.35);
+  font-size: 0.875rem;
+  font-weight: 500;
+  outline: none;
+}
+@media (max-width: 39.99rem) {
+  .kit-toaster { padding-block: 2.5rem; }
+  .kit-toaster-grid { gap: 1.5rem; }
+  .kt-compare { gap: 1rem; }
+  .kt-controls { gap: 0.375rem; }
+  .kt-control { min-height: 2.25rem; padding: 0 0.75rem; font-size: 0.8125rem; }
+}
+.kt-control:focus-visible { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+
+/* The phones: natural px scaled by --kt-scale (measured on resize), each showing --kt-shown px of
+   its height from the bottom. Before the first measure they keep a close guess and stay hidden. */
+.kt-phones { --kt-scale: 0.68; --kt-shown: 905.34; display: flex; justify-content: center; gap: 24px; width: 100%; }
+.kt-phones:not([data-fit]) .kt-slot { visibility: hidden; }
+.kt-phones[data-stacked] { flex-direction: column; align-items: center; gap: 1.25rem; }
+.kt-side { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin: 0; min-width: 0; }
+.kt-caption { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; text-align: center; font-size: 0.875rem; }
+.kt-caption-label { font-weight: 600; }
+.kt-caption-note { color: var(--muted-foreground); font-size: 0.8125rem; }
+.kt-phones[data-stacked] .kt-caption-note { display: none; }
+.kt-phones[data-stacked] .kt-side { gap: 0.5rem; }
+.kt-slot {
+  position: relative;
+  width: calc(433.66px * var(--kt-scale));
+  height: calc(var(--kt-shown) * 1px * var(--kt-scale));
+}
+/* One above the other: the upper part of each phone fades into the sky. */
+.kt-phones[data-stacked] .kt-slot {
+  overflow: clip;
+  mask-image: linear-gradient(to bottom, transparent, #000 12%);
+}
+.kt-device {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 433.66px;
+  height: 905.34px;
+  transform: scale(var(--kt-scale));
+  transform-origin: 0 100%;
+}
+/* The shell's parts of other devices (laptop base, foldable spine) stay out of the layout. */
+.kt-device :is(.dv-base, .dv-feet, .dv-spine, .dv-strip, .dv-hinge) { display: none; }
+/* A soft shadow under the body, drawn once (no filter over the live screen). */
+.kt-device::before {
+  content: '';
+  position: absolute;
+  inset: 4% 6% 1%;
+  border-radius: 64px;
+  box-shadow: 0 40px 70px -24px rgb(10 30 70 / 0.38);
+}
+.kt-frame {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+.kt-frame[data-visible] { opacity: 1; }
+
+/* The plain stack, at the screen's natural px: above the tab bar, as the Toaster's is. */
+.kt-plain {
+  position: absolute;
+  z-index: 5;
+  left: 16px;
+  right: 16px;
+  bottom: 99px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kt-plain-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 14px 10px 12px;
+  border-radius: 14px;
+  background: #fff;
+  color: #1d1d1f;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  box-shadow: 0 0 0 1px rgb(17 17 19 / 0.06), 0 10px 24px -12px rgb(0 0 0 / 0.3);
+  animation: kt-plain-in 300ms ease both;
+}
+.kt-plain-toast[data-phase='out'] { animation: kt-plain-out 300ms ease both; }
+.dark .kt-plain-toast { background: #1c1c1e; color: #f5f5f7; box-shadow: 0 0 0 1px rgb(245 245 247 / 0.1), 0 12px 28px -12px rgb(0 0 0 / 0.6); }
+@keyframes kt-plain-in { from { opacity: 0; } }
+@keyframes kt-plain-out { to { opacity: 0; } }
+.kt-plain-icon { display: grid; flex: none; place-items: center; width: 22px; height: 22px; border-radius: 9999px; color: #fff; }
+.kt-plain-icon[data-kind='success'] { background: oklch(0.62 0.17 145); }
+.kt-plain-icon[data-kind='info'] { background: oklch(0.58 0.16 252); }
+.kt-plain-icon svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.kt-plain-spinner { border: 2.5px solid color-mix(in oklab, currentColor 20%, transparent); border-top-color: currentColor; color: inherit; animation: kt-spin 900ms linear infinite; }
+@keyframes kt-spin { to { rotate: 1turn; } }
+.kt-plain-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kt-plain-spinner { animation-duration: 2.4s; }
+  .kit-open-arrow { transition: none; }
+}
+@media (forced-colors: active) {
+  .kt-control { outline: 1px solid CanvasText; }
+  .kt-control:focus-visible, .kit-open:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+  .kt-plain-toast { outline: 1px solid CanvasText; }
+}

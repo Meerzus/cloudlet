@@ -63,6 +63,12 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   opens out of its cloud, and the notification on its cloud sends a real one. The name and the clouds
   rise into place once, and scrolling lifts the near clouds faster than the far ones (vertically
   only); with reduced motion the scene stands still. The Toaster's sky runs under the whole page.
+- Under the sky's first screen, the Toaster's chapter: two identical phones, a plain stack of toasts
+  on the left and the real Toaster on the right, and one row of buttons (Send one, Send three,
+  Update, Take back) that sends the same notifications to both at the same moment. The plain stack
+  fades them in and out and pushes the rest aside; Toaster stacks them and turns around halfway. The
+  Toaster's phone is live (tap its stack to open it) and loads as the chapter comes near; on a phone
+  the two stand one above the other. Then Open Toaster and its install command.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and
