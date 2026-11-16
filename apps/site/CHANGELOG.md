@@ -51,6 +51,12 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 
 ### Website
 
+- [cloudlet.dev](https://cloudlet.dev) is the kit's own page instead of a redirect to `/toaster`: the
+  kit in one line, the `npx shadcn@latest add @cloudlet/<item>` command with a switch of the
+  components, and every component with a link to its landing and its docs. The root has its own
+  title, description and canonical address and is the first entry of `sitemap.xml`; the Toaster's
+  title, description and link card moved to [/toaster](https://cloudlet.dev/toaster). The Color
+  picker's page shares its card as a large image on X too.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and

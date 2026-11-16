@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   alternates: { canonical: `${SITE_URL}${COLOR_PICKER_PATH}` },
   openGraph: { title: TITLE, description: DESCRIPTION, url: COLOR_PICKER_PATH },
-  twitter: { title: TITLE, description: DESCRIPTION },
+  twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION },
 };
 
 const CHAPTERS: ChapterList = [

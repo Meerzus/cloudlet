@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * axe on the static export of the landings: the Toaster's `/`, `/playground` and `/frame`, `/color-picker` and its docs,
+ * axe on the static export of the landings: the kit's `/`, the Toaster's `/toaster`, `/toaster/playground` and `/toaster/frame`,
+ * `/color-picker` and its docs,
  * desktop 1440×900 and phone 390×844, light and dark, with motion and with reduced motion.
- * Scenes are pinned and fade text in and out, so the home page is checked at every section
+ * Scenes are pinned and fade text in and out, so the component landings are checked at every section
  * and at points inside scenes 2 and 3, not only at the top. Text caught mid-fade (opacity
  * between 0 and 1 along its ancestors) is a passing frame, not a resting state: it is
  * excluded from that check and counted in the report.
@@ -10,9 +11,9 @@
  *   npm run build && npm run build:site
  *   node apps/site/scripts/audit-landing.mjs <out-dir> [--base URL] [--browser chromium|firefox|webkit] [scenario ...]
  *
- * Besides axe, on `/`, `/playground`, `/color-picker` and its docs: a keyboard pass (Tab from the top until focus leaves the
+ * Besides axe, on `/`, `/toaster`, `/toaster/playground`, `/color-picker` and its docs: a keyboard pass (Tab from the top until focus leaves the
  * page or cycles; every stop must show a focus ring and be scrolled into view) and, with reduced
- * motion, the still layout (no Lenis, no pin spacers, sky and scenes untransformed).
+ * motion, the still layout of `/toaster` (no Lenis, no pin spacers, sky and scenes untransformed).
  *
  * Writes axe-<browser>.json; exits 1 on any violation, keyboard or reduced-motion failure, or console error.
  */
@@ -173,7 +174,7 @@ try {
     page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
     page.on('pageerror', (error) => errors.push(String(error)));
     const entry = (report[name] = { errors, checks: [] });
-    for (const path of ['/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/docs/components/color-picker']) {
+    for (const path of ['/', '/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/docs/components/color-picker']) {
       await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(600);
       const stops = path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
@@ -186,12 +187,12 @@ try {
       }
     }
     entry.keyboard = {};
-    for (const path of ['/toaster', '/toaster/playground', '/color-picker', '/docs/components/color-picker']) {
+    for (const path of ['/', '/toaster', '/toaster/playground', '/color-picker', '/docs/components/color-picker']) {
       entry.keyboard[path] = await keyboard(page, path);
       if (entry.keyboard[path].failures.length) failed = true;
     }
     if (options.reducedMotion === 'reduce') {
-      await page.goto(`${base}/`, { waitUntil: 'networkidle' });
+      await page.goto(`${base}/toaster`, { waitUntil: 'networkidle' });
       await scrollTo(page, 3000);
       entry.still = await stillLayout(page);
       if (entry.still.lenis || entry.still.pinSpacers || entry.still.moved) failed = true;

@@ -1,0 +1,12 @@
+/* The kit's landing has no sky yet: the page sits on the plain background in both themes. */
+html:has(.kit-site) { background: var(--background); }
+
+/* The install switch: the options keep one line each; on a phone the legend takes its own line and
+   the command wraps at its spaces instead of being cut, so the whole command stays readable. */
+.kit-install fieldset { flex-wrap: wrap; row-gap: 0.5rem; }
+.kit-install label { white-space: nowrap; }
+@media (max-width: 639px) {
+  .kit-install legend { width: 100%; }
+  .kit-install-command { height: auto; min-height: 3rem; padding-block: 0.5rem; border-radius: 1.5rem; text-align: start; }
+  .kit-install-command .truncate { white-space: normal; overflow: visible; }
+}
