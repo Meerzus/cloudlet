@@ -1,8 +1,7 @@
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import type { ChapterList } from '@/components/site/chapters';
-import { COMPONENTS, KIT_DESCRIPTION } from '@/lib/site';
-import { InstallSwitch } from './install-switch';
+import { COMPONENTS } from '@/lib/site';
 
 /** The kit landing's chapters, in page order. */
 export const KIT_CHAPTERS: ChapterList = [
@@ -12,24 +11,6 @@ export const KIT_CHAPTERS: ChapterList = [
 
 const LINK =
   'rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60';
-
-/** The top of the kit's landing: its name, one line about it and the install command. */
-export function KitIntro() {
-  return (
-    <section id="hero" aria-labelledby="kit-title" className="px-4 sm:px-6">
-      <div className="mx-auto max-w-6xl pt-36 pb-16 sm:pt-48 sm:pb-24">
-        <p className="text-sm font-medium text-muted-foreground">Cloudlet</p>
-        <h1 id="kit-title" className="mt-3 max-w-4xl text-balance text-5xl font-semibold tracking-[-0.04em] sm:text-7xl">
-          React components, light as a cloud.
-        </h1>
-        <p className="mt-6 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">{KIT_DESCRIPTION}</p>
-        <div className="mt-10">
-          <InstallSwitch />
-        </div>
-      </div>
-    </section>
-  );
-}
 
 /** Every component of the kit, in the kit's order, each leading to its landing and its docs. */
 export function KitComponents() {

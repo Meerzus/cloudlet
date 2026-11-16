@@ -22,6 +22,8 @@ export function CopyCommand({ command, className }: { command: string; className
       aria-label={`Copy command: ${command}`}
       className={cn(
         'group inline-flex h-12 max-w-full items-center gap-3 rounded-full border border-glass-border bg-background/55 pl-5 pr-2 font-mono text-sm shadow-sm backdrop-blur-md outline-none transition-colors hover:bg-background/75 focus-visible:ring-[3px] focus-visible:ring-ring/60',
+        // The narrowest phones (320 px): a little tighter, so a short command still fits whole.
+        'max-[359px]:gap-2 max-[359px]:pl-4 max-[359px]:text-xs',
         className,
       )}
     >

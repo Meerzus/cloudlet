@@ -9,7 +9,7 @@ import { useScrollScene } from './motion';
 
 type ShapeId = (typeof CLOUD_SHAPES)[number]['id'];
 
-interface Cloud {
+export interface SkyCloud {
   readonly shape: ShapeId;
   /** Left edge, % of the viewport width (may be negative to bleed off-screen). */
   readonly x: number;
@@ -20,14 +20,14 @@ interface Cloud {
   readonly flip?: boolean;
 }
 
-interface Layer {
+export interface SkyLayer {
   /** 0 = at the horizon, 1 = closest to the viewer. Drives opacity, blur and parallax. */
   readonly depth: number;
-  readonly clouds: readonly Cloud[];
+  readonly clouds: readonly SkyCloud[];
 }
 
 /* Blender-rendered layers (scripts/clouds); the first screen keeps the headline area clear. */
-const LAYERS: readonly Layer[] = [
+const LAYERS: readonly SkyLayer[] = [
   { depth: 0.15, clouds: [{ shape: 3, x: 4, y: 0.6, w: 24 }, { shape: 4, x: 60, y: 0.68, w: 28, flip: true }, { shape: 3, x: 30, y: 1.5, w: 22, flip: true }, { shape: 4, x: 72, y: 1.9, w: 26 }] },
   { depth: 0.35, clouds: [{ shape: 5, x: -6, y: 0.76, w: 24, flip: true }, { shape: 5, x: 76, y: 0.52, w: 20 }, { shape: 5, x: 44, y: 1.35, w: 22 }, { shape: 4, x: 4, y: 2.1, w: 30 }] },
   { depth: 0.6, clouds: [{ shape: 1, x: 26, y: 0.86, w: 40 }, { shape: 5, x: 78, y: 1.2, w: 26, flip: true }, { shape: 6, x: -12, y: 1.75, w: 38 }] },
@@ -70,7 +70,12 @@ export function CloudImage({ shape, theme, w }: { shape: ShapeId; theme: 'day' |
 /** Pages whose sky is a still backdrop (the playground has no scroll effects). */
 const STILL_PATHS = [PLAYGROUND_PATH];
 
-export function Sky() {
+/**
+ * The fixed sky behind a landing: gradient, stars, glow and layers of clouds that rise by depth as
+ * the page scrolls (vertically only). `layers` replaces the Toaster's clouds, for a page whose first
+ * screen draws its own (the kit's hero keeps the top of each period clear).
+ */
+export function Sky({ layers = LAYERS }: { layers?: readonly SkyLayer[] }) {
   const root = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const still = STILL_PATHS.some((path) => pathname.startsWith(path));
@@ -124,7 +129,7 @@ export function Sky() {
       <div className="sky-stars" />
       <div className="sky-glow" />
       <div className="sky-clouds">
-        {LAYERS.map((layer) => (
+        {layers.map((layer) => (
           <div
             key={layer.depth}
             data-depth={layer.depth}

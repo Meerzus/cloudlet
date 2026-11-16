@@ -57,6 +57,12 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   title, description and canonical address and is the first entry of `sitemap.xml`; the Toaster's
   title, description and link card moved to [/toaster](https://cloudlet.dev/toaster). The Color
   picker's page shares its card as a large image on X too.
+- The top of [cloudlet.dev](https://cloudlet.dev) is the sky: "Cloudlet" written in clouds, "Everything
+  floats. Nothing jumps.", the install command with a switch of the components, and the kit's
+  components resting on clouds at different depths, each one live: the palette edits, the picker
+  opens out of its cloud, and the notification on its cloud sends a real one. The name and the clouds
+  rise into place once, and scrolling lifts the near clouds faster than the far ones (vertically
+  only); with reduced motion the scene stands still. The Toaster's sky runs under the whole page.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and
@@ -126,3 +132,5 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 - Documentation pages keep the link card of their section (Toaster and Color picker); they had none.
 - The cloud icon keeps its cut-outs in dark mode where the page sets a fill on SVGs, as the shadcn
   directory does.
+- At 320 px [/toaster](https://cloudlet.dev/toaster) no longer scrolls sideways by a pixel: the
+  install command fits the screen whole.

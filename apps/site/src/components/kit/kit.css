@@ -1,12 +1,246 @@
-/* The kit's landing has no sky yet: the page sits on the plain background in both themes. */
-html:has(.kit-site) { background: var(--background); }
+/*
+ * The kit's landing at the root. The page stands on the Toaster's sky (the layout's <Sky> with
+ * KIT_SKY_LAYERS); its hero draws its own clouds, the islands.
+ */
 
-/* The install switch: the options keep one line each; on a phone the legend takes its own line and
-   the command wraps at its spaces instead of being cut, so the whole command stays readable. */
-.kit-install fieldset { flex-wrap: wrap; row-gap: 0.5rem; }
-.kit-install label { white-space: nowrap; }
-@media (max-width: 639px) {
-  .kit-install legend { width: 100%; }
-  .kit-install-command { height: auto; min-height: 3rem; padding-block: 0.5rem; border-radius: 1.5rem; text-align: start; }
-  .kit-install-command .truncate { white-space: normal; overflow: visible; }
+/* The hero's islands are the clouds of the first screen: the sky's own clouds are out of the page
+   (so not even fetched) while the hero covers the screen, and fade in as its upper part scrolls away
+   (kit-hero.tsx flips the attribute at the sentinel). */
+html:has(.kit-hero) .sky-clouds { transition: opacity 700ms ease, display 700ms allow-discrete; }
+html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity: 0; }
+@starting-style { html:has(.kit-hero) .sky-clouds { opacity: 0; } }
+.kit-hero-sentinel { position: absolute; top: 55%; left: 0; width: 1px; height: 1px; pointer-events: none; }
+
+/* ---------- Hero: the name, the slogan and the command, islands around them ---------- */
+
+/* `min-height` leaves the sticky header's height to the hero, so the first screen is exactly the hero.
+   overflow-x clips the clouds that bleed off the sides; they still run below the hero's bottom. */
+.kit-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100svh - 3.5rem);
+  overflow-x: clip;
+}
+.kit-center {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: clamp(0.5rem, 3svh, 2.5rem) 1rem 0;
+  text-align: center;
+  /* The column is wider than its words: presses beside them reach the islands under it. */
+  pointer-events: none;
+}
+.kit-center > * { pointer-events: auto; }
+
+.kit-name { position: relative; width: min(88vw, 34rem); }
+.kit-wordmark, .kit-wordmark picture { position: absolute; inset: 0; }
+.kit-wordmark img { display: block; width: 100%; height: 100%; user-select: none; }
+
+.kit-title {
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 1.1rem + 3.4vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+/* Each sentence keeps its own line when the two do not fit on one. */
+.kit-title > span { display: inline-block; }
+.kit-lede {
+  max-width: 31rem;
+  margin-top: 1rem;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  text-wrap: balance;
+}
+.kit-hero-install { margin-top: 1.75rem; }
+
+/* Narrow screens: the islands lie in a band under the words, so they never cover the command. The
+   band keeps the proportions of a phone's column and grows with the width up to 40rem. */
+.kit-islands {
+  position: relative;
+  max-width: 40rem;
+  aspect-ratio: 1.25;
+  margin: 1.75rem auto 0;
+  pointer-events: none;
+}
+.kit-island { position: absolute; z-index: 1; left: var(--nx); top: var(--ny); width: var(--nw); will-change: transform; }
+.kit-island[data-narrow='off'] { display: none; }
+
+@media (min-width: 64rem) {
+  .kit-name { width: min(46vw, 44rem); }
+  .kit-lede { max-width: 36rem; font-size: 1.125rem; }
+  .kit-hero-install { margin-top: 2rem; }
+  /* Wide screens: the islands sit around the words, placed in % of the hero. */
+  .kit-islands { position: absolute; inset: 0; max-width: none; aspect-ratio: auto; margin: 0; }
+  .kit-island, .kit-island[data-narrow='off'] { display: block; left: var(--x); top: var(--y); width: var(--w); }
+}
+
+/* An island whose picker is open lies over the words until the panel closes. */
+.kit-island:has(.color-picker-shadow) { z-index: 3; }
+
+.kit-island-rise { position: relative; }
+.kit-cloud { position: relative; width: 100%; opacity: calc(0.6 + var(--depth) * 0.4); pointer-events: none; }
+.kit-cloud[data-flip] { transform: scaleX(-1); }
+.kit-cloud picture { position: absolute; inset: 0; }
+.kit-cloud img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  /* Farther clouds are softer, like haze (as in the sky). */
+  filter: blur(calc((1 - var(--depth)) * 1.5px));
+}
+/* A cloud fades in once its image is decoded instead of popping in mid-rise. */
+@media (scripting: enabled) {
+  .kit-cloud img { opacity: 0; transition: opacity 600ms ease; }
+  .kit-cloud img[data-loaded] { opacity: 1; }
+}
+/* What rests on the cloud sits in its upper fluff, centered. */
+.kit-thing { position: absolute; left: 50%; top: 34%; z-index: 1; width: max-content; translate: -50% -50%; pointer-events: auto; }
+
+/* The name and the islands rise into place once on a spring (kit-hero.tsx), the far ones a beat later. */
+@media (prefers-reduced-motion: no-preference) {
+  .kit-name, .kit-island-rise { animation: kit-approach var(--approach-duration) var(--approach-ease) both; }
+  .kit-island-rise { animation-delay: calc(120ms + (1 - var(--depth)) * 360ms); }
+}
+@keyframes kit-approach {
+  from { opacity: 0; transform: translateY(48px) scale(0.94); }
+}
+
+/* ---------- What rests on the islands ---------- */
+
+/* A tray under a live component: opaque enough to read on any cloud, no backdrop filter. */
+.kit-tray {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--background) 92%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 8%, transparent), 0 14px 30px -14px rgb(0 0 0 / 0.3);
+}
+.kit-tray-value { padding-right: 0.75rem; font-family: var(--font-mono); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+
+/* A notification pill drawn with the package's colors (light or dark with the page). */
+.kit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 44px;
+  padding: 0 1.125rem 0 0.375rem;
+  border-radius: 9999px;
+  background: #fff;
+  color: #111113;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  outline: none;
+  box-shadow: 0 0 0 1px rgb(17 17 19 / 0.08), 0 10px 30px -12px rgb(0 0 0 / 0.25), 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.dark .kit-pill { background: #1c1c1e; color: #f5f5f7; box-shadow: 0 0 0 1px rgb(245 245 247 / 0.1), 0 12px 32px -12px rgb(0 0 0 / 0.6); }
+.kit-pill:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 70%, transparent), 0 10px 30px -12px rgb(0 0 0 / 0.25); }
+.kit-pill-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9999px; color: #fff; background: oklch(0.723 0.219 142.136); }
+.kit-pill-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Hover lifts, a press sinks, both on the hero's press spring; a new press retargets mid-way. */
+.kit-press { transition: translate var(--press-duration) var(--press-ease), scale var(--press-duration) var(--press-ease); }
+@media (hover: hover) { .kit-press:hover { translate: 0 -2px; } }
+.kit-press:active { translate: 0 0; scale: 0.97; }
+
+/* ---------- The install command and the switch of the kit's components ---------- */
+
+.kit-install { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; max-width: 100%; }
+.kit-install-center { align-items: center; }
+.kit-install-items {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0.25rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--background) 70%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+.kit-install-indicator { top: 0.25rem; bottom: 0.25rem; background: var(--foreground); }
+.kit-install-items button {
+  position: relative;
+  z-index: 1;
+  height: 2rem;
+  padding: 0 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  outline: none;
+  transition: color 200ms ease;
+}
+@media (hover: hover) { .kit-install-items button:hover { color: var(--foreground); } }
+.kit-install-items button[aria-pressed='true'] { color: var(--background); }
+.kit-install-items button:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.kit-install-command {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 100%;
+  min-height: 3rem;
+  padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+  border-radius: 1.5rem;
+  background: color-mix(in oklab, var(--background) 88%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 10px 30px -18px rgb(0 0 0 / 0.35);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  text-align: left;
+  outline: none;
+  transition: scale 160ms ease;
+}
+.kit-install-command:active { scale: 0.985; }
+.kit-install-command:focus-visible { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.kit-install-prompt { color: var(--muted-foreground); user-select: none; }
+.kit-install-text { min-width: 0; }
+.kit-install-item { display: inline-block; font-weight: 600; }
+.kit-install-copy {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+  color: var(--muted-foreground);
+  transition: color 150ms ease;
+}
+@media (hover: hover) { .kit-install-command:hover .kit-install-copy { color: var(--foreground); } }
+/* The copy icon and the check swap by blur in one spot. */
+.kit-install-icon { grid-area: 1 / 1; width: 1rem; height: 1rem; transition: opacity 200ms ease, filter 200ms ease, scale 200ms ease; }
+.kit-install-icon[data-icon='check'],
+.kit-install-command[data-copied] .kit-install-icon[data-icon='copy'] { opacity: 0; filter: blur(4px); scale: 0.6; }
+.kit-install-command[data-copied] .kit-install-icon[data-icon='check'] { opacity: 1; filter: none; scale: 1; }
+@media (max-width: 39.99rem) {
+  .kit-install-items button { padding: 0 0.625rem; font-size: 0.75rem; }
+  .kit-install-command { font-size: 0.75rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kit-install-icon, .kit-install-command, .kit-press { transition: opacity 150ms ease; }
+  .kit-press:active, .kit-install-command:active { scale: none; }
+}
+
+/* A changed word comes in by blur, never by a cut. */
+@media (prefers-reduced-motion: no-preference) {
+  .kit-swap { animation: kit-blur-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+}
+@keyframes kit-blur-in {
+  from { opacity: 0; filter: blur(6px); }
+}
+
+@media (forced-colors: active) {
+  .kit-tray, .kit-pill, .kit-install-items, .kit-install-command { outline: 1px solid CanvasText; }
+  .kit-pill:focus-visible, .kit-install-command:focus-visible, .kit-install-items button:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+  .kit-install-indicator { background: Highlight; forced-color-adjust: none; }
+  .kit-install-items button[aria-pressed='true'] { color: HighlightText; }
 }
