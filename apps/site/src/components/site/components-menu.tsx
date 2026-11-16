@@ -148,9 +148,15 @@ export function ComponentsMenu({ className }: { className?: string }) {
     const escape = (event: globalThis.KeyboardEvent) => {
       if (event.key === 'Escape' && !event.defaultPrevented) close(true);
     };
+    // The opening's animations keep their last frame (fill: both) over inline styles: drop them
+    // and rest on the new geometry, or the old clip would cut the moved card.
     const resize = () => {
+      for (const animation of running.current) animation.cancel();
+      running.current = [];
+      progress.current.settle(1);
       const shapes = place();
       if (shapes && shape.current) shape.current.style.clipPath = inset(shapes.expanded);
+      if (wrapper.current) wrapper.current.style.filter = drop(1);
     };
     document.addEventListener('pointerdown', outside, true);
     document.addEventListener('focusin', outside);
@@ -216,7 +222,8 @@ export function ComponentsMenu({ className }: { className?: string }) {
       </button>
       {phase === 'closed' ? null : (
         // The box spans the button and the card; the clip draws the shape, the filter its shadow.
-        <div ref={wrapper} className="components-panel" data-phase={phase}>
+        // While closing it is inert: Tab must not land on a link that is about to go.
+        <div ref={wrapper} className="components-panel" data-phase={phase} inert={phase === 'closing'}>
           <div ref={shape} className="components-panel-shape">
             <nav ref={nav} id={id} aria-label="Components" className="components-panel-card">
               <ul>

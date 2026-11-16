@@ -1331,6 +1331,8 @@ html[data-show="puppet"] .cloudlet-host { visibility: hidden; }
   .components-panel-shape { background: Canvas; color: CanvasText; }
   .components-panel-card { outline: 1px solid CanvasText; outline-offset: -1px; }
   .components-panel-link[aria-current='page'] { outline: 1px solid Highlight; }
+  /* Forced colors drop box-shadow, which draws the focus ring elsewhere. */
+  .components-panel-link:focus-visible { outline: 2px solid Highlight; outline-offset: -2px; }
 }
 
 /* ---------- Site footer ----------
