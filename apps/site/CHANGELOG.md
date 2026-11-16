@@ -75,8 +75,17 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   its words and a ragged airbrush edge at its top and bottom. The paint loads as the chapter comes
   near and spreads in from the heading; it flows only while the chapter is on screen, the cursor
   stirs it, reduced motion keeps it still, and without WebGL 2 a still frame of it stands in. The
-  chapter keeps its color to itself: the address of the kit's page does not change. For now it holds
-  Open Color picker and Open Color palette; the list of components under it is gone.
+  chapter keeps its color to itself: the address of the kit's page does not change. The list of
+  components that stood there is gone.
+- In that chapter, "Same color. Better in hand.": two comparisons on identical sheets. The browser's
+  own color input beside the Color picker, with a row of colors that sets both at once; a row of the
+  browser's color inputs with a plus and a remove button beside the Color palette, with harmonies that
+  fill both. Both sides hold the same color or palette, so a change on either shows on the other, and
+  every change repaints the chapter: a press spreads out of the control, a drag repaints at once, and
+  a palette of your own paints the whole chapter in its colors. Once a change has settled, the page's
+  Island says "Accent updated" or "Palette updated" and keeps updating that one notification while it
+  is on screen; loading and scrolling say nothing. Each comparison ends with Open Color picker or Open
+  Color palette and its install command.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and

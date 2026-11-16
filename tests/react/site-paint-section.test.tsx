@@ -62,6 +62,8 @@ describe('the color of a chapter on another page', () => {
   it('never writes the address or <html>, and takes no start script', () => {
     vi.useFakeTimers();
     global[START_GLOBAL] = '#1b1f4a';
+    // The chapter's own random pick lands on the first curated color, never on the script's by chance.
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
     const { container } = render(
       <PickerColorProvider page={false}>
         <Picks />
@@ -71,6 +73,7 @@ describe('the color of a chapter on another page', () => {
     // The start script belongs to the color picker landing: a chapter elsewhere picks its own.
     expect(button.dataset.hex).not.toBe('#1b1f4a');
     expect(global[START_GLOBAL]).toBe('#1b1f4a');
+    random.mockRestore();
     act(() => button.click());
     act(() => vi.advanceTimersByTime(1000));
     expect(button.dataset.hex).toBe('#2e8b57');

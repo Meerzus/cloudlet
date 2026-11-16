@@ -309,13 +309,12 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
 .kit-picker-copy {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  gap: clamp(3.5rem, 9svh, 6rem);
   max-width: 72rem;
-  min-height: 56svh;
   margin: 0 auto;
 }
+.kit-picker-intro { max-width: 40rem; }
 .kit-picker-title {
-  max-width: 40rem;
   margin-top: 0.5rem;
   font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
   font-weight: 600;
@@ -325,7 +324,116 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
 }
 .kit-picker-title > span { display: inline-block; }
 .kit-picker-lede { max-width: 34rem; margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
-.kit-picker-links { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; margin-top: 2rem; }
+
+/* Each comparison: its words, then the input for both and the two sheets, then the way on — as the
+   Toaster's chapter lays out its phones. */
+.kc-pair {
+  display: grid;
+  grid-template-areas: 'intro' 'compare' 'outro';
+  gap: 1.75rem;
+}
+.kc-intro { grid-area: intro; max-width: 30rem; }
+.kc-compare { grid-area: compare; display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.kc-outro { grid-area: outro; display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem; min-width: 0; }
+@media (min-width: 64rem) {
+  .kc-pair {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    grid-template-areas: 'intro compare' 'outro compare';
+    grid-template-rows: auto 1fr;
+    column-gap: clamp(2.5rem, 5vw, 5rem);
+    row-gap: 2rem;
+    align-items: center;
+  }
+  .kc-intro { align-self: end; }
+  .kc-outro { align-self: start; }
+}
+.kc-title { font-size: 1.5rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.025em; }
+.kc-lede { margin-top: 0.625rem; font-size: 1rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+
+/* The one input for both sides. */
+.kc-try { display: flex; flex-direction: column; align-items: flex-start; gap: 0.625rem; }
+.kc-try-label { font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
+.kc-chips, .kc-hints { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.kc-hints .cp-hint { font-size: 0.875rem; }
+.kc-chip {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background: var(--kc-chip);
+  box-shadow: 0 0 0 2px var(--background), inset 0 0 0 1px rgb(0 0 0 / 0.14), 0 6px 16px -8px rgb(0 0 0 / 0.4);
+  outline: none;
+  transition: box-shadow 150ms ease, translate 200ms ease;
+}
+@media (hover: hover) { .kc-chip:hover { translate: 0 -2px; } }
+.kc-chip[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--background), 0 0 0 3.5px var(--foreground), inset 0 0 0 1px rgb(0 0 0 / 0.14); }
+.kc-chip:focus-visible { box-shadow: 0 0 0 2px var(--background), 0 0 0 5px color-mix(in oklab, var(--ring) 70%, transparent); }
+
+/* Two identical sheets, the material of the picker's own panel; native controls follow the theme. */
+.kc-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem 1rem; }
+/* Caption and sheet on rows shared by both sides: a caption that wraps keeps the sheets level. */
+.kc-side { display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0.625rem; margin: 0; min-width: 0; }
+.kc-caption { display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.875rem; }
+.kc-caption-label { font-weight: 600; }
+.kc-caption-note { color: var(--muted-foreground); font-size: 0.8125rem; }
+.kc-sheet {
+  display: flex;
+  align-items: center;
+  min-height: 5.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1.25rem;
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
+  color-scheme: light;
+}
+.dark .kc-sheet { color-scheme: dark; }
+.kc-field { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; width: 100%; min-width: 0; }
+.kc-field-column { flex-direction: column; align-self: flex-start; align-items: flex-start; justify-content: flex-start; gap: 0.75rem; }
+.kc-field-text { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+.kc-field-label { font-size: 0.875rem; font-weight: 500; }
+.kc-value {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kc-row { min-height: 2.75rem; display: flex; align-items: center; }
+
+/* The browser's controls as the browser draws them: the site's reset is undone. */
+.kc-native { all: revert; }
+.kc-plain { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.kc-plain-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.kc-plain-item { display: flex; align-items: center; gap: 0.125rem; }
+
+@media (max-width: 39.99rem) {
+  .kit-picker-copy { gap: 2.75rem; }
+  .kc-pair { gap: 1.25rem; }
+  .kc-compare { gap: 1rem; }
+  /* The picker's sheets stay side by side; the palette's rows need the width and stand one above the other. */
+  .kc-sides { column-gap: 0.625rem; row-gap: 0.375rem; }
+  .kc-sides-stack { grid-template-columns: minmax(0, 1fr); }
+  .kc-sheet { min-height: 4.25rem; padding: 0.75rem 0.875rem; }
+  .kc-field { gap: 0.5rem; }
+  .kc-side { row-gap: 0.375rem; }
+  .kc-sides-stack .kc-side + .kc-side { margin-top: 0.5rem; }
+  .kc-sides-stack .kc-caption { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 0.5rem; }
+  .kc-sides:not(.kc-sides-stack) .kc-caption-note { display: none; }
+  .kc-hints .cp-hint { min-height: 2.25rem; gap: 0.5rem; padding-right: 0.75rem; font-size: 0.8125rem; }
+  .kc-hints .cp-hint-chip { width: 1rem; height: 1rem; }
+  .kc-hints { gap: 0.375rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kc-chip { transition: none; }
+  .kc-chip:hover { translate: none; }
+}
+@media (forced-colors: active) {
+  .kc-chip { forced-color-adjust: none; outline: 1px solid CanvasText; }
+  .kc-chip[aria-pressed='true'] { outline: 3px solid Highlight; }
+  .kc-chip:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+  .kc-sheet { outline: 1px solid CanvasText; }
+}
 
 /* One input for both phones. */
 .kt-compare { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }

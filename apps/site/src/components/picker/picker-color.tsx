@@ -30,10 +30,13 @@ interface PickerColor {
   readonly started: boolean;
   /** How the latest change shows: a jump bleeds out of where it was made, a slider moved repaints at once. */
   readonly change: MutableRefObject<PickerChange>;
-  /** Sets the page color (the palette's first); `from` is the control or the point it was picked at. */
-  readonly pick: (value: string, from?: ChangeSource) => void;
-  /** Sets the whole palette; its first color becomes the page color. */
-  readonly setPalette: (colors: readonly string[], from?: ChangeSource) => void;
+  /**
+   * Sets the page color (the palette's first); `from` is the control or the point it was picked at.
+   * `bleed` overrides how it shows: by default a slider in focus repaints at once and anything else spreads.
+   */
+  readonly pick: (value: string, from?: ChangeSource, bleed?: boolean) => void;
+  /** Sets the whole palette; its first color becomes the page color. `bleed` as for `pick`. */
+  readonly setPalette: (colors: readonly string[], from?: ChangeSource, bleed?: boolean) => void;
   /** The page's paint, once it draws: the color it shows under a point (Tools takes it). */
   readonly paint: MutableRefObject<PaintProbe | null>;
 }
@@ -169,15 +172,15 @@ export function PickerColorProvider({ children, page = true }: { children: React
       started,
       change,
       paint,
-      pick(next, from) {
-        change.current = { bleed: isJump(), from: from ?? null };
+      pick(next, from, bleed) {
+        change.current = { bleed: bleed ?? isJump(), from: from ?? null };
         changed.current = true;
         setValue(next);
       },
-      setPalette(colors, from) {
+      setPalette(colors, from, bleed) {
         const [first, ...others] = colors.slice(0, PALETTE_MAX);
         if (first === undefined) return;
-        change.current = { bleed: isJump(), from: from ?? null };
+        change.current = { bleed: bleed ?? isJump(), from: from ?? null };
         changed.current = true;
         setValue(first);
         // An untouched palette stays a harmony while only its first color (or the format) changes:
