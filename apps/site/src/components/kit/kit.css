@@ -295,6 +295,38 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
 .kit-open-arrow { width: 1rem; height: 1rem; transition: translate 200ms ease; }
 @media (hover: hover) { .kit-open:hover .kit-open-arrow { translate: 3px 0; } }
 
+/* ---------- The color picker's chapter: the sky runs into the paint and out of it ---------- */
+
+/* The bands are where the sky turns into paint and back (paint-section.tsx reads them): the copy
+   starts below the top one and ends above the bottom one. */
+.kit-picker {
+  --paint-edge-top: clamp(9rem, 32svh, 19rem);
+  --paint-edge-bottom: clamp(8rem, 28svh, 17rem);
+  position: relative;
+  isolation: isolate;
+  padding: calc(var(--paint-edge-top) + 1.5rem) 1rem calc(var(--paint-edge-bottom) + 1.5rem);
+}
+.kit-picker-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 72rem;
+  min-height: 56svh;
+  margin: 0 auto;
+}
+.kit-picker-title {
+  max-width: 40rem;
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.kit-picker-title > span { display: inline-block; }
+.kit-picker-lede { max-width: 34rem; margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+.kit-picker-links { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; margin-top: 2rem; }
+
 /* One input for both phones. */
 .kt-compare { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
 .kt-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }

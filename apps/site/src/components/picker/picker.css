@@ -274,3 +274,33 @@ html[data-cp-paint='page'] .site-edge-tint { background: linear-gradient(to bott
   inset: 0;
   background: linear-gradient(to top, color-mix(in oklab, var(--background) 22%, transparent), transparent);
 }
+
+/* --- The paint inside one section of another page (paint-section.tsx, the kit's landing) ---
+   The section sets the bands its paint fades in and out over; they are registered lengths so the
+   renderer reads them in px. Until the paint draws (and for good while it waits for its frame), the
+   flat color fills the section between the same bands; a canvas fixed to the window then draws only
+   the section's rectangle, a software WebGL one canvas over the section, no WebGL 2 a still frame. */
+@property --paint-edge-top { syntax: '<length>'; inherits: true; initial-value: 240px; }
+@property --paint-edge-bottom { syntax: '<length>'; inherits: true; initial-value: 240px; }
+.paint-section {
+  --paint-flat: color-mix(in oklch, var(--paint-color, #ff6a3d) 35%, var(--background));
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--paint-flat) var(--paint-edge-top), var(--paint-flat) calc(100% - var(--paint-edge-bottom)), transparent);
+}
+@supports (color: oklch(from red l c h)) {
+  .paint-section { --paint-flat: oklch(from color-mix(in oklch, var(--paint-color, #ff6a3d) 35%, var(--background)) max(l, 0.64) c h); }
+  .dark .paint-section { --paint-flat: oklch(from color-mix(in oklch, var(--paint-color, #ff6a3d) 35%, var(--background)) min(l, 0.4) c h); }
+}
+.paint-section[data-state='drawn'] { background: none; }
+.paint-section-gl, .paint-section-still { display: none; inset: 0; width: 100%; height: 100%; }
+.paint-section[data-paint='fixed'] .paint-section-gl { display: block; position: fixed; }
+/* Far from the window the loop stands and the canvas is out of the compositor's way. */
+.paint-section[data-paint='fixed'][data-active='false'] .paint-section-gl { visibility: hidden; }
+.paint-section[data-paint='page'] .paint-section-gl { display: block; position: absolute; }
+.paint-section[data-paint='still'][data-state='drawn'] .paint-section-still { display: block; position: absolute; }
+@media (forced-colors: active) {
+  .paint-section { display: none; }
+}

@@ -14,6 +14,11 @@
  *    - `fixed`: a GPU Chromium (ANGLE on Metal), the canvas fixed to the window — what visitors see;
  *    - `page`: Chromium with SwiftShader, the canvas over the whole page, drawn once (software WebGL);
  *    - `flat`: WebGL 2 taken away, a flat background of the page color.
+ *    The kit's landing (`/`) is measured the same way over its color picker chapter, whose paint lies in
+ *    the section's bounds (paint-section.tsx): the chapter is scrolled near so the paint loads, then
+ *    walked one screen at a time; its text is the gate, the header over it a note (its contrast on `/`
+ *    is the owner's call). There `flat` is the still frame of the paint drawn without WebGL 2. The
+ *    color comes from `?c=`, which the chapter reads but never writes.
  * 2. Every picker on /color-picker and /docs/components/color-picker, desktop 1440×900 and phone 390×844, light
  *    and dark: Enter on the swatch opens a named dialog with focus in the area; axe on the open panel;
  *    the panel inside the viewport; arrows, Shift and Home/End against the promised values
@@ -25,9 +30,10 @@
  *
  *   npm run build && npm run build:site
  *   node apps/site/scripts/audit-color-picker.mjs <out-dir> [--browser chromium|webkit] [--skip-contrast] [--skip-pickers]
- *     [--modes fixed,page,flat] [--quick]
+ *     [--modes fixed,page,flat] [--routes picker,kit] [--quick]
  *
- * --quick measures three colors and one palette instead of all. Writes color-picker-<browser>.json
+ * --quick measures three colors and one palette instead of all. --routes picks the pages measured for
+ * contrast: the color picker landing (`picker`), the kit's chapter (`kit`); both by default. Writes color-picker-<browser>.json
  * (with an ARIA snapshot of each open panel); exits 1 on any failure.
  */
 import AxeBuilder from '@axe-core/playwright';
@@ -55,12 +61,13 @@ const option = (name, fallback) => {
 };
 const engine = { chromium, webkit }[option('--browser', 'chromium')];
 const modes = option('--modes', 'fixed,page,flat').split(',');
+const routes = option('--routes', 'picker,kit').split(',');
 const skipContrast = args.includes('--skip-contrast');
 const skipPickers = args.includes('--skip-pickers');
 const quick = args.includes('--quick');
 const [outDir] = args.filter((arg) => !arg.startsWith('--'));
 if (!outDir || !engine) {
-  console.error('Usage: node apps/site/scripts/audit-color-picker.mjs <out-dir> [--browser chromium|webkit] [--skip-contrast] [--skip-pickers] [--modes fixed,page,flat] [--quick]');
+  console.error('Usage: node apps/site/scripts/audit-color-picker.mjs <out-dir> [--browser chromium|webkit] [--skip-contrast] [--skip-pickers] [--modes fixed,page,flat] [--routes picker,kit] [--quick]');
   process.exit(2);
 }
 const out = resolve(outDir);
@@ -81,8 +88,8 @@ const fail = (where, what) => {
  * drawn in (the element's color, its alpha times the opacity of its ancestors). Lines cut by the
  * window's edge are left to the screen that shows them whole.
  */
-const textTargets = (page) =>
-  page.evaluate(() => {
+const textTargets = (page, scope = null) =>
+  page.evaluate((scope) => {
     const height = window.innerHeight;
     const width = document.documentElement.clientWidth;
     // Lines that have scrolled under the fixed header are blurred behind it, not read there.
@@ -92,6 +99,8 @@ const textTargets = (page) =>
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const parent = node.parentElement;
       if (!parent || !node.textContent.trim() || parent.closest('script, style, noscript, nextjs-portal, [hidden], [aria-hidden="true"] svg')) continue;
+      // A scope keeps the text of one part of the page (and the header over it).
+      if (scope && !parent.closest(scope) && !parent.closest('.site-header')) continue;
       const style = getComputedStyle(parent);
       // Not rendered: a closed answer (<details> keeps its content in a content-visibility: hidden slot).
       if (style.visibility !== 'visible' || !parent.checkVisibility({ contentVisibilityAuto: true, visibilityProperty: true })) continue;
@@ -134,7 +143,7 @@ const textTargets = (page) =>
       group.boxes.push(...boxes);
     }
     return [...groups.values()];
-  });
+  }, scope);
 
 /** In the page: per-pixel contrast of each text box against a shot of the screen without its text. */
 const measure = (page, shot, targets) =>
@@ -195,6 +204,8 @@ const NO_WEBGL = () => {
 /** Hides the glyphs only: `color` stays, so borders and fills drawn in currentColor stay too. */
 /** Everything under the header but the paint: the page's content. */
 const BARE = 'main *, footer *, .cp-paint-footer *';
+/** The paint layers kept in the shot of the header against the paint alone. */
+const PAINT_LAYERS = '.cp-paint, .cp-veil, .paint-section, .paint-section *';
 const HIDE_TEXT = '*, *::before, *::after { -webkit-text-fill-color: transparent !important; text-shadow: none !important; text-decoration-color: transparent !important; caret-color: transparent !important; }';
 
 /** How the paint ended up drawn, once it has settled: 'fixed', 'page' or 'flat'; null when it never drew. */
@@ -211,23 +222,23 @@ const settledMode = (page) =>
     .catch(() => null);
 
 /** Scores one screen at the current scroll position. */
-async function scoreScreen(page, meta, where) {
-  const targets = await textTargets(page);
+async function scoreScreen(page, meta, where, { scope = null, headerGate = true } = {}) {
+  const targets = await textTargets(page, scope);
   const style = await page.addStyleTag({ content: HIDE_TEXT });
   await page.waitForTimeout(60);
   const shot = (await page.screenshot()).toString('base64');
   // The header against the paint alone (§8.2): the page's content hidden, the paint and the Opacity veil kept.
   // Content that scrolls under the header is scored apart (`overContent`), as a note rather than a gate.
-  const bare = await page.addStyleTag({ content: `${BARE} { visibility: hidden !important; } .cp-paint, .cp-veil { visibility: visible !important; }` });
+  const bare = await page.addStyleTag({ content: `${BARE} { visibility: hidden !important; } ${PAINT_LAYERS} { visibility: visible !important; }` });
   await page.waitForTimeout(60);
   const paintShot = (await page.screenshot()).toString('base64');
   await bare.evaluate((node) => node.remove());
   await style.evaluate((node) => node.remove());
   const header = targets.filter((target) => target.header);
-  const results = [
-    ...(await measure(page, shot, targets.filter((target) => !target.header))),
-    ...(await measure(page, paintShot, header)),
-  ];
+  const headerResults = await measure(page, paintShot, header);
+  // Where the header is not a gate (the kit's landing), its labels over the paint are a note.
+  if (!headerGate) for (const result of headerResults) if (result.pixels && result.p1 < TEXT_MIN) report.overContent.push({ ...meta, ...result, note: 'header over the paint' });
+  const results = [...(await measure(page, shot, targets.filter((target) => !target.header))), ...(headerGate ? headerResults : [])];
   for (const result of await measure(page, shot, header)) {
     if (result.pixels && result.p1 < TEXT_MIN) report.overContent.push({ ...meta, ...result });
   }
@@ -316,12 +327,84 @@ async function landingContrast(mode) {
   } finally {
     await browser.close();
   }
-  const entries = report.contrast.filter((entry) => entry.mode === mode);
+  const entries = report.contrast.filter((entry) => entry.route !== 'kit' && entry.mode === mode);
   const passed = entries.filter((entry) => entry.passed).length;
   const worst = [...entries].sort((p, q) => p.p1 - q.p1)[0];
   console.log(`contrast (${mode}): ${passed}/${entries.length} lines passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme} ${worst?.color})`);
-  const over = report.overContent.filter((entry) => entry.mode === mode);
+  const over = report.overContent.filter((entry) => entry.route !== 'kit' && entry.mode === mode);
   if (over.length) console.log(`  note: ${over.length} header labels under 4.5:1 while content scrolls under the header (not on the paint)`);
+}
+
+/** The kit's chapter: how its paint ended up drawn once the frame is in ('fixed', 'page' or 'still'); null when it never drew. */
+const settledChapter = (page) =>
+  page
+    .waitForFunction(() => {
+      const box = document.querySelector('#color-picker .paint-section');
+      const img = box?.querySelector('picture img');
+      return box?.dataset.state === 'drawn' && img?.complete && img.naturalWidth > 0 ? box.dataset.paint : false;
+    }, null, { timeout: 15_000 })
+    .then((handle) => handle.jsonValue())
+    .catch(() => null);
+
+/** On the kit's landing the audit's `flat` (no WebGL 2) is the chapter's still frame. */
+const CHAPTER_MODE = { fixed: 'fixed', page: 'page', flat: 'still' };
+
+async function kitContrast(mode) {
+  const browser = await chromium.launch({
+    args: mode === 'fixed' ? ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+  });
+  const colors = quick ? ['ff6a3d', 'ffffff', '1b1f4a'] : [...START_COLORS, ...EXTRA_COLORS];
+  const palettes = quick ? { 'palette-contrast': PALETTES['palette-contrast'] } : PALETTES;
+  const cases = [...colors.map((color) => [color, color]), ...Object.entries(palettes)];
+  try {
+    for (const [device, options] of Object.entries({ desktop: DESKTOP, phone: PHONE })) {
+      for (const colorScheme of ['light', 'dark']) {
+        const context = await browser.newContext({ ...options, colorScheme, reducedMotion: 'reduce' });
+        if (mode === 'flat') await context.addInitScript(NO_WEBGL);
+        const page = await context.newPage();
+        const errors = [];
+        page.on('pageerror', (error) => errors.push(String(error)));
+        for (const [name, c] of cases) {
+          await page.goto(`${base}/?c=${c}`, { waitUntil: 'networkidle' });
+          const where = `kit contrast ${mode} ${device}-${colorScheme} ${name}`;
+          // Near the chapter: the renderer and the frame load as it comes within a screen.
+          await page.locator('#color-picker').evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+          const drawn = await settledChapter(page);
+          if (drawn !== CHAPTER_MODE[mode]) {
+            fail(where, `the chapter's paint was drawn as ${drawn ?? 'nothing'}, not ${CHAPTER_MODE[mode]}`);
+            continue;
+          }
+          const written = await page.evaluate(() => new URLSearchParams(location.search).get('c'));
+          if (written !== c) fail(where, `the address changed to ?c=${written}`);
+          await page.waitForTimeout(300);
+          const meta = { route: 'kit', mode, device, colorScheme, color: name };
+          const { top, bottom } = await page.locator('#color-picker').evaluate((element) => {
+            const box = element.getBoundingClientRect();
+            return { top: box.top + window.scrollY, bottom: box.bottom + window.scrollY };
+          });
+          const height = options.viewport.height;
+          const step = Math.round(height * 0.75);
+          for (let y = Math.max(0, Math.round(top - height * 0.25)); ; y += step) {
+            await scrollTo(page, y);
+            await scoreScreen(page, { ...meta, y }, `${where} @${y}`, { scope: '#color-picker', headerGate: false });
+            if (y + height >= bottom) break;
+          }
+          process.stdout.write('.');
+        }
+        process.stdout.write('\n');
+        if (errors.length) fail(`kit contrast ${mode} ${device}-${colorScheme}`, `page errors: ${errors.join(' | ')}`);
+        await context.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+  const entries = report.contrast.filter((entry) => entry.route === 'kit' && entry.mode === mode);
+  const passed = entries.filter((entry) => entry.passed).length;
+  const worst = [...entries].sort((p, q) => p.p1 - q.p1)[0];
+  console.log(`kit chapter contrast (${mode}): ${passed}/${entries.length} lines passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme} ${worst?.color})`);
+  const notes = report.overContent.filter((entry) => entry.route === 'kit' && entry.mode === mode);
+  if (notes.length) console.log(`  note: ${notes.length} header labels under 4.5:1 over the chapter (the header on / is the owner's call)`);
 }
 
 // --- 2. Pickers -------------------------------------------------------------------------------------
@@ -561,7 +644,12 @@ async function pickers(browser) {
 }
 
 try {
-  if (!skipContrast && engine === chromium) for (const mode of modes) await landingContrast(mode);
+  if (!skipContrast && engine === chromium) {
+    for (const mode of modes) {
+      if (routes.includes('picker')) await landingContrast(mode);
+      if (routes.includes('kit')) await kitContrast(mode);
+    }
+  }
   if (!skipPickers) {
     const browser = await engine.launch(engine === chromium ? { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } : {});
     try {

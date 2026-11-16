@@ -69,6 +69,14 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   fades them in and out and pushes the rest aside; Toaster stacks them and turns around halfway. The
   Toaster's phone is live (tap its stack to open it) and loads as the chapter comes near; on a phone
   the two stand one above the other. Then Open Toaster and its install command.
+- Under the Toaster's chapter the sky runs into the color picker's paint and out of it again: the
+  chapter of the Color picker and the Color palette is painted with the same grainy airbrushed frame
+  as [/color-picker](https://cloudlet.dev/color-picker), in a random curated color, with paper under
+  its words and a ragged airbrush edge at its top and bottom. The paint loads as the chapter comes
+  near and spreads in from the heading; it flows only while the chapter is on screen, the cursor
+  stirs it, reduced motion keeps it still, and without WebGL 2 a still frame of it stands in. The
+  chapter keeps its color to itself: the address of the kit's page does not change. For now it holds
+  Open Color picker and Open Color palette; the list of components under it is gone.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and
@@ -140,3 +148,6 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   directory does.
 - At 320 px [/toaster](https://cloudlet.dev/toaster) no longer scrolls sideways by a pixel: the
   install command fits the screen whole.
+- In Tools on [/color-picker](https://cloudlet.dev/color-picker), a click on the paint takes the
+  color under the cursor in windows wider than the paint's frame too; there it read the frame shrunk
+  into the window's left part.

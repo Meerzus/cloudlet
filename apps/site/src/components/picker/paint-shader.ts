@@ -5,7 +5,9 @@
  * a slow warp, the flow — and is read as brightness; under the copy (the calm map) and under the
  * header's controls (a second map, in window coordinates) its paper is lifted toward the ramp's end; the brightness picks a color from a 256-entry
  * ramp, read upside down in the dark theme; a new ramp spreads out of the control that chose it with
- * a noisy edge; a still grain lies on top. Own code, MIT like the rest of the site.
+ * a noisy edge; a still grain lies on top. Painted into one section of another page (paint-section.tsx), it
+ * fades out above and below the section along a ragged airbrush edge (lib/paint-section.ts, `edgeAlpha`)
+ * and is drawn premultiplied over what lies under it. Own code, MIT like the rest of the site.
  */
 
 export const PAINT_VERTEX = `#version 300 es
@@ -40,6 +42,8 @@ uniform float uReach;         // CSS px from the rectangle to the farthest visib
 uniform float uGrain;         // amplitude of the still grain
 uniform sampler2D uStir;      // the cursor's stirring (paint-fluid.ts), window uv: rg where the paint here flowed from
 uniform float uStirOn;        // 1 while the paint is stirred or settling
+uniform vec3 uEdges;          // a section's paint: its top band, its height and its bottom band, CSS px; height 0 for a whole page
+uniform float uRagged;        // share of a band the airbrush edge wanders over (EDGE_RAGGED)
 
 out vec4 outColor;
 
@@ -121,5 +125,13 @@ void main() {
 
   // Still grain, about one CSS px across: it stays put on the screen while the paint flows under it.
   color += (hash(floor(gl_FragCoord.xy / max(1.0, uDpr * 0.75))) - 0.5) * uGrain;
-  outColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+
+  // A section's paint fades into the page above and below it, along an edge that wanders like airbrush.
+  float alpha = 1.0;
+  if (uEdges.y > 0.0) {
+    float ragged = fbm(actual / 220.0) / 0.9375 * uRagged;
+    alpha = smoothstep(0.0, uEdges.x * (1.0 - uRagged), actual.y - ragged * uEdges.x)
+          * (1.0 - smoothstep(uEdges.y - uEdges.z * (1.0 - uRagged), uEdges.y, actual.y + ragged * uEdges.z));
+  }
+  outColor = vec4(clamp(color, 0.0, 1.0) * alpha, alpha);
 }`;
