@@ -93,6 +93,14 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   (`?c=`), so its paint goes on where the chapter's was; a link off screen swaps the pages with a short
   blur. The header, its Components panel, the footers and the docs navigate as before, and with
   reduced motion or without view transitions every link is a plain navigation.
+- Back on the sky under the color picker's chapter, Install: the `npx shadcn@latest add @cloudlet/<item>`
+  command with a switch of the components, what the item adds, the same item by its address
+  (`https://cloudlet.dev/r/<item>.json`) for a CLI that does not know the namespace, and the few lines
+  that use it, which run on the page: edit the notification's title and Run (or press Enter) and it
+  flies out of the `<Toaster />` line into the page's Island; the swatch after `<ColorPicker />` opens
+  the real picker and the palette after `<ColorPalette />` is the real palette, with the code's values
+  following them. Copy takes the code with your values. The page ends with Star on GitHub, large,
+  and the install command once more.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and

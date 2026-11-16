@@ -556,3 +556,266 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
   .kt-control:focus-visible, .kit-open:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
   .kt-plain-toast { outline: 1px solid CanvasText; }
 }
+
+/* ---------- Install: the command per component, the same item by its address, the lines that run ---------- */
+
+.kit-install-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2rem, 5svh, 3rem);
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(3rem, 12svh, 7.5rem) 1rem clamp(3rem, 10svh, 6rem);
+}
+.ki-intro { max-width: 40rem; }
+.ki-title {
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.ki-title > span { display: inline-block; }
+.ki-lede { max-width: 34rem; margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+
+.ki-grid { display: grid; gap: 2rem; min-width: 0; }
+@media (min-width: 64rem) {
+  .ki-grid { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); column-gap: clamp(2.5rem, 5vw, 4.5rem); align-items: start; }
+}
+.ki-commands { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; min-width: 0; }
+.ki-adds { max-width: 30rem; font-size: 0.9375rem; line-height: 1.5; text-wrap: pretty; }
+.ki-fallback { display: flex; flex-direction: column; align-items: flex-start; gap: 0.625rem; max-width: 100%; margin-top: 0.5rem; }
+.ki-note { max-width: 30rem; font-size: 0.875rem; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty; }
+.ki-note code { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--foreground); }
+.kit-install-command.ki-url { min-height: 2.5rem; padding: 0.25rem 0.25rem 0.25rem 1rem; font-size: 0.75rem; }
+.ki-url .kit-install-copy { width: 1.75rem; height: 1.75rem; }
+
+/* The code sits on a sheet of the page's own background, like the color picker's sheets. */
+.ki-code {
+  --tok-keyword: oklch(0.42 0.2 300); --tok-string: oklch(0.44 0.14 155); --tok-tag: oklch(0.44 0.17 250);
+  --tok-type: oklch(0.47 0.15 50); --tok-function: oklch(0.42 0.16 260); --tok-number: oklch(0.47 0.15 50);
+  --tok-comment: oklch(0.47 0.03 255); --tok-punctuation: oklch(0.42 0.04 255);
+  min-width: 0;
+  margin: 0;
+  border-radius: 1.25rem;
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
+}
+.dark .ki-code {
+  --tok-keyword: oklch(0.78 0.13 305); --tok-string: oklch(0.8 0.12 155); --tok-tag: oklch(0.8 0.11 240);
+  --tok-type: oklch(0.82 0.11 70); --tok-function: oklch(0.8 0.1 260); --tok-number: oklch(0.82 0.11 70);
+  --tok-comment: oklch(0.68 0.03 255); --tok-punctuation: oklch(0.75 0.03 255);
+}
+.ki-code-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0.625rem 0.625rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.ki-code-label { font-size: 0.8125rem; color: var(--muted-foreground); }
+.ki-code-label > span { display: inline-block; font-weight: 600; color: var(--foreground); }
+.ki-code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  outline: none;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+@media (hover: hover) { .ki-code-copy:hover { color: var(--foreground); background: color-mix(in oklab, var(--foreground) 6%, transparent); } }
+.ki-code-copy:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.ki-code-copy-icon { width: 0.875rem; height: 0.875rem; }
+
+/* All three snippets share one cell: the sheet keeps the tallest one's height and a switch swaps them by blur. */
+.ki-snippets { display: grid; padding: 1rem 1.25rem 1.25rem; }
+.ki-snippet {
+  grid-area: 1 / 1;
+  margin: 0;
+  overflow: visible;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  opacity: 0;
+  visibility: hidden;
+  filter: blur(6px);
+  transition: opacity 240ms ease, filter 240ms ease, visibility 0s linear 240ms;
+}
+.ki-snippet[data-active] { z-index: 1; opacity: 1; visibility: visible; filter: none; transition: opacity 320ms ease, filter 320ms ease, visibility 0s; }
+.ki-snippet[data-active]:has(.color-picker-shadow, .color-palette :focus-within) { z-index: 2; }
+.ki-snippet code { display: flex; flex-direction: column; }
+.ki-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 1rem;
+  row-gap: 0.25rem;
+  min-height: 1.875rem;
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
+  border-radius: 0.5rem;
+}
+.ki-src { min-width: 0; padding-left: 2ch; text-indent: -2ch; }
+.ki-gap { height: 0.75rem; }
+/* What the line renders, right after it: proportional type, normal wrapping. */
+.ki-live { display: inline-flex; align-items: center; gap: 0.75rem; min-height: 2.25rem; font-family: var(--font-sans); white-space: normal; overflow-wrap: normal; }
+/* The Toaster's line lights up when a notification leaves it (it remounts on each Run). */
+@media (prefers-reduced-motion: no-preference) {
+  .ki-flash { animation: ki-flash 900ms ease-out; }
+}
+.ki-flash { border-radius: 0.25rem; }
+@keyframes ki-flash {
+  from { background: color-mix(in oklab, var(--tok-tag) 22%, transparent); }
+}
+.ki-snippet:not([data-active]) .ki-flash { animation: none; }
+/* Editable values look like the code around them, with a dotted underline that says "this one is yours". */
+.ki-edit {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  outline: none;
+  text-decoration: underline dotted color-mix(in oklab, currentColor 60%, transparent);
+  text-underline-offset: 5px;
+  border-radius: 0.25rem;
+}
+input.ki-edit { field-sizing: content; min-width: 1ch; max-width: 100%; caret-color: currentColor; }
+.ki-edit:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.ki-edit-kind { cursor: pointer; color: var(--tok-string); }
+.ki-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.875rem 0 0.75rem;
+  border-radius: 9999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  outline: none;
+  transition: scale 160ms ease;
+}
+.ki-run:active { scale: 0.96; }
+.ki-run:disabled { opacity: 0.5; }
+.ki-run:focus-visible { box-shadow: 0 0 0 2px var(--background), 0 0 0 5px color-mix(in oklab, var(--ring) 70%, transparent); }
+.ki-run-icon { width: 0.875rem; height: 0.875rem; }
+
+/* The pill that flies out of the `<Toaster />` line, drawn like the package's own (light or dark with the page). */
+.ki-pill {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1001;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 44px;
+  padding: 0 1.125rem 0 0.375rem;
+  border-radius: 9999px;
+  background: #fff;
+  color: #111113;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  transform-origin: 0 50%;
+  will-change: transform, opacity;
+  box-shadow: 0 0 0 1px rgb(17 17 19 / 0.08), 0 10px 30px -12px rgb(0 0 0 / 0.25), 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.dark .ki-pill { background: #1c1c1e; color: #f5f5f7; box-shadow: 0 0 0 1px rgb(245 245 247 / 0.1), 0 12px 32px -12px rgb(0 0 0 / 0.6); }
+.ki-pill-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9999px; color: #fff; }
+.ki-pill-icon[data-kind='success'] { background: oklch(0.723 0.219 142.136); }
+.ki-pill-icon[data-kind='info'] { background: oklch(0.685 0.169 237.323); }
+.ki-pill-icon[data-kind='warning'] { background: oklch(0.795 0.184 86.047); }
+.ki-pill-icon[data-kind='error'] { background: oklch(0.637 0.237 25.331); }
+.ki-pill-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 39.99rem) {
+  .ki-snippets { padding: 0.75rem 1rem 1rem; }
+  .ki-snippet { font-size: 0.8125rem; }
+  .ki-code-bar { padding-left: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ki-snippet, .ki-snippet[data-active] { filter: none; transition: opacity 150ms ease, visibility 0s linear 150ms; }
+  .ki-snippet[data-active] { transition: opacity 150ms ease, visibility 0s; }
+  .ki-run { transition: none; }
+  .ki-run:active { scale: none; }
+}
+@media (forced-colors: active) {
+  .ki-code, .ki-run { outline: 1px solid CanvasText; }
+  .ki-code-copy:focus-visible, .ki-run:focus-visible, .ki-edit:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+}
+
+/* ---------- The last word: Star on GitHub, large, and the command once more ---------- */
+
+.kit-star {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: clamp(4rem, 14svh, 9rem) 1rem clamp(3rem, 10svh, 6rem);
+  text-align: center;
+}
+.ks-title {
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.ks-title > span { display: inline-block; }
+.ks-lede { max-width: 30rem; margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: balance; }
+.ks-star {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.75rem;
+  margin-top: 2.25rem;
+  padding: 0.5rem 0.625rem 0.5rem 1.5rem;
+  border-radius: 9999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 1.1875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  outline: none;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 18px 40px -18px rgb(0 0 0 / 0.5);
+}
+.ks-star:focus-visible { box-shadow: 0 0 0 3px var(--background), 0 0 0 6px color-mix(in oklab, var(--ring) 70%, transparent); }
+.ks-star-mark { width: 1.375rem; height: 1.375rem; }
+.ks-star-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--background) 16%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+.ks-star-icon { width: 1.125rem; height: 1.125rem; transition: rotate 400ms ease, scale 400ms ease; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ks-star:hover .ks-star-icon { rotate: 72deg; scale: 1.12; }
+}
+.ks-install { margin-top: 1.75rem; }
+@media (max-width: 39.99rem) {
+  .ks-star { gap: 0.625rem; min-height: 3.25rem; padding-left: 1.125rem; font-size: 1.0625rem; }
+  .ks-star-count { height: 2.25rem; padding: 0 0.75rem; }
+}
+@media (forced-colors: active) {
+  .ks-star { outline: 1px solid CanvasText; }
+  .ks-star:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+}
