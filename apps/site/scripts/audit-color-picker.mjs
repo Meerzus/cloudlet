@@ -12,6 +12,8 @@
  *    every curated start color, the extremes, and a few palettes (dark, light, high-contrast); the
  *    Opacity section also at 20 % and 80 %. Three ways the paint can be drawn:
  *    - `fixed`: a GPU Chromium (ANGLE on Metal), the canvas fixed to the window — what visitors see;
+ *      local only, on a Mac: a Linux runner has no GPU and no Metal, so the audits workflow
+ *      (.github/workflows/audits.yml) runs `page` and `flat` and leaves this mode to a local run;
  *    - `page`: Chromium with SwiftShader, the canvas over the whole page, drawn once (software WebGL);
  *    - `flat`: WebGL 2 taken away, a flat background of the page color.
  *    The kit's landing (`/`) is measured the same way over its two painted sections, the hero and the

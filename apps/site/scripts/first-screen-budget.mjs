@@ -12,13 +12,15 @@
  *   shown included (it must not be fetched at all).
  *
  *   npm run build && npm run build:site
- *   node apps/site/scripts/first-screen-budget.mjs [path ...]   (default: / /toaster)
+ *   node apps/site/scripts/first-screen-budget.mjs [--json <file>] [path ...]   (default: / /toaster)
  *
  * When both `/` and `/toaster` are measured it also checks the kit's budget: the start JS of `/` is
  * no larger than that of `/toaster`, and the first screen of `/` fetches at most 150 KB of media in
- * every context. Exits 1 when either fails.
+ * every context. Exits 1 when either fails. --json also writes the measurements and the verdict to a
+ * file (the audits workflow keeps it as an artifact).
  */
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
@@ -26,7 +28,10 @@ import { chromium } from '@playwright/test';
 import { serve } from './serve-out.mjs';
 
 const OUT = resolve(fileURLToPath(new URL('../out', import.meta.url)));
-const PATHS = process.argv.slice(2).length ? process.argv.slice(2) : ['/', '/toaster'];
+const args = process.argv.slice(2);
+const jsonFlag = args.indexOf('--json');
+const jsonFile = jsonFlag >= 0 ? resolve(args.splice(jsonFlag, 2)[1]) : null;
+const PATHS = args.length ? args : ['/', '/toaster'];
 const MEDIA_MAX = 150 * 1024;
 const CONTEXTS = {
   'laptop-light': { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: 'light' },
@@ -96,16 +101,23 @@ await browser.close();
 server.close();
 
 let failed = false;
+const budget = [];
 if (results['/'] && results['/toaster']) {
   const kit = results['/'];
   const toaster = results['/toaster'];
   const jsOk = kit.js.bytes <= toaster.js.bytes;
   console.log(`\nstart JS of / (${kb(kit.js.bytes)}) ≤ /toaster (${kb(toaster.js.bytes)}): ${jsOk ? 'yes' : 'NO'}`);
+  budget.push({ check: 'start JS of / ≤ /toaster', value: kit.js.bytes, limit: toaster.js.bytes, ok: jsOk });
   failed ||= !jsOk;
   for (const [name, shot] of Object.entries(kit.media)) {
     const ok = shot.bytes <= MEDIA_MAX;
     console.log(`first-screen media of /, ${name} (${kb(shot.bytes)}) ≤ ${kb(MEDIA_MAX)}: ${ok ? 'yes' : 'NO'}`);
+    budget.push({ check: `first-screen media of /, ${name}`, value: shot.bytes, limit: MEDIA_MAX, ok });
     failed ||= !ok;
   }
+}
+if (jsonFile) {
+  mkdirSync(dirname(jsonFile), { recursive: true });
+  writeFileSync(jsonFile, JSON.stringify({ results, budget, ok: !failed }, null, 2) + '\n');
 }
 process.exit(failed ? 1 : 0);
