@@ -57,13 +57,21 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   title, description and canonical address and is the first entry of `sitemap.xml`; the Toaster's
   title, description and link card moved to [/toaster](https://cloudlet.dev/toaster). The Color
   picker's page shares its card as a large image on X too.
-- The top of [cloudlet.dev](https://cloudlet.dev) is the sky: "Cloudlet" written in clouds, "Everything
-  floats. Nothing jumps.", the install command with a switch of the components, and the kit's
-  components resting on clouds at different depths, each one live: the palette edits, the picker
-  opens out of its cloud, and the notification on its cloud sends a real one. The name and the clouds
-  rise into place once, and scrolling lifts the near clouds faster than the far ones (vertically
-  only); with reduced motion the scene stands still. The Toaster's sky runs under the whole page.
-- Under the sky's first screen, the Toaster's chapter: two identical phones, a plain stack of toasts
+- The top of [cloudlet.dev](https://cloudlet.dev) is painted: "Made to work together." on the color
+  picker's grainy airbrushed paint, with the line "A Toaster, a color picker and a palette for React.
+  Change one color and the whole kit answers.", the install command with a switch of the components,
+  and two buttons under it — Browse components (the list in the docs) and Star on GitHub (the count
+  shows from 100 stars). Beside the words are the kit's three components, live and at the same
+  weight: the Toaster, whose record shows a success, an info, an error or an upload, and whose Send
+  sends it into the page's Island (it flies out of the record; an upload turns into a success in
+  place); the Color picker's panel, which sets the page color; and the Color palette, whose own colors
+  paint the page. The paint spreads in from the picker on load, repaints from the control that changed
+  it, and runs into the sky of the Toaster's chapter along a ragged airbrush edge. Once a change has
+  settled the Island says "Accent updated" or "Palette updated", one notification updated in place;
+  loading and scrolling say nothing. Reduced motion (the system's or the page's own switch) keeps the
+  paint still, and without WebGL 2 a still frame of it stands in. On a phone the words, the command
+  and the buttons come first, then the three components one under another.
+- Under the first screen, on the sky, the Toaster's chapter: two identical phones, a plain stack of toasts
   on the left and the real Toaster on the right, and one row of buttons (Send one, Send three,
   Update, Take back) that sends the same notifications to both at the same moment. The plain stack
   fades them in and out and pushes the rest aside; Toaster stacks them and turns around halfway. The
@@ -71,18 +79,18 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   the two stand one above the other. Then Open Toaster and its install command.
 - Under the Toaster's chapter the sky runs into the color picker's paint and out of it again: the
   chapter of the Color picker and the Color palette is painted with the same grainy airbrushed frame
-  as [/color-picker](https://cloudlet.dev/color-picker), in a random curated color, with paper under
-  its words and a ragged airbrush edge at its top and bottom. The paint loads as the chapter comes
-  near and spreads in from the heading; it flows only while the chapter is on screen, the cursor
-  stirs it, reduced motion keeps it still, and without WebGL 2 a still frame of it stands in. The
-  chapter keeps its color to itself: the address of the kit's page does not change. The list of
-  components that stood there is gone.
+  as [/color-picker](https://cloudlet.dev/color-picker), in the page's one color (the hero's), with
+  paper under its words and a ragged airbrush edge at its top and bottom. The paint loads as the
+  chapter comes near and spreads in from the heading; it flows only while the chapter is on screen, the
+  cursor stirs it, reduced motion keeps it still, and without WebGL 2 a still frame of it stands in.
+  The hero and the chapter share one WebGL context, and the address of the kit's page does not change.
+  The list of components that stood there is gone.
 - In that chapter, "Same color. Better in hand.": two comparisons on identical sheets. The browser's
   own color input beside the Color picker, with a row of colors that sets both at once; a row of the
   browser's color inputs with a plus and a remove button beside the Color palette, with harmonies that
   fill both. Both sides hold the same color or palette, so a change on either shows on the other, and
   every change repaints the chapter: a press spreads out of the control, a drag repaints at once, and
-  a palette of your own paints the whole chapter in its colors. Once a change has settled, the page's
+  a palette of your own paints the whole page in its colors. Once a change has settled, the page's
   Island says "Accent updated" or "Palette updated" and keeps updating that one notification while it
   is on screen; loading and scrolling say nothing. Each comparison ends with Open Color picker or Open
   Color palette and its install command.
@@ -109,8 +117,8 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   three themes on the shadcn tokens for a picker and a palette, with the stylesheet they amount to and
   the Toaster's style editor. Tested, not promised — what the repository runs, each line with links to
   the files on GitHub. Then a short FAQ about the kit.
-- The kit's page has a link card of its own on social sites and in chats: "Cloudlet" written in
-  clouds over "Everything floats. Nothing jumps." on the day sky (it was the Toaster's). The docs
+- The kit's page has a link card of its own on social sites and in chats: the top of the page,
+  "Made to work together." on the coral paint with the three components (it was the Toaster's). The docs
   pages share it on X as before, now with their own title and description there.
 - At night the kit's clouds are dimmer and the words below the hero carry a soft halo of the night
   sky, so a moonlit cloud drifting behind a line no longer washes it out. The Paper and Terminal

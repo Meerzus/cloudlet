@@ -109,13 +109,14 @@ const isJump = () => document.activeElement?.getAttribute('role') !== 'slider';
  * set it. Until the visitor edits the palette its other colors follow the page color by a harmony.
  * The page color lives on <html> too, as `--cp-color`, for the flat background of the page.
  *
- * `page={false}` keeps the state to a part of another page (the kit's chapter): no start script is
+ * `page={false}` keeps the state to a part of another page (the kit's landing): no start script is
  * read, nothing is put on <html> and the address is never written; the start color is still `?c=`
- * when the link has one (how an audit sets it), a random curated one otherwise.
+ * when the link has one (how an audit sets it), otherwise `start` — the color the server renders too,
+ * so a first screen does not change color as it hydrates — or a random curated one without it.
  */
-export function PickerColorProvider({ children, page = true }: { children: ReactNode; page?: boolean }) {
-  // The server renders the first curated color; the start script has already painted the real one on <html>.
-  const [value, setValue] = useState<string>(START_COLORS[0]);
+export function PickerColorProvider({ children, page = true, start }: { children: ReactNode; page?: boolean; start?: string }) {
+  // The server renders `start` or the first curated color; the start script has already painted the real one on <html>.
+  const [value, setValue] = useState<string>(start ?? START_COLORS[0]);
   /** The palette after the first color, once the visitor owns it; null while it follows the page color. */
   const [rest, setRest] = useState<readonly string[] | null>(null);
   const [started, setStarted] = useState(false);
@@ -137,7 +138,7 @@ export function PickerColorProvider({ children, page = true }: { children: React
     const globals = window as unknown as Record<string, unknown>;
     const fromScript = page ? globals[START_GLOBAL] : undefined;
     const linked = paletteFromSearch(window.location.search);
-    setValue(typeof fromScript === 'string' ? fromScript : startColor(window.location.search, Math.random()));
+    setValue(typeof fromScript === 'string' ? fromScript : start && !page ? (paletteFromSearch(window.location.search)?.[0] ?? start) : startColor(window.location.search, Math.random()));
     // A link with more than one color is a palette someone made: it is theirs, not a harmony.
     if (linked && linked.length > 1) setRest(linked.slice(1));
     setStarted(true);
@@ -146,7 +147,7 @@ export function PickerColorProvider({ children, page = true }: { children: React
     // immediate second run of this effect still reads the same color.
     const consume = window.setTimeout(() => delete globals[START_GLOBAL]);
     return () => window.clearTimeout(consume);
-    // Once, at mount: `page` is fixed for a provider's life.
+    // Once, at mount: `page` and `start` are fixed for a provider's life.
   }, []);
 
   useLayoutEffect(() => {

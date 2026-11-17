@@ -1,6 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { KitColor } from '../../apps/site/src/components/kit/kit-color';
 import { PickerChapter } from '../../apps/site/src/components/kit/picker-chapter';
 import { PaintSection } from '../../apps/site/src/components/picker/paint-section';
 import { PickerColorProvider, usePickerColor } from '../../apps/site/src/components/picker/picker-color';
@@ -97,6 +98,8 @@ describe('the color of a chapter on another page', () => {
   it('the color picker landing keeps writing ?c=', () => {
     vi.useFakeTimers();
     window.history.replaceState(null, '', '/color-picker');
+    // The landing's random start never lands on the picked color by chance (then nothing would change).
+    vi.spyOn(Math, 'random').mockReturnValue(0);
     const { container } = render(
       <PickerColorProvider>
         <Picks />
@@ -111,7 +114,11 @@ describe('the color of a chapter on another page', () => {
 
 describe('the paint in a chapter loads as the chapter comes near', () => {
   it('renders on the server as a flat color with no frame, inside the chapter with its two links', () => {
-    const html = renderToString(<PickerChapter />);
+    const html = renderToString(
+      <KitColor>
+        <PickerChapter />
+      </KitColor>,
+    );
     expect(html).toContain('id="color-picker"');
     expect(html).toContain('class="paint-section"');
     expect(html).toContain('--paint-color:#ff6a3d');

@@ -10,20 +10,40 @@ import type { SectionPaint } from './section-paint';
 const APPROACH = '100% 0px';
 
 /**
+ * Runs `start` once the page has loaded and the main thread is idle: a section on the first screen
+ * (the kit's hero) shows its flat color while the page starts, and its paint never competes with it.
+ * A section further down comes near long after the load, and starts at once.
+ */
+function afterLoad(start: () => void): () => void {
+  const idle = typeof window.requestIdleCallback === 'function';
+  let handle = 0;
+  const idleStart = () => {
+    handle = idle ? window.requestIdleCallback(start, { timeout: 1500 }) : window.setTimeout(start, 0);
+  };
+  if (document.readyState === 'complete') idleStart();
+  else window.addEventListener('load', idleStart, { once: true });
+  return () => {
+    window.removeEventListener('load', idleStart);
+    if (idle) window.cancelIdleCallback(handle);
+    else window.clearTimeout(handle);
+  };
+}
+
+/**
  * The color picker's paint inside the section it is placed in (the section's first child), for a page
  * other than the color picker landing: the color comes from the nearest PickerColorProvider. Until the
  * section comes within about a screen of the window nothing but a flat background of the color is
  * there — no renderer, no shader, no frame; then they load (a dynamic import and the frame's
  * <picture>), and the paint spreads in over the flat color once the section is on screen. The
  * section sets the bands its paint fades in and out over (`--paint-edge-top`, `--paint-edge-bottom`,
- * picker.css) and passes the selector of its copy (`calm`) for the paper under the lines.
+ * picker.css) and passes the selector of its copy (`calm`) for the paper under the lines. Several
+ * sections of a page share one WebGL context: the one nearest the window draws.
  */
 export function PaintSection({ calm }: { calm: string }) {
   const state = usePickerColor();
   const { hex, started, change } = state;
   const ramp = pageRamp(state);
   const box = useRef<HTMLDivElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
   const still = useRef<HTMLCanvasElement>(null);
   const image = useRef<HTMLImageElement>(null);
   const paint = useRef<SectionPaint | null>(null);
@@ -35,16 +55,20 @@ export function PaintSection({ calm }: { calm: string }) {
   useEffect(() => {
     const section = box.current?.parentElement;
     if (!section) return;
+    let cancel = () => {};
     const approach = new IntersectionObserver(
       ([entry]) => {
         if (!entry?.isIntersecting) return;
         approach.disconnect();
-        setNear(true);
+        cancel = afterLoad(() => setNear(true));
       },
       { rootMargin: APPROACH },
     );
     approach.observe(section);
-    return () => approach.disconnect();
+    return () => {
+      approach.disconnect();
+      cancel();
+    };
   }, []);
 
   useEffect(() => {
@@ -53,11 +77,10 @@ export function PaintSection({ calm }: { calm: string }) {
     let mounted: SectionPaint | null = null;
     void import('./section-paint').then(({ mountSectionPaint }) => {
       const element = box.current;
-      if (!alive || !element?.parentElement || !canvas.current || !still.current || !image.current) return;
+      if (!alive || !element?.parentElement || !still.current || !image.current) return;
       mounted = mountSectionPaint({
         box: element,
         section: element.parentElement,
-        canvas: canvas.current,
         still: still.current,
         frame: image.current,
         calm,
@@ -84,7 +107,7 @@ export function PaintSection({ calm }: { calm: string }) {
 
   return (
     <div ref={box} className="paint-section" aria-hidden="true" style={{ '--paint-color': hex } as CSSProperties}>
-      <canvas ref={canvas} className="paint-section-gl" />
+      {/* The WebGL canvas is the page's one (section-paint.ts): it comes in here while this section draws. */}
       <canvas ref={still} className="paint-section-still" />
       {near ? (
         // Never shown: the shader (or the still frame) reads it.

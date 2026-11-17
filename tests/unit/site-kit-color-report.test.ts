@@ -43,7 +43,7 @@ describe('the Island answers the color picker chapter', () => {
       id: 'kit-color-1',
       title: 'Accent updated',
       kind: 'success',
-      description: { kind: 'text', text: 'The chapter now paints in #2E8B57.' },
+      description: { kind: 'text', text: 'The page now paints in #2E8B57.' },
     });
   });
 
@@ -54,7 +54,7 @@ describe('the Island answers the color picker chapter', () => {
     report.note('accent');
     hex = '#7cc6fe';
     vi.advanceTimersByTime(SETTLE);
-    expect(fake.show.mock.calls[0]![0]).toMatchObject({ description: { text: 'The chapter now paints in #7CC6FE.' } });
+    expect(fake.show.mock.calls[0]![0]).toMatchObject({ description: { text: 'The page now paints in #7CC6FE.' } });
   });
 
   it('updates the notification on screen in place instead of sending another', () => {
@@ -111,7 +111,7 @@ describe('the Island answers the color picker chapter', () => {
   });
 
   it('words each change', () => {
-    expect(reportText('accent', { hex: '#1b1f4a', count: 1 })).toEqual({ title: 'Accent updated', text: 'The chapter now paints in #1B1F4A.' });
+    expect(reportText('accent', { hex: '#1b1f4a', count: 1 })).toEqual({ title: 'Accent updated', text: 'The page now paints in #1B1F4A.' });
     expect(reportText('palette', { hex: '#1b1f4a', count: 1 }).text).toBe('1 color across the paint, the darkest in the shadows.');
     expect(reportText('palette', { hex: '#1b1f4a', count: 2 }).title).toBe('Palette updated');
   });

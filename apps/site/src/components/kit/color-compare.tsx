@@ -3,17 +3,17 @@
 import { ArrowRight } from 'lucide-react';
 import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { usePickerColor } from '@/components/picker/picker-color';
-import { usePageNotifications } from '@/components/site/notifications';
 import { SceneLink } from '@/components/site/scene-transition';
 import { ColorPalette } from '@/components/ui/color-palette/color-palette';
 import { ColorPicker } from '@/components/ui/color-picker/color-picker';
 import { formatColor, parseColor } from '@/components/ui/color-picker/color';
-import { createColorReport, type ColorChangeKind } from '@/lib/color-report';
+import type { ColorChangeKind } from '@/lib/color-report';
 import { harmoniesOf } from '@/lib/harmonies';
 import { PALETTE_MAX } from '@/lib/picker-start';
 import { SCENE_LANDINGS, withColors } from '@/lib/scene-transition';
 import type { RegistryItem } from '@/lib/site';
 import { InstallCommand } from './install-command';
+import { useColorNote } from './kit-color';
 
 /** The colors one press sets on both sides: warm, cool, light and deep, all of them start colors of the color picker's landing. */
 export const COLOR_CHIPS = ['#ff6a3d', '#f2b84b', '#7cc6fe', '#e8577e', '#2e8b57', '#3b2a6b'] as const;
@@ -27,26 +27,10 @@ export const COLOR_SIDES = {
 } as const;
 
 /** Any color the controls emit as `#rrggbb`, alpha dropped; null when it does not parse. */
-const hexOf = (value: string) => {
+export const hexOf = (value: string) => {
   const rgba = parseColor(value);
   return rgba ? formatColor({ ...rgba, a: 1 }, 'hex') : null;
 };
-
-/** The page's Island answers a change of the visitor's once it has settled; loading and scrolling say nothing. */
-function useColorReport() {
-  const controller = usePageNotifications();
-  const { hex, paletteHex } = usePickerColor();
-  const latest = useRef({ controller, hex, count: paletteHex.length });
-  useEffect(() => {
-    latest.current = { controller, hex, count: paletteHex.length };
-  });
-  const report = useMemo(
-    () => createColorReport({ controller: () => latest.current.controller, read: () => latest.current }),
-    [],
-  );
-  useEffect(() => () => report.cancel(), [report]);
-  return report.note;
-}
 
 /**
  * The color picker's and the palette's comparisons on the kit's landing, over the chapter's paint.
@@ -56,7 +40,7 @@ function useColorReport() {
  * control, a drag repaints at once) and, once it has settled, the page's Island reports it.
  */
 export function ColorCompare() {
-  const note = useColorReport();
+  const note = useColorNote();
   return (
     <>
       <PickerPair note={note} />

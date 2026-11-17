@@ -1,6 +1,7 @@
 import { act, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLOR_CHIPS, COLOR_SIDES } from '../../apps/site/src/components/kit/color-compare';
+import { KitColor } from '../../apps/site/src/components/kit/kit-color';
 import { PickerChapter } from '../../apps/site/src/components/kit/picker-chapter';
 import { SETTLE } from '../../apps/site/src/lib/color-report';
 import { harmoniesOf } from '../../apps/site/src/lib/harmonies';
@@ -47,7 +48,11 @@ afterEach(() => {
 });
 
 const chapter = () => {
-  const view = render(<PickerChapter />);
+  const view = render(
+    <KitColor>
+      <PickerChapter />
+    </KitColor>,
+  );
   const sides = (side: 'plain' | 'cloudlet') => view.container.querySelectorAll<HTMLElement>(`.kc-side[data-side='${side}']`);
   return {
     ...view,
@@ -74,7 +79,7 @@ describe('the color picker chapter on the kit landing', () => {
     act(() => vi.advanceTimersByTime(SETTLE - 1));
     expect(page.show).not.toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(1));
-    expect(page.show).toHaveBeenCalledWith(expect.objectContaining({ title: 'Accent updated', description: { kind: 'text', text: 'The chapter now paints in #7CC6FE.' } }));
+    expect(page.show).toHaveBeenCalledWith(expect.objectContaining({ title: 'Accent updated', description: { kind: 'text', text: 'The page now paints in #7CC6FE.' } }));
     // The next change while it is on screen updates it.
     act(() => view.button(COLOR_CHIPS[4]).click());
     act(() => vi.advanceTimersByTime(SETTLE));

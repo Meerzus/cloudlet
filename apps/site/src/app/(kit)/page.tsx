@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { KitHero } from '@/components/kit/kit-hero';
 import { KIT_CHAPTERS } from '@/components/kit/kit-shell';
 import { InstallSection } from '@/components/kit/install-section';
+import { KitColor } from '@/components/kit/kit-color';
 import { KitFaq } from '@/components/kit/kit-faq';
 import { PickerChapter } from '@/components/kit/picker-chapter';
 import { PrinciplesSection } from '@/components/kit/principles';
@@ -17,15 +18,18 @@ export const metadata: Metadata = { alternates: { canonical: `${SITE_URL}${KIT_P
 export default function KitHome() {
   return (
     <>
-      <main>
-        <KitHero />
-        <ToasterScene />
-        <PickerChapter />
-        <InstallSection />
-        <PrinciplesSection />
-        <KitFaq />
-        <StarSection />
-      </main>
+      {/* One color for the page: the hero and the color picker's chapter paint in it. */}
+      <KitColor>
+        <main>
+          <KitHero />
+          <ToasterScene />
+          <PickerChapter />
+          <InstallSection />
+          <PrinciplesSection />
+          <KitFaq />
+          <StarSection />
+        </main>
+      </KitColor>
       <Chapters chapters={KIT_CHAPTERS} />
       <Footer />
     </>

@@ -76,11 +76,12 @@ const homeStops = (page) =>
 
 /**
  * Live places on the kit's landing, checked after its sections: each opens what the visitor would open
- * (a picker's panel on a cloud and in the comparisons, a notification in the scene and from the live
- * code, a theme, an answer) and is checked open, in page order on one load of the page.
+ * (a notification from the hero's Toaster, in the scene and from the live code, a picker's panel in the
+ * comparisons, a theme, an answer) and is checked open, in page order on one load of the page.
  */
 const KIT_LIVE = [
-  { label: 'hero picker open', click: '#hero .color-picker-swatch[aria-label="Pick a color"]' },
+  { label: 'hero toast sent', click: '#hero .kh-send', wait: 1600 },
+  { label: 'hero loading sent', click: ['#hero .kh-kind[data-kind="loading"]', '#hero .kh-send'], wait: 1200 },
   { label: 'toaster sent three', click: '#toaster .kt-control >> text=Send three', wait: 1600 },
   { label: 'picker compare open', click: '#color-picker .color-picker-swatch[aria-label="Pick the accent"]' },
   { label: 'palette compare open', click: '#color-picker .color-palette .color-picker-swatch' },

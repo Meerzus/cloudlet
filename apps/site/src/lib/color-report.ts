@@ -1,7 +1,7 @@
 import type { ReactCloudletController } from '@cloudlet/toast';
 
 /**
- * The page's Island answering the color picker's chapter on the kit's landing: once a color the
+ * The page's Island answering the kit's landing (its hero and the color picker's chapter): once a color the
  * visitor set has rested for a moment, one notification says what changed, and while it is on screen
  * every later change updates it in place instead of stacking another one. Nothing here knows about
  * React: the chapter notes each of the visitor's changes, the report reads the state when it fires.
@@ -25,7 +25,7 @@ export type ReportController = Pick<ReactCloudletController, 'show' | 'update' |
 
 /** The notification's words for a change. */
 export function reportText(kind: ColorChangeKind, state: ColorReportState): { readonly title: string; readonly text: string } {
-  if (kind === 'accent') return { title: 'Accent updated', text: `The chapter now paints in ${state.hex.toUpperCase()}.` };
+  if (kind === 'accent') return { title: 'Accent updated', text: `The page now paints in ${state.hex.toUpperCase()}.` };
   return { title: 'Palette updated', text: `${state.count} ${state.count === 1 ? 'color' : 'colors'} across the paint, the darkest in the shadows.` };
 }
 
