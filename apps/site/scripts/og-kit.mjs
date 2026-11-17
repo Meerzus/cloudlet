@@ -4,6 +4,9 @@
  * gradients and the cloud renders are photographs, a PNG of them is twice as heavy), shot in
  * headless Chromium. The variants:
  *
+ * - `night`: "Cloudlet" and "Made to work together." written in clouds, cursive, across a starry night
+ *   sky with the Milky Way (scripts/brand/og-kit-night.jpg, 1920×1008, generated from the README's
+ *   cloud wordmark as the reference), scaled to the card.
  * - `wordmark-day`, `wordmark-night`: the README's picture (.github/readme/wordmark-<day|night>.webp),
  *   "Cloudlet" written in clouds across the sky, whole across the card.
  * - `paint`: the top of the kit's landing as it draws it — the color picker's paint, the headline,
@@ -29,7 +32,7 @@ import { chromium } from '@playwright/test';
 import { serve } from './serve-out.mjs';
 
 /** The variant the root shows. */
-const CHOSEN = 'wordmark-day';
+const CHOSEN = 'night';
 const APP = resolve(fileURLToPath(new URL('../src/app', import.meta.url)));
 const HEADLINE = readFileSync(new URL('../src/components/kit/kit-hero.tsx', import.meta.url), 'utf8').includes('Made to work <span>together.</span>')
   ? ['Made to work', 'together.']
@@ -37,6 +40,7 @@ const HEADLINE = readFileSync(new URL('../src/components/kit/kit-hero.tsx', impo
 if (!HEADLINE) throw new Error('The hero no longer says "Made to work together.": update the card and its alt text');
 
 const ALT = {
+  night: 'Cloudlet — "Cloudlet" and "Made to work together" written in clouds across a starry night sky',
   'wordmark-day': 'Cloudlet — "Cloudlet" written in clouds across a day sky',
   'wordmark-night': 'Cloudlet — "Cloudlet" written in clouds across a night sky with stars',
   paint: `Cloudlet — the kit's landing: the headline "${HEADLINE.join(' ')}" on the color picker's coral paint, the shadcn install command, Browse components and Star on GitHub, and the live Toaster, color picker and palette`,
@@ -88,6 +92,15 @@ async function shootClouds(browser, origin) {
   return page;
 }
 
+/** A still picture (1.9:1, like the card) scaled to it. */
+async function shootPicture(browser, file, type) {
+  const picture = `data:image/${type};base64,${readFileSync(new URL(file, import.meta.url)).toString('base64')}`;
+  const page = await browser.newPage({ javaScriptEnabled: false, viewport: { width: 1200, height: 630 } });
+  await page.setContent(`<body style="margin:0;overflow:hidden"><img src="${picture}" alt="" style="display:block;width:1200px;height:630px;object-fit:cover"></body>`);
+  await page.evaluate(() => document.images[0].decode());
+  return page;
+}
+
 /** The README's picture (2:1) whole across the card (1.9:1), 15 px of its edges mirrored above and below. */
 async function shootWordmark(browser, theme) {
   const picture = `data:image/webp;base64,${readFileSync(new URL(`../../../.github/readme/wordmark-${theme}.webp`, import.meta.url)).toString('base64')}`;
@@ -116,11 +129,16 @@ const folder = outDir ?? APP;
 mkdirSync(folder, { recursive: true });
 
 const wordmark = variant.startsWith('wordmark-');
-const server = wordmark ? null : await serve();
+const still = wordmark || variant === 'night';
+const server = still ? null : await serve();
 const origin = server ? `http://127.0.0.1:${server.address().port}` : '';
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 try {
-  const page = wordmark ? await shootWordmark(browser, variant.slice('wordmark-'.length)) : await (variant === 'paint' ? shootPaint : shootClouds)(browser, origin);
+  const page = variant === 'night'
+    ? await shootPicture(browser, './brand/og-kit-night.jpg', 'jpeg')
+    : wordmark
+      ? await shootWordmark(browser, variant.slice('wordmark-'.length))
+      : await (variant === 'paint' ? shootPaint : shootClouds)(browser, origin);
   const og = resolve(folder, 'opengraph-image.jpg');
   await page.screenshot({ path: og, type: 'jpeg', quality: 90, clip: variant === 'paint' ? { x: 0, y: 0, width: SHOT_WIDTH, height: 630 * (SHOT_WIDTH / 1200) } : { x: 0, y: 0, width: 1200, height: 630 } });
   copyFileSync(og, resolve(folder, 'twitter-image.jpg'));
