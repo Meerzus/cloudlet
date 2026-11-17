@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 /**
  * The kit's Open Graph and Twitter card, the root's (1200×630, JPEG like the color picker's: the sky's
- * gradients and the cloud renders are photographs, a PNG of them is twice as heavy). Two variants,
- * shot in headless Chromium from the static export in the light theme:
+ * gradients and the cloud renders are photographs, a PNG of them is twice as heavy), shot in
+ * headless Chromium. The variants:
  *
+ * - `wordmark-day`, `wordmark-night`: the README's picture (.github/readme/wordmark-<day|night>.webp),
+ *   "Cloudlet" written in clouds across the sky, whole across the card.
  * - `paint`: the top of the kit's landing as it draws it — the color picker's paint, the headline,
  *   the command, the two buttons and the kit's three components — shot at 1440 px wide with reduced
- *   motion and scaled to the card; the header keeps only the logo.
+ *   motion and scaled to the card in the start color (`?c=ff6a3d`: a visit's own color is random);
+ *   the header keeps only the logo.
  * - `clouds`: a still card like the Toaster's (scripts/brand-images.mjs): the day sky, the cloud
  *   renders and "Cloudlet" written in clouds over the headline, without the page's controls.
  *
- *   npm run build && npm run build:site
+ *   npm run build && npm run build:site                    (paint and clouds: they shoot the export)
  *   node apps/site/scripts/og-kit.mjs                       the chosen variant, as the root's card
  *   node apps/site/scripts/og-kit.mjs <variant> --out <dir> one variant into <dir> (to compare)
  *
@@ -26,7 +29,7 @@ import { chromium } from '@playwright/test';
 import { serve } from './serve-out.mjs';
 
 /** The variant the root shows. */
-const CHOSEN = 'paint';
+const CHOSEN = 'wordmark-day';
 const APP = resolve(fileURLToPath(new URL('../src/app', import.meta.url)));
 const HEADLINE = readFileSync(new URL('../src/components/kit/kit-hero.tsx', import.meta.url), 'utf8').includes('Made to work <span>together.</span>')
   ? ['Made to work', 'together.']
@@ -34,6 +37,8 @@ const HEADLINE = readFileSync(new URL('../src/components/kit/kit-hero.tsx', impo
 if (!HEADLINE) throw new Error('The hero no longer says "Made to work together.": update the card and its alt text');
 
 const ALT = {
+  'wordmark-day': 'Cloudlet — "Cloudlet" written in clouds across a day sky',
+  'wordmark-night': 'Cloudlet — "Cloudlet" written in clouds across a night sky with stars',
   paint: `Cloudlet — the kit's landing: the headline "${HEADLINE.join(' ')}" on the color picker's coral paint, the shadcn install command, Browse components and Star on GitHub, and the live Toaster, color picker and palette`,
   clouds: `Cloudlet — "Cloudlet" written in clouds and the headline "${HEADLINE.join(' ')}" on a day sky with clouds`,
 };
@@ -62,7 +67,7 @@ const SHOT_WIDTH = 1440;
 async function shootPaint(browser, origin) {
   const scale = 1200 / SHOT_WIDTH;
   const page = await browser.newPage({ viewport: { width: SHOT_WIDTH, height: Math.round(630 / scale) }, deviceScaleFactor: scale, reducedMotion: 'reduce', colorScheme: 'light' });
-  await page.goto(`${origin}/`, { waitUntil: 'networkidle' });
+  await page.goto(`${origin}/?c=ff6a3d`, { waitUntil: 'networkidle' });
   await page.addStyleTag({ content: '.site-edge, .chapters, nextjs-portal { display: none !important; } .site-header :is(nav, [aria-haspopup], button) { visibility: hidden; }' });
   // The paint draws once its frame is in: WebGL (GPU or software) or the still frame.
   await page.waitForFunction(() => document.querySelector('#hero .paint-section')?.dataset.state === 'drawn', null, { timeout: 20_000 });
@@ -83,22 +88,39 @@ async function shootClouds(browser, origin) {
   return page;
 }
 
+/** The README's picture (2:1) whole across the card (1.9:1), 15 px of its edges mirrored above and below. */
+async function shootWordmark(browser, theme) {
+  const picture = `data:image/webp;base64,${readFileSync(new URL(`../../../.github/readme/wordmark-${theme}.webp`, import.meta.url)).toString('base64')}`;
+  const page = await browser.newPage({ javaScriptEnabled: false, viewport: { width: 1200, height: 630 } });
+  // The 15 px bands mirror the picture's own edge rows: the sky's gradient runs on without a seam.
+  const band = (top, imageTop) =>
+    `<div style="position:fixed;left:0;top:${top}px;width:1200px;height:15px;overflow:hidden"><img src="${picture}" alt="" style="position:absolute;left:0;top:${imageTop}px;width:1200px;height:600px;transform:scaleY(-1)"></div>`;
+  await page.setContent(`<body style="margin:0;overflow:hidden">
+    ${band(0, -585)}
+    <img src="${picture}" alt="" style="position:fixed;left:0;top:15px;width:1200px;height:600px">
+    ${band(615, 0)}
+  </body>`);
+  await page.evaluate(() => Promise.all([...document.images].map((image) => image.decode())));
+  return page;
+}
+
 const args = process.argv.slice(2);
 const outFlag = args.indexOf('--out');
 const outDir = outFlag >= 0 ? resolve(args.splice(outFlag, 2)[1]) : null;
 const variant = args[0] ?? CHOSEN;
 if (!(variant in ALT)) {
-  console.error('Usage: node apps/site/scripts/og-kit.mjs [paint|clouds] [--out dir]');
+  console.error(`Usage: node apps/site/scripts/og-kit.mjs [${Object.keys(ALT).join('|')}] [--out dir]`);
   process.exit(2);
 }
 const folder = outDir ?? APP;
 mkdirSync(folder, { recursive: true });
 
-const server = await serve();
-const origin = `http://127.0.0.1:${server.address().port}`;
+const wordmark = variant.startsWith('wordmark-');
+const server = wordmark ? null : await serve();
+const origin = server ? `http://127.0.0.1:${server.address().port}` : '';
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 try {
-  const page = await (variant === 'paint' ? shootPaint : shootClouds)(browser, origin);
+  const page = wordmark ? await shootWordmark(browser, variant.slice('wordmark-'.length)) : await (variant === 'paint' ? shootPaint : shootClouds)(browser, origin);
   const og = resolve(folder, 'opengraph-image.jpg');
   await page.screenshot({ path: og, type: 'jpeg', quality: 90, clip: variant === 'paint' ? { x: 0, y: 0, width: SHOT_WIDTH, height: 630 * (SHOT_WIDTH / 1200) } : { x: 0, y: 0, width: 1200, height: 630 } });
   copyFileSync(og, resolve(folder, 'twitter-image.jpg'));
@@ -106,5 +128,5 @@ try {
   console.log(`Wrote the ${variant} card: ${og}, twitter-image.jpg and their alt texts`);
 } finally {
   await browser.close();
-  server.close();
+  server?.close();
 }

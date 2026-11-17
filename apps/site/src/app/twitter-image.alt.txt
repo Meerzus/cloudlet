@@ -1,1 +1,1 @@
-Cloudlet — the kit's landing: the headline "Made to work together." on the color picker's coral paint, the shadcn install command, Browse components and Star on GitHub, and the live Toaster, color picker and palette
+Cloudlet — "Cloudlet" written in clouds across a day sky

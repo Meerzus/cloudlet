@@ -62,26 +62,34 @@ function Picks() {
 }
 
 describe('the color of a chapter on another page', () => {
-  it('never writes the address or <html>, and takes no start script', () => {
+  it('starts in the page start script\'s color, uses it once, and never writes the address or <html>', () => {
     vi.useFakeTimers();
     global[START_GLOBAL] = '#1b1f4a';
-    // The chapter's own random pick lands on the first curated color, never on the script's by chance.
-    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
     const { container } = render(
       <PickerColorProvider page={false}>
         <Picks />
       </PickerColorProvider>,
     );
     const button = container.querySelector('button')!;
-    // The start script belongs to the color picker landing: a chapter elsewhere picks its own.
-    expect(button.dataset.hex).not.toBe('#1b1f4a');
-    expect(global[START_GLOBAL]).toBe('#1b1f4a');
-    random.mockRestore();
+    // The kit's landing renders the start script too: the color it painted the first frame with.
+    expect(button.dataset.hex).toBe('#1b1f4a');
+    act(() => vi.advanceTimersByTime(0));
+    expect(global[START_GLOBAL]).toBeUndefined();
     act(() => button.click());
     act(() => vi.advanceTimersByTime(1000));
     expect(button.dataset.hex).toBe('#2e8b57');
     expect(window.location.search).toBe('');
     expect(root.style.getPropertyValue('--cp-color')).toBe('');
+  });
+
+  it('keeps its own start over the start script', () => {
+    global[START_GLOBAL] = '#1b1f4a';
+    const { container } = render(
+      <PickerColorProvider page={false} start="#f2b84b">
+        <Picks />
+      </PickerColorProvider>,
+    );
+    expect(container.querySelector('button')!.dataset.hex).toBe('#f2b84b');
   });
 
   it('starts from ?c= when the link has one, so an audit can set it', () => {
@@ -113,15 +121,15 @@ describe('the color of a chapter on another page', () => {
 });
 
 describe('the paint in a chapter loads as the chapter comes near', () => {
-  it('renders on the server as a flat color with no frame, inside the chapter with its two links', () => {
+  it('renders on the server as the start script\'s flat color with no frame, inside the chapter with its two links', () => {
     const html = renderToString(
       <KitColor>
         <PickerChapter />
       </KitColor>,
     );
     expect(html).toContain('id="color-picker"');
-    expect(html).toContain('class="paint-section"');
-    expect(html).toContain('--paint-color:#ff6a3d');
+    expect(html).toContain('<div class="paint-section" aria-hidden="true">');
+    expect(html).not.toContain('--paint-color');
     expect(html).not.toContain('material-page');
     expect(html).toContain('href="/color-picker?c=ff6a3d"');
     expect(html).toContain('href="/color-picker?c=ff6a3d#palette"');

@@ -8,6 +8,7 @@ import { PickerChapter } from '@/components/kit/picker-chapter';
 import { PrinciplesSection } from '@/components/kit/principles';
 import { StarSection } from '@/components/kit/star-section';
 import { ToasterScene } from '@/components/kit/toaster-scene';
+import { StartColorScript } from '@/components/picker/start-color-script';
 import { Chapters } from '@/components/site/chapters';
 import { Footer } from '@/components/site/footer';
 import { KIT_PATH, SITE_URL } from '@/lib/site';
@@ -18,7 +19,8 @@ export const metadata: Metadata = { alternates: { canonical: `${SITE_URL}${KIT_P
 export default function KitHome() {
   return (
     <>
-      {/* One color for the page: the hero and the color picker's chapter paint in it. */}
+      {/* One color for the page, random for each visit: the hero and the color picker's chapter paint in it. */}
+      <StartColorScript />
       <KitColor>
         <main>
           <KitHero />

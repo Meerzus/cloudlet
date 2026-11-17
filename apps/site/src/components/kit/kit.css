@@ -93,6 +93,8 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
 .kh-label { font-size: 0.875rem; font-weight: 600; letter-spacing: -0.005em; }
 .kh-note { max-width: 20rem; font-size: 0.875rem; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty; }
 .kh-panel { width: fit-content; }
+.kh-parts :is(.kh-panel, .kh-tray) { transition: opacity 200ms ease; }
+.kh-parts:not([data-started]) :is(.kh-panel, .kh-tray) { opacity: 0; }
 .kh-panel > .color-picker-inline {
   box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
 }

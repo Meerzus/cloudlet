@@ -2,7 +2,7 @@ import { act, fireEvent, render } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HERO_TOASTS, UPLOAD_MS } from '../../apps/site/src/components/kit/hero-parts';
-import { KitColor, KIT_START_COLOR } from '../../apps/site/src/components/kit/kit-color';
+import { KitColor } from '../../apps/site/src/components/kit/kit-color';
 import { BROWSE_HREF, KitHero } from '../../apps/site/src/components/kit/kit-hero';
 import { SETTLE } from '../../apps/site/src/lib/color-report';
 import { COMPONENTS } from '../../apps/site/src/lib/site';
@@ -57,7 +57,7 @@ const button = (container: HTMLElement, name: string) =>
   [...container.querySelectorAll('button')].find((element) => (element.getAttribute('aria-label') ?? element.textContent) === name)!;
 
 describe('the kit hero', () => {
-  it('renders on the server: the words, the command, two buttons, then Toaster, picker and palette, in the start color', () => {
+  it('renders on the server: the words, the command, two buttons, then Toaster, picker and palette; the color is the start script\'s until the visit\'s is known', () => {
     const html = renderToStaticMarkup(
       <KitColor>
         <KitHero />
@@ -71,7 +71,9 @@ describe('the kit hero', () => {
     expect(BROWSE_HREF).toBe('/docs#components');
     expect(html).toContain('Browse components');
     expect(html).toContain('href="https://github.com/');
-    expect(html).toContain(`--paint-color:${KIT_START_COLOR}`);
+    // The server knows no color: the paint's flat color is the start script's, the picker and the palette wait.
+    expect(html).not.toContain('--paint-color');
+    expect(html).not.toContain('data-started');
     // The sky hero is gone: no wordmark, no islands.
     expect(html).not.toContain('wordmark');
     expect(html).not.toContain('kit-island');

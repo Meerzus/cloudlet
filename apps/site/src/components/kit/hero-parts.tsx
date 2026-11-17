@@ -190,8 +190,10 @@ function PalettePart() {
  * Island reports it once it settles; Send puts a notification in the same Island.
  */
 export function HeroParts() {
+  const { started } = usePickerColor();
   return (
-    <div className="kh-parts" role="group" aria-label="Try the kit">
+    // The picker and the palette show once the visit's color is known, so they never change color in view.
+    <div className="kh-parts" role="group" aria-label="Try the kit" data-started={started || undefined}>
       <ToasterPart />
       <PickerPart />
       <PalettePart />

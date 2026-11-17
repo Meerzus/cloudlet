@@ -106,7 +106,8 @@ export function PaintSection({ calm }: { calm: string }) {
   }, [hex, ramp, change]);
 
   return (
-    <div ref={box} className="paint-section" aria-hidden="true" style={{ '--paint-color': hex } as CSSProperties}>
+    // Until the start color is known the section's flat color is the start script's (`--cp-color` on <html>).
+    <div ref={box} className="paint-section" aria-hidden="true" style={started ? ({ '--paint-color': hex } as CSSProperties) : undefined}>
       {/* The WebGL canvas is the page's one (section-paint.ts): it comes in here while this section draws. */}
       <canvas ref={still} className="paint-section-still" />
       {near ? (
