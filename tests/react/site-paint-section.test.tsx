@@ -82,16 +82,6 @@ describe('the color of a chapter on another page', () => {
     expect(root.style.getPropertyValue('--cp-color')).toBe('');
   });
 
-  it('keeps its own start over the start script', () => {
-    global[START_GLOBAL] = '#1b1f4a';
-    const { container } = render(
-      <PickerColorProvider page={false} start="#f2b84b">
-        <Picks />
-      </PickerColorProvider>,
-    );
-    expect(container.querySelector('button')!.dataset.hex).toBe('#f2b84b');
-  });
-
   it('starts from ?c= when the link has one, so an audit can set it', () => {
     window.history.replaceState(null, '', '/?c=f2b84b,1b1f4a');
     const { container } = render(

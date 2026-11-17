@@ -3,12 +3,11 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { addTransitionType, startTransition, useEffect, useLayoutEffect, useState, ViewTransition, type MouseEvent, type ReactNode } from 'react';
-import { pageStill, stillWanted } from '@/lib/reduced-motion';
+import { pageStill, REDUCED_QUERY, stillWanted } from '@/lib/reduced-motion';
 import { openTypes, SCENE_BACK, SCENE_OPEN, sceneOfTypes, traversalTypes, type SceneId } from '@/lib/scene-transition';
 import { springEasing } from '@/lib/spring';
 import { useMediaQuery } from './use-media-query';
 
-const REDUCED = '(prefers-reduced-motion: reduce)';
 
 /** The landing grows on this spring (CSS `linear()`), the feel of the Toaster's device morph. */
 const GROW = springEasing({ stiffness: 190, damping: 24 });
@@ -169,7 +168,7 @@ function navigate(types: readonly string[], go: () => void) {
  */
 export function SceneLink({ scene, href, className, children }: { scene: SceneId; href: string; className?: string; children: ReactNode }) {
   const router = useRouter();
-  const reduced = useMediaQuery(REDUCED);
+  const reduced = useMediaQuery(REDUCED_QUERY);
   const open = (event: MouseEvent<HTMLAnchorElement>) => {
     // A new tab or window, or no motion: the link as it is.
     if (reduced !== false || pageStill() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -211,7 +210,7 @@ export function SceneStage({ children }: { children: ReactNode }) {
       const to = `${window.location.pathname}${window.location.hash}`;
       here = to;
       const types = traversalTypes(from, to);
-      if (!types || window.matchMedia(REDUCED).matches || stillWanted() || !('startViewTransition' in document)) return;
+      if (!types || window.matchMedia(REDUCED_QUERY).matches || stillWanted() || !('startViewTransition' in document)) return;
       const open = types.includes(SCENE_OPEN);
       const scene = sceneOfTypes(types);
       leave(open && scene ? linkOf(scene) : null);

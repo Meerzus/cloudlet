@@ -6,7 +6,7 @@ function names(): string {
   return all.length > 1 ? `${all.slice(0, -1).join(', ')} and ${all.at(-1)}` : (all[0] ?? '');
 }
 
-/** The kit landing's FAQ: copy for the owner's review, checked against the docs and the registry. */
+/** The kit landing's FAQ: short answers, checked against the docs and the registry. */
 export const KIT_FAQ: readonly { readonly id: string; readonly question: string; readonly answer: string }[] = [
   {
     id: 'what',

@@ -72,8 +72,8 @@ const STILL_PATHS = [PLAYGROUND_PATH];
 
 /**
  * The fixed sky behind a landing: gradient, stars, glow and layers of clouds that rise by depth as
- * the page scrolls (vertically only). `layers` replaces the Toaster's clouds, for a page whose first
- * screen draws its own (the kit's hero keeps the top of each period clear).
+ * the page scrolls (vertically only). `layers` replaces the Toaster's clouds, for a page that wants
+ * fewer or different clouds (the kit's).
  */
 export function Sky({ layers = LAYERS }: { layers?: readonly SkyLayer[] }) {
   const root = useRef<HTMLDivElement>(null);

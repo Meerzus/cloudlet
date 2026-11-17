@@ -17,8 +17,8 @@
  *    The kit's landing (`/`) is measured the same way over its two painted sections, the hero and the
  *    color picker chapter, whose paint lies in the section's bounds (paint-section.tsx, one WebGL
  *    context between them): the section is scrolled near so the paint loads, then walked one screen
- *    at a time; its text is the gate, the header over it a note (its contrast on `/` is the owner's
- *    call). There `flat` is the still frame of the paint drawn without WebGL 2. The color comes from
+ *    at a time; its text is the gate, the header over it a note (its contrast on `/` is not a
+ *    gate). There `flat` is the still frame of the paint drawn without WebGL 2. The color comes from
  *    `?c=`, which the page reads but never writes.
  * 2. Every picker on /color-picker and /docs/components/color-picker, desktop 1440×900 and phone 390×844, light
  *    and dark: Enter on the swatch opens a named dialog with focus in the area; axe on the open panel;
@@ -412,7 +412,7 @@ async function kitContrast(mode, route = 'kit') {
   const worst = [...entries].sort((p, q) => p.p1 - q.p1)[0];
   console.log(`${section} contrast (${mode}): ${passed}/${entries.length} lines passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme} ${worst?.color})`);
   const notes = report.overContent.filter((entry) => entry.route === route && entry.mode === mode);
-  if (notes.length) console.log(`  note: ${notes.length} header labels under 4.5:1 over the ${section} (the header on / is the owner's call)`);
+  if (notes.length) console.log(`  note: ${notes.length} header labels under 4.5:1 over the ${section} (a note, not a gate)`);
 }
 
 /**
@@ -459,7 +459,7 @@ async function kitSkyContrast() {
   const worst = [...entries].sort((p, q) => p.p1 - q.p1)[0];
   console.log(`kit sky contrast: ${passed}/${entries.length} lines passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme})`);
   const notes = report.overContent.filter((entry) => entry.route === 'kit-sky');
-  if (notes.length) console.log(`  note: ${notes.length} header labels under 4.5:1 over the page (the header on / is the owner's call)`);
+  if (notes.length) console.log(`  note: ${notes.length} header labels under 4.5:1 over the page (a note, not a gate)`);
 }
 
 // --- 2. Pickers -------------------------------------------------------------------------------------

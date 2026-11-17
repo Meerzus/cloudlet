@@ -6,7 +6,6 @@ import { LUT_SIZE } from '@/lib/picker-ramp';
 import { PaintFluid } from './paint-fluid';
 import { PAINT_FRAGMENT, PAINT_VERTEX } from './paint-shader';
 
-export type { BleedOrigin };
 
 export interface PaintLayout {
   /**

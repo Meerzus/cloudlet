@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { bleedOrigin, PaintPage } from '../../apps/site/src/components/picker/paint-page';
+import { PaintPage } from '../../apps/site/src/components/picker/paint-page';
+import { bleedOrigin } from '../../apps/site/src/lib/paint-origin';
 import { PaintRenderer } from '../../apps/site/src/components/picker/paint-renderer';
 import { Palette } from '../../apps/site/src/components/picker/palette';
 import { PickerColorProvider } from '../../apps/site/src/components/picker/picker-color';

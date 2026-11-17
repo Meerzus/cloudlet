@@ -19,7 +19,7 @@ export interface InstallCommandProps {
   readonly onItemChange?: (item: RegistryItem) => void;
   /** The switch of the kit's components above the command; off, the command stays on `initial`. */
   readonly switcher?: boolean;
-  /** `center` centers the switch over the command (the hero); `start` lines both up on the left. */
+  /** `center` centers the switch over the command (Star on GitHub); `start` lines both up on the left. */
   readonly align?: 'start' | 'center';
   readonly className?: string;
 }

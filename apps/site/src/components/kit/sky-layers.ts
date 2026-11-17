@@ -2,8 +2,7 @@ import type { SkyLayer } from '@/components/site/sky';
 
 /**
  * The kit's sky: three layers of the Toaster's clouds behind everything under the hero. While the
- * hero covers the screen they are hidden (kit.css), because the hero's islands are the clouds of the
- * first screen; they come in as the hero scrolls away and rise by depth like the Toaster's sky. The
+ * hero covers the screen they are hidden (kit.css), because the hero is paint, not sky; they come in as the hero scrolls away and rise by depth like the Toaster's sky. The
  * clouds load lazily, once shown. Hidden, they cannot be measured, so every cloud ends well above
  * the next period (2.8 screens): the lowest by 2.6 on a screen as short as 600 px at 1440.
  */

@@ -10,7 +10,6 @@ import { flatLut, flatOf, pageRamp, rampLut, themeOf } from '@/lib/picker-ramp';
 import { LIFT, PaintRenderer, type PaintLayout } from './paint-renderer';
 import { usePickerColor } from './picker-color';
 
-export { bleedOrigin };
 
 const REDUCED = '(prefers-reduced-motion: reduce)';
 /** Where a jump with no source of its own spreads from, and the frame's first appearance: the hero's panel. */
