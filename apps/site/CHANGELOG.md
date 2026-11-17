@@ -117,8 +117,8 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   three themes on the shadcn tokens for a picker and a palette, with the stylesheet they amount to and
   the Toaster's style editor. Tested, not promised — what the repository runs, each line with links to
   the files on GitHub. Then a short FAQ about the kit.
-- The kit's page has a link card of its own on social sites and in chats: the top of the page,
-  "Made to work together." on the coral paint with the three components (it was the Toaster's). The docs
+- The kit's page has a link card of its own on social sites and in chats: "Cloudlet" and "Made to
+  work together" written in clouds across a starry night sky (it was the Toaster's). The docs
   pages share it on X as before, now with their own title and description there.
 - At night the kit's clouds are dimmer and the words below the hero carry a soft halo of the night
   sky, so a moonlit cloud drifting behind a line no longer washes it out. The Paper and Terminal
