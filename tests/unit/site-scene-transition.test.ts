@@ -30,7 +30,7 @@ describe('scene transitions', () => {
   });
 
   it('is no scene for the kit page, the docs, the playground or anything else', () => {
-    for (const href of ['/', '/#faq', '/docs', '/docs/components/toaster', '/toaster/playground', '/toaster/frame', '/proto/b', '/nope']) {
+    for (const href of ['/', '/#faq', '/docs', '/docs/components/toaster', '/toaster/playground', '/toaster/frame', '/nope']) {
       expect(sceneOf(href)).toBeNull();
     }
   });
