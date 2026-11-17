@@ -6,6 +6,7 @@ import { useCopy, usePageNotifications } from '@/components/site/notifications';
 import { ColorPalette } from '@/components/ui/color-palette/color-palette';
 import { ColorPicker } from '@/components/ui/color-picker/color-picker';
 import { highlight } from '@/lib/highlight';
+import { pageStill } from '@/lib/reduced-motion';
 import {
   importLine,
   INSTALL_SNIPPETS,
@@ -131,7 +132,7 @@ export function InstallLive() {
     const spec = { title: values.title.trim() || SNIPPET_START.title, kind: values.kind };
     setRuns((count) => count + 1);
     const line = toasterLine.current?.querySelector('.ki-src');
-    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches || typeof document.body.animate !== 'function';
+    const still = pageStill() || typeof document.body.animate !== 'function';
     if (still || !line) {
       controller.show(spec);
       return;

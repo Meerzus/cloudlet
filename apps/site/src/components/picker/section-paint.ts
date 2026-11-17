@@ -4,9 +4,9 @@ import { readPixels, type Pixels } from '@/lib/paint-sample';
 import { sectionEdges, sectionScroll, stillPaint, type SectionEdges } from '@/lib/paint-section';
 import { softwareGL } from '@/lib/picker-motion';
 import { flatLut, flatOf, rampLut, themeOf, type RampStop } from '@/lib/picker-ramp';
+import { pageStill, watchStill } from '@/lib/reduced-motion';
 import { LIFT, PaintRenderer } from './paint-renderer';
 
-const REDUCED = '(prefers-reduced-motion: reduce)';
 /** A mouse or a trackpad: on a touch screen a finger scrolls the page, so it stirs nothing. */
 const FINE_POINTER = '(hover: hover) and (pointer: fine)';
 /** The paint draws while the section is this close to the window: a frame fixed to the window is right before it shows. */
@@ -66,7 +66,6 @@ function lengthOf(element: Element, property: string): number {
 export function mountSectionPaint(options: SectionPaintOptions): SectionPaint {
   const { box, section, canvas, still, frame, calm: calmText } = options;
   const root = document.documentElement;
-  const reduced = window.matchMedia(REDUCED);
   const fine = window.matchMedia(FINE_POINTER);
   let hex = options.hex;
   let stops = options.stops;
@@ -183,9 +182,10 @@ export function mountSectionPaint(options: SectionPaintOptions): SectionPaint {
   );
   onScreen.observe(section);
   document.addEventListener('visibilitychange', activity);
-  const motion = () => renderer?.setMoving(!reduced.matches && !software);
+  // The system setting or the page's own switch: the paint stands still and repaints at once.
+  const motion = () => renderer?.setMoving(!pageStill() && !software);
   motion();
-  reduced.addEventListener('change', motion);
+  const unwatchStill = watchStill(motion);
 
   // The theme picks the scene, shown at once; the flat color and the still frame follow it.
   const theme = () => {
@@ -264,7 +264,7 @@ export function mountSectionPaint(options: SectionPaintOptions): SectionPaint {
       window.removeEventListener('resize', remeasure);
       window.removeEventListener('scroll', scroll);
       document.removeEventListener('visibilitychange', activity);
-      reduced.removeEventListener('change', motion);
+      unwatchStill();
       watchTheme.disconnect();
       section.removeEventListener('pointermove', move);
       section.removeEventListener('pointerdown', down);

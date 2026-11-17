@@ -6,4 +6,6 @@ export const KIT_CHAPTERS: ChapterList = [
   { id: 'toaster', label: 'Toaster' },
   { id: 'color-picker', label: 'Color picker' },
   { id: 'install', label: 'Install' },
+  { id: 'principles', label: 'Principles' },
+  { id: 'faq', label: 'FAQ' },
 ];

@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import { KitHero } from '@/components/kit/kit-hero';
 import { KIT_CHAPTERS } from '@/components/kit/kit-shell';
 import { InstallSection } from '@/components/kit/install-section';
+import { KitFaq } from '@/components/kit/kit-faq';
 import { PickerChapter } from '@/components/kit/picker-chapter';
+import { PrinciplesSection } from '@/components/kit/principles';
 import { StarSection } from '@/components/kit/star-section';
 import { ToasterScene } from '@/components/kit/toaster-scene';
 import { Chapters } from '@/components/site/chapters';
@@ -20,6 +22,8 @@ export default function KitHome() {
         <ToasterScene />
         <PickerChapter />
         <InstallSection />
+        <PrinciplesSection />
+        <KitFaq />
         <StarSection />
       </main>
       <Chapters chapters={KIT_CHAPTERS} />

@@ -106,7 +106,7 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
 
 /* The name and the islands rise into place once on a spring (kit-hero.tsx), the far ones a beat later. */
 @media (prefers-reduced-motion: no-preference) {
-  .kit-name, .kit-island-rise { animation: kit-approach var(--approach-duration) var(--approach-ease) both; }
+  html:not([data-reduced-motion]) :is(.kit-name, .kit-island-rise) { animation: kit-approach var(--approach-duration) var(--approach-ease) both; }
   .kit-island-rise { animation-delay: calc(120ms + (1 - var(--depth)) * 360ms); }
 }
 @keyframes kit-approach {
@@ -229,10 +229,13 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
   .kit-install-icon, .kit-install-command, .kit-press { transition: opacity 150ms ease; }
   .kit-press:active, .kit-install-command:active { scale: none; }
 }
+/* The page's own switch (lib/reduced-motion.ts): the same stillness as the media query, beside each one. */
+html[data-reduced-motion] :is(.kit-install-icon, .kit-install-command, .kit-press) { transition: opacity 150ms ease; }
+html[data-reduced-motion] :is(.kit-press, .kit-install-command):active { scale: none; }
 
 /* A changed word comes in by blur, never by a cut. */
 @media (prefers-reduced-motion: no-preference) {
-  .kit-swap { animation: kit-blur-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  html:not([data-reduced-motion]) .kit-swap { animation: kit-blur-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 }
 @keyframes kit-blur-in {
   from { opacity: 0; filter: blur(6px); }
@@ -428,6 +431,8 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
   .kc-chip { transition: none; }
   .kc-chip:hover { translate: none; }
 }
+html[data-reduced-motion] .kc-chip { transition: none; }
+html[data-reduced-motion] .kc-chip:hover { translate: none; }
 @media (forced-colors: active) {
   .kc-chip { forced-color-adjust: none; outline: 1px solid CanvasText; }
   .kc-chip[aria-pressed='true'] { outline: 3px solid Highlight; }
@@ -551,6 +556,8 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
   .kt-plain-spinner { animation-duration: 2.4s; }
   .kit-open-arrow { transition: none; }
 }
+html[data-reduced-motion] .kt-plain-spinner { animation-duration: 2.4s; }
+html[data-reduced-motion] .kit-open-arrow { transition: none; }
 @media (forced-colors: active) {
   .kt-control { outline: 1px solid CanvasText; }
   .kt-control:focus-visible, .kit-open:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
@@ -671,7 +678,7 @@ html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity:
 .ki-live { display: inline-flex; align-items: center; gap: 0.75rem; min-height: 2.25rem; font-family: var(--font-sans); white-space: normal; overflow-wrap: normal; }
 /* The Toaster's line lights up when a notification leaves it (it remounts on each Run). */
 @media (prefers-reduced-motion: no-preference) {
-  .ki-flash { animation: ki-flash 900ms ease-out; }
+  html:not([data-reduced-motion]) .ki-flash { animation: ki-flash 900ms ease-out; }
 }
 .ki-flash { border-radius: 0.25rem; }
 @keyframes ki-flash {
@@ -753,6 +760,10 @@ input.ki-edit { field-sizing: content; min-width: 1ch; max-width: 100%; caret-co
   .ki-run { transition: none; }
   .ki-run:active { scale: none; }
 }
+html[data-reduced-motion] :is(.ki-snippet, .ki-snippet[data-active]) { filter: none; transition: opacity 150ms ease, visibility 0s linear 150ms; }
+html[data-reduced-motion] .ki-snippet[data-active] { transition: opacity 150ms ease, visibility 0s; }
+html[data-reduced-motion] .ki-run { transition: none; }
+html[data-reduced-motion] .ki-run:active { scale: none; }
 @media (forced-colors: active) {
   .ki-code, .ki-run { outline: 1px solid CanvasText; }
   .ki-code-copy:focus-visible, .ki-run:focus-visible, .ki-edit:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
@@ -808,7 +819,7 @@ input.ki-edit { field-sizing: content; min-width: 1ch; max-width: 100%; caret-co
 }
 .ks-star-icon { width: 1.125rem; height: 1.125rem; transition: rotate 400ms ease, scale 400ms ease; }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .ks-star:hover .ks-star-icon { rotate: 72deg; scale: 1.12; }
+  html:not([data-reduced-motion]) .ks-star:hover .ks-star-icon { rotate: 72deg; scale: 1.12; }
 }
 .ks-install { margin-top: 1.75rem; }
 @media (max-width: 39.99rem) {
@@ -818,4 +829,188 @@ input.ki-edit { field-sizing: content; min-width: 1ch; max-width: 100%; caret-co
 @media (forced-colors: active) {
   .ks-star { outline: 1px solid CanvasText; }
   .ks-star:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+}
+
+/* ---------- Principles: four promises, each shown live on the sky; then the kit's FAQ ---------- */
+
+.kit-principles {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3.5rem, 11svh, 6.5rem);
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(3rem, 12svh, 7.5rem) 1rem clamp(2rem, 6svh, 4rem);
+}
+.kp-intro { max-width: 40rem; }
+.kp-heading {
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.kp-heading > span { display: inline-block; }
+.kp-lede { max-width: 34rem; margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+
+.kp-principle { display: grid; gap: 1.5rem; min-width: 0; }
+@media (min-width: 64rem) {
+  .kp-principle { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); column-gap: clamp(2.5rem, 5vw, 4.5rem); align-items: start; }
+}
+.kp-copy { max-width: 30rem; }
+.kp-title { margin-top: 0.375rem; font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.125rem); font-weight: 600; line-height: 1.1; letter-spacing: -0.03em; text-wrap: balance; }
+.kp-text p { margin-top: 0.75rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+.kp-proof { min-width: 0; }
+
+/* The material of the picker's sheets and the code sheet: the page's own background, a hairline, a soft drop. */
+.kp-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 1.25rem;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
+  color-scheme: light;
+}
+.dark .kp-sheet { color-scheme: dark; }
+/* An open panel lies over what follows. */
+.kp-sheet:has(.color-picker-shadow) { position: relative; z-index: 2; }
+.kp-note { font-size: 0.875rem; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty; }
+.kp-note code { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--foreground); }
+.kp-note kbd {
+  display: inline-block;
+  min-width: 1.5rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 0.375rem;
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 0 var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--foreground);
+  text-align: center;
+}
+
+.kp-motion-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 1.5rem; min-height: 2.75rem; }
+
+/* A switch: the track fills with the text color, the thumb slides on a soft spring. */
+.kp-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.625rem 0.25rem 0.25rem;
+  border-radius: 9999px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: left;
+  outline: none;
+}
+.kp-switch:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.kp-switch[aria-disabled='true'] { cursor: not-allowed; }
+.kp-switch-track {
+  position: relative;
+  flex: none;
+  width: 2.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 22%, transparent);
+  transition: background-color 200ms ease;
+}
+.kp-switch[aria-checked='true'] .kp-switch-track { background: var(--foreground); }
+.kp-switch[aria-disabled='true'] .kp-switch-track { opacity: 0.55; }
+.kp-switch-thumb {
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background: var(--background);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  transition: translate 250ms cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+.kp-switch[aria-checked='true'] .kp-switch-thumb { translate: 1rem 0; }
+
+.kp-access { display: grid; gap: 1rem; }
+.kp-still { align-items: flex-start; gap: 0.5rem; }
+.kp-focus-picker { display: flex; align-items: center; min-height: 2.75rem; }
+/* The path Tab took: each stop by its name, the current one ringed. */
+.kp-path { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 0.25rem; min-height: 1.875rem; margin: 0; padding: 0; list-style: none; font-size: 0.8125rem; }
+.kp-path li { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--muted-foreground); }
+.kp-path li:not(:last-child)::after { content: '→'; padding-left: 0.25rem; color: var(--muted-foreground); }
+.kp-path li[data-current] { padding: 0.1875rem 0.625rem; border-radius: 9999px; color: var(--foreground); font-weight: 600; box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--ring) 75%, transparent); }
+.kp-path-empty { font-style: italic; }
+
+/* A preset sets the shadcn tokens on this wrapper only (lib/theme-presets.ts), both themes side by side. */
+.kp-theme[data-preset] {
+  --background: var(--tp-light-background);
+  --foreground: var(--tp-light-foreground);
+  --muted: var(--tp-light-muted);
+  --muted-foreground: var(--tp-light-muted-foreground);
+  --border: var(--tp-light-border);
+  --ring: var(--tp-light-ring);
+  font-family: var(--tp-font, inherit);
+}
+.dark .kp-theme[data-preset] {
+  --background: var(--tp-dark-background);
+  --foreground: var(--tp-dark-foreground);
+  --muted: var(--tp-dark-muted);
+  --muted-foreground: var(--tp-dark-muted-foreground);
+  --border: var(--tp-dark-border);
+  --ring: var(--tp-dark-ring);
+}
+.kp-theme-proof { display: grid; gap: 1rem; min-width: 0; }
+.kp-theme-sheet { gap: 0; transition: background-color 300ms ease, color 300ms ease; }
+/* A fieldset is as wide as its content by default: on a narrow phone the theme switch wraps under its legend. */
+.kp-theme-sheet fieldset { flex-wrap: wrap; row-gap: 0.5rem; min-width: 0; }
+/* The chosen theme stands out on a sheet of the same background: the preset's muted fill and a hairline. */
+.kp-theme-sheet label:has(:checked) { background: var(--muted); box-shadow: inset 0 0 0 1px var(--border); }
+.kp-theme-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; min-height: 3.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.kp-theme-label { font-size: 0.9375rem; font-weight: 500; }
+.kp-theme-code { padding: 1rem 1.25rem; font-family: var(--font-mono); font-size: 0.8125rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kp-tok-selector { color: var(--tok-keyword); }
+.kp-tok-name { color: var(--tok-tag); }
+.kp-tok-value { color: var(--tok-string); }
+.kp-tok-comment { color: var(--tok-comment); }
+.kp-link { display: inline-flex; margin-top: 0.25rem; color: var(--foreground); font-size: 0.9375rem; }
+
+/* What the repository runs: a line each, with the files that run it. */
+.kp-tested { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--glass-border); }
+.kp-tested li { display: grid; gap: 0.25rem; padding: 1rem 0; border-bottom: 1px solid var(--glass-border); }
+.kp-tested-title { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
+.kp-tested-text { font-size: 0.9375rem; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty; }
+.kp-tested-proof { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: 0.25rem; }
+.kp-repo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.75rem;
+  border-radius: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
+  text-underline-offset: 4px;
+  outline: none;
+}
+.kp-repo svg { width: 0.875rem; height: 0.875rem; }
+@media (hover: hover) { .kp-repo:hover { text-decoration-color: currentColor; } }
+.kp-repo:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+
+.kit-faq { max-width: 72rem; margin: 0 auto; padding: clamp(3rem, 10svh, 6rem) 1rem 0; }
+.kit-faq .faq-list { max-width: 52rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kp-switch-track, .kp-switch-thumb, .kp-theme-sheet { transition: none; }
+}
+html[data-reduced-motion] :is(.kp-switch-track, .kp-switch-thumb, .kp-theme-sheet) { transition: none; }
+@media (forced-colors: active) {
+  .kp-sheet { outline: 1px solid CanvasText; }
+  .kp-switch-track { border: 1px solid CanvasText; }
+  .kp-switch[aria-checked='true'] .kp-switch-track { background: Highlight; forced-color-adjust: none; }
+  .kp-switch:focus-visible, .kp-repo:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+  .kp-path li[data-current] { outline: 2px solid Highlight; }
 }

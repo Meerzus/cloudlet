@@ -101,6 +101,14 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   the real picker and the palette after `<ColorPalette />` is the real palette, with the code's values
   following them. Copy takes the code with your values. The page ends with Star on GitHub, large,
   and the install command once more.
+- Between Install and Star on GitHub, Principles: four promises, each shown on the page. Motion — a
+  picker to catch halfway, with slow motion at a quarter speed. Accessibility — a switch that reduces
+  motion on this page (smooth scrolling, the sky's parallax, the scenes, the paint's spread and flow,
+  the entrances and the transitions to a landing; the Color picker and the Color palette follow it,
+  the Toaster follows the system setting), and the path Tab takes through a live picker. Your theme —
+  three themes on the shadcn tokens for a picker and a palette, with the stylesheet they amount to and
+  the Toaster's style editor. Tested, not promised — what the repository runs, each line with links to
+  the files on GitHub. Then a short FAQ about the kit.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { addTransitionType, startTransition, useEffect, useLayoutEffect, useState, ViewTransition, type MouseEvent, type ReactNode } from 'react';
+import { pageStill, stillWanted } from '@/lib/reduced-motion';
 import { openTypes, SCENE_BACK, SCENE_OPEN, sceneOfTypes, traversalTypes, type SceneId } from '@/lib/scene-transition';
 import { springEasing } from '@/lib/spring';
 import { useMediaQuery } from './use-media-query';
@@ -164,14 +165,14 @@ function navigate(types: readonly string[], go: () => void) {
 
 /**
  * A scene's "Open …" link: the only link that turns the kit's page into a landing. Nothing moves
- * with reduced motion (or before the preference is known).
+ * with reduced motion, the page’s own switch on (or before the preference is known).
  */
 export function SceneLink({ scene, href, className, children }: { scene: SceneId; href: string; className?: string; children: ReactNode }) {
   const router = useRouter();
   const reduced = useMediaQuery(REDUCED);
   const open = (event: MouseEvent<HTMLAnchorElement>) => {
     // A new tab or window, or no motion: the link as it is.
-    if (reduced !== false || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (reduced !== false || pageStill() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     leave(event.currentTarget);
     navigate(openTypes(scene), () => router.push(href));
@@ -210,7 +211,7 @@ export function SceneStage({ children }: { children: ReactNode }) {
       const to = `${window.location.pathname}${window.location.hash}`;
       here = to;
       const types = traversalTypes(from, to);
-      if (!types || window.matchMedia(REDUCED).matches || !('startViewTransition' in document)) return;
+      if (!types || window.matchMedia(REDUCED).matches || stillWanted() || !('startViewTransition' in document)) return;
       const open = types.includes(SCENE_OPEN);
       const scene = sceneOfTypes(types);
       leave(open && scene ? linkOf(scene) : null);

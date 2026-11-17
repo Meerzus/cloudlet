@@ -21,3 +21,6 @@ html:active-view-transition-type(scene-open, scene-back) .site-header { view-tra
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+html[data-reduced-motion]::view-transition-group(*),
+html[data-reduced-motion]::view-transition-old(*),
+html[data-reduced-motion]::view-transition-new(*) { animation: none !important; }
