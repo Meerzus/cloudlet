@@ -1014,3 +1014,19 @@ html[data-reduced-motion] :is(.kp-switch-track, .kp-switch-thumb, .kp-theme-shee
   .kp-switch:focus-visible, .kp-repo:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
   .kp-path li[data-current] { outline: 2px solid Highlight; }
 }
+
+/* ---------- Night: the copy over the sky ---------- */
+
+/* At night the clouds are moonlit, lighter than the sky, and drift under the copy of the sections
+   below the hero. Here they are dimmer than on the Toaster's landing (its scenes keep their copy
+   clear of them), and the copy takes a soft halo of the night sky with it: a cloud passing behind a
+   line dims around the letters and the text keeps 4.5:1 (audit-color-picker measures it by pixels).
+   The painted chapter has its own paper; the text of sheets, pills and buttons sits on their own fill. */
+.dark:has(.kit-site) .sky-cloud { opacity: calc((0.55 + var(--depth) * 0.45) * 0.6); }
+.dark .kit-site :is(main > section:not(#hero, #color-picker), .site-footer) :is(h2, h3, p, li, summary, a, span, code):not(:where(.ks-star, .kit-open, .kit-install-command, button, [class*='sheet'], [class*='code']) *, .ks-star, .kit-open, button) {
+  text-shadow:
+    0 0 2px oklch(0.15 0.04 266),
+    0 0 6px oklch(0.15 0.04 266 / 0.9),
+    0 0 12px oklch(0.15 0.04 266 / 0.8),
+    0 0 24px oklch(0.15 0.04 266 / 0.6);
+}

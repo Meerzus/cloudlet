@@ -21,6 +21,11 @@ function contrast(a: string, b: string): number {
   const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (light! + 0.05) / (dark! + 0.05);
 }
+/** `top` at `alpha` laid over `bottom`, as the browser composites it (sRGB). */
+function over(top: string, alpha: number, bottom: string): string {
+  const channel = (hex: string, start: number) => parseInt(hex.slice(start, start + 2), 16);
+  return `#${[1, 3, 5].map((start) => Math.round(channel(top, start) * alpha + channel(bottom, start) * (1 - alpha)).toString(16).padStart(2, '0')).join('')}`;
+}
 
 describe('the theme presets of the kit landing', () => {
   it('start with the page’s own tokens and have unique ids', () => {
@@ -41,6 +46,9 @@ describe('the theme presets of the kit landing', () => {
         expect(contrast(values.foreground, values.muted), `${preset.id} ${theme} text on muted`).toBeGreaterThanOrEqual(4.5);
         expect(contrast(values['muted-foreground'], values.background), `${preset.id} ${theme} muted text`).toBeGreaterThanOrEqual(4.5);
         expect(contrast(values.ring, values.background), `${preset.id} ${theme} ring`).toBeGreaterThanOrEqual(3);
+        // The picker's format switch (color-picker.css): the foreground at 60 % over the muted track at 60 %.
+        const track = over(values.muted, 0.6, values.background);
+        expect(contrast(over(values.foreground, 0.6, track), track), `${preset.id} ${theme} picker formats`).toBeGreaterThanOrEqual(4.5);
       }
     }
   });

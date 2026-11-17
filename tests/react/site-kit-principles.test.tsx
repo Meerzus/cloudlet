@@ -54,7 +54,8 @@ describe('the page’s own reduce-motion switch', () => {
     );
     const probe = screen.getByTestId('probe');
     await waitFor(() => expect(probe).toHaveAttribute('data-reduced', 'false'), { timeout: 4000 });
-    expect(scene.setups).toBe(1);
+    // The scenes are set up once the motion runtime has loaded, which can be a little after the flag.
+    await waitFor(() => expect(scene.setups).toBe(1), { timeout: 4000 });
 
     const toggle = screen.getByRole('switch', { name: 'Reduce motion on this page' });
     expect(toggle).toHaveAttribute('aria-checked', 'false');
@@ -62,13 +63,13 @@ describe('the page’s own reduce-motion switch', () => {
     expect(document.documentElement).toHaveAttribute(STILL_ATTRIBUTE);
     expect(toggle).toHaveAttribute('aria-checked', 'true');
     await waitFor(() => expect(probe).toHaveAttribute('data-reduced', 'true'));
-    expect(scene.cleanups).toBe(1);
+    await waitFor(() => expect(scene.cleanups).toBe(1));
     expect(screen.getByRole('status')).toHaveTextContent('Motion is reduced on this page.');
 
     act(() => toggle.click());
     expect(document.documentElement).not.toHaveAttribute(STILL_ATTRIBUTE);
     await waitFor(() => expect(probe).toHaveAttribute('data-reduced', 'false'));
-    expect(scene.setups).toBe(2);
+    await waitFor(() => expect(scene.setups).toBe(2));
     expect(screen.getByRole('status')).toHaveTextContent('Motion is back on this page.');
 
     // On again, then the page goes: the attribute leaves <html> (other pages never see it), the choice stays for a return.
@@ -138,12 +139,12 @@ describe('the theme proof', () => {
     expect(wrapper).not.toHaveAttribute('data-preset');
     act(() => screen.getByRole('radio', { name: 'Paper' }).click());
     expect(wrapper).toHaveAttribute('data-preset', 'paper');
-    expect(wrapper.style.getPropertyValue('--tp-light-background')).toBe('#fbf6ec');
+    expect(wrapper.style.getPropertyValue('--tp-light-background')).toBe('#fcf8f0');
     expect(wrapper.style.getPropertyValue('--tp-font')).toContain('serif');
     expect(document.documentElement.getAttribute('style') ?? '').not.toContain('--tp-');
     expect(screen.getByRole('status')).toHaveTextContent('The picker and the palette now use Paper.');
     // The stylesheet shown is the preset's.
-    expect(document.querySelector('.kp-theme-code')).toHaveTextContent('--background: #fbf6ec;');
+    expect(document.querySelector('.kp-theme-code')).toHaveTextContent('--background: #fcf8f0;');
     act(() => screen.getByRole('radio', { name: 'Cloudlet' }).click());
     expect(wrapper).not.toHaveAttribute('data-preset');
   });

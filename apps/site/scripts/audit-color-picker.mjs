@@ -30,10 +30,11 @@
  *
  *   npm run build && npm run build:site
  *   node apps/site/scripts/audit-color-picker.mjs <out-dir> [--browser chromium|webkit] [--skip-contrast] [--skip-pickers]
- *     [--modes fixed,page,flat] [--routes picker,kit] [--quick]
+ *     [--modes fixed,page,flat] [--routes picker,kit,kit-sky] [--quick] [--base URL]
  *
  * --quick measures three colors and one palette instead of all. --routes picks the pages measured for
- * contrast: the color picker landing (`picker`), the kit's chapter (`kit`); both by default. Writes color-picker-<browser>.json
+ * contrast: the color picker landing (`picker`), the kit's chapter (`kit`), the rest of the kit's landing over the sky
+ * (`kit-sky`, once: the sky has no modes); all by default. Writes color-picker-<browser>.json
  * (with an ARIA snapshot of each open panel); exits 1 on any failure.
  */
 import AxeBuilder from '@axe-core/playwright';
@@ -61,19 +62,20 @@ const option = (name, fallback) => {
 };
 const engine = { chromium, webkit }[option('--browser', 'chromium')];
 const modes = option('--modes', 'fixed,page,flat').split(',');
-const routes = option('--routes', 'picker,kit').split(',');
+const routes = option('--routes', 'picker,kit,kit-sky').split(',');
 const skipContrast = args.includes('--skip-contrast');
 const skipPickers = args.includes('--skip-pickers');
 const quick = args.includes('--quick');
 const [outDir] = args.filter((arg) => !arg.startsWith('--'));
 if (!outDir || !engine) {
-  console.error('Usage: node apps/site/scripts/audit-color-picker.mjs <out-dir> [--browser chromium|webkit] [--skip-contrast] [--skip-pickers] [--modes fixed,page,flat] [--routes picker,kit] [--quick]');
+  console.error('Usage: node apps/site/scripts/audit-color-picker.mjs <out-dir> [--browser chromium|webkit] [--skip-contrast] [--skip-pickers] [--modes fixed,page,flat] [--routes picker,kit,kit-sky] [--quick]');
   process.exit(2);
 }
 const out = resolve(outDir);
 mkdirSync(out, { recursive: true });
-const server = await serve();
-const base = `http://127.0.0.1:${server.address().port}`;
+const external = option('--base', null);
+const server = external ? null : await serve();
+const base = external ?? `http://127.0.0.1:${server.address().port}`;
 const report = { contrast: [], overContent: [], pickers: [] };
 const failures = [];
 const fail = (where, what) => {
@@ -207,6 +209,8 @@ const BARE = 'main *, footer *, .cp-paint-footer *';
 /** The paint layers kept in the shot of the header against the paint alone. */
 const PAINT_LAYERS = '.cp-paint, .cp-veil, .paint-section, .paint-section *';
 const HIDE_TEXT = '*, *::before, *::after { -webkit-text-fill-color: transparent !important; text-shadow: none !important; text-decoration-color: transparent !important; caret-color: transparent !important; }';
+/** The glyphs only, their halo kept: on the kit's sky a halo is what the text stands on over a cloud. */
+const HIDE_GLYPHS = '*, *::before, *::after { -webkit-text-fill-color: transparent !important; text-decoration-color: transparent !important; caret-color: transparent !important; }';
 
 /** How the paint ended up drawn, once it has settled: 'fixed', 'page' or 'flat'; null when it never drew. */
 const settledMode = (page) =>
@@ -222,9 +226,9 @@ const settledMode = (page) =>
     .catch(() => null);
 
 /** Scores one screen at the current scroll position. */
-async function scoreScreen(page, meta, where, { scope = null, headerGate = true } = {}) {
+async function scoreScreen(page, meta, where, { scope = null, headerGate = true, halo = false } = {}) {
   const targets = await textTargets(page, scope);
-  const style = await page.addStyleTag({ content: HIDE_TEXT });
+  const style = await page.addStyleTag({ content: halo ? HIDE_GLYPHS : HIDE_TEXT });
   await page.waitForTimeout(60);
   const shot = (await page.screenshot()).toString('base64');
   // The header against the paint alone (§8.2): the page's content hidden, the paint and the Opacity veil kept.
@@ -327,11 +331,11 @@ async function landingContrast(mode) {
   } finally {
     await browser.close();
   }
-  const entries = report.contrast.filter((entry) => entry.route !== 'kit' && entry.mode === mode);
+  const entries = report.contrast.filter((entry) => !entry.route && entry.mode === mode);
   const passed = entries.filter((entry) => entry.passed).length;
   const worst = [...entries].sort((p, q) => p.p1 - q.p1)[0];
   console.log(`contrast (${mode}): ${passed}/${entries.length} lines passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme} ${worst?.color})`);
-  const over = report.overContent.filter((entry) => entry.route !== 'kit' && entry.mode === mode);
+  const over = report.overContent.filter((entry) => !entry.route && entry.mode === mode);
   if (over.length) console.log(`  note: ${over.length} header labels under 4.5:1 while content scrolls under the header (not on the paint)`);
 }
 
@@ -405,6 +409,53 @@ async function kitContrast(mode) {
   console.log(`kit chapter contrast (${mode}): ${passed}/${entries.length} lines passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme} ${worst?.color})`);
   const notes = report.overContent.filter((entry) => entry.route === 'kit' && entry.mode === mode);
   if (notes.length) console.log(`  note: ${notes.length} header labels under 4.5:1 over the chapter (the header on / is the owner's call)`);
+}
+
+/**
+ * The rest of the kit's landing: its text over the sky (the hero, the Toaster's scene, Install,
+ * Principles, the FAQ with every answer open, Star, the footer), walked one screen at a time like the
+ * chapter. axe cannot see the sky (a fixed layer the hit test skips) and takes the page's base blue for
+ * the background; the pixels are what the text sits on, its halo at night included. Reduced motion holds the sky and the islands
+ * still; the chapter's own text is measured above, the header over the page is a note.
+ */
+async function kitSkyContrast() {
+  const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  try {
+    for (const [device, options] of Object.entries({ desktop: DESKTOP, phone: PHONE })) {
+      for (const colorScheme of ['light', 'dark']) {
+        const context = await browser.newContext({ ...options, colorScheme, reducedMotion: 'reduce' });
+        const page = await context.newPage();
+        const errors = [];
+        page.on('pageerror', (error) => errors.push(String(error)));
+        await page.goto(`${base}/`, { waitUntil: 'networkidle' });
+        const where = `kit sky contrast ${device}-${colorScheme}`;
+        await page.evaluate(() => {
+          for (const details of document.querySelectorAll('#faq details')) details.open = true;
+        });
+        const meta = { route: 'kit-sky', mode: 'sky', device, colorScheme, color: 'sky' };
+        const height = options.viewport.height;
+        const step = Math.round(height * 0.75);
+        for (let y = 0; ; y += step) {
+          const total = await page.evaluate(() => document.documentElement.scrollHeight);
+          await scrollTo(page, Math.min(y, total - height));
+          // Lazy clouds and images settle before the shot.
+          await page.waitForTimeout(250);
+          await scoreScreen(page, { ...meta, y }, `${where} @${y}`, { scope: 'main > section:not(#color-picker), footer', headerGate: false, halo: true });
+          if (y + height >= total) break;
+        }
+        if (errors.length) fail(where, `page errors: ${errors.join(' | ')}`);
+        await context.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+  const entries = report.contrast.filter((entry) => entry.route === 'kit-sky');
+  const passed = entries.filter((entry) => entry.passed).length;
+  const worst = [...entries].sort((p, q) => p.p1 - q.p1)[0];
+  console.log(`kit sky contrast: ${passed}/${entries.length} lines passed; tightest ${worst?.label} ${worst?.p1}:1 (${worst?.device}-${worst?.colorScheme})`);
+  const notes = report.overContent.filter((entry) => entry.route === 'kit-sky');
+  if (notes.length) console.log(`  note: ${notes.length} header labels under 4.5:1 over the page (the header on / is the owner's call)`);
 }
 
 // --- 2. Pickers -------------------------------------------------------------------------------------
@@ -649,6 +700,7 @@ try {
       if (routes.includes('picker')) await landingContrast(mode);
       if (routes.includes('kit')) await kitContrast(mode);
     }
+    if (routes.includes('kit-sky')) await kitSkyContrast();
   }
   if (!skipPickers) {
     const browser = await engine.launch(engine === chromium ? { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } : {});
@@ -659,7 +711,7 @@ try {
     }
   }
 } finally {
-  server.close();
+  server?.close();
 }
 report.failures = failures;
 writeFileSync(join(out, `color-picker-${engine.name()}.json`), JSON.stringify(report, null, 2) + '\n');

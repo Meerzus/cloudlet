@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono'
 
 /*
  * The kit's metadata, which every page without its own inherits. Icons and the OG/Twitter card are
- * files next to this layout (scripts/brand-images.mjs renders the PNGs); for now the card is the
- * Toaster's, the same as the one next to the Toaster's layout.
+ * files next to this layout: the card is the kit's (scripts/og-kit.mjs), the icons come from
+ * scripts/brand-images.mjs.
  */
 export const metadata: Metadata = {
   metadataBase: new URL(METADATA_BASE),

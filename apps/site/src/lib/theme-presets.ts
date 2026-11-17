@@ -24,7 +24,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     id: 'paper',
     label: 'Paper',
     tokens: {
-      light: { background: '#fbf6ec', foreground: '#2e2316', muted: '#f1e7d6', 'muted-foreground': '#6b563d', border: '#e2d4bc', ring: '#a65a2a' },
+      light: { background: '#fcf8f0', foreground: '#1a1209', muted: '#f4ecdf', 'muted-foreground': '#6b563d', border: '#e2d4bc', ring: '#a65a2a' },
       dark: { background: '#221a12', foreground: '#f4eadb', muted: '#31271c', 'muted-foreground': '#c4b197', border: '#4a3a29', ring: '#e09a68' },
     },
     font: "Georgia, 'Times New Roman', serif",
@@ -33,7 +33,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     id: 'terminal',
     label: 'Terminal',
     tokens: {
-      light: { background: '#f3f7f4', foreground: '#0f2219', muted: '#e2ece5', 'muted-foreground': '#43604f', border: '#c9d9cf', ring: '#137a55' },
+      light: { background: '#f3f7f4', foreground: '#06140d', muted: '#e2ece5', 'muted-foreground': '#43604f', border: '#c9d9cf', ring: '#137a55' },
       dark: { background: '#0c1511', foreground: '#d4f3e4', muted: '#15231c', 'muted-foreground': '#8fb5a2', border: '#23372d', ring: '#46cf9b' },
     },
     font: 'ui-monospace, SFMono-Regular, Menlo, monospace',

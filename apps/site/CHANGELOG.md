@@ -109,6 +109,12 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   three themes on the shadcn tokens for a picker and a palette, with the stylesheet they amount to and
   the Toaster's style editor. Tested, not promised — what the repository runs, each line with links to
   the files on GitHub. Then a short FAQ about the kit.
+- The kit's page has a link card of its own on social sites and in chats: "Cloudlet" written in
+  clouds over "Everything floats. Nothing jumps." on the day sky (it was the Toaster's). The docs
+  pages share it on X as before, now with their own title and description there.
+- At night the kit's clouds are dimmer and the words below the hero carry a soft halo of the night
+  sky, so a moonlit cloud drifting behind a line no longer washes it out. The Paper and Terminal
+  themes in Principles have darker text, so the picker's format switch reads at 4.5:1 in them too.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and

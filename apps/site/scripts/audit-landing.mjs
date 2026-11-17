@@ -13,7 +13,9 @@
  *
  * Besides axe, on `/`, `/toaster`, `/toaster/playground`, `/color-picker` and its docs: a keyboard pass (Tab from the top until focus leaves the
  * page or cycles; every stop must show a focus ring and be scrolled into view) and, with reduced
- * motion, the still layout of `/toaster` (no Lenis, no pin spacers, sky and scenes untransformed).
+ * motion, the still layout of `/` and `/toaster` (no Lenis, no pin spacers, sky and scenes untransformed).
+ * The kit's `/` is checked at every section, then with each of its live places open (KIT_LIVE). On
+ * the phone, every page is also loaded 320 px wide and must not scroll sideways.
  *
  * Writes axe-<browser>.json; exits 1 on any violation, keyboard or reduced-motion failure, or console error.
  */
@@ -72,15 +74,52 @@ const homeStops = (page) =>
     return stops;
   }, SCENE_POINTS);
 
-/** Marks text whose effective opacity is strictly between 0 and 1; returns where it sits (aria-hidden counts as decorative). */
+/**
+ * Live places on the kit's landing, checked after its sections: each opens what the visitor would open
+ * (a picker's panel on a cloud and in the comparisons, a notification in the scene and from the live
+ * code, a theme, an answer) and is checked open, in page order on one load of the page.
+ */
+const KIT_LIVE = [
+  { label: 'hero picker open', click: '#hero .color-picker-swatch[aria-label="Pick a color"]' },
+  { label: 'toaster sent three', click: '#toaster .kt-control >> text=Send three', wait: 1600 },
+  { label: 'picker compare open', click: '#color-picker .color-picker-swatch[aria-label="Pick the accent"]' },
+  { label: 'palette compare open', click: '#color-picker .color-palette .color-picker-swatch' },
+  { label: 'install code run', click: '#install .ki-run', wait: 1600 },
+  { label: 'install picker open', click: ['#install button[aria-pressed] >> text=Color picker', '#install .color-picker-swatch[aria-label="Change accent"]'] },
+  { label: 'principles motion open', click: '#principles .color-picker-swatch[aria-label^="Open the picker to catch"]' },
+  { label: 'principles theme paper', click: '#principles label:has(input[type="radio"]) >> nth=1' },
+  { label: 'principles theme picker open', click: '#principles .color-picker-swatch[aria-label="Pick the themed accent"]' },
+  // axe cannot see the sky behind an open answer (a fixed layer its hit test skips) and takes the page's
+  // base blue for it: the answers' contrast is measured by pixels in audit-color-picker.mjs (kit-sky).
+  { label: 'faq answer open', click: '#faq summary >> nth=0', pixels: true },
+];
+
+/** Scrolls a live place's control to the middle of the screen, presses it and lets it settle. */
+async function openLive(page, live) {
+  for (const selector of [live.click].flat()) {
+    const control = page.locator(selector).first();
+    const y = await control.evaluate((element) => element.getBoundingClientRect().top + window.scrollY - window.innerHeight / 2);
+    await scrollTo(page, Math.max(0, y));
+    await control.click();
+    await page.waitForTimeout(live.wait ?? 900);
+  }
+}
+
+/** Marks text whose effective opacity is strictly between 0 and 1, or under a running fade; returns where it sits (aria-hidden counts as decorative). */
 const markFading = (page) =>
   page.evaluate(() => {
     const where = new Set();
     for (const element of document.querySelectorAll('[data-audit-fading]')) element.removeAttribute('data-audit-fading');
+    // A fade that is running (or about to) passes through every opacity before axe gets to it.
+    const fadingNow = document.getAnimations()
+      .filter((animation) => animation.playState !== 'finished' && Number.isFinite(animation.effect?.getComputedTiming().endTime) && animation.effect.getKeyframes().some((frame) => 'opacity' in frame))
+      .map((animation) => animation.effect.target)
+      .filter((target) => target instanceof Element);
     for (const element of document.querySelectorAll('main *')) {
       let opacity = 1;
       for (let node = element; node; node = node.parentElement) opacity *= Number(getComputedStyle(node).opacity);
-      if (opacity > 0.01 && opacity < 0.99 && element.childElementCount === 0 && element.textContent?.trim()) {
+      const animated = fadingNow.some((target) => target.contains(element));
+      if (((opacity > 0.01 && opacity < 0.99) || animated) && element.childElementCount === 0 && element.textContent?.trim()) {
         element.setAttribute('data-audit-fading', '');
         const owner = element.closest('[aria-hidden="true"]') ? 'decorative' : (element.closest('[class]')?.className.split(' ')[0] ?? '?');
         where.add(owner);
@@ -89,8 +128,10 @@ const markFading = (page) =>
     return [...where];
   });
 
-async function axe(page) {
-  const audit = await new AxeBuilder({ page }).exclude('[data-audit-fading]').analyze();
+async function axe(page, { pixels = false } = {}) {
+  const builder = new AxeBuilder({ page }).exclude('[data-audit-fading]');
+  if (pixels) builder.disableRules(['color-contrast']);
+  const audit = await builder.analyze();
   return audit.violations.map((violation) => ({
     id: violation.id,
     impact: violation.impact,
@@ -177,7 +218,7 @@ try {
     for (const path of ['/', '/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/docs/components/color-picker']) {
       await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(600);
-      const stops = path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
+      const stops = path === '/' || path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
       for (const stop of stops) {
         await scrollTo(page, stop.y);
         const fading = await markFading(page);
@@ -185,17 +226,44 @@ try {
         entry.checks.push({ path, at: stop.label, fading, violations });
         if (violations.length) failed = true;
       }
+      if (path === '/') {
+        for (const live of KIT_LIVE) {
+          await openLive(page, live);
+          const fading = await markFading(page);
+          const violations = await axe(page, live);
+          entry.checks.push({ path, at: live.label, fading, violations });
+          if (violations.length) failed = true;
+          // Close what opened (a panel, a popover); a theme and an answer stay as they are.
+          await page.keyboard.press('Escape');
+          await page.waitForTimeout(400);
+        }
+      }
     }
     entry.keyboard = {};
     for (const path of ['/', '/toaster', '/toaster/playground', '/color-picker', '/docs/components/color-picker']) {
       entry.keyboard[path] = await keyboard(page, path);
       if (entry.keyboard[path].failures.length) failed = true;
     }
+    // The narrowest phone (320 px): no page scrolls sideways.
+    if (name.startsWith('phone') && options.reducedMotion !== 'reduce') {
+      entry.narrow = {};
+      await page.setViewportSize({ width: 320, height: 640 });
+      for (const path of ['/', '/toaster', '/toaster/playground', '/color-picker', '/docs/components/color-picker']) {
+        await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(400);
+        const width = (entry.narrow[path] = await page.evaluate(() => document.documentElement.scrollWidth));
+        if (width > 320) failed = true;
+      }
+      await page.setViewportSize(options.viewport);
+    }
     if (options.reducedMotion === 'reduce') {
-      await page.goto(`${base}/toaster`, { waitUntil: 'networkidle' });
-      await scrollTo(page, 3000);
-      entry.still = await stillLayout(page);
-      if (entry.still.lenis || entry.still.pinSpacers || entry.still.moved) failed = true;
+      entry.still = {};
+      for (const path of ['/', '/toaster']) {
+        await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+        await scrollTo(page, 3000);
+        const still = (entry.still[path] = await stillLayout(page));
+        if (still.lenis || still.pinSpacers || still.moved) failed = true;
+      }
     }
     if (errors.length) failed = true;
     await context.close();
@@ -204,7 +272,8 @@ try {
     const keys = Object.entries(entry.keyboard).map(([path, pass]) => `${path} ${pass.stops} tab stops, ${pass.failures.length} failing`);
     console.log(
       `${name}: ${entry.checks.length} checks, ${bad.length} with violations (mid-fade text skipped in: ${fading.join(', ') || 'none'}); ${keys.join('; ')}; ${errors.length} console errors` +
-        (entry.still ? `; still layout ${JSON.stringify(entry.still)}` : ''),
+        (entry.still ? `; still layout ${JSON.stringify(entry.still)}` : '') +
+        (entry.narrow ? `; scrollWidth at 320 px ${JSON.stringify(entry.narrow)}` : ''),
     );
     for (const [path, pass] of Object.entries(entry.keyboard)) for (const stop of pass.failures) console.log(`  keyboard ${path}: ${JSON.stringify(stop)}`);
     for (const check of bad)

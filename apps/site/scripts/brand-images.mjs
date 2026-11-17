@@ -8,7 +8,7 @@
  *
  * Writes src/app/apple-icon.png (180², full bleed: iOS rounds it itself) and the Toaster's card,
  * opengraph-image.png + twitter-image.png (1200×630, a hero frame with clouds), next to the Toaster's
- * layout (src/app/toaster/(site)/) and, until the kit has a card of its own, at the root too.
+ * layout (src/app/toaster/(site)/). The kit's card at the root is scripts/og-kit.mjs.
  */
 import { copyFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -55,8 +55,7 @@ try {
   }, card);
   await page.evaluate(() => Promise.all([document.fonts.ready, ...[...document.images].map((image) => image.decode())]));
   await page.screenshot({ path: resolve(TOASTER, 'opengraph-image.png') });
-  for (const [folder, name] of [[TOASTER, 'twitter-image.png'], [APP, 'opengraph-image.png'], [APP, 'twitter-image.png']])
-    copyFileSync(resolve(TOASTER, 'opengraph-image.png'), resolve(folder, name));
+  copyFileSync(resolve(TOASTER, 'opengraph-image.png'), resolve(TOASTER, 'twitter-image.png'));
 
   const icon = await browser.newPage({ viewport: { width: 180, height: 180 } });
   await icon.setContent(`<style>html,body{margin:0}</style>${ICON.replace('<svg ', '<svg width="180" height="180" ').replace(' rx="8"', '')}`);
@@ -65,4 +64,4 @@ try {
   await browser.close();
   server.close();
 }
-console.log('wrote apple-icon.png and the Toaster card (opengraph-image.png, twitter-image.png) in toaster/(site)/ and at the root');
+console.log('wrote apple-icon.png and the Toaster card (opengraph-image.png, twitter-image.png) in toaster/(site)/');
