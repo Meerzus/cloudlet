@@ -61,15 +61,15 @@ export async function generateMetadata({ params }: Props, parent: ResolvingMetad
   if (!page) notFound();
   const title = `${page.data.title} — Cloudlet Docs`;
   // A page's own openGraph replaces the parent's whole, file-based image included: carry it over.
-  const { openGraph } = await parent;
+  const { openGraph, twitter } = await parent;
   const picker = page.url === COLOR_PICKER_DOCS_PATH;
   // Agents and crawlers: the canonical address and the page's own Markdown.
   return {
     title,
     description: page.data.description,
     openGraph: { title, description: page.data.description, url: page.url, images: picker ? pickerCard('opengraph-image') : (openGraph?.images ?? []) },
-    // A page's twitter replaces the root's whole too.
-    ...(picker ? { twitter: { card: 'summary_large_image', title, description: page.data.description, images: pickerCard('twitter-image') } } : {}),
+    // A page's twitter replaces the root's whole too: its own title and description, the card carried over.
+    twitter: { card: 'summary_large_image', title, description: page.data.description, images: picker ? pickerCard('twitter-image') : (twitter?.images ?? []) },
     alternates: { canonical: `${SITE_URL}${page.url}`, types: { 'text/markdown': `${SITE_URL}${markdownUrl(page)}` } },
   };
 }

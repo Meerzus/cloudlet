@@ -30,10 +30,13 @@ interface PickerColor {
   readonly started: boolean;
   /** How the latest change shows: a jump bleeds out of where it was made, a slider moved repaints at once. */
   readonly change: MutableRefObject<PickerChange>;
-  /** Sets the page color (the palette's first); `from` is the control or the point it was picked at. */
-  readonly pick: (value: string, from?: ChangeSource) => void;
-  /** Sets the whole palette; its first color becomes the page color. */
-  readonly setPalette: (colors: readonly string[], from?: ChangeSource) => void;
+  /**
+   * Sets the page color (the palette's first); `from` is the control or the point it was picked at.
+   * `bleed` overrides how it shows: by default a slider in focus repaints at once and anything else spreads.
+   */
+  readonly pick: (value: string, from?: ChangeSource, bleed?: boolean) => void;
+  /** Sets the whole palette; its first color becomes the page color. `bleed` as for `pick`. */
+  readonly setPalette: (colors: readonly string[], from?: ChangeSource, bleed?: boolean) => void;
   /** The page's paint, once it draws: the color it shows under a point (Tools takes it). */
   readonly paint: MutableRefObject<PaintProbe | null>;
 }
@@ -105,8 +108,13 @@ const isJump = () => document.activeElement?.getAttribute('role') !== 'slider';
  * color — the hero's panel, the inline panel in Built for keyboards and the Palette section read and
  * set it. Until the visitor edits the palette its other colors follow the page color by a harmony.
  * The page color lives on <html> too, as `--cp-color`, for the flat background of the page.
+ *
+ * `page={false}` keeps the state to a part of another page (the kit's landing): nothing is put on
+ * <html> and the address is never written; the start color is still `?c=` when the link has one (how
+ * an audit sets it), otherwise the start script's color when the page renders one, else a random
+ * curated one.
  */
-export function PickerColorProvider({ children }: { children: ReactNode }) {
+export function PickerColorProvider({ children, page = true }: { children: ReactNode; page?: boolean }) {
   // The server renders the first curated color; the start script has already painted the real one on <html>.
   const [value, setValue] = useState<string>(START_COLORS[0]);
   /** The palette after the first color, once the visitor owns it; null while it follows the page color. */
@@ -134,22 +142,24 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
     // A link with more than one color is a palette someone made: it is theirs, not a harmony.
     if (linked && linked.length > 1) setRest(linked.slice(1));
     setStarted(true);
+    if (fromScript === undefined) return;
     // Used once: a later client navigation back here picks afresh. Cleared after a task, so StrictMode's
     // immediate second run of this effect still reads the same color.
     const consume = window.setTimeout(() => delete globals[START_GLOBAL]);
     return () => window.clearTimeout(consume);
+    // Once, at mount: `page` is fixed for a provider's life.
   }, []);
 
   useLayoutEffect(() => {
-    if (started) document.documentElement.style.setProperty('--cp-color', hex);
-  }, [hex, started]);
+    if (started && page) document.documentElement.style.setProperty('--cp-color', hex);
+  }, [hex, started, page]);
 
   const linkKey = own ? paletteKey : hex;
   useEffect(() => {
-    if (!changed.current) return;
+    if (!changed.current || !page) return;
     const timer = window.setTimeout(() => writeUrl(linkKey.split(',')), URL_DELAY);
     return () => window.clearTimeout(timer);
-  }, [linkKey]);
+  }, [linkKey, page]);
 
   const state = useMemo<PickerColor>(
     () => ({
@@ -163,15 +173,15 @@ export function PickerColorProvider({ children }: { children: ReactNode }) {
       started,
       change,
       paint,
-      pick(next, from) {
-        change.current = { bleed: isJump(), from: from ?? null };
+      pick(next, from, bleed) {
+        change.current = { bleed: bleed ?? isJump(), from: from ?? null };
         changed.current = true;
         setValue(next);
       },
-      setPalette(colors, from) {
+      setPalette(colors, from, bleed) {
         const [first, ...others] = colors.slice(0, PALETTE_MAX);
         if (first === undefined) return;
-        change.current = { bleed: isJump(), from: from ?? null };
+        change.current = { bleed: bleed ?? isJump(), from: from ?? null };
         changed.current = true;
         setValue(first);
         // An untouched palette stays a harmony while only its first color (or the format) changes:

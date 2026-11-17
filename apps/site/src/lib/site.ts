@@ -1,10 +1,17 @@
 /** Public origin of the site: the apex is canonical, `www` redirects to it. */
 export const SITE_URL = 'https://cloudlet.dev';
-/**
- * The Toaster's landing and Playground live under `/toaster`; the root redirects there
- * (vercel.json) until it becomes the kit's own page.
- */
+/** The root is the kit's own landing; each component has a landing of its own under it. */
+export const KIT_PATH = '/';
+/** The kit's title and description: the root's metadata and the site-wide defaults. */
+export const KIT_TITLE = 'Cloudlet — React components, light as a cloud';
+export const KIT_DESCRIPTION =
+  'A kit of React components on interruptible springs: notifications that stack softly, a color picker and a palette. Install them with shadcn and own every line.';
+/** The Toaster's landing and Playground live under `/toaster`. */
 export const TOASTER_PATH = '/toaster';
+/** The Toaster's title and description: its landing's metadata and its Open Graph and Twitter card. */
+export const TOASTER_TITLE = 'Cloudlet — notifications, light as a cloud';
+export const TOASTER_DESCRIPTION =
+  'A React notification stack that drifts in, stacks softly and opens into a card when it matters. Every motion on springs, every frame interruptible.';
 export const PLAYGROUND_PATH = `${TOASTER_PATH}/playground`;
 /** The color picker's landing (COLOR_PICKER §8): a registry item, no npm package. */
 export const COLOR_PICKER_PATH = '/color-picker';

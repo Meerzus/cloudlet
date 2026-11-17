@@ -104,7 +104,12 @@ export function paintColorAt(x: number, pageY: number, sample: PaintSample): str
   return `#${hexPair(r)}${hexPair(g)}${hexPair(b)}`;
 }
 
-/** A picture's pixels, read once through a 2D canvas; null where one cannot be had. */
+/**
+ * A picture's pixels, read once through a 2D canvas; null where one cannot be had. The picture is
+ * stretched over the canvas: a candidate picked from a `srcset` reports a natural size corrected by
+ * its density (a 1280w frame in a 1440 px window is 1440 px wide), and drawn at its own size it would
+ * leave the canvas' far side empty.
+ */
 export function readPixels(image: HTMLImageElement): Pixels | null {
   const width = image.naturalWidth;
   const height = image.naturalHeight;
@@ -114,6 +119,6 @@ export function readPixels(image: HTMLImageElement): Pixels | null {
   canvas.height = height;
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) return null;
-  context.drawImage(image, 0, 0);
+  context.drawImage(image, 0, 0, width, height);
   return { data: context.getImageData(0, 0, width, height).data, width, height };
 }

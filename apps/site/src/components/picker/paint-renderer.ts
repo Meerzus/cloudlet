@@ -1,11 +1,11 @@
 import { CYCLE_MS, FLOW, FLOW_FPS, tileSize, type Size } from '@/lib/paint-layout';
-import type { CalmMap, PageRect } from '@/lib/paint-calm';
+import type { CalmMap } from '@/lib/paint-calm';
+import type { BleedOrigin } from '@/lib/paint-origin';
+import { EDGE_RAGGED, type SectionEdges } from '@/lib/paint-section';
 import { LUT_SIZE } from '@/lib/picker-ramp';
 import { PaintFluid } from './paint-fluid';
 import { PAINT_FRAGMENT, PAINT_VERTEX } from './paint-shader';
 
-/** Where a new ramp spreads from: a control's box in page coordinates (a point is an empty box), with its corner radius. */
-export type BleedOrigin = PageRect & { readonly radius: number };
 
 export interface PaintLayout {
   /**
@@ -22,6 +22,16 @@ export interface PaintLayout {
   readonly calm: CalmMap;
   /** The paper under the header's controls, in window coordinates (the header stays put): `fixed` mode only. */
   readonly headerCalm: CalmMap | null;
+  /**
+   * Paint in one section of a page (paint-section.tsx): "page" coordinates are the section's, and the
+   * paint fades out above and below it (lib/paint-section.ts). Absent for paint under a whole page.
+   */
+  readonly edges?: SectionEdges;
+}
+
+export interface PaintOptions {
+  /** A canvas that shows what lies under it where the paint fades out (a section's edges); opaque otherwise. */
+  readonly transparent?: boolean;
 }
 
 /** Length of a bleed (§8.3). */
@@ -60,6 +70,8 @@ const UNIFORMS = [
   'uGrain',
   'uStir',
   'uStirOn',
+  'uEdges',
+  'uRagged',
 ] as const;
 type Uniform = (typeof UNIFORMS)[number];
 
@@ -85,7 +97,8 @@ function texture(gl: WebGL2RenderingContext, filter: number): WebGLTexture | nul
 }
 
 /**
- * Draws the paint under the whole color picker landing with raw WebGL 2 (COLOR_PICKER §8.2–§8.3,
+ * Draws the paint under the whole color picker landing — or inside one section of another page
+ * (`PaintLayout.edges`) — with raw WebGL 2 (COLOR_PICKER §8.2–§8.3,
  * §8.9): one long frame laid along the page, one ramp, the paper lifted under the copy, a slow flow
  * and a bleed out of a control when the ramp jumps. Discipline: at most 1.5 device px per CSS px;
  * frames only while active (a visible tab), at FLOW_FPS while it only flows, every frame while it
@@ -93,8 +106,10 @@ function texture(gl: WebGL2RenderingContext, filter: number): WebGLTexture | nul
  */
 export class PaintRenderer {
   /** A renderer showing `lut` over a blank frame, or null when there is no WebGL 2 or the shader does not compile. */
-  static create(canvas: HTMLCanvasElement, lut: Uint8Array): PaintRenderer | null {
-    const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: false, powerPreference: 'low-power' });
+  static create(canvas: HTMLCanvasElement, lut: Uint8Array, options: PaintOptions = {}): PaintRenderer | null {
+    // A transparent canvas takes the shader's premultiplied output as it is.
+    const transparent = options.transparent === true;
+    const gl = canvas.getContext('webgl2', { alpha: transparent, antialias: false, depth: false, stencil: false, premultipliedAlpha: transparent, powerPreference: 'low-power' });
     if (!gl) return null;
     const vertex = compile(gl, gl.VERTEX_SHADER, PAINT_VERTEX);
     const fragment = compile(gl, gl.FRAGMENT_SHADER, PAINT_FRAGMENT);
@@ -409,6 +424,9 @@ export class PaintRenderer {
     gl.uniform1f(u.uBleed, this.bleedStart === null ? 1 : easeOut(progress));
     gl.uniform1f(u.uReach, this.reach);
     gl.uniform1f(u.uGrain, this.hasFrame ? GRAIN : 0);
+    const edges = layout.edges;
+    gl.uniform3f(u.uEdges, edges?.top ?? 0, edges?.height ?? 0, edges?.bottom ?? 0);
+    gl.uniform1f(u.uRagged, EDGE_RAGGED);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.lastDraw = now;
     this.stale = this.bleedStart !== null || (stirring && this.fluid!.awake());

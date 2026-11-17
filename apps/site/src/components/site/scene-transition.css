@@ -1,0 +1,26 @@
+/*
+ * The kit's page turning into a component's landing and back (scene-transition.tsx), only for a
+ * navigation that carries a scene's type. The page's two pictures animate from script; here the
+ * stage's group stands still and the header holds still above it.
+ */
+
+/* Clicks and the trackpad reach the page that is arriving: a second click or Back takes over at once. */
+html:active-view-transition-type(scene-open, scene-back)::view-transition { pointer-events: none; }
+
+::view-transition-group(scene-page) { animation: none; }
+::view-transition-old(scene-page), ::view-transition-new(scene-page) { animation: none; mix-blend-mode: normal; }
+/* Back: the landing leaves over the kit's page. */
+html:active-view-transition-type(scene-back)::view-transition-old(scene-page) { z-index: 1; }
+
+/* The header is the same on both pages: it holds still above them. */
+html:active-view-transition-type(scene-open, scene-back) .site-header { view-transition-name: scene-header; }
+::view-transition-group(scene-header) { animation: none; z-index: 2; }
+::view-transition-old(scene-header) { display: none; }
+::view-transition-new(scene-header) { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
+html[data-reduced-motion]::view-transition-group(*),
+html[data-reduced-motion]::view-transition-old(*),
+html[data-reduced-motion]::view-transition-new(*) { animation: none !important; }

@@ -134,6 +134,22 @@ export function FrameApp() {
           applyTheme(message.theme);
           setTheme(message.theme);
           break;
+        case 'toast-show': {
+          const { title, kind, duration } = message.toast;
+          controller.show({ id: message.id, title, kind, duration, attention: 'stack' });
+          break;
+        }
+        case 'toast-update': {
+          const handle = controller.getHandle(message.id);
+          const { title, kind, duration } = message.toast;
+          if (handle) controller.update(handle, { title, kind, duration });
+          break;
+        }
+        case 'toast-dismiss': {
+          const handle = controller.getHandle(message.id);
+          if (handle) controller.dismiss(handle);
+          break;
+        }
       }
     };
     // Visitor input inside the screen interrupts the intro; the intro's own synthetic events are untrusted.

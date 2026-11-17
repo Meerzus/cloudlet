@@ -51,6 +51,78 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 
 ### Website
 
+- [cloudlet.dev](https://cloudlet.dev) is the kit's own page instead of a redirect to `/toaster`: the
+  kit in one line, the `npx shadcn@latest add @cloudlet/<item>` command with a switch of the
+  components, and every component with a link to its landing and its docs. The root has its own
+  title, description and canonical address and is the first entry of `sitemap.xml`; the Toaster's
+  title, description and link card moved to [/toaster](https://cloudlet.dev/toaster). The Color
+  picker's page shares its card as a large image on X too.
+- The top of [cloudlet.dev](https://cloudlet.dev) is painted: "Made to work together." on the color
+  picker's grainy airbrushed paint, with the line "A Toaster, a color picker and a palette for React.
+  Change one color and the whole kit answers.", the install command with a switch of the components,
+  and two buttons under it — Browse components (the list in the docs) and Star on GitHub (the count
+  shows from 100 stars). Beside the words are the kit's three components, live and at the same
+  weight: the Toaster, whose record shows a success, an info, an error or an upload, and whose Send
+  sends it into the page's Island (it flies out of the record; an upload turns into a success in
+  place); the Color picker's panel, which sets the page color; and the Color palette, whose own colors
+  paint the page. The paint spreads in from the picker on load, repaints from the control that changed
+  it, and runs into the sky of the Toaster's chapter along a ragged airbrush edge. Once a change has
+  settled the Island says "Accent updated" or "Palette updated", one notification updated in place;
+  loading and scrolling say nothing. Reduced motion (the system's or the page's own switch) keeps the
+  paint still, and without WebGL 2 a still frame of it stands in. On a phone the words, the command
+  and the buttons come first, then the three components one under another.
+- Under the first screen, on the sky, the Toaster's chapter: two identical phones, a plain stack of toasts
+  on the left and the real Toaster on the right, and one row of buttons (Send one, Send three,
+  Update, Take back) that sends the same notifications to both at the same moment. The plain stack
+  fades them in and out and pushes the rest aside; Toaster stacks them and turns around halfway. The
+  Toaster's phone is live (tap its stack to open it) and loads as the chapter comes near; on a phone
+  the two stand one above the other. Then Open Toaster and its install command.
+- Under the Toaster's chapter the sky runs into the color picker's paint and out of it again: the
+  chapter of the Color picker and the Color palette is painted with the same grainy airbrushed frame
+  as [/color-picker](https://cloudlet.dev/color-picker), in the page's one color (the hero's), with
+  paper under its words and a ragged airbrush edge at its top and bottom. The paint loads as the
+  chapter comes near and spreads in from the heading; it flows only while the chapter is on screen, the
+  cursor stirs it, reduced motion keeps it still, and without WebGL 2 a still frame of it stands in.
+  The hero and the chapter share one WebGL context, and the address of the kit's page does not change.
+  The list of components that stood there is gone.
+- In that chapter, "Same color. Better in hand.": two comparisons on identical sheets. The browser's
+  own color input beside the Color picker, with a row of colors that sets both at once; a row of the
+  browser's color inputs with a plus and a remove button beside the Color palette, with harmonies that
+  fill both. Both sides hold the same color or palette, so a change on either shows on the other, and
+  every change repaints the chapter: a press spreads out of the control, a drag repaints at once, and
+  a palette of your own paints the whole page in its colors. Once a change has settled, the page's
+  Island says "Accent updated" or "Palette updated" and keeps updating that one notification while it
+  is on screen; loading and scrolling say nothing. Each comparison ends with Open Color picker or Open
+  Color palette and its install command.
+- Open Toaster, Open Color picker and Open Color palette on the kit's page open the landing out of the
+  link itself: it grows from the link's pill to the whole window on a spring while the kit's page
+  sinks back behind it, and the browser's Back shrinks it into the same link, with the kit's page
+  where you left it. The header stays put. The color picker's landing opens in the chapter's colors
+  (`?c=`), so its paint goes on where the chapter's was; a link off screen swaps the pages with a short
+  blur. The header, its Components panel, the footers and the docs navigate as before, and with
+  reduced motion or without view transitions every link is a plain navigation.
+- Back on the sky under the color picker's chapter, Install: the `npx shadcn@latest add @cloudlet/<item>`
+  command with a switch of the components, what the item adds, the same item by its address
+  (`https://cloudlet.dev/r/<item>.json`) for a CLI that does not know the namespace, and the few lines
+  that use it, which run on the page: edit the notification's title and Run (or press Enter) and it
+  flies out of the `<Toaster />` line into the page's Island; the swatch after `<ColorPicker />` opens
+  the real picker and the palette after `<ColorPalette />` is the real palette, with the code's values
+  following them. Copy takes the code with your values. The page ends with Star on GitHub, large,
+  and the install command once more.
+- Between Install and Star on GitHub, Principles: four promises, each shown on the page. Motion — a
+  picker to catch halfway, with slow motion at a quarter speed. Accessibility — a switch that reduces
+  motion on this page (smooth scrolling, the sky's parallax, the scenes, the paint's spread and flow,
+  the entrances and the transitions to a landing; the Color picker and the Color palette follow it,
+  the Toaster follows the system setting), and the path Tab takes through a live picker. Your theme —
+  three themes on the shadcn tokens for a picker and a palette, with the stylesheet they amount to and
+  the Toaster's style editor. Tested, not promised — what the repository runs, each line with links to
+  the files on GitHub. Then a short FAQ about the kit.
+- The kit's page has a link card of its own on social sites and in chats: "Cloudlet" and "Made to
+  work together" written in clouds across a starry night sky (it was the Toaster's). The docs
+  pages share it on X as before, now with their own title and description there.
+- At night the kit's clouds are dimmer and the words below the hero carry a soft halo of the night
+  sky, so a moonlit cloud drifting behind a line no longer washes it out. The Paper and Terminal
+  themes in Principles have darker text, so the picker's format switch reads at 4.5:1 in them too.
 - [/color-picker](https://cloudlet.dev/color-picker): "pick a color, paint the page". One long grainy
   airbrushed paint lies under the whole page, recolored in one WebGL 2 shader by the picked color: the
   open panel beside the headline paints it, a new color bleeds out of the control that made it, and
@@ -120,3 +192,8 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 - Documentation pages keep the link card of their section (Toaster and Color picker); they had none.
 - The cloud icon keeps its cut-outs in dark mode where the page sets a fill on SVGs, as the shadcn
   directory does.
+- At 320 px [/toaster](https://cloudlet.dev/toaster) no longer scrolls sideways by a pixel: the
+  install command fits the screen whole.
+- In Tools on [/color-picker](https://cloudlet.dev/color-picker), a click on the paint takes the
+  color under the cursor in windows wider than the paint's frame too; there it read the frame shrunk
+  into the window's left part.

@@ -1099,6 +1099,8 @@ html[data-device='foldable'] .fs-status {
   .device-fold-slot > .device-fold,
   .device-fold-slot[data-shown] > .device-fold { transition: none; }
 }
+/* A page's own switch (lib/reduced-motion.ts; the kit's landing): the same stillness as the media query. */
+html[data-reduced-motion] [data-segment-ready] > .segment-indicator { transition: opacity 150ms ease; }
 }
 
 /* ---------- Puppet accuracy stand (/puppet-check) ---------- */
@@ -1327,6 +1329,7 @@ html[data-show="puppet"] .cloudlet-host { visibility: hidden; }
 .components-chevron { transition: rotate 240ms cubic-bezier(0.32, 0.72, 0, 1); }
 .components-trigger[aria-expanded='true'] .components-chevron { rotate: 180deg; }
 @media (prefers-reduced-motion: reduce) { .components-chevron { transition: none; } }
+html[data-reduced-motion] .components-chevron { transition: none; }
 @media (forced-colors: active) {
   .components-panel-shape { background: Canvas; color: CanvasText; }
   .components-panel-card { outline: 1px solid CanvasText; outline-offset: -1px; }
@@ -1396,6 +1399,7 @@ html[data-wordmark-mask] .footer-bank {
 .faq-answer { padding-bottom: 1.5rem; }
 .faq-answer p { max-width: 44rem; color: color-mix(in oklab, var(--foreground) 80%, transparent); text-wrap: pretty; }
 @media (prefers-reduced-motion: reduce) { .faq-chevron { transition: none; } }
+html[data-reduced-motion] .faq-chevron { transition: none; }
 
 /* ---------- Chapters (landing) ----------
    One dot per chapter on the right edge; the current one morphs into a pill that fills with the
@@ -1438,6 +1442,7 @@ html[data-wordmark-mask] .footer-bank {
 @media (prefers-reduced-motion: reduce) {
   .chapters, .chapter-dot, .chapter-label { transition: none; }
 }
+html[data-reduced-motion] :is(.chapters, .chapter-dot, .chapter-label) { transition: none; }
 @media (forced-colors: active) {
   .chapter-dot { background: GrayText; box-shadow: none; }
   .chapter-fill { background: Highlight; }

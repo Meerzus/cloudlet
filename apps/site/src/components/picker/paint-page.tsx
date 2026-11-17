@@ -3,11 +3,13 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { boxRects, CALM_HEADER, CALM_REACH, CALM_TEXT, calmMap, lineRects, type CalmMap } from '@/lib/paint-calm';
 import { tileSize } from '@/lib/paint-layout';
+import { bleedOrigin, type BleedOrigin } from '@/lib/paint-origin';
 import { paintColorAt, readPixels, type Pixels } from '@/lib/paint-sample';
 import { softwareGL } from '@/lib/picker-motion';
 import { flatLut, flatOf, pageRamp, rampLut, themeOf } from '@/lib/picker-ramp';
-import { LIFT, PaintRenderer, type BleedOrigin, type PaintLayout } from './paint-renderer';
-import { usePickerColor, type ChangeSource } from './picker-color';
+import { LIFT, PaintRenderer, type PaintLayout } from './paint-renderer';
+import { usePickerColor } from './picker-color';
+
 
 const REDUCED = '(prefers-reduced-motion: reduce)';
 /** Where a jump with no source of its own spreads from, and the frame's first appearance: the hero's panel. */
@@ -20,16 +22,6 @@ const NO_SWIRL = '#tools';
 
 /** How the paint is drawn: on a canvas fixed to the window, on one over the whole page (software WebGL), or not at all (flat). */
 export type PaintMode = 'fixed' | 'page' | 'flat';
-
-/** A source of a change as the renderer takes it: a box in page coordinates with its corner radius. */
-export function bleedOrigin(source: ChangeSource): BleedOrigin {
-  if (!('getBoundingClientRect' in source)) return { x: source.x, y: source.y, width: 0, height: 0, radius: 0 };
-  // A wrapper round an inline panel spreads from the panel itself, with its rounded corners.
-  const target = source.matches('.color-picker-inline') ? source : (source.querySelector('.color-picker-inline') ?? source);
-  const box = target.getBoundingClientRect();
-  const radius = Number.parseFloat(getComputedStyle(target).borderTopLeftRadius) || 0;
-  return { x: box.left + window.scrollX, y: box.top + window.scrollY, width: box.width, height: box.height, radius };
-}
 
 /**
  * The paint under the whole color picker landing (COLOR_PICKER §8.2–§8.3): the long frame recolored

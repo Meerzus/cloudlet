@@ -9,7 +9,6 @@
     { "source": "/:path*", "has": [{ "type": "host", "value": "cloudlet-five.vercel.app" }], "destination": "https://cloudlet.dev/:path*", "permanent": true },
     { "source": "/:path*", "has": [{ "type": "host", "value": "cloudlet-meerzus-projects.vercel.app" }], "destination": "https://cloudlet.dev/:path*", "permanent": true },
     { "source": "/:path*", "has": [{ "type": "host", "value": "cloudlet-git-prod-meerzus-projects.vercel.app" }], "destination": "https://cloudlet.dev/:path*", "permanent": true },
-    { "source": "/", "destination": "/toaster", "permanent": false },
     { "source": "/toaster/docs", "destination": "/docs/components/toaster", "permanent": true },
     { "source": "/toaster/docs.md", "destination": "/docs/components/toaster.md", "permanent": true },
     { "source": "/toaster/docs/:path*", "destination": "/docs/components/toaster/:path*", "permanent": true },

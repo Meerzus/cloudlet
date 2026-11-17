@@ -1,9 +1,11 @@
 /**
- * Typed postMessage protocol between the hero (parent) and the `/toaster/frame` screen.
+ * Typed postMessage protocol between a parent page (the Toaster's hero, the kit's Toaster scene) and
+ * the `/toaster/frame` screen.
  * Both sides are the same site, so every message must come from our
  * own origin and from the expected window; anything else is ignored.
  */
 
+import type { CompareKind, CompareToast } from './compare-scene';
 import { DEVICE_IDS, type DeviceId } from './devices';
 import { TOASTER_PATH } from './site';
 
@@ -19,7 +21,11 @@ export type ParentMessage =
   | { readonly type: 'stop-intro' }
   | { readonly type: 'set-theme'; readonly theme: FrameTheme }
   /** Stops the intro and clears every notification. */
-  | { readonly type: 'reset' };
+  | { readonly type: 'reset' }
+  /** The kit's Toaster scene: the same notification the plain stack beside the screen gets. */
+  | { readonly type: 'toast-show'; readonly id: string; readonly toast: CompareToast }
+  | { readonly type: 'toast-update'; readonly id: string; readonly toast: CompareToast }
+  | { readonly type: 'toast-dismiss'; readonly id: string };
 
 export type IntroEnd = 'complete' | 'interrupted';
 
@@ -48,6 +54,28 @@ export function frameUrl(device: DeviceId, theme: FrameTheme) {
   return `${FRAME_PATH}?device=${device}&theme=${theme}`;
 }
 
+const COMPARE_KINDS: readonly CompareKind[] = ['success', 'info', 'loading'];
+/** Longest id, title and duration a scene message may carry; anything else is not ours. */
+const ID_LIMIT = 64;
+const TITLE_LIMIT = 120;
+const DURATION_LIMIT = 60_000;
+
+function parseId(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 && value.length <= ID_LIMIT ? value : null;
+}
+
+function parseToast(value: unknown): CompareToast | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { title, kind, duration } = value as Record<string, unknown>;
+  if (typeof title !== 'string' || title.length === 0 || title.length > TITLE_LIMIT) return null;
+  const known = COMPARE_KINDS.find((candidate) => candidate === kind);
+  if (!known) return null;
+  if (duration !== null && (typeof duration !== 'number' || !Number.isFinite(duration) || duration < 0 || duration > DURATION_LIMIT)) {
+    return null;
+  }
+  return { title, kind: known, duration };
+}
+
 function record(data: unknown): Record<string, unknown> | null {
   if (typeof data !== 'object' || data === null) return null;
   const value = data as Record<string, unknown>;
@@ -63,6 +91,16 @@ export function parseParentMessage(data: unknown): ParentMessage | null {
       return { type: value['type'] };
     case 'set-theme':
       return value['theme'] === 'light' || value['theme'] === 'dark' ? { type: 'set-theme', theme: value['theme'] } : null;
+    case 'toast-show':
+    case 'toast-update': {
+      const id = parseId(value['id']);
+      const toast = parseToast(value['toast']);
+      return id && toast ? { type: value['type'], id, toast } : null;
+    }
+    case 'toast-dismiss': {
+      const id = parseId(value['id']);
+      return id ? { type: 'toast-dismiss', id } : null;
+    }
     default:
       return null;
   }
