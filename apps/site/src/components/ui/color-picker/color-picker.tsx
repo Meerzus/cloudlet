@@ -581,7 +581,16 @@ export function ColorPicker({ swatch, labels: partial, alpha = false, name, ...r
       play(wrapper, { filter: [drop(Math.max(0, grow.from)), drop(Math.max(0, grow.to))] }, { duration: grow.duration, easing: grow.easing });
     }
     running.current = animations;
-    if (!opening) {
+    if (opening) {
+      // Settled: drop the animations so the panel rests on its inline values. Held by `fill: both`, they keep their
+      // last frame, and a spring's linear() curve ends just short of 1 (the clip stays a fraction of a pixel in);
+      // a WebKit that drops a frame can hold it far short.
+      void Promise.all(animations.map((animation) => animation.finished)).then(() => {
+        if (running.current !== animations) return;
+        for (const animation of animations) animation.cancel();
+        running.current = [];
+      }, () => {});
+    } else {
       if (last) last.finished.then(() => setPhase('closed'), () => {});
       else setPhase('closed');
     }

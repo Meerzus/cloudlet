@@ -12,6 +12,8 @@
  *    every curated start color, the extremes, and a few palettes (dark, light, high-contrast); the
  *    Opacity section also at 20 % and 80 %. Three ways the paint can be drawn:
  *    - `fixed`: a GPU Chromium (ANGLE on Metal), the canvas fixed to the window — what visitors see;
+ *      local only, on a Mac: a Linux runner has no GPU and no Metal, so the audits workflow
+ *      (.github/workflows/audits.yml) runs `page` and `flat` and leaves this mode to a local run;
  *    - `page`: Chromium with SwiftShader, the canvas over the whole page, drawn once (software WebGL);
  *    - `flat`: WebGL 2 taken away, a flat background of the page color.
  *    The kit's landing (`/`) is measured the same way over its two painted sections, the hero and the
@@ -422,6 +424,77 @@ async function kitContrast(mode, route = 'kit') {
  * the background; the pixels are what the text sits on, its halo at night included. Reduced motion holds the sky
  * still; the hero's and the chapter's own text is measured above, the header over the page is a note.
  */
+/**
+ * How two shots of the screen differ: pixels whose channels move by more than DRIFT, the largest move, and the
+ * box they span with what lies at its centre. Software raster redraws blurred halos a unit or two apart from
+ * shot to shot; a toast arriving moves a block of pixels by far more.
+ */
+const DRIFT = 24;
+const shotDifference = (page, previous, next) =>
+  page.evaluate(async ([p, q, drift]) => {
+    const load = (data) => new Promise((done) => { const image = new Image(); image.onload = () => done(image); image.src = `data:image/png;base64,${data}`; });
+    const [a, b] = [await load(p), await load(q)];
+    const canvas = Object.assign(document.createElement('canvas'), { width: a.width, height: a.height });
+    const context = canvas.getContext('2d');
+    context.drawImage(a, 0, 0);
+    const before = context.getImageData(0, 0, a.width, a.height).data;
+    context.drawImage(b, 0, 0);
+    const after = context.getImageData(0, 0, a.width, a.height).data;
+    let [moved, largest, left, top, right, bottom] = [0, 0, Infinity, Infinity, -1, -1];
+    for (let index = 0; index < before.length; index += 4) {
+      const delta = Math.max(Math.abs(before[index] - after[index]), Math.abs(before[index + 1] - after[index + 1]), Math.abs(before[index + 2] - after[index + 2]));
+      largest = Math.max(largest, delta);
+      if (delta <= drift) continue;
+      moved += 1;
+      const x = (index / 4) % a.width;
+      const y = Math.floor(index / 4 / a.width);
+      [left, top, right, bottom] = [Math.min(left, x), Math.min(top, y), Math.max(right, x), Math.max(bottom, y)];
+    }
+    const share = moved / (a.width * a.height);
+    if (!moved) return { share, where: `nothing past ${drift}/255 (largest ${largest})` };
+    const scale = a.width / window.innerWidth;
+    const box = [left, top, right, bottom].map((value) => Math.round(value / scale));
+    const chain = [];
+    for (let node = document.elementFromPoint((box[0] + box[2]) / 2, (box[1] + box[3]) / 2); node && chain.length < 4; node = node.parentElement) {
+      chain.push(`${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${typeof node.className === 'string' && node.className ? `.${node.className.trim().split(/\s+/u).slice(0, 2).join('.')}` : ''}`);
+    }
+    return { share, where: `${(share * 100).toFixed(3)} % of pixels past ${drift}/255 (largest ${largest}) in ${box.join(',')} (${chain.join(' < ')})` };
+  }, [previous.toString('base64'), next.toString('base64'), DRIFT]);
+
+/**
+ * Waits until the screen holds still for 1.2 s (at most ~10 s), so it is scored at rest. Each shot is compared with
+ * the first of the window, not with the one before it, so a slow change adds up instead of passing step by step;
+ * shots agree when identical or when no more than 0.05 % of the pixels moved past DRIFT (raster noise, not
+ * motion). A screen that keeps changing returns how it changed against the last window's first shot.
+ */
+async function screenAtRest(page) {
+  let anchor = await page.screenshot();
+  let agreeing = 0;
+  let last = null;
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    await page.waitForTimeout(400);
+    const next = await page.screenshot();
+    const difference = next.equals(anchor) ? null : await shotDifference(page, anchor, next);
+    if (!difference || difference.share <= 0.0005) {
+      agreeing += 1;
+      if (agreeing >= 3) return { rest: true };
+      continue;
+    }
+    last = difference;
+    anchor = next;
+    agreeing = 0;
+  }
+  return { rest: false, moving: last?.where ?? '?' };
+}
+
+/**
+ * The Toaster scene on `/` plays one step by itself the first time its phones are on screen: toasts arrive over
+ * half a second and leave after COMPARE_DURATION (plus the plain stack's fade). Read from lib/compare-scene.ts so
+ * the wait cannot drift from the page.
+ */
+const SCENE = readFileSync(new URL('../src/lib/compare-scene.ts', import.meta.url), 'utf8');
+const SCENE_PLAY_MS = Number(/COMPARE_DURATION = (\d+)/u.exec(SCENE)[1]) + Number(/PLAIN_FADE_MS = (\d+)/u.exec(SCENE)[1]) + 1500;
+
 async function kitSkyContrast() {
   const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   try {
@@ -436,6 +509,11 @@ async function kitSkyContrast() {
         await page.evaluate(() => {
           for (const details of document.querySelectorAll('#faq details')) details.open = true;
         });
+        // Let the scene play its step out before the walk: measured mid-step, a toast that leaves between the
+        // two shots of a screen leaves its line scored against the background that was under it.
+        await page.evaluate(() => document.querySelector('#toaster .kt-phones')?.scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.waitForTimeout(SCENE_PLAY_MS);
+        await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
         const meta = { route: 'kit-sky', mode: 'sky', device, colorScheme, color: 'sky' };
         const height = options.viewport.height;
         const step = Math.round(height * 0.75);
@@ -444,6 +522,14 @@ async function kitSkyContrast() {
           await scrollTo(page, Math.min(y, total - height));
           // Lazy clouds and images settle before the shot.
           await page.waitForTimeout(250);
+          // The Toaster scene plays one step by itself the first time it is on screen, adding toasts on timers:
+          // measured mid-step, a line is scored against the background of a stack that has since moved.
+          const settled = await screenAtRest(page);
+          if (!settled.rest) {
+            fail(`${where} @${y}`, `the screen did not hold still for 1.2 s within 10 s (reduced motion holds the sky still), still changing: ${settled.moving}; not scored`);
+            if (y + height >= total) break;
+            continue;
+          }
           await scoreScreen(page, { ...meta, y }, `${where} @${y}`, { scope: 'main > section:not(#color-picker, #hero), footer', headerGate: false, halo: true });
           if (y + height >= total) break;
         }
@@ -492,7 +578,13 @@ const hitExtent = (locator) =>
       while (d < 40 && control(cx + dx * (d + 1), cy + dy * (d + 1))) d += 1;
       return d;
     };
-    return { width: reach(-1, 0) + reach(1, 0) + 1, height: reach(0, -1) + reach(0, 1) + 1 };
+    const width = reach(-1, 0) + reach(1, 0) + 1;
+    const height = reach(0, -1) + reach(0, 1) + 1;
+    if (control(cx, cy)) return { width, height };
+    // Not even the centre lands on the control: say what does, so a failure shows its cause.
+    const describe = (node) => (node ? `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${typeof node.className === 'string' && node.className ? `.${node.className.trim().split(/\s+/u).slice(0, 3).join('.')}` : ''}` : 'nothing');
+    const hit = document.elementFromPoint(cx, cy);
+    return { width, height, centre: `${describe(hit)} in ${describe(hit?.parentElement)} at ${Math.round(cx)},${Math.round(cy)} of ${window.innerWidth}×${window.innerHeight}` };
   });
 
 async function checkPopover(page, trigger, where, { reduced, forced, browserName }) {
@@ -620,14 +712,34 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
   entry.copy = { live, clipboard };
   if (browserName === 'chromium') check('copy writes and announces', live === 'Copied' && clipboard === (await dialog.locator('.color-picker-value').inputValue()), `live “${live}”, clipboard ${clipboard}`);
 
-  // Target sizes through the centre (own hit areas included).
+  // Target sizes through the centre (own hit areas included), on the panel at rest: its clip grows on animations
+  // (fill: both), and a slow page (the paint drawn in software) can still be running them here.
+  const rest = await dialog.evaluate(async (element) => {
+    const running = () => element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'running');
+    const deadline = Date.now() + 5000;
+    while (running().length && Date.now() < deadline) await new Promise((done) => setTimeout(done, 100));
+    // Every animation on the panel, as it stands: a clip held mid-way with nothing running names its cause here.
+    const animations = element.getAnimations({ subtree: true }).map((animation) => {
+      const frames = animation.effect?.getKeyframes?.() ?? [];
+      const last = frames.at(-1) ?? {};
+      const property = Object.keys(last).find((key) => key.startsWith('--color-picker-clip') || key === 'clipPath') ?? Object.keys(last).find((key) => !['offset', 'easing', 'composite', 'computedOffset'].includes(key));
+      return `${animation.playState}/${animation.replaceState} t=${Math.round(animation.currentTime ?? -1)} of ${Math.round(animation.effect?.getComputedTiming?.().endTime ?? -1)} rate ${animation.playbackRate} ${property}→${property ? last[property] : '?'}`;
+    });
+    return {
+      running: running().length,
+      clip: getComputedStyle(element).clipPath,
+      vars: ['top', 'right', 'bottom', 'left'].map((side) => element.style.getPropertyValue(`--color-picker-clip-${side}`)).join(' '),
+      animations: animations.length ? animations.join('; ') : 'none',
+    };
+  });
   const targets = { value: dialog.locator('.color-picker-value'), hue, copy, segment: dialog.locator('.color-picker-segment').first() };
   entry.targets = {};
   for (const [label, locator] of [['swatch', null], ...Object.entries(targets)]) {
     if (locator && !(await locator.count())) continue;
     const extent = locator ? await hitExtent(locator) : swatchExtent;
     entry.targets[label] = extent;
-    check(`target ${label} ≥ ${TARGET_MIN} px`, extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}`);
+    // A press at the centre must land on the control too, not only the span around it.
+    check(`target ${label} ≥ ${TARGET_MIN} px`, !extent.centre && extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}${extent.centre ? `, the centre hits ${extent.centre}${locator ? `; panel clip ${rest.clip} (inline ${rest.vars}), ${rest.running} running; animations: ${rest.animations}` : ''}` : ''}`);
   }
 
   // Escape from the area: closed, focus back on the swatch.
