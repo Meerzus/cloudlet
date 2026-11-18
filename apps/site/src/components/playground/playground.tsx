@@ -92,7 +92,8 @@ export function Playground() {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* grid-cols-1 is minmax(0, 1fr): an implicit column would size to the longest demo label and push a phone sideways. */}
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {DEMO_GROUPS.map((group) => (
           <GroupCard key={group.id} group={group.id} blurb={group.blurb} />
         ))}
@@ -108,7 +109,7 @@ function GroupCard({ group, blurb }: { group: DemoGroup; blurb: string }) {
   return (
     <section
       aria-labelledby={titleId}
-      className="flex flex-col rounded-3xl border border-glass-border bg-background/72 p-5 sm:p-6"
+      className="flex min-w-0 flex-col rounded-3xl border border-glass-border bg-background/72 p-5 sm:p-6"
     >
       <h2 id={titleId} className="text-2xl font-semibold tracking-[-0.02em]">
         {group}
