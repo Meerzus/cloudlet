@@ -130,9 +130,21 @@ const markFading = (page) =>
   });
 
 async function axe(page, { pixels = false } = {}) {
-  const builder = new AxeBuilder({ page }).exclude('[data-audit-fading]');
-  if (pixels) builder.disableRules(['color-contrast']);
-  const audit = await builder.analyze();
+  const run = () => {
+    const builder = new AxeBuilder({ page }).exclude('[data-audit-fading]');
+    if (pixels) builder.disableRules(['color-contrast']);
+    return builder.analyze();
+  };
+  // axe itself sometimes dies in Firefox ("too much recursion" while it writes its results' messages):
+  // a crash of the tool, not a finding. One more run; a second crash fails the audit as before.
+  let audit;
+  try {
+    audit = await run();
+  } catch (error) {
+    console.log(`  axe crashed (${String(error.message).split('\n')[0]}), running it again`);
+    await page.waitForTimeout(500);
+    audit = await run();
+  }
   return audit.violations.map((violation) => ({
     id: violation.id,
     impact: violation.impact,

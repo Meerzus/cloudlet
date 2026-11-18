@@ -424,6 +424,18 @@ async function kitContrast(mode, route = 'kit') {
  * the background; the pixels are what the text sits on, its halo at night included. Reduced motion holds the sky
  * still; the hero's and the chapter's own text is measured above, the header over the page is a note.
  */
+/** Waits until two shots 400 ms apart are the same (at most ~6 s), so the screen is scored at rest. */
+async function screenAtRest(page) {
+  let previous = await page.screenshot();
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    await page.waitForTimeout(400);
+    const next = await page.screenshot();
+    if (next.equals(previous)) return true;
+    previous = next;
+  }
+  return false;
+}
+
 async function kitSkyContrast() {
   const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   try {
@@ -446,6 +458,9 @@ async function kitSkyContrast() {
           await scrollTo(page, Math.min(y, total - height));
           // Lazy clouds and images settle before the shot.
           await page.waitForTimeout(250);
+          // The Toaster scene plays one step by itself the first time it is on screen, adding toasts on timers:
+          // measured mid-step, a line is scored against the background of a stack that has since moved.
+          await screenAtRest(page);
           await scoreScreen(page, { ...meta, y }, `${where} @${y}`, { scope: 'main > section:not(#color-picker, #hero), footer', headerGate: false, halo: true });
           if (y + height >= total) break;
         }
