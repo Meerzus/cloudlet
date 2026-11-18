@@ -265,21 +265,34 @@ let failed = false;
 try {
   for (const [name, options] of Object.entries(SCENARIOS)) {
     if (only.length && !only.includes(name)) continue;
-    // Firefox has no mobile emulation: its phone scenarios are a narrow touch window.
-    const context = await browser.newContext(engine === firefox ? { ...options, isMobile: undefined } : options);
-    // WebKit on Linux draws WebGL in software, and there the paint's shader ran the runner out of memory
-    // (3 → 16 GB within a minute of scrolling /color-picker; on a Mac the same scroll holds steady). The paint
-    // is not what this audit checks — audit-color-picker.mjs measures the text over it — so on that engine the
-    // pages get no WebGL 2 and show their own fallback, as a browser without it would.
-    if (SOFTWARE_WEBKIT) await context.addInitScript(NO_WEBGL);
-    const page = await context.newPage();
     const errors = [];
-    page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
-    page.on('pageerror', (error) => errors.push(String(error)));
+    let context = null;
+    let page = null;
+    /**
+     * A context and page for the scenario. Linux WebKit gets a fresh one before every page: in one long-lived
+     * process its memory sat at ~3 GB page after page, then ran away by ~180 MB/s at a different point each run
+     * until the runner died; a Mac's WebKit holds steady. Elsewhere the scenario keeps one page throughout.
+     */
+    const renew = async (viewport = null) => {
+      if (page && !SOFTWARE_WEBKIT) return;
+      await context?.close();
+      // Firefox has no mobile emulation: its phone scenarios are a narrow touch window.
+      context = await browser.newContext(engine === firefox ? { ...options, isMobile: undefined } : options);
+      // WebKit on Linux draws WebGL in software, and there the paint's shader ran the runner out of memory. The paint
+      // is not what this audit checks — audit-color-picker.mjs measures the text over it — so on that engine the
+      // pages get no WebGL 2 and show their own fallback, as a browser without it would.
+      if (SOFTWARE_WEBKIT) await context.addInitScript(NO_WEBGL);
+      page = await context.newPage();
+      if (viewport) await page.setViewportSize(viewport);
+      page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
+      page.on('pageerror', (error) => errors.push(String(error)));
+    };
+    await renew();
     const entry = (report[name] = { errors, checks: [], complete: false, skipped: SKIPPED });
     for (const path of PAGES) {
       // Progress in the log: when a runner dies mid-scenario (the WebKit job ran out of memory), it names the page.
       console.log(`  ${name} ${path}`);
+      await renew();
       await visit(page, path);
       await page.waitForTimeout(600);
       const stops = path === '/' || path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
@@ -305,6 +318,8 @@ try {
     }
     entry.keyboard = {};
     for (const path of PAGES.filter((path) => path !== '/toaster/frame')) {
+      trace(`${name} ${path}: keyboard`);
+      await renew();
       entry.keyboard[path] = await keyboard(page, path);
       if (entry.keyboard[path].failures.length) failed = true;
     }
@@ -313,6 +328,8 @@ try {
       entry.narrow = {};
       await page.setViewportSize({ width: 320, height: 640 });
       for (const path of PAGES.filter((path) => path !== '/toaster/frame')) {
+        trace(`${name} ${path}: 320 px`);
+        await renew({ width: 320, height: 640 });
         await visit(page, path);
         await page.waitForTimeout(400);
         const width = (entry.narrow[path] = await page.evaluate(() => document.documentElement.scrollWidth));
@@ -359,6 +376,8 @@ try {
     if (options.reducedMotion === 'reduce') {
       entry.still = {};
       for (const path of ['/', '/toaster']) {
+        trace(`${name} ${path}: still layout`);
+        await renew(options.viewport);
         await visit(page, path);
         await scrollTo(page, 3000);
         const still = (entry.still[path] = await stillLayout(page));
