@@ -643,14 +643,21 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
   entry.copy = { live, clipboard };
   if (browserName === 'chromium') check('copy writes and announces', live === 'Copied' && clipboard === (await dialog.locator('.color-picker-value').inputValue()), `live “${live}”, clipboard ${clipboard}`);
 
-  // Target sizes through the centre (own hit areas included).
+  // Target sizes through the centre (own hit areas included), on the panel at rest: its clip grows on animations
+  // (fill: both), and a slow page (the paint drawn in software) can still be running them here.
+  const rest = await dialog.evaluate(async (element) => {
+    const running = () => element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'running');
+    const deadline = Date.now() + 5000;
+    while (running().length && Date.now() < deadline) await new Promise((done) => setTimeout(done, 100));
+    return { running: running().length, clip: getComputedStyle(element).clipPath };
+  });
   const targets = { value: dialog.locator('.color-picker-value'), hue, copy, segment: dialog.locator('.color-picker-segment').first() };
   entry.targets = {};
   for (const [label, locator] of [['swatch', null], ...Object.entries(targets)]) {
     if (locator && !(await locator.count())) continue;
     const extent = locator ? await hitExtent(locator) : swatchExtent;
     entry.targets[label] = extent;
-    check(`target ${label} ≥ ${TARGET_MIN} px`, extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}${extent.centre ? `, the centre hits ${extent.centre}` : ''}`);
+    check(`target ${label} ≥ ${TARGET_MIN} px`, extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}${extent.centre ? `, the centre hits ${extent.centre}; panel clip ${rest.clip}, ${rest.running} animations still running` : ''}`);
   }
 
   // Escape from the area: closed, focus back on the swatch.
