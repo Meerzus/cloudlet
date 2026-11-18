@@ -460,7 +460,11 @@ async function kitSkyContrast() {
           await page.waitForTimeout(250);
           // The Toaster scene plays one step by itself the first time it is on screen, adding toasts on timers:
           // measured mid-step, a line is scored against the background of a stack that has since moved.
-          await screenAtRest(page);
+          if (!(await screenAtRest(page))) {
+            fail(`${where} @${y}`, 'the screen did not come to rest in 6 s (reduced motion holds the sky still): not scored');
+            if (y + height >= total) break;
+            continue;
+          }
           await scoreScreen(page, { ...meta, y }, `${where} @${y}`, { scope: 'main > section:not(#color-picker, #hero), footer', headerGate: false, halo: true });
           if (y + height >= total) break;
         }
@@ -657,7 +661,7 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
     if (locator && !(await locator.count())) continue;
     const extent = locator ? await hitExtent(locator) : swatchExtent;
     entry.targets[label] = extent;
-    check(`target ${label} ≥ ${TARGET_MIN} px`, extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}${extent.centre ? `, the centre hits ${extent.centre}; panel clip ${rest.clip}, ${rest.running} animations still running` : ''}`);
+    check(`target ${label} ≥ ${TARGET_MIN} px`, extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}${extent.centre ? `, the centre hits ${extent.centre}${locator ? `; panel clip ${rest.clip}, ${rest.running} animations still running` : ''}` : ''}`);
   }
 
   // Escape from the area: closed, focus back on the swatch.

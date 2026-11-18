@@ -48,8 +48,11 @@ function landing(report) {
     const keyFailures = keyboard.reduce((sum, [, pass]) => sum + pass.failures.length, 0);
     const still = entry.still ? Object.values(entry.still).every((layout) => !layout.lenis && !layout.pinSpacers && !layout.moved) : null;
     const narrow = entry.narrow ? Object.values(entry.narrow).every((width) => width <= 320) : null;
-    const ok = !bad.length && !keyFailures && !entry.errors.length && still !== false && narrow !== false;
-    rows.push([mark(ok) + ' ' + scenario, entry.checks.length, bad.length, keyboard.map(([path, pass]) => `${path} ${pass.stops}`).join(', '), keyFailures, entry.errors.length, still === null ? '—' : mark(still), narrow === null ? '—' : mark(narrow)]);
+    // A scenario cut short (the audit threw) is not green, whatever it had checked so far.
+    const complete = entry.complete !== false;
+    const ok = complete && !bad.length && !keyFailures && !entry.errors.length && still !== false && narrow !== false;
+    if (!complete) problems.push(`${scenario}: interrupted before it finished — partial results`);
+    rows.push([mark(ok) + ' ' + scenario + (complete ? '' : ' (interrupted)'), entry.checks.length, bad.length, keyboard.map(([path, pass]) => `${path} ${pass.stops}`).join(', '), keyFailures, entry.errors.length, still === null ? '—' : mark(still), narrow === null ? '—' : mark(narrow)]);
     for (const check of bad) for (const violation of check.violations) problems.push(`${scenario} \`${check.path}\` ${check.at}: **${violation.id}** — ${violation.nodes.map((node) => node.target).join(', ')}`);
     for (const [path, pass] of keyboard) for (const stop of pass.failures) problems.push(`${scenario} keyboard \`${path}\`: ${JSON.stringify(stop)}`);
     for (const error of entry.errors) problems.push(`${scenario} console: ${error}`);

@@ -157,6 +157,8 @@ async function axe(page, { pixels = false } = {}) {
   } catch (error) {
     console.log(`  axe crashed (${String(error.message).split('\n')[0]}), running it again`);
     await page.waitForTimeout(500);
+    // Marked afresh: text that finished fading meanwhile is checked, text still fading stays excluded.
+    await markFading(page);
     audit = await run();
   }
   return audit.violations.map((violation) => ({
@@ -241,7 +243,7 @@ try {
     const errors = [];
     page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
     page.on('pageerror', (error) => errors.push(String(error)));
-    const entry = (report[name] = { errors, checks: [] });
+    const entry = (report[name] = { errors, checks: [], complete: false });
     for (const path of ['/', '/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/docs/components/color-picker']) {
       await visit(page, path);
       await page.waitForTimeout(600);
@@ -289,8 +291,16 @@ try {
             // only stretches with a page that already does), so it is left out too.
             const clipped = (element) => {
               const position = getComputedStyle(element).position;
+              // Fixed to the viewport, and not to a transformed or filtered ancestor that would hold it in the page.
+              const holds = (node) => {
+                const style = getComputedStyle(node);
+                return style.transform !== 'none' || style.filter !== 'none' || (style.backdropFilter ?? 'none') !== 'none' || style.perspective !== 'none' || /paint|layout|strict|content/u.test(style.contain) || /transform|filter|perspective/u.test(style.willChange);
+              };
               for (let node = element; node && node !== document.body; node = node.parentElement) {
-                if (getComputedStyle(node).position === 'fixed') return true;
+                if (getComputedStyle(node).position !== 'fixed') continue;
+                let held = false;
+                for (let parent = node.parentElement; parent && parent !== document.body; parent = parent.parentElement) if (holds(parent)) held = true;
+                if (!held) return true;
               }
               const block = element.offsetParent;
               for (let parent = element.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
@@ -321,6 +331,8 @@ try {
       }
     }
     if (errors.length) failed = true;
+    // The summary counts a scenario green only when it ran to here: one cut short keeps its partial results.
+    entry.complete = true;
     await context.close();
     const bad = entry.checks.filter((check) => check.violations.length);
     const fading = [...new Set(entry.checks.flatMap((check) => check.fading))];
