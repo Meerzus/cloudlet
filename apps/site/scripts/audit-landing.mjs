@@ -129,6 +129,20 @@ const markFading = (page) =>
     return [...where];
   });
 
+/**
+ * Opens a page and waits for the network to go quiet. A shared CI runner sometimes keeps Firefox from getting
+ * there in 30 s on a page that loads at once elsewhere: one more try with a longer wait; a second timeout fails.
+ */
+async function visit(page, path) {
+  try {
+    await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+  } catch (error) {
+    if (error?.name !== 'TimeoutError') throw error;
+    console.log(`  ${path} did not go quiet in 30 s, loading it again`);
+    await page.goto(`${base}${path}`, { waitUntil: 'networkidle', timeout: 60_000 });
+  }
+}
+
 async function axe(page, { pixels = false } = {}) {
   const run = () => {
     const builder = new AxeBuilder({ page }).exclude('[data-audit-fading]');
@@ -157,7 +171,7 @@ const TAB = engine === webkit ? 'Alt+Tab' : 'Tab';
 
 /** Tab through `path` from the top; returns the stops and the failures among them. */
 async function keyboard(page, path) {
-  await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+  await visit(page, path);
   await page.waitForTimeout(600);
   const stops = [];
   const failures = [];
@@ -229,7 +243,7 @@ try {
     page.on('pageerror', (error) => errors.push(String(error)));
     const entry = (report[name] = { errors, checks: [] });
     for (const path of ['/', '/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/docs/components/color-picker']) {
-      await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+      await visit(page, path);
       await page.waitForTimeout(600);
       const stops = path === '/' || path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
       for (const stop of stops) {
@@ -262,7 +276,7 @@ try {
       entry.narrow = {};
       await page.setViewportSize({ width: 320, height: 640 });
       for (const path of ['/', '/toaster', '/toaster/playground', '/color-picker', '/docs/components/color-picker']) {
-        await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+        await visit(page, path);
         await page.waitForTimeout(400);
         const width = (entry.narrow[path] = await page.evaluate(() => document.documentElement.scrollWidth));
         if (width > 320) {
@@ -300,7 +314,7 @@ try {
     if (options.reducedMotion === 'reduce') {
       entry.still = {};
       for (const path of ['/', '/toaster']) {
-        await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+        await visit(page, path);
         await scrollTo(page, 3000);
         const still = (entry.still[path] = await stillLayout(page));
         if (still.lenis || still.pinSpacers || still.moved) failed = true;
