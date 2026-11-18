@@ -661,7 +661,8 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
     if (locator && !(await locator.count())) continue;
     const extent = locator ? await hitExtent(locator) : swatchExtent;
     entry.targets[label] = extent;
-    check(`target ${label} ≥ ${TARGET_MIN} px`, extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}${extent.centre ? `, the centre hits ${extent.centre}${locator ? `; panel clip ${rest.clip}, ${rest.running} animations still running` : ''}` : ''}`);
+    // A press at the centre must land on the control too, not only the span around it.
+    check(`target ${label} ≥ ${TARGET_MIN} px`, !extent.centre && extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}${extent.centre ? `, the centre hits ${extent.centre}${locator ? `; panel clip ${rest.clip}, ${rest.running} animations still running` : ''}` : ''}`);
   }
 
   // Escape from the area: closed, focus back on the swatch.

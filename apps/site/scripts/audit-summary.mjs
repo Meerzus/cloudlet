@@ -49,7 +49,7 @@ function landing(report) {
     const still = entry.still ? Object.values(entry.still).every((layout) => !layout.lenis && !layout.pinSpacers && !layout.moved) : null;
     const narrow = entry.narrow ? Object.values(entry.narrow).every((width) => width <= 320) : null;
     // A scenario cut short (the audit threw) is not green, whatever it had checked so far.
-    const complete = entry.complete !== false;
+    const complete = entry.complete === true;
     const ok = complete && !bad.length && !keyFailures && !entry.errors.length && still !== false && narrow !== false;
     if (!complete) problems.push(`${scenario}: interrupted before it finished — partial results`);
     rows.push([mark(ok) + ' ' + scenario + (complete ? '' : ' (interrupted)'), entry.checks.length, bad.length, keyboard.map(([path, pass]) => `${path} ${pass.stops}`).join(', '), keyFailures, entry.errors.length, still === null ? '—' : mark(still), narrow === null ? '—' : mark(narrow)]);
