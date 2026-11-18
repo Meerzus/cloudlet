@@ -718,7 +718,19 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
     const running = () => element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'running');
     const deadline = Date.now() + 5000;
     while (running().length && Date.now() < deadline) await new Promise((done) => setTimeout(done, 100));
-    return { running: running().length, clip: getComputedStyle(element).clipPath };
+    // Every animation on the panel, as it stands: a clip held mid-way with nothing running names its cause here.
+    const animations = element.getAnimations({ subtree: true }).map((animation) => {
+      const frames = animation.effect?.getKeyframes?.() ?? [];
+      const last = frames.at(-1) ?? {};
+      const property = Object.keys(last).find((key) => key.startsWith('--color-picker-clip') || key === 'clipPath') ?? Object.keys(last).find((key) => !['offset', 'easing', 'composite', 'computedOffset'].includes(key));
+      return `${animation.playState}/${animation.replaceState} t=${Math.round(animation.currentTime ?? -1)} of ${Math.round(animation.effect?.getComputedTiming?.().endTime ?? -1)} rate ${animation.playbackRate} ${property}→${property ? last[property] : '?'}`;
+    });
+    return {
+      running: running().length,
+      clip: getComputedStyle(element).clipPath,
+      vars: ['top', 'right', 'bottom', 'left'].map((side) => element.style.getPropertyValue(`--color-picker-clip-${side}`)).join(' '),
+      animations: animations.length ? animations.join('; ') : 'none',
+    };
   });
   const targets = { value: dialog.locator('.color-picker-value'), hue, copy, segment: dialog.locator('.color-picker-segment').first() };
   entry.targets = {};
@@ -727,7 +739,7 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
     const extent = locator ? await hitExtent(locator) : swatchExtent;
     entry.targets[label] = extent;
     // A press at the centre must land on the control too, not only the span around it.
-    check(`target ${label} ≥ ${TARGET_MIN} px`, !extent.centre && extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}${extent.centre ? `, the centre hits ${extent.centre}${locator ? `; panel clip ${rest.clip}, ${rest.running} animations still running` : ''}` : ''}`);
+    check(`target ${label} ≥ ${TARGET_MIN} px`, !extent.centre && extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}${extent.centre ? `, the centre hits ${extent.centre}${locator ? `; panel clip ${rest.clip} (inline ${rest.vars}), ${rest.running} running; animations: ${rest.animations}` : ''}` : ''}`);
   }
 
   // Escape from the area: closed, focus back on the swatch.

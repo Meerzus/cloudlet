@@ -58,14 +58,26 @@ jobs:
 
   landing:
     # audit-landing.mjs: axe at every section and live place, the Tab path, the still layout under
-    # reduced motion and 320 px, desktop and phone, both themes, with and without motion.
+    # reduced motion and 320 px, desktop and phone, both themes, with and without motion. Chromium and
+    # Firefox run all eight scenarios in one job; WebKit runs one scenario per job — in one job it kept
+    # memory until the runner died after an hour (with its log), each scenario on a fresh runner does not.
     needs: export
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox, webkit]
+        include:
+          - { browser: chromium, scenario: '' }
+          - { browser: firefox, scenario: '' }
+          - { browser: webkit, scenario: desktop-light }
+          - { browser: webkit, scenario: desktop-light-reduced }
+          - { browser: webkit, scenario: desktop-dark }
+          - { browser: webkit, scenario: desktop-dark-reduced }
+          - { browser: webkit, scenario: phone-light }
+          - { browser: webkit, scenario: phone-light-reduced }
+          - { browser: webkit, scenario: phone-dark }
+          - { browser: webkit, scenario: phone-dark-reduced }
     steps:
       - uses: actions/checkout@v7
         with:
@@ -92,13 +104,13 @@ jobs:
           # early and replace the audit's exit status.
           trap 'pkill -P "$sampler" 2>/dev/null || true; kill "$sampler" 2>/dev/null || true' EXIT
           if [ "${{ matrix.browser }}" = webkit ]; then export AUDIT_TRACE=1; fi
-          node apps/site/scripts/audit-landing.mjs artifacts/audits/landing --browser ${{ matrix.browser }} 2>&1 | tee artifacts/audits/landing.log
+          node apps/site/scripts/audit-landing.mjs artifacts/audits/landing --browser ${{ matrix.browser }} ${{ matrix.scenario }} 2>&1 | tee artifacts/audits/landing.log
       - if: always()
-        run: node apps/site/scripts/audit-summary.mjs landing artifacts/audits/landing/axe-${{ matrix.browser }}.json --title "Landings — ${{ matrix.browser }}"
+        run: node apps/site/scripts/audit-summary.mjs landing artifacts/audits/landing/axe-${{ matrix.browser }}.json --title "Landings — ${{ matrix.browser }}${{ matrix.scenario && format(' · {0}', matrix.scenario) || '' }}"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: audit-landing-${{ matrix.browser }}
+          name: audit-landing-${{ matrix.browser }}${{ matrix.scenario && format('-{0}', matrix.scenario) || '' }}
           retention-days: 7
           if-no-files-found: ignore
           path: artifacts/audits/
