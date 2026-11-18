@@ -36,6 +36,8 @@ const cell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' 
 const table = (head, rows) => [`| ${head.join(' | ')} |`, `|${head.map(() => ' --- ').join('|')}|`, ...rows.map((row) => `| ${row.map(cell).join(' | ')} |`)].join('\n');
 const list = (items, limit = 20) => [...items.slice(0, limit).map((item) => `- ${item}`), ...(items.length > limit ? [`- … and ${items.length - limit} more (see the artifact)`] : [])].join('\n');
 const mark = (ok) => (ok ? '✅' : '❌');
+/** A Lighthouse score as a percentage, a median's half point kept (89.5 is below 90, and must not read as 90). */
+const score = (value) => String(Math.round(value * 1000) / 10);
 
 function landing(report) {
   const rows = [];
@@ -85,6 +87,7 @@ function picker(report) {
 }
 
 function budget(report) {
+  if (report.ok === null) return `_Measured only (${Object.keys(report.results).join(', ')}): the budget compares \`/\` with \`/toaster\`, so it was not checked._`;
   const rows = report.budget.map((line) => [mark(line.ok) + ' ' + line.check, kb(line.value), kb(line.limit)]);
   const js = Object.entries(report.results).map(([path, result]) => `\`${path}\` ${kb(result.js.bytes)} in ${result.js.scripts} scripts`);
   return [table(['Budget', 'value', 'limit'], rows), `\nStart JS (gzip -9): ${js.join(' · ')}`].join('\n');
@@ -93,10 +96,10 @@ function budget(report) {
 function lighthouse(report) {
   const rows = report.map((entry) => [
     mark(entry.ok) + ' `' + entry.path + '`',
-    Math.round(entry.performance * 100) + (entry.runs ? ` (${entry.runs.map((run) => Math.round(run.performance * 100)).join(', ')})` : ''),
-    Math.round(entry.accessibility * 100),
-    Math.round(entry.bestPractices * 100),
-    Math.round(entry.seo * 100),
+    score(entry.performance) + (entry.runs ? ` (${entry.runs.map((run) => score(run.performance)).join(', ')})` : ''),
+    score(entry.accessibility),
+    score(entry.bestPractices),
+    score(entry.seo),
     `${Math.round(entry.lcp)} ms`,
     `${Math.round(entry.tbt)} ms`,
     entry.cls,
@@ -113,7 +116,8 @@ function walk(report) {
   const problems = [];
   for (const [name, entry] of entries) {
     const failures = entry.failures ?? [];
-    const errors = entry.errors ?? [];
+    // The Playground's report names its console messages `errors`, the docs' `console`.
+    const errors = entry.errors ?? entry.console ?? [];
     const violations = Object.values(entry.axe ?? {}).flatMap((value) => (Array.isArray(value) ? value : []));
     rows.push([mark(!failures.length && !errors.length && !violations.length) + ' ' + name, failures.length, errors.length, violations.length]);
     for (const failure of failures) problems.push(`${name}: ${typeof failure === 'string' ? failure : JSON.stringify(failure)}`);

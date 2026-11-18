@@ -14,6 +14,11 @@ on:
       - registry/**
       - packages/toast/**
       - package-lock.json
+      # Shared build inputs: the package and the site extend the base tsconfig; Node and the build
+      # scripts come from these.
+      - tsconfig.base.json
+      - package.json
+      - .nvmrc
       - .github/workflows/audits.yml
   workflow_dispatch:
 permissions:
@@ -43,7 +48,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: site-export
-          retention-days: 3
+          # As long as GitHub lets a failed job be re-run (30 days): a re-run reuses this export.
+          retention-days: 30
           include-hidden-files: true
           path: apps/site/out/
 
@@ -202,7 +208,9 @@ jobs:
         run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/smoke-picker-hero.mjs 2>&1 | tee artifacts/audits/smoke.log
-          cp apps/site/scripts/smoke/picker-hero.actual.png artifacts/audits/ 2>/dev/null || true
+      # The shot the smoke writes when it fails, kept apart so the failed step above still fails the job.
+      - if: always() && matrix.walk == 'smoke'
+        run: cp apps/site/scripts/smoke/picker-hero.actual.png artifacts/audits/ 2>/dev/null || true
       - if: always() && matrix.walk != 'smoke'
         run: node apps/site/scripts/audit-summary.mjs walk artifacts/audits/${{ matrix.walk }}/report.json --title "Walk — ${{ matrix.walk }}"
       - if: always() && matrix.walk == 'smoke'

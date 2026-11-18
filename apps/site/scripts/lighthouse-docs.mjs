@@ -50,6 +50,8 @@ const median = (values) => {
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 };
+/** A score as a percentage, a median's half point kept (89.5 is below 90, and must not read as 90). */
+const score = (value) => String(Math.round(value * 1000) / 10);
 const NUMBERS = ['performance', 'accessibility', 'bestPractices', 'seo', 'fcp', 'lcp', 'tbt', 'cls', 'si'];
 
 const server = await serve();
@@ -88,8 +90,8 @@ try {
     entry.ok = entry.performance >= THRESHOLDS.performance && entry.accessibility >= THRESHOLDS.accessibility && entry.cls < THRESHOLDS.cls;
     if (runs > 1) entry.runs = samples;
     results.push(entry);
-    const spread = runs > 1 ? ` (median of ${runs}: performance ${samples.map((sample) => Math.round(sample.performance * 100)).join(', ')})` : '';
-    console.log(`${path}: ${entry.ok ? 'ok' : 'FAILED'} — performance ${Math.round(entry.performance * 100)}, accessibility ${Math.round(entry.accessibility * 100)}, best practices ${Math.round(entry.bestPractices * 100)}, SEO ${Math.round(entry.seo * 100)}; FCP ${Math.round(entry.fcp)} ms, LCP ${Math.round(entry.lcp)} ms, TBT ${Math.round(entry.tbt)} ms, CLS ${entry.cls}, SI ${Math.round(entry.si)} ms${entry.failedAccessibility.length ? `; a11y: ${entry.failedAccessibility.join(', ')}` : ''}${spread}`);
+    const spread = runs > 1 ? ` (median of ${runs}: performance ${samples.map((sample) => score(sample.performance)).join(', ')})` : '';
+    console.log(`${path}: ${entry.ok ? 'ok' : 'FAILED'} — performance ${score(entry.performance)}, accessibility ${score(entry.accessibility)}, best practices ${score(entry.bestPractices)}, SEO ${score(entry.seo)}; FCP ${Math.round(entry.fcp)} ms, LCP ${Math.round(entry.lcp)} ms, TBT ${Math.round(entry.tbt)} ms, CLS ${entry.cls}, SI ${Math.round(entry.si)} ms${entry.failedAccessibility.length ? `; a11y: ${entry.failedAccessibility.join(', ')}` : ''}${spread}`);
   }
 } finally {
   server.close();

@@ -17,7 +17,7 @@
  * When both `/` and `/toaster` are measured it also checks the kit's budget: the start JS of `/` is
  * no larger than that of `/toaster`, and the first screen of `/` fetches at most 150 KB of media in
  * every context. Exits 1 when either fails. --json also writes the measurements and the verdict to a
- * file (the audits workflow keeps it as an artifact).
+ * file (the audits workflow keeps it as an artifact); its `ok` is null when the budget was not checked.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -118,6 +118,7 @@ if (results['/'] && results['/toaster']) {
 }
 if (jsonFile) {
   mkdirSync(dirname(jsonFile), { recursive: true });
-  writeFileSync(jsonFile, JSON.stringify({ results, budget, ok: !failed }, null, 2) + '\n');
+  // ok is null when the budget was not checked (it compares / with /toaster, and one of them was not measured).
+  writeFileSync(jsonFile, JSON.stringify({ results, budget, ok: budget.length ? !failed : null }, null, 2) + '\n');
 }
 process.exit(failed ? 1 : 0);
