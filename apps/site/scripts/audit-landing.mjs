@@ -18,7 +18,7 @@
  * the phone, every page is also loaded 320 px wide and must not scroll sideways.
  *
  * WebKit on Linux runs without WebGL 2 (its software WebGL runs out of memory on the paint): the pages show
- * their fallback there; Safari on a Mac draws the paint.
+ * their fallback there; Safari on a Mac draws the paint. It also leaves out /color-picker (see PAGES).
  *
  * Writes axe-<browser>.json; exits 1 on any violation, keyboard or reduced-motion failure, or console error.
  */
@@ -133,6 +133,15 @@ const markFading = (page) =>
   });
 
 const SOFTWARE_WEBKIT = (engine === webkit && process.platform === 'linux') || process.env.AUDIT_NO_WEBGL === '1';
+/**
+ * The pages audited. Linux WebKit leaves out /color-picker: scrolling it there ran the runner out of memory again and
+ * again (3 → 16 GB in a minute or two, a different scenario each run, with WebGL and without), while a Mac's WebKit
+ * holds steady and every other page passes. That page stays covered by Chromium and Firefox here, by the WebKit picker
+ * audit (audit-color-picker.mjs) in CI, and by Safari on a Mac locally.
+ */
+const ALL_PAGES = ['/', '/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/docs/components/color-picker'];
+const SKIPPED = SOFTWARE_WEBKIT ? ['/color-picker'] : [];
+const PAGES = ALL_PAGES.filter((path) => !SKIPPED.includes(path));
 /** Takes WebGL 2 away before the page runs (the same switch as the `flat` mode of audit-color-picker.mjs). */
 const NO_WEBGL = () => {
   const original = HTMLCanvasElement.prototype.getContext;
@@ -256,11 +265,8 @@ let failed = false;
 try {
   for (const [name, options] of Object.entries(SCENARIOS)) {
     if (only.length && !only.includes(name)) continue;
-    // Firefox has no mobile emulation: its phone scenarios are a narrow touch window. Linux WebKit draws the
-    // phone at 1× (its software compositor ran out of memory at 3× on /color-picker's fixed paint layers, the
-    // desktop at 1× passing); the checks here — axe, Tab, layout — do not depend on pixel density.
-    const contextOptions = engine === firefox ? { ...options, isMobile: undefined } : SOFTWARE_WEBKIT ? { ...options, deviceScaleFactor: 1 } : options;
-    const context = await browser.newContext(contextOptions);
+    // Firefox has no mobile emulation: its phone scenarios are a narrow touch window.
+    const context = await browser.newContext(engine === firefox ? { ...options, isMobile: undefined } : options);
     // WebKit on Linux draws WebGL in software, and there the paint's shader ran the runner out of memory
     // (3 → 16 GB within a minute of scrolling /color-picker; on a Mac the same scroll holds steady). The paint
     // is not what this audit checks — audit-color-picker.mjs measures the text over it — so on that engine the
@@ -270,8 +276,8 @@ try {
     const errors = [];
     page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
     page.on('pageerror', (error) => errors.push(String(error)));
-    const entry = (report[name] = { errors, checks: [], complete: false });
-    for (const path of ['/', '/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/docs/components/color-picker']) {
+    const entry = (report[name] = { errors, checks: [], complete: false, skipped: SKIPPED });
+    for (const path of PAGES) {
       // Progress in the log: when a runner dies mid-scenario (the WebKit job ran out of memory), it names the page.
       console.log(`  ${name} ${path}`);
       await visit(page, path);
@@ -298,7 +304,7 @@ try {
       }
     }
     entry.keyboard = {};
-    for (const path of ['/', '/toaster', '/toaster/playground', '/color-picker', '/docs/components/color-picker']) {
+    for (const path of PAGES.filter((path) => path !== '/toaster/frame')) {
       entry.keyboard[path] = await keyboard(page, path);
       if (entry.keyboard[path].failures.length) failed = true;
     }
@@ -306,7 +312,7 @@ try {
     if (name.startsWith('phone') && options.reducedMotion !== 'reduce') {
       entry.narrow = {};
       await page.setViewportSize({ width: 320, height: 640 });
-      for (const path of ['/', '/toaster', '/toaster/playground', '/color-picker', '/docs/components/color-picker']) {
+      for (const path of PAGES.filter((path) => path !== '/toaster/frame')) {
         await visit(page, path);
         await page.waitForTimeout(400);
         const width = (entry.narrow[path] = await page.evaluate(() => document.documentElement.scrollWidth));

@@ -44,6 +44,7 @@ const score = (value) => String(Math.round(value * 1000) / 10);
 function landing(report) {
   const rows = [];
   const problems = [];
+  const notes = [];
   for (const [scenario, entry] of Object.entries(report)) {
     const bad = entry.checks.filter((check) => check.violations.length);
     const keyboard = Object.entries(entry.keyboard ?? {});
@@ -56,8 +57,10 @@ function landing(report) {
       if (!values.every(passes)) return false;
       return values.length >= expected ? true : 'partial';
     };
+    const skipped = entry.skipped ?? [];
     const still = verdict(entry.still, 2, (layout) => !layout.lenis && !layout.pinSpacers && !layout.moved);
-    const narrow = verdict(entry.narrow, 5, (width) => width <= 320);
+    const narrow = verdict(entry.narrow, 5 - skipped.filter((path) => path !== '/toaster/frame').length, (width) => width <= 320);
+    if (skipped.length) notes.push(`${scenario}: ${skipped.join(', ')} left out on this engine (see audit-landing.mjs)`);
     // A scenario cut short (the audit threw) is not green, whatever it had checked so far.
     const complete = entry.complete === true;
     const ok = complete && !bad.length && !keyFailures && !entry.errors.length && still !== false && still !== 'partial' && narrow !== false && narrow !== 'partial';
@@ -69,6 +72,7 @@ function landing(report) {
   }
   return [
     table(['Scenario', 'axe checks', 'with violations', 'Tab stops', 'keyboard failures', 'console errors', 'still (reduced)', '320 px'], rows),
+    notes.length ? `\n${notes.map((note) => `_${note}_`).join('  \n')}` : '',
     problems.length ? `\n**Problems**\n\n${list(problems)}` : '',
   ].join('\n');
 }
