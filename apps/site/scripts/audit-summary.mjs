@@ -88,7 +88,8 @@ function picker(report) {
 
 function budget(report) {
   if (report.ok === null) return `_Measured only (${Object.keys(report.results).join(', ')}): the budget compares \`/\` with \`/toaster\`, so it was not checked._`;
-  const rows = report.budget.map((line) => [mark(line.ok) + ' ' + line.check, kb(line.value), kb(line.limit)]);
+  // A failing row shows its bytes: 150.0 KB against 150.0 KB would not say why it failed.
+  const rows = report.budget.map((line) => [mark(line.ok) + ' ' + line.check, line.ok ? kb(line.value) : `${kb(line.value)} (${line.value} B, ${line.value - line.limit} B over)`, line.ok ? kb(line.limit) : `${kb(line.limit)} (${line.limit} B)`]);
   const js = Object.entries(report.results).map(([path, result]) => `\`${path}\` ${kb(result.js.bytes)} in ${result.js.scripts} scripts`);
   return [table(['Budget', 'value', 'limit'], rows), `\nStart JS (gzip -9): ${js.join(' · ')}`].join('\n');
 }

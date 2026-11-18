@@ -258,9 +258,18 @@ try {
           // What sticks out, so the failure shows its cause: the outermost elements whose right edge passes 320 px
           // and that no ancestor clips.
           const over = await page.evaluate(() => {
+            // An ancestor's overflow-x clips a static or relative element always, an absolute one only when the
+            // ancestor is (or holds) its containing block. A fixed element never makes the page scroll sideways (it
+            // only stretches with a page that already does), so it is left out too.
             const clipped = (element) => {
+              const position = getComputedStyle(element).position;
+              for (let node = element; node && node !== document.body; node = node.parentElement) {
+                if (getComputedStyle(node).position === 'fixed') return true;
+              }
+              const block = element.offsetParent;
               for (let parent = element.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
-                if (['hidden', 'clip'].includes(getComputedStyle(parent).overflowX)) return true;
+                if (!['hidden', 'clip'].includes(getComputedStyle(parent).overflowX)) continue;
+                if (position !== 'absolute' || (block && (parent === block || parent.contains(block)))) return true;
               }
               return false;
             };
@@ -303,6 +312,7 @@ try {
 } finally {
   await browser.close();
   server?.close();
+  // Written even when a scenario throws, so the results collected before it are kept.
+  writeFileSync(join(out, `axe-${engine.name()}.json`), JSON.stringify(report, null, 2) + '\n');
 }
-writeFileSync(join(out, `axe-${engine.name()}.json`), JSON.stringify(report, null, 2) + '\n');
 process.exit(failed ? 1 : 0);
