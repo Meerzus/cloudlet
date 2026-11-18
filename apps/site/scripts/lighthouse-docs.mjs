@@ -25,7 +25,11 @@ import { serve } from './serve-out.mjs';
 const LIGHTHOUSE = 'lighthouse@13.5.0';
 const PATHS = ['/docs/components/toaster', '/docs/components/toaster/notifications'];
 const THRESHOLDS = { performance: 0.9, accessibility: 1, cls: 0.01 };
-const USAGE = 'Usage: node apps/site/scripts/lighthouse-docs.mjs <out-dir> [--runs N] [--report-only] [path ...]';
+// Ubuntu 24.04 runners forbid the unprivileged user namespaces Chrome's sandbox needs, so Chrome dies
+// before it opens its debugging port; Playwright passes --no-sandbox itself, Lighthouse's launcher does
+// not. Only in CI: the page is the site's own export.
+const CHROME_FLAGS = process.env.CI ? '--headless=new --no-sandbox' : '--headless=new';
+const USAGE ='Usage: node apps/site/scripts/lighthouse-docs.mjs <out-dir> [--runs N] [--report-only] [path ...]';
 
 const args = process.argv.slice(2);
 const runsFlag = args.indexOf('--runs');
@@ -61,7 +65,7 @@ try {
       // Asynchronous: the static server lives in this process and must keep answering.
       await promisify(execFile)(
         'npx',
-        ['--yes', LIGHTHOUSE, `${base}${path}`, '--quiet', '--output=json', '--output=html', `--output-path=${prefix}`, '--chrome-flags=--headless=new', '--only-categories=performance,accessibility,best-practices,seo'],
+        ['--yes', LIGHTHOUSE, `${base}${path}`, '--quiet', '--output=json', '--output=html', `--output-path=${prefix}`, `--chrome-flags=${CHROME_FLAGS}`, '--only-categories=performance,accessibility,best-practices,seo'],
         { env: { ...process.env, CHROME_PATH: chromium.executablePath() }, maxBuffer: 64 * 1024 * 1024 },
       );
       const report = JSON.parse(readFileSync(`${prefix}.report.json`, 'utf8'));
