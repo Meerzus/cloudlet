@@ -424,16 +424,46 @@ async function kitContrast(mode, route = 'kit') {
  * the background; the pixels are what the text sits on, its halo at night included. Reduced motion holds the sky
  * still; the hero's and the chapter's own text is measured above, the header over the page is a note.
  */
-/** Waits until two shots 400 ms apart are the same (at most ~6 s), so the screen is scored at rest. */
+/**
+ * Waits until two shots 400 ms apart are the same (at most ~10 s), so the screen is scored at rest. A screen that
+ * keeps changing returns where: the box that changed between the last two shots and what lies at its centre.
+ */
 async function screenAtRest(page) {
   let previous = await page.screenshot();
-  for (let attempt = 0; attempt < 12; attempt += 1) {
+  for (let attempt = 0; attempt < 25; attempt += 1) {
     await page.waitForTimeout(400);
     const next = await page.screenshot();
-    if (next.equals(previous)) return true;
+    if (next.equals(previous)) return { rest: true };
+    if (attempt === 24) {
+      const moving = await page.evaluate(async ([p, q]) => {
+        const load = (data) => new Promise((done) => { const image = new Image(); image.onload = () => done(image); image.src = `data:image/png;base64,${data}`; });
+        const [a, b] = [await load(p), await load(q)];
+        const canvas = Object.assign(document.createElement('canvas'), { width: a.width, height: a.height });
+        const context = canvas.getContext('2d');
+        context.drawImage(a, 0, 0);
+        const before = context.getImageData(0, 0, a.width, a.height).data;
+        context.drawImage(b, 0, 0);
+        const after = context.getImageData(0, 0, a.width, a.height).data;
+        let [left, top, right, bottom] = [Infinity, Infinity, -1, -1];
+        for (let index = 0; index < before.length; index += 4) {
+          if (before[index] === after[index] && before[index + 1] === after[index + 1] && before[index + 2] === after[index + 2]) continue;
+          const x = (index / 4) % a.width;
+          const y = Math.floor(index / 4 / a.width);
+          [left, top, right, bottom] = [Math.min(left, x), Math.min(top, y), Math.max(right, x), Math.max(bottom, y)];
+        }
+        const scale = a.width / window.innerWidth;
+        const box = [left, top, right, bottom].map((value) => Math.round(value / scale));
+        const chain = [];
+        for (let node = document.elementFromPoint((box[0] + box[2]) / 2, (box[1] + box[3]) / 2); node && chain.length < 4; node = node.parentElement) {
+          chain.push(`${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${typeof node.className === 'string' && node.className ? `.${node.className.trim().split(/\s+/u).slice(0, 2).join('.')}` : ''}`);
+        }
+        return `${box.join(',')} (${chain.join(' < ')})`;
+      }, [previous.toString('base64'), next.toString('base64')]);
+      return { rest: false, moving };
+    }
     previous = next;
   }
-  return false;
+  return { rest: false, moving: '?' };
 }
 
 async function kitSkyContrast() {
@@ -460,8 +490,9 @@ async function kitSkyContrast() {
           await page.waitForTimeout(250);
           // The Toaster scene plays one step by itself the first time it is on screen, adding toasts on timers:
           // measured mid-step, a line is scored against the background of a stack that has since moved.
-          if (!(await screenAtRest(page))) {
-            fail(`${where} @${y}`, 'the screen did not come to rest in 6 s (reduced motion holds the sky still): not scored');
+          const settled = await screenAtRest(page);
+          if (!settled.rest) {
+            fail(`${where} @${y}`, `the screen did not come to rest in 10 s (reduced motion holds the sky still), still changing at ${settled.moving}: not scored`);
             if (y + height >= total) break;
             continue;
           }

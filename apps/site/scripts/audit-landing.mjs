@@ -245,6 +245,8 @@ try {
     page.on('pageerror', (error) => errors.push(String(error)));
     const entry = (report[name] = { errors, checks: [], complete: false });
     for (const path of ['/', '/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/docs/components/color-picker']) {
+      // Progress in the log: when a runner dies mid-scenario (the WebKit job ran out of memory), it names the page.
+      console.log(`  ${name} ${path}`);
       await visit(page, path);
       await page.waitForTimeout(600);
       const stops = path === '/' || path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
