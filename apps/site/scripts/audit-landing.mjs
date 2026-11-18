@@ -253,7 +253,26 @@ try {
         await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
         await page.waitForTimeout(400);
         const width = (entry.narrow[path] = await page.evaluate(() => document.documentElement.scrollWidth));
-        if (width > 320) failed = true;
+        if (width > 320) {
+          failed = true;
+          // What sticks out, so the failure shows its cause: the outermost elements whose right edge passes 320 px
+          // and that no ancestor clips.
+          const over = await page.evaluate(() => {
+            const clipped = (element) => {
+              for (let parent = element.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+                if (['hidden', 'clip'].includes(getComputedStyle(parent).overflowX)) return true;
+              }
+              return false;
+            };
+            return [...document.body.querySelectorAll('*')]
+              .map((element) => ({ element, right: element.getBoundingClientRect().right + window.scrollX }))
+              .filter(({ element, right }) => right > 320.5 && !(element.parentElement && element.parentElement.getBoundingClientRect().right + window.scrollX > 320.5) && !clipped(element))
+              .slice(0, 5)
+              .map(({ element, right }) => `${element.tagName.toLowerCase()}${typeof element.className === 'string' && element.className ? `.${element.className.trim().split(/\s+/u).slice(0, 3).join('.')}` : ''} → ${right.toFixed(1)} px`);
+          });
+          (entry.overflow ??= {})[path] = over;
+          console.log(`  ${name} ${path} at 320 px: ${over.join('; ') || 'no element past the edge (a margin or a transform?)'}`);
+        }
       }
       await page.setViewportSize(options.viewport);
     }

@@ -494,7 +494,13 @@ const hitExtent = (locator) =>
       while (d < 40 && control(cx + dx * (d + 1), cy + dy * (d + 1))) d += 1;
       return d;
     };
-    return { width: reach(-1, 0) + reach(1, 0) + 1, height: reach(0, -1) + reach(0, 1) + 1 };
+    const width = reach(-1, 0) + reach(1, 0) + 1;
+    const height = reach(0, -1) + reach(0, 1) + 1;
+    if (control(cx, cy)) return { width, height };
+    // Not even the centre lands on the control: say what does, so a failure shows its cause.
+    const describe = (node) => (node ? `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${typeof node.className === 'string' && node.className ? `.${node.className.trim().split(/\s+/u).slice(0, 3).join('.')}` : ''}` : 'nothing');
+    const hit = document.elementFromPoint(cx, cy);
+    return { width, height, centre: `${describe(hit)} in ${describe(hit?.parentElement)} at ${Math.round(cx)},${Math.round(cy)} of ${window.innerWidth}×${window.innerHeight}` };
   });
 
 async function checkPopover(page, trigger, where, { reduced, forced, browserName }) {
@@ -629,7 +635,7 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
     if (locator && !(await locator.count())) continue;
     const extent = locator ? await hitExtent(locator) : swatchExtent;
     entry.targets[label] = extent;
-    check(`target ${label} ≥ ${TARGET_MIN} px`, extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}`);
+    check(`target ${label} ≥ ${TARGET_MIN} px`, extent.width >= TARGET_MIN && extent.height >= TARGET_MIN, `${extent.width}×${extent.height}${extent.centre ? `, the centre hits ${extent.centre}` : ''}`);
   }
 
   // Escape from the area: closed, focus back on the swatch.
