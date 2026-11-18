@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { DEMO_GROUPS, DEMOS } from '../../apps/site/src/lib/demos';
 import { INSTALL_COMMAND, REGISTRY_ITEMS, registryCommand, registryUrlCommand } from '../../apps/site/src/lib/site';
 
 /**
@@ -19,16 +20,14 @@ const SPEC_ORDER = [
   '---Components---',
   `${TOASTER}/index`,
   'components/color-picker',
-  '---Toaster---',
-  `${TOASTER}/installation`,
-  `${TOASTER}/quick-start`,
-  '[Playground](/toaster/playground)',
   '---Toaster guides---',
+  '[Playground](/toaster/playground)',
   `${TOASTER}/notifications`,
   `${TOASTER}/operations`,
   `${TOASTER}/forms`,
-  `${TOASTER}/positioning`,
   `${TOASTER}/styling`,
+  '---Toaster advanced---',
+  `${TOASTER}/positioning`,
   `${TOASTER}/ssr`,
   `${TOASTER}/csp`,
   `${TOASTER}/accessibility`,
@@ -92,13 +91,9 @@ describe('site docs tree', () => {
     expect(new Set(pages).size).toBe(pages.length);
   });
 
-  it("has the Toaster's first group written", () => {
-    const group = meta.pages.slice(meta.pages.indexOf('---Toaster---') + 1, meta.pages.indexOf('---Toaster guides---'));
-    expect(group).toEqual([`${TOASTER}/installation`, `${TOASTER}/quick-start`, '[Playground](/toaster/playground)']);
-    for (const page of group.filter(isPage)) {
-      expect(written, `${page}.mdx`).toContain(page);
-      expect(PENDING.has(page), `${page} is pending`).toBe(false);
-    }
+  it('lists only component pages under Components', () => {
+    const group = meta.pages.slice(meta.pages.indexOf('---Components---') + 1, meta.pages.indexOf('---Toaster guides---'));
+    expect(group).toEqual([`${TOASTER}/index`, 'components/color-picker']);
   });
 
   it('has the notification Guides written, with Run blocks', () => {
@@ -119,10 +114,9 @@ describe('site docs tree', () => {
     }
   });
 
-  it('sends readers to the Playground from Introduction and Quick start only', () => {
+  it('sends no reader to the Playground from the Next steps of a guide', () => {
     const nextSteps = (page: string) => frontmatter(`${TOASTER}/${page}`).body.split('## Next steps')[1] ?? '';
-    for (const page of ['index', 'quick-start']) expect(nextSteps(page), page).toContain('](/toaster/playground)');
-    for (const page of ['installation', 'notifications', 'operations', 'forms', 'positioning', 'styling', 'ssr', 'csp', 'accessibility']) {
+    for (const page of ['notifications', 'operations', 'forms', 'positioning', 'styling', 'ssr', 'csp', 'accessibility']) {
       expect(nextSteps(page), page).not.toContain('](/toaster/playground)');
     }
   });
@@ -181,13 +175,43 @@ describe('site docs tree', () => {
     const registry = JSON.parse(readFileSync(new URL('../../registry/registry.json', import.meta.url), 'utf8')) as { items: { name: string }[] };
     expect(registry.items.map((entry) => entry.name)).toEqual([...REGISTRY_ITEMS]);
     expect(installation).toContain('`https://cloudlet.dev/r/<item>.json`');
-    expect(installation).toContain('](/docs/components/toaster/installation)');
+    expect(installation).toContain('](/docs/components/toaster#installation)');
   });
 
-  it("keeps the Toaster's page, the former Introduction, with a typechecked example and the English locale only", () => {
+  it('keeps the Toaster on one component page: Preview, Installation, Usage, Examples, API Reference', () => {
     expect(written).toContain(`${TOASTER}/index`);
-    expect(frontmatter(`${TOASTER}/index`).fields['title']).toBe('Toaster');
-    expect(frontmatter(`${TOASTER}/index`).body).toMatch(/^```tsx/mu);
+    const { fields, body } = frontmatter(`${TOASTER}/index`);
+    expect(fields['title']).toBe('Toaster');
+    expect([...body.matchAll(/^## (.+)$/gmu)].map((match) => match[1])).toEqual(['Preview', 'Installation', 'Usage', 'Examples', 'API Reference']);
+    const section = (name: string) => body.split(`\n## ${name}\n`)[1]?.split('\n## ')[0] ?? '';
+    expect(section('Preview'), 'Preview: one demo block').toMatch(/^```tsx demo="[^"]+"$/mu);
+    expect(section('Installation'), 'Installation: the npm / shadcn tabs').toContain('<GetStartedTabs />');
+    expect(section('Installation'), 'Installation: the kit page for the namespace').toContain('](/docs/installation)');
+    for (const heading of ['Requirements', 'Import the styles', 'The shadcn registry item']) expect(section('Installation')).toContain(`\n### ${heading}\n`);
+    expect(section('Usage'), 'Usage: a typechecked example').toMatch(/^```tsx title="[^"]+"$/mu);
+    for (const link of ['/docs/components/toaster/ssr#nextjs-app-router', '/docs/components/toaster/api/labels', '/docs/components/toaster/styling']) {
+      expect(section('Usage'), `Usage: link to ${link}`).toContain(`](${link})`);
+    }
+    for (const name of ['createCloudlet', 'CloudletProvider', 'useCloudlet', 'Toaster']) {
+      expect(section('API Reference'), `API Reference: ${name}`).toMatch(new RegExp(`^\\| \\[\`${name}\`\\]\\(/docs/components/toaster/api/[^)]+\\) \\| .+ \\|$`, 'mu'));
+    }
+  });
+
+  it('runs the whole demo catalog in Examples, a group per heading with its blurb, in catalog order', () => {
+    const examples = frontmatter(`${TOASTER}/index`).body.split('\n## Examples\n')[1]?.split('\n## ')[0] ?? '';
+    const groups = examples.split(/^### /mu).slice(1);
+    expect(groups.map((group) => group.split('\n')[0])).toEqual(DEMO_GROUPS.map((group) => group.id));
+    for (const [index, { id, blurb }] of DEMO_GROUPS.entries()) {
+      const group = groups[index] ?? '';
+      expect(group, `${id}: blurb`).toContain(`\n${blurb} `);
+      expect(group, `${id}: a link to the guide`).toMatch(/\]\(\/docs\/components\/toaster\/[a-z-]+(?:#[a-z-]+)?\)\.\n/u);
+      expect(group, `${id}: one <Demos>`).toMatch(/<Demos>[\s\S]*<\/Demos>/u);
+      const used = [...group.matchAll(/^```tsx demo="([^"]+)"$/gmu)].map((match) => match[1]);
+      expect(used, `${id}: demo= blocks`).toEqual(DEMOS.filter((demo) => demo.group === id).map((demo) => demo.id));
+    }
+  });
+
+  it('has the English locale only', () => {
     const locales = readdirSync(new URL('../', CONTENT), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
     expect(locales).toEqual(['en']);
   });

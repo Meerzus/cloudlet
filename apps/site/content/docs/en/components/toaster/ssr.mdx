@@ -146,7 +146,7 @@ export function SaveButton() {
 
 `useCloudlet()` throws while the controller is `null`, so keep it for components that render only after the owner has mounted, such as content of a dialog the user opens.
 
-The shadcn registry item works a little differently: its wrapper renders the Provider and the Toaster for a controller you pass in, and the `notification-owner.tsx` of [Installation](/docs/components/toaster/installation#the-shadcn-registry-item) renders it once that controller exists.
+The shadcn registry item works a little differently: its wrapper renders the Provider and the Toaster for a controller you pass in, and the `notification-owner.tsx` of [Installation](/docs/components/toaster#installation) renders it once that controller exists.
 
 ### React Strict Mode
 
@@ -173,13 +173,13 @@ export default function App({ Component, pageProps }: AppProps) {
 }
 ```
 
-With the shadcn wrapper, its two CSS imports move into `_app` too, in the order given in [Installation](/docs/components/toaster/installation#the-shadcn-registry-item).
+With the shadcn wrapper, its two CSS imports move into `_app` too, in the order given in [The shadcn registry item](/docs/components/toaster#the-shadcn-registry-item).
 
 Both routers need a matching pair of `react` and `react-dom`, in the range Cloudlet supports.
 
 ## Vite and other client-only apps
 
-A single-page application without server rendering has nothing to hydrate. Create the controller once at module scope of the client entry and render the Provider and the Toaster there, as in the [Quick start](/docs/components/toaster/quick-start#mount-the-toaster). With Vite's SSR mode, the server entry follows [One controller per session or request](#one-controller-per-session-or-request).
+A single-page application without server rendering has nothing to hydrate. Create the controller once at module scope of the client entry and render the Provider and the Toaster there, as in [Usage](/docs/components/toaster#usage). With Vite's SSR mode, the server entry follows [One controller per session or request](#one-controller-per-session-or-request).
 
 ## Next steps
 

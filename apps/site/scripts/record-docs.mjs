@@ -2,10 +2,11 @@
 /**
  * Walks /docs/components/toaster in headless Chromium against the static export: every page of
  * the sidebar opens with a clean console, the drawer and the table of contents work, Copy copies
- * the example, and axe finds no violations with the drawer closed and open. Getting started:
- * the Installation tabs switch from the keyboard and copy their example, the demo button on Quick
- * start shows the toast on the page Toaster (top on desktop, bottom on phones: `position="auto"`).
- * Guides: every demo button of Notifications, Operations and Positioning shows its own
+ * the example, and axe finds no violations with the drawer closed and open. The component page:
+ * the tabs of its Installation switch from the keyboard and copy their example, the demo button of
+ * its Preview shows the toast on the page Toaster (top on desktop, bottom on phones:
+ * `position="auto"`), and its Examples run the whole catalog. Guides: every demo button of the
+ * component page, Notifications, Operations and Positioning shows its own
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
  * under Show code. Guides:
  * Styling, SSR and Accessibility pass axe, the page never scrolls sideways, and every table wider
@@ -48,6 +49,9 @@ const SCENARIOS = {
 
 const wait = (page, ms) => page.waitForTimeout(ms);
 
+/** The component page's sections and its Examples groups (DEMO_GROUPS), as table-of-contents links. */
+const TOC_ENTRIES = ['preview', 'installation', 'usage', 'examples', 'kinds', 'content', 'actions', 'forms', 'promises', 'attention', 'stack', 'api-reference'].map((id) => `#${id}`);
+
 /** What the page Toaster shows: edge, state and the visible titles. */
 async function toaster(page) {
   return page.evaluate(() => {
@@ -75,9 +79,9 @@ async function copyBlock(page, figure) {
   return { ok: copied === source && copied.length > 0, length: copied.length, label: await figure.locator('.docs-code-title').textContent() };
 }
 
-/** Installation: npm / shadcn tabs from the keyboard, each tab's example copies verbatim. */
+/** Installation of the component page: npm / shadcn tabs from the keyboard, each tab's example copies verbatim. */
 async function installation(page, base, still, failures) {
-  await page.goto(`${base}/docs/components/toaster/installation`);
+  await page.goto(`${base}/docs/components/toaster#installation`);
   await wait(page, 600);
   await still('installation');
   const result = { axe: await axe(page), tabs: [] };
@@ -104,13 +108,16 @@ async function installation(page, base, still, failures) {
   return result;
 }
 
-/** Quick start: the demo button is enabled after mount, the page says what the snippets assume, and it shows the toast. */
-async function quickStart(page, base, phone, still, failures) {
-  await page.goto(`${base}/docs/components/toaster/quick-start`);
+/**
+ * Preview of the component page, the first `show`: the demo button is enabled after mount, the
+ * page says once what the snippets assume, and it shows the toast.
+ */
+async function preview(page, base, phone, still, failures) {
+  await page.goto(`${base}/docs/components/toaster#preview`);
   await wait(page, 600);
-  await still('quick-start');
+  await still('preview');
   const result = { axe: { page: await axe(page) } };
-  const figure = page.locator('.docs-demo[data-demo="success"]');
+  const figure = page.locator('.docs-demo').first();
   const runButton = figure.locator('.docs-demo-trigger[data-demo="success"]');
   result.note = await page.locator('.docs-demo-note').count();
   result.enabled = await runButton.isEnabled();
@@ -121,7 +128,7 @@ async function quickStart(page, base, phone, still, failures) {
   await still('run');
   result.axe.toast = await axe(page);
   const edge = phone ? 'bottom' : 'top';
-  if (result.note !== 1 || !result.enabled || !result.copy.ok) failures.push(`quick start: ${JSON.stringify(result)}`);
+  if (result.note !== 1 || !result.enabled || !result.copy.ok) failures.push(`preview: ${JSON.stringify(result)}`);
   if (result.toast.edge !== edge || !result.toast.titles.includes('Synced to the cloud')) failures.push(`run: ${JSON.stringify(result.toast)} (expected edge ${edge})`);
   // Keyboard: the demo button is in the tab order; Enter runs it again (the stack grows to two).
   await runButton.focus();
@@ -132,8 +139,8 @@ async function quickStart(page, base, phone, still, failures) {
   return result;
 }
 
-/** Pages whose every demo button is checked; a fresh load per demo, so each toast is its own. */
-const GUIDES = ['notifications', 'operations', 'positioning'];
+/** Pages whose every demo button is checked (`''` is the component page); a fresh load per demo, so each toast is its own. */
+const GUIDES = ['', 'notifications', 'operations', 'positioning'];
 
 /**
  * Guides: each demo button shows a notification titled as its snippet; `dismiss-all` empties the
@@ -143,23 +150,28 @@ const GUIDES = ['notifications', 'operations', 'positioning'];
 async function guides(page, base, still, failures) {
   const result = {};
   for (const slug of GUIDES) {
-    await page.goto(`${base}/docs/components/toaster/${slug}`);
+    const url = `${base}/docs/components/toaster${slug && `/${slug}`}`;
+    const name = slug || 'toaster';
+    await page.goto(url);
     await wait(page, 600);
-    await page.screenshot({ path: still.path(`full-${slug}`), fullPage: true });
+    await page.screenshot({ path: still.path(`full-${name}`), fullPage: true });
     const entry = { axe: { page: await axe(page) }, runs: [], groups: [], folds: [] };
-    const ids = await page.locator('.docs-demo-trigger[data-demo]').evaluateAll((buttons) => buttons.map((button) => button.getAttribute('data-demo')));
-    for (const [index, id] of ids.entries()) {
+    // By block and button, not by id: the same demo may run from two blocks of a page.
+    const buttons = await page.locator('.docs-demo').evaluateAll((blocks) =>
+      blocks.flatMap((block, at) => [...block.querySelectorAll('.docs-demo-trigger[data-demo]')].map((button, index) => ({ at, index, id: button.getAttribute('data-demo') }))),
+    );
+    for (const [run, { at, index, id }] of buttons.entries()) {
       // dismiss-all clears what the demo before it (overflow) left; every other demo starts from an empty stack.
       if (id !== 'dismiss-all') {
-        await page.goto(`${base}/docs/components/toaster/${slug}`);
+        await page.goto(url);
         await wait(page, 600);
       }
-      const trigger = page.locator(`.docs-demo-trigger[data-demo="${id}"]`);
+      const figure = page.locator('.docs-demo').nth(at);
+      const trigger = figure.locator('.docs-demo-trigger').nth(index);
       await trigger.scrollIntoViewIfNeeded();
       await trigger.click();
       await wait(page, 900);
       // The pressed button's figure now shows its snippet (data-demo follows the selection).
-      const figure = page.locator(`.docs-demo[data-demo="${id}"]`);
       const source = await figure.locator('pre').evaluate((pre) => pre.textContent ?? '');
       // The first title of the snippet; of a template literal, its longest literal part (`${name} drifted by`).
       const title = /title: (['"`])(.*?)\1/u.exec(source)?.[2] ?? '';
@@ -168,17 +180,17 @@ async function guides(page, base, still, failures) {
       const shown = [toast.pill ?? '', ...toast.titles].join(' | ');
       const ok = id === 'dismiss-all' ? toast.pill === null && toast.titles.length === 0 : Boolean(expected) && shown.includes(expected);
       entry.runs.push({ id, expected, shown, ok });
-      if (!ok) failures.push(`run ${slug} ${id}: expected "${expected}", shown "${shown}"`);
-      if (index === 0) {
-        await still(`run-${slug}`);
+      if (!ok) failures.push(`run ${name} ${id}: expected "${expected}", shown "${shown}"`);
+      if (run === 0) {
+        await still(`run-${name}`);
         entry.axe.toast = await axe(page);
       }
     }
-    await page.goto(`${base}/docs/components/toaster/${slug}`);
+    await page.goto(url);
     await wait(page, 600);
-    entry.groups = await groups(page, slug, still, failures);
-    entry.folds = await folds(page, slug, still, failures);
-    result[slug] = entry;
+    entry.groups = await groups(page, name, still, failures);
+    entry.folds = await folds(page, name, still, failures);
+    result[name] = entry;
   }
   return result;
 }
@@ -630,7 +642,7 @@ async function run(name, scenario, base, out) {
 
   await page.goto(`${base}/docs/components/toaster`);
   await wait(page, 800);
-  const report = { name, pages: [], axe: {}, quiet: null, toc: null, copy: null, drawer: null, installation: null, quickStart: null, guides: null, integration: null, reference: null, search: null, agents: null };
+  const report = { name, pages: [], axe: {}, quiet: null, toc: null, copy: null, drawer: null, installation: null, preview: null, guides: null, integration: null, reference: null, search: null, agents: null };
 
   // Quiet mode: no sky, no Lenis, a flat page colour.
   report.quiet = await page.evaluate(() => ({
@@ -665,6 +677,10 @@ async function run(name, scenario, base, out) {
   const first = await toc.first().getAttribute('href');
   report.toc = { count: await toc.count(), first, target: first ? await page.locator(first).count() : 0 };
   if (report.toc.count === 0 || report.toc.target !== 1) failures.push(`toc: ${JSON.stringify(report.toc)}`);
+  // The component page's sections and the groups of its Examples are all in the table of contents.
+  report.toc.entries = await toc.evaluateAll((items) => items.map((item) => item.getAttribute('href')));
+  const missing = TOC_ENTRIES.filter((entry) => !report.toc.entries.includes(entry));
+  if (missing.length) failures.push(`toc misses ${missing.join(', ')}`);
   await toc.first().click();
   await wait(page, 600);
   await still('toc');
@@ -684,9 +700,9 @@ async function run(name, scenario, base, out) {
 
   report.installation = await installation(page, base, still, failures);
   report.axe.installation = report.installation.axe;
-  report.quickStart = await quickStart(page, base, phone, still, failures);
-  report.axe.quickStart = report.quickStart.axe.page;
-  report.axe.quickStartToast = report.quickStart.axe.toast;
+  report.preview = await preview(page, base, phone, still, failures);
+  report.axe.preview = report.preview.axe.page;
+  report.axe.previewToast = report.preview.axe.toast;
   report.guides = await guides(page, base, still, failures);
   for (const [slug, entry] of Object.entries(report.guides)) {
     report.axe[slug] = entry.axe.page;
