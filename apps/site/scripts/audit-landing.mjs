@@ -256,8 +256,11 @@ let failed = false;
 try {
   for (const [name, options] of Object.entries(SCENARIOS)) {
     if (only.length && !only.includes(name)) continue;
-    // Firefox has no mobile emulation: its phone scenarios are a narrow touch window.
-    const context = await browser.newContext(engine === firefox ? { ...options, isMobile: undefined } : options);
+    // Firefox has no mobile emulation: its phone scenarios are a narrow touch window. Linux WebKit draws the
+    // phone at 1× (its software compositor ran out of memory at 3× on /color-picker's fixed paint layers, the
+    // desktop at 1× passing); the checks here — axe, Tab, layout — do not depend on pixel density.
+    const contextOptions = engine === firefox ? { ...options, isMobile: undefined } : SOFTWARE_WEBKIT ? { ...options, deviceScaleFactor: 1 } : options;
+    const context = await browser.newContext(contextOptions);
     // WebKit on Linux draws WebGL in software, and there the paint's shader ran the runner out of memory
     // (3 → 16 GB within a minute of scrolling /color-picker; on a Mac the same scroll holds steady). The paint
     // is not what this audit checks — audit-color-picker.mjs measures the text over it — so on that engine the
