@@ -129,6 +129,9 @@ const markFading = (page) =>
     return [...where];
   });
 
+/** Step by step in the log when AUDIT_TRACE is set (the WebKit job: its runner runs out of memory on one page). */
+const trace = (line) => process.env.AUDIT_TRACE && console.log(`    ${new Date().toISOString().slice(11, 19)} ${line}`);
+
 /**
  * Opens a page and waits for the network to go quiet. A shared CI runner sometimes keeps Firefox from getting
  * there in 30 s on a page that loads at once elsewhere: one more try with a longer wait; a second timeout fails.
@@ -252,8 +255,11 @@ try {
       const stops = path === '/' || path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
       for (const stop of stops) {
         await scrollTo(page, stop.y);
+        trace(`${name} ${path} ${stop.label}: marking fades`);
         const fading = await markFading(page);
+        trace(`${name} ${path} ${stop.label}: axe`);
         const violations = await axe(page);
+        trace(`${name} ${path} ${stop.label}: axe done`);
         entry.checks.push({ path, at: stop.label, fading, violations });
         if (violations.length) failed = true;
       }

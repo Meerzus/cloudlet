@@ -425,8 +425,46 @@ async function kitContrast(mode, route = 'kit') {
  * still; the hero's and the chapter's own text is measured above, the header over the page is a note.
  */
 /**
- * Waits until two shots 400 ms apart are the same (at most ~10 s), so the screen is scored at rest. A screen that
- * keeps changing returns where: the box that changed between the last two shots and what lies at its centre.
+ * How two shots of the screen differ: pixels whose channels move by more than DRIFT, the largest move, and the
+ * box they span with what lies at its centre. Software raster redraws blurred halos a unit or two apart from
+ * shot to shot; a toast arriving moves a block of pixels by far more.
+ */
+const DRIFT = 24;
+const shotDifference = (page, previous, next) =>
+  page.evaluate(async ([p, q, drift]) => {
+    const load = (data) => new Promise((done) => { const image = new Image(); image.onload = () => done(image); image.src = `data:image/png;base64,${data}`; });
+    const [a, b] = [await load(p), await load(q)];
+    const canvas = Object.assign(document.createElement('canvas'), { width: a.width, height: a.height });
+    const context = canvas.getContext('2d');
+    context.drawImage(a, 0, 0);
+    const before = context.getImageData(0, 0, a.width, a.height).data;
+    context.drawImage(b, 0, 0);
+    const after = context.getImageData(0, 0, a.width, a.height).data;
+    let [moved, largest, left, top, right, bottom] = [0, 0, Infinity, Infinity, -1, -1];
+    for (let index = 0; index < before.length; index += 4) {
+      const delta = Math.max(Math.abs(before[index] - after[index]), Math.abs(before[index + 1] - after[index + 1]), Math.abs(before[index + 2] - after[index + 2]));
+      largest = Math.max(largest, delta);
+      if (delta <= drift) continue;
+      moved += 1;
+      const x = (index / 4) % a.width;
+      const y = Math.floor(index / 4 / a.width);
+      [left, top, right, bottom] = [Math.min(left, x), Math.min(top, y), Math.max(right, x), Math.max(bottom, y)];
+    }
+    const share = moved / (a.width * a.height);
+    if (!moved) return { share, where: `nothing past ${drift}/255 (largest ${largest})` };
+    const scale = a.width / window.innerWidth;
+    const box = [left, top, right, bottom].map((value) => Math.round(value / scale));
+    const chain = [];
+    for (let node = document.elementFromPoint((box[0] + box[2]) / 2, (box[1] + box[3]) / 2); node && chain.length < 4; node = node.parentElement) {
+      chain.push(`${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${typeof node.className === 'string' && node.className ? `.${node.className.trim().split(/\s+/u).slice(0, 2).join('.')}` : ''}`);
+    }
+    return { share, where: `${(share * 100).toFixed(3)} % of pixels past ${drift}/255 (largest ${largest}) in ${box.join(',')} (${chain.join(' < ')})` };
+  }, [previous.toString('base64'), next.toString('base64'), DRIFT]);
+
+/**
+ * Waits until two shots 400 ms apart agree (at most ~10 s), so the screen is scored at rest. Agree: identical, or
+ * no more than 0.05 % of the pixels moved past DRIFT (raster noise, not motion). A screen that keeps changing
+ * returns how it changed between the last two shots.
  */
 async function screenAtRest(page) {
   let previous = await page.screenshot();
@@ -434,33 +472,9 @@ async function screenAtRest(page) {
     await page.waitForTimeout(400);
     const next = await page.screenshot();
     if (next.equals(previous)) return { rest: true };
-    if (attempt === 24) {
-      const moving = await page.evaluate(async ([p, q]) => {
-        const load = (data) => new Promise((done) => { const image = new Image(); image.onload = () => done(image); image.src = `data:image/png;base64,${data}`; });
-        const [a, b] = [await load(p), await load(q)];
-        const canvas = Object.assign(document.createElement('canvas'), { width: a.width, height: a.height });
-        const context = canvas.getContext('2d');
-        context.drawImage(a, 0, 0);
-        const before = context.getImageData(0, 0, a.width, a.height).data;
-        context.drawImage(b, 0, 0);
-        const after = context.getImageData(0, 0, a.width, a.height).data;
-        let [left, top, right, bottom] = [Infinity, Infinity, -1, -1];
-        for (let index = 0; index < before.length; index += 4) {
-          if (before[index] === after[index] && before[index + 1] === after[index + 1] && before[index + 2] === after[index + 2]) continue;
-          const x = (index / 4) % a.width;
-          const y = Math.floor(index / 4 / a.width);
-          [left, top, right, bottom] = [Math.min(left, x), Math.min(top, y), Math.max(right, x), Math.max(bottom, y)];
-        }
-        const scale = a.width / window.innerWidth;
-        const box = [left, top, right, bottom].map((value) => Math.round(value / scale));
-        const chain = [];
-        for (let node = document.elementFromPoint((box[0] + box[2]) / 2, (box[1] + box[3]) / 2); node && chain.length < 4; node = node.parentElement) {
-          chain.push(`${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${typeof node.className === 'string' && node.className ? `.${node.className.trim().split(/\s+/u).slice(0, 2).join('.')}` : ''}`);
-        }
-        return `${box.join(',')} (${chain.join(' < ')})`;
-      }, [previous.toString('base64'), next.toString('base64')]);
-      return { rest: false, moving };
-    }
+    const difference = await shotDifference(page, previous, next);
+    if (difference.share <= 0.0005) return { rest: true };
+    if (attempt === 24) return { rest: false, moving: difference.where };
     previous = next;
   }
   return { rest: false, moving: '?' };
@@ -492,7 +506,7 @@ async function kitSkyContrast() {
           // measured mid-step, a line is scored against the background of a stack that has since moved.
           const settled = await screenAtRest(page);
           if (!settled.rest) {
-            fail(`${where} @${y}`, `the screen did not come to rest in 10 s (reduced motion holds the sky still), still changing at ${settled.moving}: not scored`);
+            fail(`${where} @${y}`, `the screen did not come to rest in 10 s (reduced motion holds the sky still), still changing: ${settled.moving}; not scored`);
             if (y + height >= total) break;
             continue;
           }
