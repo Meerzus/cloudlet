@@ -462,23 +462,38 @@ const shotDifference = (page, previous, next) =>
   }, [previous.toString('base64'), next.toString('base64'), DRIFT]);
 
 /**
- * Waits until two shots 400 ms apart agree (at most ~10 s), so the screen is scored at rest. Agree: identical, or
- * no more than 0.05 % of the pixels moved past DRIFT (raster noise, not motion). A screen that keeps changing
- * returns how it changed between the last two shots.
+ * Waits until the screen holds still for 1.2 s (at most ~10 s), so it is scored at rest. Each shot is compared with
+ * the first of the window, not with the one before it, so a slow change adds up instead of passing step by step;
+ * shots agree when identical or when no more than 0.05 % of the pixels moved past DRIFT (raster noise, not
+ * motion). A screen that keeps changing returns how it changed against the last window's first shot.
  */
 async function screenAtRest(page) {
-  let previous = await page.screenshot();
+  let anchor = await page.screenshot();
+  let agreeing = 0;
+  let last = null;
   for (let attempt = 0; attempt < 25; attempt += 1) {
     await page.waitForTimeout(400);
     const next = await page.screenshot();
-    if (next.equals(previous)) return { rest: true };
-    const difference = await shotDifference(page, previous, next);
-    if (difference.share <= 0.0005) return { rest: true };
-    if (attempt === 24) return { rest: false, moving: difference.where };
-    previous = next;
+    const difference = next.equals(anchor) ? null : await shotDifference(page, anchor, next);
+    if (!difference || difference.share <= 0.0005) {
+      agreeing += 1;
+      if (agreeing >= 3) return { rest: true };
+      continue;
+    }
+    last = difference;
+    anchor = next;
+    agreeing = 0;
   }
-  return { rest: false, moving: '?' };
+  return { rest: false, moving: last?.where ?? '?' };
 }
+
+/**
+ * The Toaster scene on `/` plays one step by itself the first time its phones are on screen: toasts arrive over
+ * half a second and leave after COMPARE_DURATION (plus the plain stack's fade). Read from lib/compare-scene.ts so
+ * the wait cannot drift from the page.
+ */
+const SCENE = readFileSync(new URL('../src/lib/compare-scene.ts', import.meta.url), 'utf8');
+const SCENE_PLAY_MS = Number(/COMPARE_DURATION = (\d+)/u.exec(SCENE)[1]) + Number(/PLAIN_FADE_MS = (\d+)/u.exec(SCENE)[1]) + 1500;
 
 async function kitSkyContrast() {
   const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -494,6 +509,11 @@ async function kitSkyContrast() {
         await page.evaluate(() => {
           for (const details of document.querySelectorAll('#faq details')) details.open = true;
         });
+        // Let the scene play its step out before the walk: measured mid-step, a toast that leaves between the
+        // two shots of a screen leaves its line scored against the background that was under it.
+        await page.evaluate(() => document.querySelector('#toaster .kt-phones')?.scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.waitForTimeout(SCENE_PLAY_MS);
+        await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
         const meta = { route: 'kit-sky', mode: 'sky', device, colorScheme, color: 'sky' };
         const height = options.viewport.height;
         const step = Math.round(height * 0.75);
@@ -506,7 +526,7 @@ async function kitSkyContrast() {
           // measured mid-step, a line is scored against the background of a stack that has since moved.
           const settled = await screenAtRest(page);
           if (!settled.rest) {
-            fail(`${where} @${y}`, `the screen did not come to rest in 10 s (reduced motion holds the sky still), still changing: ${settled.moving}; not scored`);
+            fail(`${where} @${y}`, `the screen did not hold still for 1.2 s within 10 s (reduced motion holds the sky still), still changing: ${settled.moving}; not scored`);
             if (y + height >= total) break;
             continue;
           }

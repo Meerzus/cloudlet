@@ -36,6 +36,8 @@ const cell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' 
 const table = (head, rows) => [`| ${head.join(' | ')} |`, `|${head.map(() => ' --- ').join('|')}|`, ...rows.map((row) => `| ${row.map(cell).join(' | ')} |`)].join('\n');
 const list = (items, limit = 20) => [...items.slice(0, limit).map((item) => `- ${item}`), ...(items.length > limit ? [`- … and ${items.length - limit} more (see the artifact)`] : [])].join('\n');
 const mark = (ok) => (ok ? '✅' : '❌');
+/** A layout check's cell: not run, partial (cut short), or its verdict. */
+const layoutCell = (value) => (value === null ? '—' : value === 'partial' ? '◌ partial' : mark(value));
 /** A Lighthouse score as a percentage, a median's half point kept (89.5 is below 90, and must not read as 90). */
 const score = (value) => String(Math.round(value * 1000) / 10);
 
@@ -46,13 +48,21 @@ function landing(report) {
     const bad = entry.checks.filter((check) => check.violations.length);
     const keyboard = Object.entries(entry.keyboard ?? {});
     const keyFailures = keyboard.reduce((sum, [, pass]) => sum + pass.failures.length, 0);
-    const still = entry.still ? Object.values(entry.still).every((layout) => !layout.lenis && !layout.pinSpacers && !layout.moved) : null;
-    const narrow = entry.narrow ? Object.values(entry.narrow).every((width) => width <= 320) : null;
+    // A layout check is green only with every page it measures (audit-landing.mjs: the still layout of / and
+    // /toaster, 320 px on five pages); a failure already measured stays red, a check cut short is partial.
+    const verdict = (measured, expected, passes) => {
+      if (!measured) return null;
+      const values = Object.values(measured);
+      if (!values.every(passes)) return false;
+      return values.length >= expected ? true : 'partial';
+    };
+    const still = verdict(entry.still, 2, (layout) => !layout.lenis && !layout.pinSpacers && !layout.moved);
+    const narrow = verdict(entry.narrow, 5, (width) => width <= 320);
     // A scenario cut short (the audit threw) is not green, whatever it had checked so far.
     const complete = entry.complete === true;
-    const ok = complete && !bad.length && !keyFailures && !entry.errors.length && still !== false && narrow !== false;
+    const ok = complete && !bad.length && !keyFailures && !entry.errors.length && still !== false && still !== 'partial' && narrow !== false && narrow !== 'partial';
     if (!complete) problems.push(`${scenario}: interrupted before it finished — partial results`);
-    rows.push([mark(ok) + ' ' + scenario + (complete ? '' : ' (interrupted)'), entry.checks.length, bad.length, keyboard.map(([path, pass]) => `${path} ${pass.stops}`).join(', '), keyFailures, entry.errors.length, still === null ? '—' : mark(still), narrow === null ? '—' : mark(narrow)]);
+    rows.push([mark(ok) + ' ' + scenario + (complete ? '' : ' (interrupted)'), entry.checks.length, bad.length, keyboard.map(([path, pass]) => `${path} ${pass.stops}`).join(', '), keyFailures, entry.errors.length, layoutCell(still), layoutCell(narrow)]);
     for (const check of bad) for (const violation of check.violations) problems.push(`${scenario} \`${check.path}\` ${check.at}: **${violation.id}** — ${violation.nodes.map((node) => node.target).join(', ')}`);
     for (const [path, pass] of keyboard) for (const stop of pass.failures) problems.push(`${scenario} keyboard \`${path}\`: ${JSON.stringify(stop)}`);
     for (const error of entry.errors) problems.push(`${scenario} console: ${error}`);

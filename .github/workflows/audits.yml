@@ -83,9 +83,12 @@ jobs:
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: |
           mkdir -p artifacts/audits
-          # Memory in the log every 20 s: the WebKit job has been cut off by the runner itself (exit 143),
-          # and the log is all that survives that.
+          # Memory in the log every 20 s: the WebKit job was cut off by the runner itself when it ran out of
+          # memory (exit 143), and the log is all that survives that.
           (while sleep 20; do free -m | awk -v t="$(date -u +%T)" 'NR==2 { print "memory " t ": " $3 " of " $2 " MB used" }'; done) &
+          sampler=$!
+          # The sampler and its sleep must not outlive the audit: they hold the step's output open.
+          trap 'pkill -P "$sampler" 2>/dev/null; kill "$sampler" 2>/dev/null; true' EXIT
           if [ "${{ matrix.browser }}" = webkit ]; then export AUDIT_TRACE=1; fi
           node apps/site/scripts/audit-landing.mjs artifacts/audits/landing --browser ${{ matrix.browser }} 2>&1 | tee artifacts/audits/landing.log
       - if: always()

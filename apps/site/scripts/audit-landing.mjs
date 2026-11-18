@@ -17,6 +17,9 @@
  * The kit's `/` is checked at every section, then with each of its live places open (KIT_LIVE). On
  * the phone, every page is also loaded 320 px wide and must not scroll sideways.
  *
+ * WebKit on Linux runs without WebGL 2 (its software WebGL runs out of memory on the paint): the pages show
+ * their fallback there; Safari on a Mac draws the paint.
+ *
  * Writes axe-<browser>.json; exits 1 on any violation, keyboard or reduced-motion failure, or console error.
  */
 import AxeBuilder from '@axe-core/playwright';
@@ -129,6 +132,14 @@ const markFading = (page) =>
     return [...where];
   });
 
+const SOFTWARE_WEBKIT = (engine === webkit && process.platform === 'linux') || process.env.AUDIT_NO_WEBGL === '1';
+/** Takes WebGL 2 away before the page runs (the same switch as the `flat` mode of audit-color-picker.mjs). */
+const NO_WEBGL = () => {
+  const original = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+    return type === 'webgl2' ? null : original.call(this, type, ...rest);
+  };
+};
 /** Step by step in the log when AUDIT_TRACE is set (the WebKit job: its runner runs out of memory on one page). */
 const trace = (line) => process.env.AUDIT_TRACE && console.log(`    ${new Date().toISOString().slice(11, 19)} ${line}`);
 
@@ -146,29 +157,34 @@ async function visit(page, path) {
   }
 }
 
+/**
+ * Marks the text caught mid-fade and runs axe without it; returns both from the same attempt. axe itself sometimes
+ * dies in Firefox ("too much recursion" while it writes its results' messages): a crash of the tool, not a finding.
+ * One more attempt, marked afresh (text that finished fading meanwhile is checked); a second crash fails the audit.
+ */
 async function axe(page, { pixels = false } = {}) {
-  const run = () => {
+  const attempt = async () => {
+    const fading = await markFading(page);
     const builder = new AxeBuilder({ page }).exclude('[data-audit-fading]');
     if (pixels) builder.disableRules(['color-contrast']);
-    return builder.analyze();
+    return { fading, audit: await builder.analyze() };
   };
-  // axe itself sometimes dies in Firefox ("too much recursion" while it writes its results' messages):
-  // a crash of the tool, not a finding. One more run; a second crash fails the audit as before.
-  let audit;
+  let result;
   try {
-    audit = await run();
+    result = await attempt();
   } catch (error) {
     console.log(`  axe crashed (${String(error.message).split('\n')[0]}), running it again`);
     await page.waitForTimeout(500);
-    // Marked afresh: text that finished fading meanwhile is checked, text still fading stays excluded.
-    await markFading(page);
-    audit = await run();
+    result = await attempt();
   }
-  return audit.violations.map((violation) => ({
-    id: violation.id,
-    impact: violation.impact,
-    nodes: violation.nodes.map((node) => ({ target: node.target.join(' '), summary: node.failureSummary?.split('\n').slice(1).join(' ').trim() })),
-  }));
+  return {
+    fading: result.fading,
+    violations: result.audit.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      nodes: violation.nodes.map((node) => ({ target: node.target.join(' '), summary: node.failureSummary?.split('\n').slice(1).join(' ').trim() })),
+    })),
+  };
 }
 
 /** Safari (and WebKit) tab only to controls by default; Option+Tab reaches links too. */
@@ -242,6 +258,11 @@ try {
     if (only.length && !only.includes(name)) continue;
     // Firefox has no mobile emulation: its phone scenarios are a narrow touch window.
     const context = await browser.newContext(engine === firefox ? { ...options, isMobile: undefined } : options);
+    // WebKit on Linux draws WebGL in software, and there the paint's shader ran the runner out of memory
+    // (3 → 16 GB within a minute of scrolling /color-picker; on a Mac the same scroll holds steady). The paint
+    // is not what this audit checks — audit-color-picker.mjs measures the text over it — so on that engine the
+    // pages get no WebGL 2 and show their own fallback, as a browser without it would.
+    if (SOFTWARE_WEBKIT) await context.addInitScript(NO_WEBGL);
     const page = await context.newPage();
     const errors = [];
     page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
@@ -255,10 +276,8 @@ try {
       const stops = path === '/' || path === '/toaster' || path === '/color-picker' ? await homeStops(page) : [{ label: 'top', y: 0 }];
       for (const stop of stops) {
         await scrollTo(page, stop.y);
-        trace(`${name} ${path} ${stop.label}: marking fades`);
-        const fading = await markFading(page);
         trace(`${name} ${path} ${stop.label}: axe`);
-        const violations = await axe(page);
+        const { fading, violations } = await axe(page);
         trace(`${name} ${path} ${stop.label}: axe done`);
         entry.checks.push({ path, at: stop.label, fading, violations });
         if (violations.length) failed = true;
@@ -266,8 +285,7 @@ try {
       if (path === '/') {
         for (const live of KIT_LIVE) {
           await openLive(page, live);
-          const fading = await markFading(page);
-          const violations = await axe(page, live);
+          const { fading, violations } = await axe(page, live);
           entry.checks.push({ path, at: live.label, fading, violations });
           if (violations.length) failed = true;
           // Close what opened (a panel, a popover); a theme and an answer stay as they are.
