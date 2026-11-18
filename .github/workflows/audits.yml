@@ -3,9 +3,9 @@ name: site-audits
 # pull request. The export is built once and shared as an artifact; every audit then runs in its own job,
 # in parallel. Gates (a red job is a failed audit): axe, keyboard and still layout of the landings in Chromium
 # and Firefox, text contrast over the paint without a GPU (SwiftShader `page` and no-WebGL `flat`), the pickers
-# from the keyboard in Chromium and WebKit, the first-screen budget, the paint smoke. Reports (they run and show
-# their results, a red one does not fail the run): the landings in Linux WebKit, the docs and Playground walks
-# (until the unused CSS preload is fixed), Lighthouse (Performance is noisy on shared runners). Local only (they
+# from the keyboard in Chromium and WebKit, the first-screen budget, the docs and Playground walks, the paint
+# smoke. Reports (they run and show their results, a red one does not fail the run): the landings in Linux
+# WebKit, Lighthouse (Performance is noisy on shared runners). Local only (they
 # need a GPU or hands): the `fixed` paint mode of audit-color-picker.mjs (ANGLE on Metal), scroll-bench.mjs
 # (frame times), Safari.
 on:
@@ -208,14 +208,11 @@ jobs:
 
   walks:
     # The docs and the Playground walked in Chromium: pages, demos, copy, search, axe (record-docs.mjs,
-    # record-playground.mjs); and the paint smoke of the color picker's top (smoke-picker-hero.mjs, a gate).
-    # The two walks count console warnings as failures, and today every page they open warns that the
-    # kit's and the picker's CSS were preloaded and not used: until that is fixed they report and do not
-    # fail the run (everything else in them passes). Drop continue-on-error once they are green.
+    # record-playground.mjs); and the paint smoke of the color picker's top (smoke-picker-hero.mjs).
+    # All three are gates; the two walks count console warnings as failures.
     needs: export
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    continue-on-error: ${{ matrix.walk != 'smoke' }}
     strategy:
       fail-fast: false
       matrix:

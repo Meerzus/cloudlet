@@ -201,6 +201,10 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 - On a narrow phone the cards of the [Playground](https://cloudlet.dev/toaster/playground) keep inside
   the page's margins and cut their longest labels short. The cards used to grow to the longest label,
   which ran into the right margin and, with Linux fonts, scrolled the page sideways at 320 px.
+- The documentation, the Playground and the Color picker's page no longer load the stylesheets of
+  other pages they do not use. The logo and Docs in the header prefetched their page as soon as they
+  were on screen, which preloaded the kit's hero and the color picker's CSS everywhere; they now
+  prefetch when the pointer comes over them, on focus or on touch.
 - In Tools on [/color-picker](https://cloudlet.dev/color-picker), a click on the paint takes the
   color under the cursor in windows wider than the paint's frame too; there it read the frame shrunk
   into the window's left part.

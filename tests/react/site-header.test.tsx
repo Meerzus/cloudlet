@@ -1,10 +1,10 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Header } from '../../apps/site/src/components/site/header';
 
-const route = vi.hoisted(() => ({ pathname: '/toaster' }));
-vi.mock('next/navigation', () => ({ usePathname: () => route.pathname }));
+const route = vi.hoisted(() => ({ pathname: '/toaster', prefetch: vi.fn() }));
+vi.mock('next/navigation', () => ({ usePathname: () => route.pathname, useRouter: () => ({ prefetch: route.prefetch }) }));
 vi.mock('@/components/site/theme-toggle', () => ({ ThemeToggle: () => null }));
 
 // jsdom has no ResizeObserver (the edge blur and segment highlights re-measure on it) and no Web
@@ -12,6 +12,7 @@ vi.mock('@/components/site/theme-toggle', () => ({ ThemeToggle: () => null }));
 beforeEach(() => {
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
   route.pathname = '/toaster';
+  route.prefetch.mockClear();
 });
 
 const trigger = () => screen.getByRole('button', { name: 'Components' });
@@ -44,6 +45,22 @@ describe('site header', () => {
       expect(primary().getByRole('link', { name: 'Docs' })).toHaveAttribute('href', docs);
       unmount();
     }
+  });
+
+  // A prefetch on screen would preload the other page's CSS, unused here (Chrome warns about it).
+  it('prefetches the logo’s and Docs’ pages on hover, focus or touch, not on render', async () => {
+    const user = userEvent.setup();
+    route.pathname = '/docs/components/toaster/styling';
+    render(<Header />);
+    expect(route.prefetch).not.toHaveBeenCalled();
+
+    await user.hover(screen.getByRole('link', { name: 'Cloudlet' }));
+    expect(route.prefetch).toHaveBeenLastCalledWith('/');
+    act(() => primary().getByRole('link', { name: 'Docs' }).focus());
+    expect(route.prefetch).toHaveBeenLastCalledWith('/docs/components/toaster');
+    route.prefetch.mockClear();
+    fireEvent.touchStart(screen.getByRole('link', { name: 'Cloudlet' }));
+    expect(route.prefetch).toHaveBeenCalledWith('/');
   });
 });
 
