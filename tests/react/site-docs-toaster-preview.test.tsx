@@ -69,8 +69,9 @@ describe('docs Toaster preview', () => {
       ['Side', 'Right', 'top-right', 'ltr', '<Toaster position="top-right" />'],
       ['Position', 'Bottom', 'bottom-right', 'ltr', '<Toaster position="bottom-right" />'],
       ['Direction', 'RTL', 'bottom-right', 'rtl', '<Toaster position="bottom-right" dir="rtl" />'],
-      ['Position', 'Auto', 'top-right', 'rtl', '<Toaster position="top-right" dir="rtl" />'],
-      ['Side', 'Center', 'auto', 'rtl', '<Toaster dir="rtl" />'],
+      ['Position', 'Auto', 'auto', 'rtl', '<Toaster dir="rtl" />'],
+      ['Position', 'Top', 'top-center', 'rtl', '<Toaster position="top-center" dir="rtl" />'],
+      ['Position', 'Auto', 'auto', 'rtl', '<Toaster dir="rtl" />'],
       ['Direction', 'LTR', 'auto', 'ltr', '<Toaster />'],
     ];
     for (const [group, option, position, dir, text] of steps) {
@@ -82,14 +83,34 @@ describe('docs Toaster preview', () => {
     }
   });
 
-  it('takes the bottom edge for Auto beside the centre on a narrow screen, as position="auto" would', async () => {
-    screenState.wide = false;
-    render(<Page />);
-    await act(async () => {});
-    pick('Side', 'Left');
-    await act(async () => {});
-    expect(host()).toHaveAttribute('data-position', 'bottom-left');
-    expect(code()).toBe('<Toaster position="bottom-left" />');
+  it('keeps Auto in the centre: Left and Right are off, picking Auto moves Side to Center, the width does not matter', async () => {
+    for (const wide of [true, false]) {
+      screenState.wide = wide;
+      render(<Page />);
+      await act(async () => {});
+      const side = (name: string) => within(screen.getByRole('group', { name: 'Side' })).getByRole('radio', { name });
+      expect([side('Left').hasAttribute('disabled'), side('Center').hasAttribute('disabled'), side('Right').hasAttribute('disabled')]).toEqual([true, false, true]);
+      expect(side('Center')).toBeChecked();
+      // A click dispatched at a disabled side reaches no handler (a browser does not dispatch it at all).
+      pick('Side', 'Left');
+      await act(async () => {});
+      expect(host()).toHaveAttribute('data-position', 'auto');
+      expect(code()).toBe('<Toaster />');
+      // Top frees every side; Auto from Left comes back to Center.
+      pick('Position', 'Top');
+      await act(async () => {});
+      expect(side('Left')).toBeEnabled();
+      pick('Side', 'Left');
+      await act(async () => {});
+      expect(host()).toHaveAttribute('data-position', 'top-left');
+      pick('Position', 'Auto');
+      await act(async () => {});
+      expect(side('Center')).toBeChecked();
+      expect(side('Left')).toBeDisabled();
+      expect(host()).toHaveAttribute('data-position', 'auto');
+      expect(code()).toBe('<Toaster />');
+      cleanup();
+    }
   });
 
   it('copies the code it shows', async () => {

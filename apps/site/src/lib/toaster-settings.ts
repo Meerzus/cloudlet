@@ -33,13 +33,16 @@ export const POSITIONS: readonly Position[] = ['auto', 'top-center', 'bottom-cen
 export const AUTO_BREAKPOINT = '48rem';
 
 /**
- * `auto` exists only in the centre: beside it the edge is the one `auto` would take at this width,
- * so Auto + Left is `top-left` on a wide viewport and `bottom-left` on a phone.
+ * `auto` exists only in the centre: with Position = Auto the Side is Center and Left / Right are off,
+ * so the position is `auto` whatever the side state and the width.
  */
-export function positionOf(edge: Edge, side: Side, wide: boolean): Position {
-  if (side === 'center') return edge === 'auto' ? 'auto' : `${edge}-center`;
-  return `${edge === 'auto' ? (wide ? 'top' : 'bottom') : edge}-${side}`;
+export function positionOf(edge: Edge, side: Side): Position {
+  if (edge === 'auto') return 'auto';
+  return `${edge}-${side}`;
 }
+
+/** Whether a side can be picked on an edge: every side on Top and Bottom, only Center on Auto. */
+export const sideEnabled = (edge: Edge, side: Side) => edge !== 'auto' || side === 'center';
 
 /** One token of the code: its text and the Shiki theme variable it is coloured with. */
 export interface CodeToken {

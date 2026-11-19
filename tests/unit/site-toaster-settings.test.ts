@@ -11,6 +11,7 @@ import {
   POSITIONS,
   positionOf,
   SIDES,
+  sideEnabled,
   toasterCode,
   type Direction,
   type Position,
@@ -23,25 +24,28 @@ import {
  */
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
-/** Every setting the controls can make, on a wide and on a narrow screen. */
+/** Every setting the controls can make: Auto only with Center, Top and Bottom with every side. */
 const settings: { position: Position; dir: Direction }[] = [];
-for (const wide of [true, false]) {
-  for (const { value: edge } of EDGES) {
-    for (const { value: side } of SIDES) {
-      for (const { value: dir } of DIRECTIONS) settings.push({ position: positionOf(edge, side, wide), dir });
-    }
+for (const { value: edge } of EDGES) {
+  for (const { value: side } of SIDES) {
+    if (!sideEnabled(edge, side)) continue;
+    for (const { value: dir } of DIRECTIONS) settings.push({ position: positionOf(edge, side), dir });
   }
 }
 const codes = [...new Set(settings.map((setting) => codeText(toasterCode(setting))))];
 
 describe('Toaster preview settings', () => {
-  it('reaches all seven positions; auto only in the centre, its edge beside it follows the width', () => {
+  it('reaches all seven positions; Auto only in the centre, whatever the width', () => {
     expect(new Set(settings.map((setting) => setting.position))).toEqual(new Set(POSITIONS));
-    expect(positionOf('auto', 'center', true)).toBe('auto');
-    expect(positionOf('auto', 'center', false)).toBe('auto');
-    expect(positionOf('auto', 'left', true)).toBe('top-left');
-    expect(positionOf('auto', 'right', false)).toBe('bottom-right');
-    expect(positionOf('bottom', 'center', true)).toBe('bottom-center');
+    expect(settings).toHaveLength(POSITIONS.length * DIRECTIONS.length);
+    expect(positionOf('auto', 'center')).toBe('auto');
+    // A side left over from Top or Bottom does not leak into Auto.
+    expect(positionOf('auto', 'left')).toBe('auto');
+    expect(positionOf('auto', 'right')).toBe('auto');
+    expect(positionOf('top', 'left')).toBe('top-left');
+    expect(positionOf('bottom', 'center')).toBe('bottom-center');
+    expect(SIDES.filter(({ value }) => sideEnabled('auto', value)).map(({ value }) => value)).toEqual(['center']);
+    for (const edge of ['top', 'bottom'] as const) expect(SIDES.every(({ value }) => sideEnabled(edge, value))).toBe(true);
   });
 
   it('writes only the props that differ from the defaults', () => {

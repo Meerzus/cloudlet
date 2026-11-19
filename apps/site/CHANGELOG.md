@@ -198,7 +198,8 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   (their `.md` pages to the component page's `.md`).
 - Its Preview is a small playground: Show a notification and Show five run on the page's own
   Toaster, Position, Side and Direction move it through all seven positions and right-to-left, and
-  the `<Toaster />` code under them follows with Copy. The buttons in Examples, which run every demo
+  the `<Toaster />` code under them follows with Copy. Auto is centred: Left and Right turn on with
+  Top or Bottom, and on Auto the code is `<Toaster />` at any width. The buttons in Examples, which run every demo
   of the catalog group by group, show their notifications where the Preview put the Toaster, and
   leaving the page puts it back. In Markdown and `llms-full.txt` the Preview is the code with its
   values.

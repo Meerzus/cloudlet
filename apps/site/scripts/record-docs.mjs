@@ -6,7 +6,7 @@
  * the tabs of its Installation switch from the keyboard and copy their example, its Preview shows
  * one notification and five on the page Toaster (top on desktop, bottom on phones:
  * `position="auto"`), its Position, Side and Direction move that Toaster with the code under them,
- * from the mouse and the keyboard, Examples run where they put it and leaving the page resets it,
+ * from the mouse and the keyboard, Auto keeps the Side at Center with Left and Right off, Examples run where they put it and leaving the page resets it,
  * and its Examples run the whole catalog. Guides: every demo button of the
  * component page, Notifications, Operations and Forms shows its own
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
@@ -127,7 +127,9 @@ const toasterCode = (position, dir) => `<Toaster${position === 'auto' ? '' : ` p
  * and show one notification and five; every control moves the page Toaster (`data-position`,
  * `data-edge`, `data-align` and `dir` of its host) and the code under them follows and copies
  * verbatim; a Run of the Examples lands where the controls put it; Tab goes button, button, the
- * three radio groups (arrows move inside), the Styling link, Copy, the code; with reduced motion
+ * three radio groups (arrows move inside), the Styling link, Copy, the code; Auto takes the Side to
+ * Center and turns Left and Right off (neither a click nor an arrow reaches them), Top and Bottom
+ * take every side, and the code is `<Toaster />` on Auto at any width; with reduced motion
  * the code swaps without its fade and the stack moves at once; leaving the page puts the Toaster
  * back to `auto`, and coming back starts the controls at their defaults.
  */
@@ -205,8 +207,8 @@ async function preview(page, base, phone, still, failures) {
     ['Side', 'Right', 'top-right', 'top', 'right', 'ltr'],
     ['Position', 'Bottom', 'bottom-right', 'bottom', 'right', 'ltr'],
     ['Direction', 'RTL', 'bottom-right', 'bottom', 'right', 'rtl'],
-    ['Position', 'Auto', `${auto}-right`, auto, 'right', 'rtl'],
-    ['Side', 'Center', 'auto', auto, 'center', 'rtl'],
+    // Auto from Right: the Side goes to Center.
+    ['Position', 'Auto', 'auto', auto, 'center', 'rtl'],
     ['Direction', 'LTR', 'auto', auto, 'center', 'ltr'],
   ];
   for (const [group, option, position, edge, align, dir] of steps) {
@@ -217,6 +219,31 @@ async function preview(page, base, phone, still, failures) {
     if (host.position !== position || host.edge !== edge || host.align !== align || host.dir !== dir || step.code !== toasterCode(position, dir)) fail(`${group} ${option}`, step);
     if (option === 'RTL') await still('preview-rtl');
   }
+
+  // Auto lives in the centre: Left and Right are shown but off, a click on them and the arrows
+  // inside the group leave Center checked and the Toaster at auto.
+  const sideGroup = figure.getByRole('group', { name: 'Side', exact: true });
+  const sides = () => sideGroup.locator('input').evaluateAll((inputs) => inputs.map((input) => `${input.value}${input.disabled ? ':off' : ''}${input.checked ? ':checked' : ''}`).join(','));
+  result.auto = { sides: await sides() };
+  // Forced: Playwright would wait for a disabled control to turn on; the browser drops the click.
+  await sideGroup.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  for (const option of ['Left', 'Right']) await sideGroup.getByText(option, { exact: true }).click({ force: true });
+  await wait(page, 300);
+  result.auto.clicked = { sides: await sides(), host: await pageHost(page), code: await code() };
+  await sideGroup.locator('input[value="center"]').focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await wait(page, 300);
+  result.auto.arrows = { sides: await sides(), host: await pageHost(page), focused: await page.evaluate(() => (document.activeElement instanceof HTMLInputElement ? document.activeElement.value : null)) };
+  await still('preview-auto');
+  const centred = 'left:off,center:checked,right:off';
+  if (result.auto.sides !== centred || result.auto.clicked.sides !== centred || result.auto.clicked.host.position !== 'auto' || result.auto.clicked.code !== '<Toaster />') fail('auto sides', result.auto);
+  if (result.auto.arrows.sides !== centred || result.auto.arrows.focused !== 'center' || result.auto.arrows.host.position !== 'auto') fail('auto arrows', result.auto.arrows);
+  // Top frees every side again.
+  await pick('Position', 'Top');
+  result.auto.top = await sides();
+  if (result.auto.top !== 'left,center:checked,right') fail('top sides', result.auto.top);
 
   // Five notifications in a corner; the code copies as shown.
   await pick('Position', 'Top');

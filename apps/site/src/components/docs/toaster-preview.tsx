@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useCopy, usePageNotifications, useToasterSettings } from '@/components/site/notifications';
 import { Segmented } from '@/components/site/segmented';
-import { useWide } from '@/components/site/use-wide';
 import { findDemo, type Demo } from '@/lib/demos';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
 import { TOASTER_DOCS_PATH } from '@/lib/site';
@@ -15,6 +14,7 @@ import {
   EDGES,
   positionOf,
   SIDES,
+  sideEnabled,
   toasterCode,
   type Direction,
   type Edge,
@@ -45,8 +45,13 @@ export function ToasterPreview() {
   const [side, setSide] = useState<Side>('center');
   const [dir, setDir] = useState<Direction>('ltr');
   const [copied, setCopied] = useState(false);
-  const wide = useWide();
-  const position = positionOf(edge, side, wide);
+  const position = positionOf(edge, side);
+  // Auto lives in the centre: picking it moves Side to Center, and Left / Right wait for Top or Bottom.
+  const pickEdge = (next: Edge) => {
+    setEdge(next);
+    if (!sideEnabled(next, side)) setSide('center');
+  };
+  const sides = SIDES.map((option) => ({ ...option, disabled: !sideEnabled(edge, option.value) }));
   useToasterSettings({ position, dir });
   const tokens = toasterCode({ position, dir });
   const text = codeText(tokens);
@@ -79,8 +84,8 @@ export function ToasterPreview() {
         {trigger(FIVE, STRINGS.showFive, 'five')}
       </div>
       <div role="group" aria-label={STRINGS.settings} className="docs-preview-controls">
-        <Segmented legend={STRINGS.position} options={EDGES} value={edge} onChange={setEdge} />
-        <Segmented legend={STRINGS.side} options={SIDES} value={side} onChange={setSide} />
+        <Segmented legend={STRINGS.position} options={EDGES} value={edge} onChange={pickEdge} />
+        <Segmented legend={STRINGS.side} options={sides} value={side} onChange={setSide} />
         <Segmented legend={STRINGS.direction} options={DIRECTIONS} value={dir} onChange={setDir} />
         <Link href={`${TOASTER_DOCS_PATH}/styling`} className="docs-preview-link">
           {STRINGS.styling}
