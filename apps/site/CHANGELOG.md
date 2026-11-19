@@ -182,7 +182,8 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   package manager.
 - The former addresses (`/toaster/docs/…`, `/color-picker/docs` and their `.md` pages) redirect
   permanently to the new ones. Search, `llms.txt`, `llms-full.txt`, the `.md` pages and the sitemap
-  follow the new sidebar; `llms.txt` opens with a line about the kit.
+  follow the new sidebar; `llms.txt` opens with a line about the kit, and the Introduction says
+  that every page has its `.md` and where `llms.txt` and `llms-full.txt` are.
 - The READMEs, the security policy and the issue template link to the new addresses.
 - The Toaster's documentation is 14 pages instead of 16, shorter and answering first: no
   introductions, no retelling of the landing, no Next steps that repeat the sidebar, and every
@@ -191,7 +192,8 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   Next.js, Content Security Policy, Accessibility) and Toaster reference (createCloudlet,
   Controller, Toaster props, Labels & announcements, Types).
 - [/docs/components/toaster](https://cloudlet.dev/docs/components/toaster) is one component page:
-  Preview, Installation, Usage, Examples and API Reference. It takes in the former Installation and
+  Preview, Installation, Usage, Examples and API Reference, a table of each export, what it is and
+  its reference page. It takes in the former Installation and
   Quick start pages, which redirect permanently to its Installation and Usage sections in one step
   (their `.md` pages to the component page's `.md`).
 - Its Preview is a small playground: Show a notification and Show five run on the page's own

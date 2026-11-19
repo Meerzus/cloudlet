@@ -159,6 +159,10 @@ describe('site docs tree', () => {
     for (const link of ['/docs/components/toaster', '/docs/components/color-picker', '/docs/components/color-picker#palette', '/docs/installation']) {
       expect(intro, `index: link to ${link}`).toContain(`](${link})`);
     }
+    // The Markdown of every page and llms.txt are said once, for the whole docs, here.
+    for (const link of ['https://cloudlet.dev/llms.txt', 'https://cloudlet.dev/llms-full.txt']) expect(intro, `index: link to ${link}`).toContain(`](${link})`);
+    expect(intro).toMatch(/Markdown version at its address plus `\.md`/u);
+    expect(frontmatter(`${TOASTER}/index`).body, 'the Toaster page leaves llms.txt to the Introduction').not.toContain('llms.txt');
     const installation = frontmatter('installation').body;
     const commands = [...installation.matchAll(/<InstallCommand command="([^"]+)" \/>/gu)].map((match) => match[1]);
     expect(commands).toEqual([registryCommand('color-picker'), registryUrlCommand('color-picker'), INSTALL_COMMAND]);
@@ -185,8 +189,12 @@ describe('site docs tree', () => {
     for (const link of ['/docs/components/toaster/ssr#nextjs-app-router', '/docs/components/toaster/api/labels', '/docs/components/toaster/styling']) {
       expect(section('Usage'), `Usage: link to ${link}`).toContain(`](${link})`);
     }
+    // Three columns: the export as code, what it is, a link to its reference page named by that page.
+    expect(section('API Reference')).toContain('\n| Export | What it is | Reference |\n');
     for (const name of ['createCloudlet', 'CloudletProvider', 'useCloudlet', 'Toaster']) {
-      expect(section('API Reference'), `API Reference: ${name}`).toMatch(new RegExp(`^\\| \\[\`${name}\`\\]\\(/docs/components/toaster/api/[^)]+\\) \\| .+ \\|$`, 'mu'));
+      expect(section('API Reference'), `API Reference: ${name}`).toMatch(
+        new RegExp(`^\\| \`${name}\` \\| [^|]+ \\| \\[(?:createCloudlet|Toaster props)\\]\\(/docs/components/toaster/api/[^)]+\\) \\|$`, 'mu'),
+      );
     }
   });
 

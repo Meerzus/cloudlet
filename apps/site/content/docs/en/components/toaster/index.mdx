@@ -434,11 +434,11 @@ cloudlet.acknowledgeOverflow(); // the missed count survives clear()
 </Demos>
 ## API Reference
 
-| Export | What it is |
-| --- | --- |
-| [`createCloudlet`](/docs/components/toaster/api/create-cloudlet) | Creates a controller, the object that owns every notification, its time and its operations. |
-| [`CloudletProvider`](/docs/components/toaster/api/toaster#cloudletprovider) | Hands a controller to a React tree; renders nothing itself. |
-| [`useCloudlet`](/docs/components/toaster/api/toaster#usecloudlet) | Returns the controller of the nearest Provider. |
-| [`Toaster`](/docs/components/toaster/api/toaster#props) | Renders the stack and the Island of that controller, in a portal after mount. |
+| Export | What it is | Reference |
+| --- | --- | --- |
+| `createCloudlet` | Creates a controller, the object that owns every notification, its time and its operations. | [createCloudlet](/docs/components/toaster/api/create-cloudlet) |
+| `CloudletProvider` | Hands a controller to a React tree; renders nothing itself. | [Toaster props](/docs/components/toaster/api/toaster#cloudletprovider) |
+| `useCloudlet` | Returns the controller of the nearest Provider. | [Toaster props](/docs/components/toaster/api/toaster#usecloudlet) |
+| `Toaster` | Renders the stack and the Island of that controller, in a portal after mount. | [Toaster props](/docs/components/toaster/api/toaster#props) |
 
-The controller's methods are on [Controller](/docs/components/toaster/api/controller), the other public types on [Types](/docs/components/toaster/api/types). Every page of these docs also has a Markdown version at its address plus `.md`, and [llms.txt](https://cloudlet.dev/llms.txt) indexes them for agents.
+The controller's methods are on [Controller](/docs/components/toaster/api/controller), the other public types on [Types](/docs/components/toaster/api/types).
