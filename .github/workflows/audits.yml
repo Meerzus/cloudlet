@@ -99,7 +99,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps ${{ matrix.browser }} && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - run: |
           mkdir -p artifacts/audits
           # Memory in the log every 20 s: the WebKit job was cut off by the runner itself when it ran out of
@@ -154,7 +160,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps chromium
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/audit-color-picker.mjs artifacts/audits/contrast --skip-pickers --routes ${{ matrix.route }} --modes ${{ matrix.mode == 'sky' && 'page' || matrix.mode }} 2>&1 | tee artifacts/audits/contrast.log
@@ -192,7 +204,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps ${{ matrix.browser }} && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/audit-color-picker.mjs artifacts/audits/pickers --skip-contrast --browser ${{ matrix.browser }} 2>&1 | tee artifacts/audits/pickers.log
@@ -231,7 +249,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps chromium
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - if: matrix.walk == 'docs'
         run: |
           mkdir -p artifacts/audits
@@ -274,7 +298,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps chromium
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/first-screen-budget.mjs --json artifacts/audits/budget.json / /toaster 2>&1 | tee artifacts/audits/budget.log
@@ -308,7 +338,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps chromium
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/lighthouse-docs.mjs artifacts/audits/lighthouse --runs 3 --report-only / /toaster /color-picker /docs/components/toaster /docs/components/toaster/notifications 2>&1 | tee artifacts/audits/lighthouse.log
