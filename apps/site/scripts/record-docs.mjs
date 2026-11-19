@@ -10,7 +10,7 @@
  * and its Examples run the whole catalog. Guides: every demo button of the
  * component page, Notifications, Operations and Forms shows its own
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
- * under Show code. Guides:
+ * under Show code.
  * Styling and the advanced pages (Positioning, SSR, CSP, Accessibility) pass axe, the page never scrolls sideways, and every table wider
  * than the column scrolls inside itself. Style editor: the stage frame shows a
  * pinned pill and an open Island that stays open while the controls are pressed, the radius control

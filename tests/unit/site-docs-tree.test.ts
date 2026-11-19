@@ -127,7 +127,8 @@ describe('site docs tree', () => {
       const { body } = frontmatter(page);
       expect(body, `${page}: tsx example`).toMatch(/^```tsx title="[^"]+"$/mu);
       expect(body, `${page}: demo= blocks`).not.toMatch(/demo="/u);
-      for (const link of links) expect(body, `${page}: link to ${link}`).toContain(`](${link})`);
+      // The page itself or one of its sections: a link to a prop lands on the Props table.
+      for (const link of links) expect(body.includes(`](${link})`) || body.includes(`](${link}#`), `${page}: link to ${link}`).toBe(true);
     }
   });
 
