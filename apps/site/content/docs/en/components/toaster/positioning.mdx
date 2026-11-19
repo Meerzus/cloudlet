@@ -3,19 +3,15 @@ title: Positioning & offsets
 description: Where the stack sits, how it avoids notches, navigation bars and the keyboard, and which element it renders into.
 ---
 
-The stack takes one spot at the top or bottom of the viewport: in the centre, or in a corner. This page explains how that spot is chosen, how Cloudlet keeps it clear of safe areas, your own navigation and the on-screen keyboard, and how to render the Toaster into an element of yours.
-
 ## Position
 
 `<Toaster position>` is `auto` by default:
 
-- `auto` puts the stack at the top centre on viewports 48rem wide and wider, and at the bottom centre below that, where a thumb reaches it. The edge is re-evaluated when the viewport crosses the threshold.
+- `auto` puts the stack at the top centre on viewports 48rem wide and wider, and at the bottom centre below that, where a thumb reaches it. The threshold is in `rem`, so it follows the user's font size rather than device pixels, and the edge is re-evaluated when the viewport crosses it.
 - `top-center` and `bottom-center` fix the edge regardless of width.
-- `top-left`, `top-right`, `bottom-left` and `bottom-right` fix the edge and put the stack in that corner.
+- `top-left`, `top-right`, `bottom-left` and `bottom-right` fix the edge and put the stack in that corner. `auto` is always centred: pick the corner and the edge yourself if you want both.
 
-At the bottom edge everything is mirrored vertically: the Island grows upwards, the tails peek above the pill, and notifications enter and leave from the bottom. The threshold is in `rem`, so it follows the user's font size rather than device pixels.
-
-In a corner the pill and its tails keep to their side, and the Island grows away from it: its edge on that side does not move while it opens and closes. The Island is as wide as in the centre, so on a phone it still spans the screen between the gutters. `auto` is always centred; pick the corner and the edge yourself if you want both.
+At the bottom edge everything is mirrored vertically: the Island grows upwards, the tails peek above the pill, and notifications enter and leave from the bottom. In a corner the pill and its tails keep to their side, and the Island grows away from it: its edge on that side does not move while it opens and closes. The Island is as wide as in the centre, so on a phone it still spans the screen between the gutters.
 
 ```tsx title="notifications.tsx"
 import type { ReactNode } from 'react';
@@ -33,7 +29,7 @@ export function Notifications({ children }: { children: ReactNode }) {
 }
 ```
 
-The side is physical, like [offsets](#offsets): `-left` stays on the left in `dir="rtl"`. [Try the edges, the sides and RTL in the Playground](/toaster/playground): its toggles change the page's Toaster live. `dir="rtl"` on the Toaster mirrors the badge, the slider and the arrow keys.
+The side is physical, like [offsets](#offsets): `-left` stays on the left in `dir="rtl"`, while `dir="rtl"` on the Toaster mirrors the badge, the slider and the arrow keys. The host reports where it sits as `data-edge` and `data-align` ([Class names](/docs/components/toaster/styling#class-names)). The [Preview](/docs/components/toaster#preview) moves this site's Toaster through every position and RTL.
 
 ## Safe area
 
@@ -115,7 +111,3 @@ export function EditorDialog({ children }: { children: ReactNode }) {
 ```
 
 You are responsible for the container being visible and suitable. The host is `position: fixed`; an ancestor with a `transform`, `filter` or `overflow: hidden` can clip it or become its containing block, and no `z-index` overcomes that.
-
-## Next steps
-
-- [Notifications & time](/docs/components/toaster/notifications): what pauses a notification's time while the Island is open.

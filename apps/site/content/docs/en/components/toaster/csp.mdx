@@ -7,7 +7,7 @@ Cloudlet works under a policy that forbids inline style attributes. It writes th
 
 ## Pass the nonce
 
-Under a nonce-based policy, pass the current request's nonce to every Toaster so the browser accepts its style blocks:
+Pass the current request's nonce to every Toaster ([`nonce`](/docs/components/toaster/api/toaster)) so the browser accepts its style blocks:
 
 ```tsx title="notifications.tsx"
 import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
@@ -23,11 +23,7 @@ export function Notifications({ nonce }: { nonce: string }) {
 }
 ```
 
-`nonce` and every other prop are listed in [Toaster props](/docs/components/toaster/api/toaster).
-
 ## A policy that works
-
-A representative production policy:
 
 ```text
 default-src 'none'; script-src 'self' 'nonce-REQUEST_NONCE';
@@ -46,7 +42,7 @@ Cloudlet's integration tests run production Vite and Next.js builds under this p
 
 ## Next.js App Router
 
-In Next.js, a `proxy.ts` generates a nonce for each request and puts it into the `Content-Security-Policy` header and an `x-nonce` request header, as described in the [Next.js CSP guide](https://nextjs.org/docs/app/guides/content-security-policy). Next.js applies it to its own scripts. The client component that owns the controller, set up in [SSR & Next.js](/docs/components/toaster/ssr#nextjs-app-router), takes the nonce and hands it to the Toaster:
+A `proxy.ts` generates a nonce for each request and puts it into the `Content-Security-Policy` header and an `x-nonce` request header, as in the [Next.js CSP guide](https://nextjs.org/docs/app/guides/content-security-policy); Next.js applies it to its own scripts. The client component that owns the controller ([SSR & Next.js](/docs/components/toaster/ssr#nextjs-app-router)) takes the nonce and hands it to the Toaster:
 
 ```tsx title="components/notification-owner.tsx"
 'use client';
@@ -92,8 +88,3 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 ```
 
 A nonce exists only for a request, so pages that use it are rendered dynamically; a statically generated page has no nonce to pass.
-
-## Next steps
-
-- [SSR & Next.js](/docs/components/toaster/ssr): where the controller lives on the server and in the browser.
-- [Styling](/docs/components/toaster/styling): the stylesheet, tokens and class names.

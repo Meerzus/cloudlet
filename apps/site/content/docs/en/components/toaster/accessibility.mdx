@@ -3,8 +3,6 @@ title: Accessibility
 description: How the pill and the Island are named, announced and focused, and what is tested and what stays with you.
 ---
 
-Cloudlet is built so that a notification reaches everyone without taking anything away from them: the stack is reachable from the keyboard, its content is announced once, and nothing moves focus unless the user asks. This page describes the semantics you get, how to localize them, what has been verified, and what remains your application's job.
-
 ## The pill
 
 The collapsed stack is one native `<button>`. Its accessible name comes from `labels.stackSummary(title, count, missed)`: the title of the top notification, how many notifications are in the stack and how many were missed, such as "Synced to the cloud, 3 notifications, 1 missed". It has `aria-expanded="false"` and controls the Island. The tails and the badge are decorative and hidden from assistive technology; the count they show is already part of the name.
@@ -41,7 +39,7 @@ Every gesture has a key or a button that does the same. Vertical movement on the
 
 ## Announcements
 
-Cloudlet keeps two permanent live regions, one polite and one assertive, next to the host from the moment it mounts. Cloudlet collects what happened in 300ms windows and speaks each window once:
+Two permanent live regions, one polite and one assertive, sit next to the host from the moment it mounts. Cloudlet collects what happened in 300ms windows and speaks each window once:
 
 - A new notification is announced by its title and description. A rich description is not read from its markup; it carries its own `announcement` text.
 - Notifications behind the presented one are announced only as a count: "2 notifications queued".
@@ -74,7 +72,7 @@ Cloudlet never takes focus on its own:
 
 - A new notification arriving, and the Island opening for [attention](/docs/components/toaster/notifications#attention), leave focus where it is.
 - Focus enters the stack only when the user moves it there: with `Tab`, a click, or a shortcut your application provides.
-- When a focused control disappears, focus moves before it is hidden: to close of the next notification, to the title after retry or cancel, to the pill on `Escape`, and back to the element focused before the stack after the last notification closes.
+- When a focused control disappears, focus moves before it is hidden: to the title after retry or cancel, otherwise as in [Keyboard and gestures](#keyboard-and-gestures) (close of the next notification, the pill on `Escape`, the element focused before the stack after the last one).
 
 While a notification has focus or the pointer, its time on screen is paused, so it cannot close while someone is reading or operating it. See [Time on screen](/docs/components/toaster/notifications#time-on-screen).
 
@@ -103,23 +101,21 @@ document.addEventListener('keydown', (event) => {
 | `{ kind: 'notification', handle, control }` | Its `'action'` or `'close'` button. |
 | `{ kind: 'overflow' }` | The button that acknowledges missed notifications, or the pill. |
 
-The result is `{ status: 'requested' }`, or `rejected` with a reason: `no-host` when no Toaster is mounted, `not-visible` when the notification is not the presented one, `unavailable` when the target does not exist (no action, no overflow), `disposed`, or a reason why the handle is not valid. Do not call it when a notification arrives: moving focus without the user asking is exactly what the focus policy avoids.
+The result is `{ status: 'requested' }`, or `rejected` with a reason: `no-host` when no Toaster is mounted, `not-visible` when the notification is not the presented one, `unavailable` when the target does not exist (no action, no overflow), `disposed`, or a reason why the handle is not valid. Do not call it when a notification arrives: that is the move the focus policy forbids.
 
 ## Reduced motion
 
-When the user prefers reduced motion, every transition of the stack and the Island becomes a short crossfade: no movement, no scaling, no slide. Spinners stop, and swipes are turned off; the keyboard and the buttons still do everything. Cloudlet follows `prefers-reduced-motion` live, without a remount, and marks the host with `data-reduced-motion="true"`.
+Under `prefers-reduced-motion`, every transition of the stack and the Island becomes a short crossfade: no movement, no scaling, no slide. Spinners stop and swipes are turned off; the keyboard and the buttons still do everything. Cloudlet follows the setting live, without a remount, and marks the host with `data-reduced-motion="true"`.
 
 In forced-colours mode Cloudlet uses system colours with visible borders and a solid focus ring. See [Theme](/docs/components/toaster/styling#theme).
 
 ## Localization
 
-Everything Cloudlet says comes from three places, and each one is yours to translate:
+Everything Cloudlet says comes from three partial objects; whatever you leave out keeps its English default:
 
-- **`labels`** on the Toaster: names of the controls and regions.
+- **`labels`** on the [Toaster](/docs/components/toaster/api/toaster): names of the controls and regions.
 - **`announcements`** on the Toaster: the text spoken in the live regions.
 - **`messages`** of the controller: titles of fallback notifications, such as an operation that failed without a mapped error.
-
-Each is partial: whatever you leave out keeps its English default.
 
 ```tsx title="notifications.tsx"
 import {
@@ -189,8 +185,3 @@ Automation checks the DOM, not speech, so the rest is checked by hand:
 - **Keep rich content simple.** A rich description is text and inline formatting with its own `announcement`; interactive controls belong in `action`, not inside the description. Text input belongs in a [form action](/docs/components/toaster/forms), whose fields come labelled and announced.
 - **Keep contrast** when you override colour tokens: 4.5:1 for text and 3:1 for the focus ring against the surface.
 - **Test with the screen readers your users have.** Delivery to a live region does not prove that it was spoken.
-
-## Next steps
-
-- [Labels & announcements](/docs/components/toaster/api/labels): every label and formatter with its default.
-- [Toaster props](/docs/components/toaster/api/toaster): `labels`, `announcements`, `dir` and the rest.

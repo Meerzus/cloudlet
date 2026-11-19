@@ -11,7 +11,7 @@
  * component page, Notifications, Operations and Forms shows its own
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
  * under Show code. Guides:
- * Styling, SSR and Accessibility pass axe, the page never scrolls sideways, and every table wider
+ * Styling and the advanced pages (Positioning, SSR, CSP, Accessibility) pass axe, the page never scrolls sideways, and every table wider
  * than the column scrolls inside itself. Style editor: the stage frame shows a
  * pinned pill and an open Island that stays open while the controls are pressed, the radius control
  * and the morphing color picker change the computed CSS and copied stylesheet for the site theme,
@@ -373,7 +373,7 @@ async function folds(page, slug, still, failures) {
   return [check];
 }
 
-const INTEGRATION = ['styling', 'ssr', 'accessibility'];
+const INTEGRATION = ['styling', 'positioning', 'ssr', 'csp', 'accessibility'];
 
 /** Styling's editor: a stage frame with a pinned pill and an open Island, real CSSOM, clipboard and URL behaviour. */
 async function styleEditor(page, base, still, failures, previousUrl) {
@@ -510,7 +510,7 @@ async function styleEditor(page, base, still, failures, previousUrl) {
   return result;
 }
 
-/** Integration guides: no horizontal page scroll; a table wider than its column scrolls inside its own wrapper. */
+/** Styling and the advanced pages: no horizontal page scroll; a table wider than its column scrolls inside its own wrapper. */
 async function integration(page, base, still, failures) {
   const result = {};
   for (const slug of INTEGRATION) {
