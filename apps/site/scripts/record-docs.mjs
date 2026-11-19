@@ -248,13 +248,17 @@ async function preview(page, base, phone, still, failures) {
   // Five notifications in a corner; the code copies as shown.
   await pick('Position', 'Top');
   await pick('Side', 'Left');
+  // An empty stack first: the notification shown above leaves on its timer, so the count after the
+  // press is this button's own.
+  await page.waitForFunction(() => !document.querySelector('.cloudlet-host .cloudlet-pill'), null, { timeout: 15000 }).catch(() => {});
+  const before = (await toaster(page)).pill;
   await press(five);
   await wait(page, 1200);
-  result.five = { ...(await toaster(page)), host: await pageHost(page) };
+  result.five = { ...(await toaster(page)), host: await pageHost(page), before };
   await still('preview-five');
-  // The pill names how many are stacked: five from this press (the first one may still be there, or gone on its timer).
+  // The pill names how many are stacked: exactly five.
   result.five.stacked = Number(/(\d+) notifications/u.exec(result.five.pill ?? '')?.[1] ?? 0);
-  if (result.five.host.align !== 'left' || result.five.edge !== 'top' || !result.five.titles.includes('Altocumulus drifted by') || result.five.stacked < 5) fail('show five', result.five);
+  if (before !== null || result.five.host.align !== 'left' || result.five.edge !== 'top' || !result.five.titles.includes('Altocumulus drifted by') || result.five.stacked !== 5) fail('show five', result.five);
   result.copy = await copyBlock(page, figure);
   if (!result.copy.ok || (await code()) !== toasterCode('top-left', 'ltr')) fail('copy', result.copy);
 
