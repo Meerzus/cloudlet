@@ -357,6 +357,19 @@ html:has(.docs-shell) { background: var(--background); }
 .docs-demo-fold:hover { background: color-mix(in oklab, var(--foreground) 8%, var(--background)); }
 .docs-demo-fold:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
 .docs-demo-code[data-folded] .docs-demo-fold { position: absolute; left: 50%; bottom: 1rem; z-index: 1; margin: 0; transform: translateX(-50%); }
+/* The Toaster's Preview: the demo block with the page Toaster's controls between the stage and the code. */
+.docs-preview-controls {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; padding: 0.875rem 1.125rem;
+  border-top: 1px solid var(--border);
+}
+/* The shared segmented control is drawn as glass; on the flat page its rim is the plain hairline. */
+.docs-preview-controls fieldset > div { border-color: var(--border); background: color-mix(in oklab, var(--foreground) 3%, var(--background)); }
+/* At night the page colour under the chosen segment is darker than its track: lift it instead. */
+.dark .docs-preview-controls label:has(:checked) { background: color-mix(in oklab, var(--foreground) 14%, var(--background)); }
+/* On a phone the controls stack: one legend column, so the three tracks start on one line. */
+@media (max-width: 40rem) { .docs-preview-controls legend { width: 5rem; } }
+/* Underline, hover and focus ring come from the prose links. */
+.docs-preview-link { margin-inline-start: auto; font-size: 0.875rem; }
 @media (prefers-reduced-motion: reduce) {
   .docs-demo-trigger, .docs-demo-fold { transition: none; }
   .docs-demo-code .docs-code-pre { animation: none; }

@@ -12,6 +12,7 @@ import { PaletteDemo } from './palette-demo';
 import { PickerDemo } from './picker-demo';
 import { Table } from './table';
 import { StyleEditor } from './style-editor/style-editor';
+import { ToasterPreview } from './toaster-preview';
 
 type LinkProps = ComponentProps<typeof Link>;
 type HeadingTag = 'h2' | 'h3' | 'h4';
@@ -90,5 +91,6 @@ export function getMDXComponents(): MDXComponents {
     PaletteDemo,
     PickerDemo,
     StyleEditor,
+    ToasterPreview,
   };
 }

@@ -38,6 +38,17 @@ export const DOCS_UI = {
   demoGroup: 'Examples',
   showCode: 'Show code',
   hideCode: 'Hide code',
+  /** The Preview of the Toaster's component page: the page Toaster with its main props. */
+  preview: {
+    showOne: 'Show a notification',
+    showFive: 'Show five',
+    settings: 'Toaster settings',
+    position: 'Position',
+    side: 'Side',
+    direction: 'Direction',
+    styling: 'Customize the look',
+    codeTitle: 'Toaster',
+  },
   styleEditor: {
     stage: 'Live preview',
     region: 'Style editor notifications',

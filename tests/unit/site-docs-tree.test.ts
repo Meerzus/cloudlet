@@ -184,7 +184,9 @@ describe('site docs tree', () => {
     expect(fields['title']).toBe('Toaster');
     expect([...body.matchAll(/^## (.+)$/gmu)].map((match) => match[1])).toEqual(['Preview', 'Installation', 'Usage', 'Examples', 'API Reference']);
     const section = (name: string) => body.split(`\n## ${name}\n`)[1]?.split('\n## ')[0] ?? '';
-    expect(section('Preview'), 'Preview: one demo block').toMatch(/^```tsx demo="[^"]+"$/mu);
+    expect(section('Preview'), 'Preview: the live preview of the page Toaster').toMatch(/^<ToasterPreview \/>$/mu);
+    expect(section('Preview'), 'Preview: no demo block, the Examples run the catalog').not.toMatch(/^```tsx demo=/mu);
+    expect(section('Preview'), 'Preview: a link to the Examples it moves').toContain('](#examples)');
     expect(section('Installation'), 'Installation: the npm / shadcn tabs').toContain('<GetStartedTabs />');
     expect(section('Installation'), 'Installation: the kit page for the namespace').toContain('](/docs/installation)');
     for (const heading of ['Requirements', 'Import the styles', 'The shadcn registry item']) expect(section('Installation')).toContain(`\n### ${heading}\n`);

@@ -4,6 +4,7 @@ import { source, type DocsPage } from './docs-source';
 import { DOCS_UI } from './docs-ui-strings';
 import { GET_STARTED, type GetStartedTab } from './get-started';
 import { COLOR_PICKER_DOCS_PATH, DOCS_PATH, isUnder, SITE_URL, TOASTER_DOCS_PATH } from './site';
+import { AUTO_BREAKPOINT, codeText, DIRECTIONS, POSITIONS, toasterCode } from './toaster-settings';
 
 /*
  * The documentation for agents, from the same MDX as the pages: `/llms.txt` lists
@@ -50,6 +51,20 @@ const RENDERERS: Record<string, (data: PlaceholderData) => string> = {
   /** The live example of the color picker docs: nothing to read away from the page. */
   PickerDemo: () => `Live example at ${SITE_URL}${COLOR_PICKER_DOCS_PATH}: the swatch and the inline panel on one color.`,
   PaletteDemo: () => `Live example at ${SITE_URL}${COLOR_PICKER_DOCS_PATH}#palette: a palette of three colors and the array it gives back.`,
+  /** The live Preview of the Toaster: what its controls set, as one line of code and its values. */
+  ToasterPreview: () => {
+    const values = (list: readonly string[]) => list.map((value) => `\`${value}\``).join(', ');
+    const [auto, ...fixed] = POSITIONS;
+    return [
+      `Live preview at ${SITE_URL}${TOASTER_DOCS_PATH}#preview: one notification or five on the page's own Toaster, with controls for its position and direction. The code they make:`,
+      fence('tsx', codeText(toasterCode({ position: 'top-right', dir: 'rtl' }))),
+      [
+        `- \`position\`: \`${auto}\` (the default: top centre from ${AUTO_BREAKPOINT} wide, bottom centre below), ${values(fixed)}.`,
+        `- \`dir\`: ${values(DIRECTIONS.map((direction) => direction.value))}; by default the document's \`dir\`.`,
+      ].join('\n'),
+      'A prop at its default is left out; with every default the code is `<Toaster />`.',
+    ].join('\n\n');
+  },
   /** The shareable editor contract stays useful away from the interactive page. */
   StyleEditor: () => `Style editor at ${SITE_URL}${TOASTER_DOCS_PATH}/styling#style-editor: set the tokens on a live Toaster and copy the CSS. The query string carries the values — one parameter per token name without the \`--cloudlet-\` prefix (\`background\`, \`background-dark\`, \`pill-radius\`, \`font-family\`, …); dark-theme colors use the \`-dark\` suffix, and the preview follows the site theme.`,
 };

@@ -11,9 +11,9 @@ description: One notification stack that collapses to a pill and opens into the 
 
 Every notification goes into one **stack**, newest first, collapsed at rest to a single **pill** with tails for the ones behind it and a badge with the count. Activating the pill opens the **Island**: one surface with a slider over every notification, moved by a swipe, the arrow keys or the trackpad, where you read, retry, cancel or close. Escape collapses it with every notification kept.
 
-```tsx demo="success"
-cloudlet.show({ title: 'Synced to the cloud', kind: 'success' });
-```
+The controls below move this page's Toaster, and the code under them does the same in your app. The buttons in [Examples](#examples) show their notifications where the controls put it.
+
+<ToasterPreview />
 
 Need a plain toast, without the Island and the motion? [Sonner](https://sonner.emilkowal.ski) is a great choice.
 

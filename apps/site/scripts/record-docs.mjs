@@ -3,9 +3,11 @@
  * Walks /docs/components/toaster in headless Chromium against the static export: every page of
  * the sidebar opens with a clean console, the drawer and the table of contents work, Copy copies
  * the example, and axe finds no violations with the drawer closed and open. The component page:
- * the tabs of its Installation switch from the keyboard and copy their example, the demo button of
- * its Preview shows the toast on the page Toaster (top on desktop, bottom on phones:
- * `position="auto"`), and its Examples run the whole catalog. Guides: every demo button of the
+ * the tabs of its Installation switch from the keyboard and copy their example, its Preview shows
+ * one notification and five on the page Toaster (top on desktop, bottom on phones:
+ * `position="auto"`), its Position, Side and Direction move that Toaster with the code under them,
+ * from the mouse and the keyboard, Examples run where they put it and leaving the page resets it,
+ * and its Examples run the whole catalog. Guides: every demo button of the
  * component page, Notifications, Operations and Positioning shows its own
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
  * under Show code. Guides:
@@ -108,34 +110,158 @@ async function installation(page, base, still, failures) {
   return result;
 }
 
+/** The page's own Toaster (not a Toaster inside the article, as the Style editor has): where it sits. */
+async function pageHost(page) {
+  return page.evaluate(() => {
+    const host = [...document.querySelectorAll('.cloudlet-host')].find((element) => !element.closest('article'));
+    return { position: host?.dataset.position ?? null, edge: host?.dataset.edge ?? null, align: host?.dataset.align ?? null, dir: host?.getAttribute('dir') ?? null };
+  });
+}
+
+/** The code the Preview shows for a setting: `<Toaster />` with the props off their defaults. */
+const toasterCode = (position, dir) => `<Toaster${position === 'auto' ? '' : ` position="${position}"`}${dir === 'ltr' ? '' : ` dir="${dir}"`} />`;
+
 /**
- * Preview of the component page, the first `show`: the demo button is enabled after mount, the
- * page says once what the snippets assume, and it shows the toast.
+ * Preview of the component page, the live page Toaster: its two buttons are enabled after mount
+ * and show one notification and five; every control moves the page Toaster (`data-position`,
+ * `data-edge`, `data-align` and `dir` of its host) and the code under them follows and copies
+ * verbatim; a Run of the Examples lands where the controls put it; Tab goes button, button, the
+ * three radio groups (arrows move inside), the Styling link, Copy, the code; with reduced motion
+ * the code swaps without its fade and the stack moves at once; leaving the page puts the Toaster
+ * back to `auto`, and coming back starts the controls at their defaults.
  */
 async function preview(page, base, phone, still, failures) {
+  // A fresh document: after the Installation scenario a goto to #preview would be a fragment
+  // navigation, a history entry the app router never wrote, and Back to it leaves Styling on screen.
+  await page.goto('about:blank');
   await page.goto(`${base}/docs/components/toaster#preview`);
   await wait(page, 600);
   await still('preview');
-  const result = { axe: { page: await axe(page) } };
-  const figure = page.locator('.docs-demo').first();
-  const runButton = figure.locator('.docs-demo-trigger[data-demo="success"]');
+  const fail = (step, value) => failures.push(`preview ${step}: ${JSON.stringify(value)}`);
+  const result = { axe: { page: await axe(page) }, steps: [] };
+  const figure = page.locator('.docs-preview');
+  const one = figure.locator('[data-preview="one"]');
+  const five = figure.locator('[data-preview="five"]');
+  const code = () => figure.locator('pre').evaluate((pre) => pre.textContent ?? '');
+  // Mid-screen before every press: on a phone the stack sits at the bottom, over whatever is under it.
+  const press = async (locator) => {
+    await locator.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+    await locator.click();
+  };
+  const pick = async (group, option) => {
+    await press(figure.getByRole('group', { name: group, exact: true }).getByText(option, { exact: true }));
+    await wait(page, 300);
+  };
+  // position="auto": the top edge on a desktop, the bottom one on a phone.
+  const auto = phone ? 'bottom' : 'top';
+
+  // The page says once what the snippets assume, above the first demo block of the Examples.
   result.note = await page.locator('.docs-demo-note').count();
-  result.enabled = await runButton.isEnabled();
-  result.copy = await copyBlock(page, figure);
-  await runButton.click();
+  result.enabled = (await one.isEnabled()) && (await five.isEnabled());
+  result.initial = { code: await code(), host: await pageHost(page) };
+  if (result.note !== 1 || !result.enabled) fail('buttons', result);
+  if (result.initial.code !== '<Toaster />' || result.initial.host.position !== 'auto' || result.initial.host.edge !== auto || result.initial.host.dir !== 'ltr') fail('defaults', result.initial);
+
+  // Keyboard: Tab reaches every control once, a radio group by its checked option.
+  await one.focus();
+  const path = [];
+  for (let step = 0; step < 8; step += 1) {
+    path.push(await page.evaluate(() => {
+      const element = document.activeElement;
+      if (!element) return null;
+      if (element.matches('[data-preview]')) return element.getAttribute('data-preview');
+      if (element.matches('input[type="radio"]')) return `radio:${element.value}`;
+      if (element.matches('a')) return `link:${element.textContent}`;
+      if (element.matches('button')) return `button:${element.getAttribute('aria-label')}`;
+      return element.tagName.toLowerCase();
+    }));
+    await page.keyboard.press('Tab');
+  }
+  result.tab = path;
+  const expectedPath = ['one', 'five', 'radio:auto', 'radio:center', 'radio:ltr', 'link:Customize the look', 'button:Copy Toaster', 'pre'];
+  if (path.join(',') !== expectedPath.join(',')) fail('tab path', path);
+  // Arrows move inside a group and move the Toaster with it.
+  await figure.locator('input[value="auto"]').focus();
+  await page.keyboard.press('ArrowRight');
+  await wait(page, 300);
+  result.arrow = { checked: await figure.locator('fieldset:has(input[value="auto"]) input:checked').getAttribute('value'), host: await pageHost(page), code: await code() };
+  await page.keyboard.press('ArrowLeft');
+  await wait(page, 300);
+  if (result.arrow.checked !== 'top' || result.arrow.host.position !== 'top-center' || result.arrow.code !== toasterCode('top-center', 'ltr')) fail('arrows', result.arrow);
+  if ((await pageHost(page)).position !== 'auto') fail('arrow back', await pageHost(page));
+
+  await press(one);
   await wait(page, 1200);
   result.toast = await toaster(page);
   await still('run');
   result.axe.toast = await axe(page);
-  const edge = phone ? 'bottom' : 'top';
-  if (result.note !== 1 || !result.enabled || !result.copy.ok) failures.push(`preview: ${JSON.stringify(result)}`);
-  if (result.toast.edge !== edge || !result.toast.titles.includes('Synced to the cloud')) failures.push(`run: ${JSON.stringify(result.toast)} (expected edge ${edge})`);
-  // Keyboard: the demo button is in the tab order; Enter runs it again (the stack grows to two).
-  await runButton.focus();
-  await page.keyboard.press('Enter');
-  await wait(page, 900);
-  result.keyboard = await toaster(page);
-  if (!/2/u.test(result.keyboard.pill ?? '')) failures.push(`run from the keyboard: ${JSON.stringify(result.keyboard)}`);
+  if (result.toast.edge !== auto || !result.toast.titles.includes('Synced to the cloud')) fail('show a notification', result.toast);
+
+  // Every control: the host and the code follow.
+  const steps = [
+    ['Position', 'Top', 'top-center', 'top', 'center', 'ltr'],
+    ['Side', 'Left', 'top-left', 'top', 'left', 'ltr'],
+    ['Side', 'Right', 'top-right', 'top', 'right', 'ltr'],
+    ['Position', 'Bottom', 'bottom-right', 'bottom', 'right', 'ltr'],
+    ['Direction', 'RTL', 'bottom-right', 'bottom', 'right', 'rtl'],
+    ['Position', 'Auto', `${auto}-right`, auto, 'right', 'rtl'],
+    ['Side', 'Center', 'auto', auto, 'center', 'rtl'],
+    ['Direction', 'LTR', 'auto', auto, 'center', 'ltr'],
+  ];
+  for (const [group, option, position, edge, align, dir] of steps) {
+    await pick(group, option);
+    const step = { group, option, host: await pageHost(page), code: await code() };
+    result.steps.push(step);
+    const host = step.host;
+    if (host.position !== position || host.edge !== edge || host.align !== align || host.dir !== dir || step.code !== toasterCode(position, dir)) fail(`${group} ${option}`, step);
+    if (option === 'RTL') await still('preview-rtl');
+  }
+
+  // Five notifications in a corner; the code copies as shown.
+  await pick('Position', 'Top');
+  await pick('Side', 'Left');
+  await press(five);
+  await wait(page, 1200);
+  result.five = { ...(await toaster(page)), host: await pageHost(page) };
+  await still('preview-five');
+  if (result.five.host.align !== 'left' || result.five.edge !== 'top' || !result.five.titles.includes('Altocumulus drifted by')) fail('show five', result.five);
+  result.copy = await copyBlock(page, figure);
+  if (!result.copy.ok || (await code()) !== toasterCode('top-left', 'ltr')) fail('copy', result.copy);
+
+  // A Run of the Examples lands where the Preview put the Toaster.
+  await pick('Position', 'Bottom');
+  const run = page.locator('.docs-demo:not(.docs-preview) .docs-demo-trigger[data-demo="error"]').first();
+  await press(run);
+  await wait(page, 1200);
+  result.examples = await toaster(page);
+  result.examples.host = await pageHost(page);
+  await still('preview-examples');
+  if (result.examples.edge !== 'bottom' || result.examples.host.align !== 'left' || !result.examples.titles.includes('Sync got lost in the fog')) fail('run in Examples', result.examples);
+
+  // Reduced motion: the new code is there without its fade, the stack is already on its side.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await press(figure.getByRole('group', { name: 'Side', exact: true }).getByText('Right', { exact: true }));
+  // A render and an effect later; nothing of either moves (a fade would still run its 220 ms).
+  await wait(page, 150);
+  result.reduced = await page.evaluate(() => {
+    const pre = document.querySelector('.docs-preview pre');
+    const host = [...document.querySelectorAll('.cloudlet-host')].find((element) => !element.closest('article'));
+    return { animation: pre ? getComputedStyle(pre).animationName : null, align: host?.dataset.align ?? null };
+  });
+  await page.emulateMedia({ reducedMotion: null });
+  if (result.reduced.animation !== 'none' || result.reduced.align !== 'right') fail('reduced motion', result.reduced);
+
+  // Leaving the page (a client-side link) puts the Toaster back; coming back resets the controls.
+  await press(figure.getByRole('link', { name: 'Customize the look' }));
+  await page.waitForURL('**/docs/components/toaster/styling');
+  await wait(page, 600);
+  result.left = await pageHost(page);
+  await page.goBack();
+  await page.waitForURL((url) => url.pathname === '/docs/components/toaster');
+  await wait(page, 600);
+  result.back = { checked: await figure.locator('input:checked').evaluateAll((inputs) => inputs.map((input) => input.value)), code: await code(), host: await pageHost(page) };
+  if (result.left.position !== 'auto' || result.left.dir !== 'ltr') fail('leave', result.left);
+  if (result.back.checked.join(',') !== 'auto,center,ltr' || result.back.code !== '<Toaster />' || result.back.host.position !== 'auto') fail('back', result.back);
   return result;
 }
 

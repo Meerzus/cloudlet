@@ -46,7 +46,7 @@ const full = read('llms-full.txt');
 const LEFTOVERS = [
   [/demo="|demo-note/u, 'runnable meta'],
   [/\0/u, 'placeholder'],
-  [/<(Callout|GetStartedTabs|GetStartedCode|StyleEditor|PickerDemo|PaletteDemo|InstallCommand)\b/u, 'MDX component'],
+  [/<(Callout|GetStartedTabs|GetStartedCode|StyleEditor|PickerDemo|PaletteDemo|InstallCommand|ToasterPreview)\b/u, 'MDX component'],
 ];
 const urls = pageUrls(CONTENT);
 for (const url of urls) {

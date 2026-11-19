@@ -8,6 +8,8 @@ import { useCopy, usePageNotifications, useToasterSettings, type ToasterSettings
 import { useTheme } from '@/components/site/theme';
 import { Segmented } from '@/components/site/segmented';
 import { DEMO_GROUPS, demosIn, isCodeLabel, type Demo, type DemoGroup } from '@/lib/demos';
+import { useWide } from '@/components/site/use-wide';
+import { DIRECTIONS, EDGES, positionOf, SIDES, type Edge, type Side } from '@/lib/toaster-settings';
 import type { ThemePreference } from '@/lib/theme';
 import { TOASTER_PATH } from '@/lib/site';
 import { cn } from '@/lib/utils';
@@ -17,36 +19,6 @@ const THEMES: readonly { value: ThemePreference; label: string }[] = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ];
-type Edge = 'auto' | 'top' | 'bottom';
-type Side = 'left' | 'center' | 'right';
-const EDGES: readonly { value: Edge; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'top', label: 'Top' },
-  { value: 'bottom', label: 'Bottom' },
-];
-const SIDES: readonly { value: Side; label: string }[] = [
-  { value: 'left', label: 'Left' },
-  { value: 'center', label: 'Center' },
-  { value: 'right', label: 'Right' },
-];
-
-/** `auto` exists only in the centre: beside it the playground takes the edge `auto` would, by the same 48rem breakpoint. */
-function useWide() {
-  const [wide, setWide] = useState(true);
-  useEffect(() => {
-    const media = window.matchMedia('(min-width: 48rem)');
-    const update = () => setWide(media.matches);
-    update();
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, []);
-  return wide;
-}
-const DIRECTIONS: readonly { value: ToasterSettings['dir']; label: string }[] = [
-  { value: 'ltr', label: 'LTR' },
-  { value: 'rtl', label: 'RTL' },
-];
-
 /**
  * Every demo of the shared catalog on a button, calling the real
  * page-level Toaster. Theme is the site's own; position and direction apply to
@@ -58,8 +30,7 @@ export function Playground() {
   const [side, setSide] = useState<Side>('center');
   const [dir, setDir] = useState<ToasterSettings['dir']>('ltr');
   const wide = useWide();
-  const position: ToasterSettings['position'] = edge === 'auto' && side === 'center'
-    ? 'auto' : `${edge === 'auto' ? (wide ? 'top' : 'bottom') : edge}-${side}`;
+  const position = positionOf(edge, side, wide);
   useToasterSettings({ position, dir });
 
   return (
