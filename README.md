@@ -29,7 +29,7 @@ npm install @cloudlet/toast
 | Path | Contents |
 |---|---|
 | `packages/toast` | `@cloudlet/toast`: notification and operation controller, React adapter, the stack/Island shell, public types, CSS and its own build |
-| `apps/site` | The website at cloudlet.dev: landing page, Playground and the documentation at `/docs` |
+| `apps/site` | The website at cloudlet.dev: landing pages and the documentation at `/docs` |
 | `apps/lab` | The interactive laboratory and the isolated fixtures the browser tests run on ([README](apps/lab/README.md)) |
 | `registry` | The shadcn registry item: a thin client wrapper and a CSS theme bridge ([README](registry/README.md)) |
 | `fixtures` | Installed-archive consumers: Vite/React 18.2 and 19, Next App/Pages, size measurement |

@@ -8,7 +8,6 @@
     "components/toaster/index",
     "components/color-picker",
     "---Toaster guides---",
-    "[Playground](/toaster/playground)",
     "components/toaster/notifications",
     "components/toaster/operations",
     "components/toaster/forms",

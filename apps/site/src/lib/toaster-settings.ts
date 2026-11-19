@@ -2,8 +2,8 @@ import type { ToasterProps } from '@cloudlet/toast';
 
 /**
  * The page Toaster's live settings as a visitor picks them: an edge, a side and a direction, the
- * `position` they make and the `<Toaster />` code that sets it. Shared by the component page's
- * Preview and the Playground, so both pick the same position for the same controls.
+ * `position` they make and the `<Toaster />` code that sets it, for the component page's Preview
+ * and the Markdown of that page.
  */
 
 export type Edge = 'auto' | 'top' | 'bottom';

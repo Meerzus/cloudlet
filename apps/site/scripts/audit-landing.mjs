@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * axe on the static export of the landings: the kit's `/`, the Toaster's `/toaster`, `/toaster/playground` and `/toaster/frame`,
+ * axe on the static export of the landings: the kit's `/`, the Toaster's `/toaster` and `/toaster/frame`,
  * `/color-picker` and its docs,
  * desktop 1440×900 and phone 390×844, light and dark, with motion and with reduced motion.
  * Scenes are pinned and fade text in and out, so the component landings are checked at every section
@@ -11,7 +11,7 @@
  *   npm run build && npm run build:site
  *   node apps/site/scripts/audit-landing.mjs <out-dir> [--base URL] [--browser chromium|firefox|webkit] [scenario ...]
  *
- * Besides axe, on `/`, `/toaster`, `/toaster/playground`, `/color-picker` and its docs: a keyboard pass (Tab from the top until focus leaves the
+ * Besides axe, on `/`, `/toaster`, `/color-picker` and its docs: a keyboard pass (Tab from the top until focus leaves the
  * page or cycles; every stop must show a focus ring and be scrolled into view) and, with reduced
  * motion, the still layout of `/` and `/toaster` (no Lenis, no pin spacers, sky and scenes untransformed).
  * The kit's `/` is checked at every section, then with each of its live places open (KIT_LIVE). On
@@ -139,7 +139,7 @@ const SOFTWARE_WEBKIT = (engine === webkit && process.platform === 'linux') || p
  * holds steady and every other page passes. That page stays covered by Chromium and Firefox here, by the WebKit picker
  * audit (audit-color-picker.mjs) in CI, and by Safari on a Mac locally.
  */
-const ALL_PAGES = ['/', '/toaster', '/toaster/playground', '/toaster/frame', '/color-picker', '/docs/components/color-picker'];
+const ALL_PAGES = ['/', '/toaster', '/toaster/frame', '/color-picker', '/docs/components/color-picker'];
 const SKIPPED = SOFTWARE_WEBKIT ? ['/color-picker'] : [];
 const PAGES = ALL_PAGES.filter((path) => !SKIPPED.includes(path));
 /** Takes WebGL 2 away before the page runs (the same switch as the `flat` mode of audit-color-picker.mjs). */

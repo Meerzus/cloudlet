@@ -23,7 +23,7 @@
  * (rows of three or more columns are a grid line with the description
  * under it, every row a card on phones), every link to a docs anchor lands on
  * an existing heading, and axe is clean. Search and agents: the search window opens from its
- * button, ⌘K / Ctrl K and `/` (not on the landing or the Playground, `/` stays a character in the
+ * button, ⌘K / Ctrl K and `/` (not on the landings, `/` stays a character in the
  * field), a word from Accessibility finds the page and Enter opens it, arrows move, there is an
  * empty and a no-result state, Escape closes and gives the focus back, axe is clean with it open;
  * the drawer opens and closes from the keyboard; `/llms.txt`, `/llms-full.txt` and the `.md` of a
@@ -710,9 +710,9 @@ async function search(page, base, phone, still, failures) {
     if (!opened || !closed) fail(`shortcut ${key}`, result.shortcuts[key]);
   }
 
-  // No search outside the documentation.
+  // No search outside the documentation (the landing; /color-picker's paint would fill the console with WebGL notes).
   result.elsewhere = {};
-  for (const path of ['/toaster', '/toaster/playground']) {
+  for (const path of ['/toaster']) {
     await page.goto(`${base}${path}`);
     await wait(page, 800);
     await page.keyboard.press('Meta+k');

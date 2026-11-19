@@ -21,7 +21,6 @@ const SPEC_ORDER = [
   `${TOASTER}/index`,
   'components/color-picker',
   '---Toaster guides---',
-  '[Playground](/toaster/playground)',
   `${TOASTER}/notifications`,
   `${TOASTER}/operations`,
   `${TOASTER}/forms`,
@@ -110,13 +109,6 @@ describe('site docs tree', () => {
       const { body } = frontmatter(page);
       const used = [...body.matchAll(/^```tsx demo="([^"]+)"$/gmu)].map((match) => match[1]);
       expect(used, `${page}: demo= blocks`).toEqual(demos);
-    }
-  });
-
-  it('sends no reader to the Playground from the Next steps of a guide', () => {
-    const nextSteps = (page: string) => frontmatter(`${TOASTER}/${page}`).body.split('## Next steps')[1] ?? '';
-    for (const page of ['notifications', 'operations', 'forms', 'positioning', 'styling', 'ssr', 'csp', 'accessibility']) {
-      expect(nextSteps(page), page).not.toContain('](/toaster/playground)');
     }
   });
 

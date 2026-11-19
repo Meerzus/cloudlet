@@ -21,7 +21,7 @@ const primary = () => within(screen.getByRole('navigation', { name: 'Primary' })
 
 describe('site header', () => {
   it('leads the logo to the kit and has no Playground link', () => {
-    for (const pathname of ['/toaster', '/toaster/playground', '/color-picker', '/docs']) {
+    for (const pathname of ['/toaster', '/toaster/frame', '/color-picker', '/docs']) {
       route.pathname = pathname;
       const { unmount } = render(<Header />);
       expect(screen.getByRole('link', { name: 'Cloudlet' })).toHaveAttribute('href', '/');

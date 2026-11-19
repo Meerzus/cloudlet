@@ -3,7 +3,7 @@ name: site-audits
 # pull request. The export is built once and shared as an artifact; every audit then runs in its own job,
 # in parallel. Gates (a red job is a failed audit): axe, keyboard and still layout of the landings in Chromium
 # and Firefox, text contrast over the paint without a GPU (SwiftShader `page` and no-WebGL `flat`), the pickers
-# from the keyboard in Chromium and WebKit, the first-screen budget, the docs and Playground walks, the paint
+# from the keyboard in Chromium and WebKit, the first-screen budget, the docs walk, the paint
 # smoke. Reports (they run and show their results, a red one does not fail the run): the landings in Linux
 # WebKit, Lighthouse (Performance is noisy on shared runners). Local only (they
 # need a GPU or hands): the `fixed` paint mode of audit-color-picker.mjs (ANGLE on Metal), scroll-bench.mjs
@@ -207,16 +207,16 @@ jobs:
           path: artifacts/audits/
 
   walks:
-    # The docs and the Playground walked in Chromium: pages, demos, copy, search, axe (record-docs.mjs,
-    # record-playground.mjs); and the paint smoke of the color picker's top (smoke-picker-hero.mjs).
-    # All three are gates; the two walks count console warnings as failures.
+    # The docs walked in Chromium: pages, the Toaster's Preview, demos, copy, search, axe (record-docs.mjs);
+    # and the paint smoke of the color picker's top (smoke-picker-hero.mjs). Both are gates; the walk
+    # counts console warnings as failures.
     needs: export
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        walk: [docs, playground, smoke]
+        walk: [docs, smoke]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -236,10 +236,6 @@ jobs:
         run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/record-docs.mjs artifacts/audits/docs 2>&1 | tee artifacts/audits/docs.log
-      - if: matrix.walk == 'playground'
-        run: |
-          mkdir -p artifacts/audits
-          node apps/site/scripts/record-playground.mjs artifacts/audits/playground 2>&1 | tee artifacts/audits/playground.log
       - if: matrix.walk == 'smoke'
         run: |
           mkdir -p artifacts/audits

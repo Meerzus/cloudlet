@@ -6,7 +6,7 @@ import { Notifications } from '@/components/site/notifications';
 import { Sky } from '@/components/site/sky';
 import { TOASTER_DESCRIPTION, TOASTER_PATH, TOASTER_TITLE } from '@/lib/site';
 
-/* The Toaster's metadata for its landing and Playground; its OG/Twitter card is the pair of files next to this layout. */
+/* The Toaster's metadata for its landing; its OG/Twitter card is the pair of files next to this layout. */
 export const metadata: Metadata = {
   title: TOASTER_TITLE,
   description: TOASTER_DESCRIPTION,

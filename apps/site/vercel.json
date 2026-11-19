@@ -23,6 +23,7 @@
     { "source": "/color-picker/docs", "destination": "/docs/components/color-picker", "permanent": true },
     { "source": "/color-picker/docs.md", "destination": "/docs/components/color-picker.md", "permanent": true },
     { "source": "/docs/components", "destination": "/docs", "permanent": false },
-    { "source": "/playground", "destination": "/toaster/playground", "permanent": true }
+    { "source": "/toaster/playground", "destination": "/docs/components/toaster", "permanent": true },
+    { "source": "/playground", "destination": "/docs/components/toaster", "permanent": true }
   ]
 }

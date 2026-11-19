@@ -29,8 +29,8 @@ describe('scene transitions', () => {
     expect(sceneOf('/color-picker#faq')).toBe('color-picker');
   });
 
-  it('is no scene for the kit page, the docs, the playground or anything else', () => {
-    for (const href of ['/', '/#faq', '/docs', '/docs/components/toaster', '/toaster/playground', '/toaster/frame', '/nope']) {
+  it('is no scene for the kit page, the docs, the frame or anything else', () => {
+    for (const href of ['/', '/#faq', '/docs', '/docs/components/toaster', '/toaster/frame', '/nope']) {
       expect(sceneOf(href)).toBeNull();
     }
   });
@@ -57,7 +57,7 @@ describe('scene transitions', () => {
       ['/toaster', '/docs/components/toaster'],
       ['/toaster', '/color-picker'],
       ['/color-picker', '/toaster'],
-      ['/toaster', '/toaster/playground'],
+      ['/toaster', '/toaster/frame'],
       ['/', '/#faq'],
       ['/toaster', '/toaster'],
     ];

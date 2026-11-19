@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -128,6 +128,33 @@ describe('docs redirects from the former addresses', () => {
       if (/:\w/.test(rule.destination)) continue; // patterned destinations are walked above with real addresses
       expect(redirect(pageOf(rule.destination)), `${rule.source} → ${rule.destination} redirects again`).toBeUndefined();
     }
+  });
+
+  // The Playground became the component page's Preview and Examples. Its address and the one from
+  // before the umbrella both reach the page in one step, and nothing the site or the repository
+  // publishes links to the Playground any more.
+  for (const source of ['/toaster/playground', '/playground']) {
+    it(`${source} → ${TOASTER} in one permanent step`, () => {
+      expect(redirect(source)).toEqual({ rule: { source, destination: TOASTER, permanent: true }, to: TOASTER });
+      expect(redirect(TOASTER)).toBeUndefined();
+    });
+  }
+
+  it('leaves no link to the Playground and no Playground route', () => {
+    const root = new URL('../../', import.meta.url);
+    const files = [
+      ...(readdirSync(CONTENT, { recursive: true }) as string[]).filter((file) => /\.(mdx|json)$/.test(file)).map((file) => `apps/site/content/docs/en/${file}`),
+      ...(readdirSync(new URL('apps/site/src/', root), { recursive: true }) as string[]).filter((file) => /\.(tsx?|css)$/.test(file)).map((file) => `apps/site/src/${file}`),
+      'README.md',
+      'packages/toast/README.md',
+      'registry/README.md',
+      'registry/registry.json',
+    ];
+    for (const file of files) {
+      const text = readFileSync(new URL(file, root), 'utf8');
+      expect(text, file).not.toMatch(/\/toaster\/playground|PLAYGROUND_PATH|\]\(\/playground\)/);
+    }
+    expect(existsSync(new URL('apps/site/src/app/toaster/(site)/playground', root)), 'the Playground route').toBe(false);
   });
 
   it('sends /docs/components to /docs temporarily: a component list may live there later', () => {

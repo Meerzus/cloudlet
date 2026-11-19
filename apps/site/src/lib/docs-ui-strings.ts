@@ -84,6 +84,5 @@ export const DOCS_UI = {
   linkToSection: 'Link to this section',
   /** A table wider than the column, focusable so the keyboard can scroll it. */
   scrollableTable: 'Scrollable table',
-  tryPlayground: 'Try it in the Playground',
   noteLabels: { note: 'Note', tip: 'Tip', warning: 'Warning' },
 } as const;

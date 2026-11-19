@@ -25,7 +25,7 @@ function demoFences(node: MdNode, found: MdNode[] = []): MdNode[] {
 
 /**
  * Marks the first runnable fence of every page, so its code block can say once what the
- * snippets assume (`const cloudlet = useCloudlet();`, as on the Playground). Done at build
+ * snippets assume (`const cloudlet = useCloudlet();`). Done at build
  * time: the line is in the static HTML and nothing shifts after hydration.
  *
  * The Markdown of the page (`/docs/<slug>.md`, `llms-full.txt`) gets every runnable
