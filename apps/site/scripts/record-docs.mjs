@@ -252,7 +252,9 @@ async function preview(page, base, phone, still, failures) {
   await wait(page, 1200);
   result.five = { ...(await toaster(page)), host: await pageHost(page) };
   await still('preview-five');
-  if (result.five.host.align !== 'left' || result.five.edge !== 'top' || !result.five.titles.includes('Altocumulus drifted by')) fail('show five', result.five);
+  // The pill names how many are stacked: five from this press (the first one may still be there, or gone on its timer).
+  result.five.stacked = Number(/(\d+) notifications/u.exec(result.five.pill ?? '')?.[1] ?? 0);
+  if (result.five.host.align !== 'left' || result.five.edge !== 'top' || !result.five.titles.includes('Altocumulus drifted by') || result.five.stacked < 5) fail('show five', result.five);
   result.copy = await copyBlock(page, figure);
   if (!result.copy.ok || (await code()) !== toasterCode('top-left', 'ltr')) fail('copy', result.copy);
 

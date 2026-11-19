@@ -38,6 +38,20 @@ describe('site docs Markdown for agents', () => {
     expect([...demoSections(markdown)]).toEqual([['attention-auto', 'Attention'], ['overflow', 'Capacity and overflow']]);
   });
 
+  it('leaves a runnable fence shown inside a longer fence as it is written', () => {
+    const literal = '````md\n```tsx demo="success"\nshow();\n```\n````';
+    const markdown = `${literal}\n\n\`\`\`tsx demo="error"\nfail();\n\`\`\``;
+    const folded = new Map([['success', '`success`: in a guide.']]);
+    expect(runnableMarkdown(markdown, folded)).toBe(`${literal}\n\n${NOTE}\n\n\`\`\`tsx\nfail();\n\`\`\``);
+    expect([...demoSections(`## Shown\n\n${literal}\n\n## Run\n\n\`\`\`tsx demo="error"\nfail();\n\`\`\``)]).toEqual([['error', 'Run']]);
+  });
+
+  it('closes a block at a longer fence of the same character, and at no other', () => {
+    const markdown = ['## One', '```tsx demo="a"\n~~~\n## inside\n````', '## Two', '~~~tsx demo="b"\n```\n## inside\n~~~'].join('\n\n');
+    expect([...demoSections(markdown)]).toEqual([['a', 'One'], ['b', 'Two']]);
+    expect(runnableMarkdown('```tsx demo="a"\na();\n````\n\ntext')).toBe(`${NOTE}\n\n\`\`\`tsx\na();\n\`\`\`\n\ntext`);
+  });
+
   it('folds exactly the Examples demos that a Toaster guide shows, and keeps the others as code', () => {
     const guides = readdirSync(TOASTER).filter((entry) => entry.endsWith('.mdx') && entry !== 'index.mdx');
     const inGuides = new Set(guides.flatMap((entry) => demosOf(readFileSync(new URL(entry, TOASTER), 'utf8'))));

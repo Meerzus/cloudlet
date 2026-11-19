@@ -35,10 +35,20 @@ function ids(page: string) {
   const text = readFileSync(new URL(`${page}.mdx`, CONTENT), 'utf8');
   const seen = new Map<string, number>();
   const result = new Set<string>();
-  let fenced = false;
+  // The fence that opened the current code block: only one of the same character, at least as long
+  // and with nothing after it closes the block, so a shorter or a tilde fence inside stays code.
+  let open: string | null = null;
   for (const line of text.split('\n')) {
-    if (/^\s*```/u.test(line)) fenced = !fenced;
-    const heading = fenced ? null : /^#{2,6} (.+)$/u.exec(line);
+    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(line);
+    if (open !== null) {
+      if (fence && fence[1]?.[0] === open[0] && (fence[1]?.length ?? 0) >= open.length && fence[2]?.trim() === '') open = null;
+      continue;
+    }
+    if (fence) {
+      open = fence[1] ?? null;
+      continue;
+    }
+    const heading = /^#{2,6} (.+)$/u.exec(line);
     if (!heading) continue;
     const base = slug(heading[1] ?? '');
     const count = seen.get(base) ?? 0;

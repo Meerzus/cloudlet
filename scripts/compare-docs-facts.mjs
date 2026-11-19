@@ -255,7 +255,12 @@ function indexOf(text) {
 }
 
 function isFound(fact, index) {
-  if (fact.kind === 'code' && fact.block) return new RegExp(`(?<![\\w$-])${escape(fact.value)}(?![\\w$])`, 'u').test(index.text);
+  if (fact.kind === 'code' && fact.block) {
+    // A custom property is not found inside a longer one (`--cloudlet-gap` in `--cloudlet-gap-extra`);
+    // an identifier may be followed by a hyphen, as `aria` is in `aria-hidden`.
+    const after = fact.value.startsWith('--') ? '[\\w$-]' : '[\\w$]';
+    return new RegExp(`(?<![\\w$-])${escape(fact.value)}(?!${after})`, 'u').test(index.text);
+  }
   if (fact.kind === 'code') return index.code.includes(normalizeCode(fact.value));
   if (fact.kind === 'number') return fact.number.unit ? index.valueUnits.has(`${fact.number.value}|${fact.number.unit}`) : index.values.has(fact.number.value);
   const words = normalizeWords(fact.value);
