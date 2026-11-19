@@ -175,7 +175,7 @@ describe('site docs runnable examples', () => {
     expect(metas).toEqual(['title="main.tsx"', `demo="success" ${DEMO_NOTE}`, 'demo="error"', null]);
   });
 
-  it('writes runnable fences as plain code in the Markdown for agents, the first after the note', () => {
+  it('keeps the demo id of runnable fences in the Markdown for agents, without a title or the note', () => {
     const source = 'Intro\n\n```tsx demo="success"\nshow();\n```\n\n```tsx demo="error" title="x.tsx"\nfail();\n```\n';
     const at = (text: string) => {
       const start = source.indexOf(text);
@@ -195,7 +195,7 @@ describe('site docs runnable examples', () => {
     const file = vfile(source);
     remarkDemoNote()(tree, file);
     const markdown = createStringifier(file).stringify(tree as never);
-    expect(markdown).toBe('Intro\n\nSnippets assume `const cloudlet = useCloudlet();`.\n\n```tsx\nshow();\n```\n\n```tsx\nfail();\n```\n');
+    expect(markdown).toBe('Intro\n\n```tsx demo="success"\nshow();\n```\n\n```tsx demo="error"\nfail();\n```\n');
   });
 });
 

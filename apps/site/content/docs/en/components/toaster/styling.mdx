@@ -86,12 +86,7 @@ The tokens must reach the portal: define them on `:root` or on an ancestor of th
 
 ## Theme
 
-`<Toaster theme>` is `system` by default:
-
-- `system` follows the user's `prefers-color-scheme`.
-- `light` and `dark` force a theme, whatever the operating system prefers.
-
-Pass your app's resolved theme to keep Cloudlet's surface and native `color-scheme` in sync with the page. The host's `data-theme` keeps the prop value; `data-resolved-theme` is the active theme after mount:
+[`theme`](/docs/components/toaster/api/toaster#props) is `system` by default; `light` and `dark` force a theme whatever the operating system prefers. Pass your app's resolved theme to keep Cloudlet's surface and native `color-scheme` in sync with the page. The host's `data-theme` keeps the prop value; `data-resolved-theme` is the active theme after mount:
 
 ```css title="notifications.css"
 .cloudlet-host[data-resolved-theme="dark"] .app-toast-action { font-weight: 500; }
@@ -103,11 +98,11 @@ In forced-colours mode (Windows High Contrast), every theme uses system colours:
 
 ## Direction
 
-`<Toaster dir>` is `ltr` or `rtl`. When it is omitted, the Toaster follows `dir="rtl"` on the `<html>` element. In right-to-left mode, text aligns to the start, the badge and the slider are mirrored, and the arrow keys move between notifications in the reading direction. The Direction control of the [Preview](/docs/components/toaster#preview) shows it on this site's Toaster.
+Without [`dir`](/docs/components/toaster/api/toaster#props), the Toaster follows `dir="rtl"` on the `<html>` element. In right-to-left mode, text aligns to the start, the badge and the slider are mirrored, and the arrow keys move between notifications in the reading direction. The Direction control of the [Preview](/docs/components/toaster#preview) shows it on this site's Toaster.
 
 ## Class names
 
-`classNames` adds your classes to the parts of the renderer. They are added next to Cloudlet's own `cloudlet-*` classes and never replace them, so the stylesheet keeps working:
+[`classNames`](/docs/components/toaster/api/toaster#classnames) adds your classes per part, next to Cloudlet's own `cloudlet-*` classes, which keep working:
 
 ```tsx title="notifications.tsx"
 import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
@@ -129,8 +124,6 @@ export function Notifications() {
   );
 }
 ```
-
-The parts are `host`, `stack`, `pill`, `tail`, `badge`, `island`, `header`, `icon`, `title`, `close`, `body`, `description`, `actions`, `action`, `indicator`, `clear` and `overflow`; [classNames](/docs/components/toaster/api/toaster#classnames) says which element each one is.
 
 Cloudlet's own rules use two classes, such as `.cloudlet-host .cloudlet-action`, so a selector with a single class of yours loses to them on the properties they set. Write rules at least as specific, or style through the tokens:
 

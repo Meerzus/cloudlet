@@ -187,7 +187,9 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 - The READMEs, the security policy and the issue template link to the new addresses.
 - The Toaster's documentation is 14 pages instead of 16, shorter and answering first: no
   introductions, no retelling of the landing, no Next steps that repeat the sidebar, and every
-  fact kept. The sidebar shows the Toaster under Components, then Toaster guides (Notifications &
+  fact kept. The guides and the advanced pages link to the reference for every option, field and
+  result it already lists instead of repeating it; each full setup file is shown once, so Content
+  Security Policy shows only what the nonce adds to the SSR & Next.js setup. The sidebar shows the Toaster under Components, then Toaster guides (Notifications &
   time, Operations & cancellation, Forms, Styling), Toaster advanced (Positioning & offsets, SSR &
   Next.js, Content Security Policy, Accessibility) and Toaster reference (createCloudlet,
   Controller, Toaster props, Labels & announcements, Types).
@@ -202,7 +204,7 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   Top or Bottom, and on Auto the code is `<Toaster />` at any width. The buttons in Examples, which run every demo
   of the catalog group by group, show their notifications where the Preview put the Toaster, and
   leaving the page puts it back. In Markdown and `llms-full.txt` the Preview is the code with its
-  values.
+  values, and an Examples snippet that a guide already shows is one line linking to that guide.
 - Attention (what opens the Island on its own, after how long and how to change the delay) moved
   from Positioning to Notifications & time. The guides keep the demos that show their rule and send
   the rest to Examples.

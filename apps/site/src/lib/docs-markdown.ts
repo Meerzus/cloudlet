@@ -1,7 +1,10 @@
+import { isValidElement, type ReactNode } from 'react';
 import { renderPlaceholder, type PlaceholderData } from 'fumadocs-core/mdx-plugins/remark-llms.runtime';
 import { groupTree } from '@/components/docs/nav';
 import { source, type DocsPage } from './docs-source';
+import { findDemo } from './demos';
 import { DOCS_UI } from './docs-ui-strings';
+import { demoSections, runnableMarkdown } from './runnable-markdown';
 import { GET_STARTED, type GetStartedTab } from './get-started';
 import { COLOR_PICKER_DOCS_PATH, DOCS_PATH, isUnder, SITE_URL, TOASTER_DOCS_PATH } from './site';
 import { AUTO_BREAKPOINT, codeText, DIRECTIONS, POSITIONS, toasterCode } from './toaster-settings';
@@ -11,8 +14,9 @@ import { AUTO_BREAKPOINT, codeText, DIRECTIONS, POSITIONS, toasterCode } from '.
  * the pages by sidebar group, `/llms-full.txt` holds them all, `/docs/<slug>.md` is one page
  * (`/docs.md` for the Introduction). fumadocs-mdx keeps
  * the authored Markdown of each page (`includeProcessedMarkdown`); MDX components come as
- * placeholders and are expanded here into plain text and code, runnable fences are already plain
- * code (remark-demo-note.ts) and a `<Demos>` group is just its fences, and site links become absolute.
+ * placeholders and are expanded here into plain text and code, a `<Demos>` group is just its
+ * fences, runnable fences become plain code or a link (`foldedDemos` decides which, with the
+ * helpers of runnable-markdown.ts), and site links become absolute.
  */
 
 /** One line about the kit at the top of `/llms.txt`; the site's own description lives in the root layout. */
@@ -69,6 +73,53 @@ const RENDERERS: Record<string, (data: PlaceholderData) => string> = {
   StyleEditor: () => `Style editor at ${SITE_URL}${TOASTER_DOCS_PATH}/styling#style-editor: set the tokens on a live Toaster and copy the CSS. The query string carries the values — one parameter per token name without the \`--cloudlet-\` prefix (\`background\`, \`background-dark\`, \`pill-radius\`, \`font-family\`, …); dark-theme colors use the \`-dark\` suffix, and the preview follows the site theme.`,
 };
 
+/** The plain text of a heading as the TOC holds it (a string, or React nodes around one). */
+function textOf(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join('');
+  if (isValidElement<{ children?: ReactNode }>(node)) return textOf(node.props.children);
+  return '';
+}
+
+/** A heading of the Markdown as text: no code marks, emphasis or links. */
+const headingText = (heading: string) => heading.replace(/\[([^\]]*)\]\([^)]*\)/gu, '$1').replace(/[`*_]/gu, '').trim();
+
+/** The section of `page` titled `heading`, as a docs link with its anchor. */
+function sectionUrl(page: DocsPage, heading: string): string {
+  const item = page.data.toc.find((entry) => headingText(textOf(entry.title)) === headingText(heading));
+  if (!item) throw new Error(`docs-markdown: no heading "${heading}" in the table of contents of ${page.url}`);
+  return `${page.url}${item.url}`;
+}
+
+/** The Markdown body of a page with its MDX components expanded and runnable fences still marked. */
+const bodies = new Map<string, Promise<string>>();
+function body(page: DocsPage): Promise<string> {
+  let text = bodies.get(page.url);
+  if (!text) {
+    text = page.data.getText('processed').then((processed) => renderPlaceholder(processed, RENDERERS));
+    bodies.set(page.url, text);
+  }
+  return text;
+}
+
+/**
+ * Demos of a page that a page under it shows too — the Examples of a component page whose guide
+ * runs the same snippet — each as a line pointing to that guide's section. An agent reads the code
+ * once, where the guide explains it; a demo only the component page has stays code there.
+ */
+async function foldedDemos(page: DocsPage): Promise<Map<string, string>> {
+  const folded = new Map<string, string>();
+  const below = source.getPages().filter((other) => other.url !== page.url && isUnder(other.url, page.url));
+  for (const other of below) {
+    for (const [id, heading] of demoSections(await body(other))) {
+      if (folded.has(id) || !heading) continue;
+      const label = findDemo(id)?.label;
+      folded.set(id, `\`${id}\`${label ? ` (${label})` : ''}: code in [${other.data.title} › ${headingText(heading)}](${sectionUrl(other, heading)}).`);
+    }
+  }
+  return folded;
+}
+
 /** `](/docs/…)` → `](https://…/docs/…)`: the Markdown is read away from the site. */
 function absoluteLinks(markdown: string): string {
   return markdown.replace(/\]\((\/[^)\s]*)\)/gu, (_, path: string) => `](${SITE_URL}${path})`);
@@ -81,9 +132,9 @@ export function markdownUrl(page: DocsPage): string {
 
 /** One page as Markdown: title, description, address of the page, then the content. */
 export async function pageMarkdown(page: DocsPage): Promise<string> {
-  const body = await renderPlaceholder(await page.data.getText('processed'), RENDERERS);
+  const content = runnableMarkdown(await body(page), await foldedDemos(page));
   const head = [`# ${page.data.title}`, page.data.description ? `> ${page.data.description}` : null, `Source: ${SITE_URL}${page.url}`];
-  return `${head.filter(Boolean).join('\n\n')}\n\n${absoluteLinks(body).trim()}\n`;
+  return `${head.filter(Boolean).join('\n\n')}\n\n${absoluteLinks(content).trim()}\n`;
 }
 
 /** The pages in sidebar order, grouped as in the sidebar; links outside the docs are kept as they are. */

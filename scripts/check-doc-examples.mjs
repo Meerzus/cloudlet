@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -51,6 +51,9 @@ function extractExamples(markdown, document) {
  * its path in the page's own directory, so `import … from '../components/owner'` between them
  * resolves. A repeated title (a later version of the same file) is written next to the first one
  * as `name.2.tsx`, keeping its relative imports. Fences without a `.ts`/`.tsx` title stay standalone.
+ * A file a page imports but does not show is taken from a page of the same folder that shows it
+ * (CSP's `app/layout.tsx` imports the `components/notification-owner.tsx` of SSR): the import is
+ * compiled against the real file, never a stub, and a path no page shows stays a compile error.
  */
 function titledPath(example, used) {
   const title = /(?:^|\s)title="([^"]+)"/u.exec(example.meta)?.[1];
@@ -59,6 +62,15 @@ function titledPath(example, used) {
   const count = (used.get(title) ?? 0) + 1;
   used.set(title, count);
   return count === 1 ? title : title.replace(/\.tsx?$/u, (extension) => `.${count}${extension}`);
+}
+
+/** `title="path"` files of each page: page project folder, and title → source, by page. */
+const pageFiles = new Map();
+
+/** Relative imports of a titled file that its own page does not show, resolved to titles. */
+function missingImports(title, source, titles) {
+  const imports = [...source.matchAll(/from\s+'(\.{1,2}\/[^']+)'/gu)].map((match) => posix.normalize(posix.join(posix.dirname(title), match[1])));
+  return imports.filter((path) => !['.tsx', '.ts'].some((extension) => titles.has(`${path}${extension}`))).flatMap((path) => [`${path}.tsx`, `${path}.ts`]);
 }
 
 try {
@@ -80,6 +92,22 @@ try {
       await mkdir(dirname(resolve(temporary, filename)), { recursive: true });
       await writeFile(resolve(temporary, filename), scaffold + example.source);
       examples.push({ ...example, filename, scaffold });
+      if (titled) {
+        const folder = `${documentIndex + 1}-${document.replaceAll('/', '-')}`;
+        const page = pageFiles.get(document) ?? { folder, files: new Map() };
+        page.files.set(titled, example.source);
+        pageFiles.set(document, page);
+      }
+    }
+  }
+  for (const [document, { folder, files }] of pageFiles) {
+    for (const [title, source] of files) {
+      for (const wanted of missingImports(title, source, files)) {
+        const shown = [...pageFiles].filter(([other, page]) => other !== document && dirname(other) === dirname(document) && page.files.has(wanted));
+        if (shown.length !== 1) continue;
+        await mkdir(dirname(resolve(temporary, folder, wanted)), { recursive: true });
+        await writeFile(resolve(temporary, folder, wanted), shown[0][1].files.get(wanted));
+      }
     }
   }
   const config = {

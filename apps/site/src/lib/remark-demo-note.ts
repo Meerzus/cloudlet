@@ -1,5 +1,4 @@
 import { replaceSource } from 'fumadocs-core/mdx-plugins/stringifier';
-import { DOCS_UI } from './docs-ui-strings';
 
 /** The meta of a runnable fence: ```tsx demo="success" */
 export const DEMO_META = /(?:^|\s)demo="([^"]+)"/u;
@@ -29,15 +28,16 @@ function demoFences(node: MdNode, found: MdNode[] = []): MdNode[] {
  * time: the line is in the static HTML and nothing shifts after hydration.
  *
  * The Markdown of the page (`/docs/<slug>.md`, `llms-full.txt`) gets every runnable
- * fence as plain code, the first one after the same sentence: there is no Run button to explain.
+ * fence as `lang demo="<id>"` and its code, without a title or the note: `docs-markdown.ts`
+ * decides per demo whether the code stays or becomes a link to the guide that shows it, and
+ * writes the note above the first code that stays. There is no Run button to explain.
  */
 export function remarkDemoNote() {
   return (tree: MdNode, file: SourceFile) => {
     const fences = demoFences(tree);
-    fences.forEach((fence, index) => {
-      const code = `\`\`\`${fence.lang ?? ''}\n${fence.value ?? ''}\n\`\`\``;
-      const note = `${DOCS_UI.demoNoteBefore}\`${DOCS_UI.demoNoteCode}\`.\n\n`;
-      replaceSource(file, fence as SourceNode, index === 0 ? `${note}${code}` : code);
+    fences.forEach((fence) => {
+      const id = DEMO_META.exec(fence.meta ?? '')?.[1] ?? '';
+      replaceSource(file, fence as SourceNode, `\`\`\`${fence.lang ?? ''} demo="${id}"\n${fence.value ?? ''}\n\`\`\``);
     });
     const first = fences[0];
     if (first) first.meta = `${first.meta} ${DEMO_NOTE}`;

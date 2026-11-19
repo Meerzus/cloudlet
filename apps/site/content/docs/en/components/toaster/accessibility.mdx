@@ -7,17 +7,17 @@ description: How the pill and the Island are named, announced and focused, and w
 
 The collapsed stack is one native `<button>`. Its accessible name comes from `labels.stackSummary(title, count, missed)`: the title of the top notification, how many notifications are in the stack and how many were missed, such as "Synced to the cloud, 3 notifications, 1 missed". It has `aria-expanded="false"` and controls the Island. The tails and the badge are decorative and hidden from assistive technology; the count they show is already part of the name.
 
-The host around it is a region named by `labels.region` ("Notifications"). It is not in the tab order, but it is the anchor that [`requestFocus()`](#moving-focus-on-request) moves focus to.
+The host around it is a region named by `labels.region`. It is not in the tab order, but it is the anchor that [`requestFocus()`](#moving-focus-on-request) moves focus to.
 
 ## The Island
 
-Activating the pill opens the Island in place of it. The Island is a region with the role description "carousel", named by `labels.island` ("Current notifications") and described by a hidden hint, `labels.collapse` ("Press Escape to collapse").
+Activating the pill opens the Island in place of it. The Island is a region with the role description "carousel", named by `labels.island` and described by a hidden hint, `labels.collapse`. Every label and its English default is in [Labels & announcements](/docs/components/toaster/api/labels#cloudletlabels).
 
-- Only the current notification is in the DOM, as a group with the role description "slide", named by `labels.page(index, total)`: "2 of 5".
+- Only the current notification is in the DOM, as a group with the role description "slide", named by `labels.page(index, total)`.
 - Its title is a heading. Opening the Island from the keyboard moves focus to it.
 - Close, actions, retry and cancel are native buttons and links. Close is 32px wide with a 44px touch target.
 - With more than one notification, page dots appear: buttons named like the slides, with `aria-current` on the current one. Above five notifications a text counter replaces them; it is hidden from assistive technology, because the slide's name already says where you are.
-- With more than one notification, a clear button ends the dots row, named `labels.clearAll` ("Clear all"). Its first press only arms it: its name becomes `labels.clearAllConfirm(count)` ("Clear 12"), spoken once through a status. A second press within 3 seconds closes every notification and the missed count, and focus returns to where it was before the Island. Leaving the button, collapsing the Island or waiting disarms it; a double click never does both presses.
+- With more than one notification, a clear button ends the dots row, named `labels.clearAll`. Its first press only arms it: its name becomes `labels.clearAllConfirm(count)`, spoken once through a status. After the second press focus returns to where it was before the Island. Leaving the button, collapsing the Island or waiting disarms it; a double click never does both presses.
 - Missed notifications appear as a line, `labels.overflowCount(count)`, with a button named `labels.acknowledgeOverflow`.
 - A notification with progress exposes a `progressbar` in the Island, named by its progress `label` or its title.
 
@@ -42,8 +42,8 @@ Every gesture has a key or a button that does the same. Vertical movement on the
 Two permanent live regions, one polite and one assertive, sit next to the host from the moment it mounts. Cloudlet collects what happened in 300ms windows and speaks each window once:
 
 - A new notification is announced by its title and description. A rich description is not read from its markup; it carries its own `announcement` text.
-- Notifications behind the presented one are announced only as a count: "2 notifications queued".
-- A repeated notification merged by `dedupeKey` announces its occurrences: "Synced to the cloud. 3 occurrences".
+- Notifications behind the presented one are announced only as a count.
+- A repeated notification merged by `dedupeKey` announces its occurrences.
 - Progress updates are silent; the end of an operation is announced once.
 - Moving back to a notification already shown in the open Island (arrow keys, the dots, a swipe, or the next one after closing) reads it again, once. The title stays the same element across slides, so a screen reader would otherwise hear nothing.
 - Reflow or remounting the Toaster repeats nothing. Returning to a hidden tab announces the current count, not the events that were missed.
@@ -78,7 +78,7 @@ While a notification has focus or the pointer, its time on screen is paused, so 
 
 ### Moving focus on request
 
-`requestFocus(target?)` moves focus into the stack when the user asks for it, for example from a keyboard shortcut:
+[`requestFocus(target?)`](/docs/components/toaster/api/controller#requestfocus) moves focus into the stack when the user asks for it, for example from a keyboard shortcut. Its targets and results are in the reference:
 
 ```tsx title="shortcut.ts"
 import { createCloudlet } from '@cloudlet/toast';
@@ -94,20 +94,13 @@ document.addEventListener('keydown', (event) => {
 });
 ```
 
-| Target | Moves focus to |
-|---|---|
-| `{ kind: 'anchor' }` (the default) | The host region. |
-| `{ kind: 'notification', handle }` | The title of the presented notification, or the pill when the Island is closed. |
-| `{ kind: 'notification', handle, control }` | Its `'action'` or `'close'` button. |
-| `{ kind: 'overflow' }` | The button that acknowledges missed notifications, or the pill. |
-
-The result is `{ status: 'requested' }`, or `rejected` with a reason: `no-host` when no Toaster is mounted, `not-visible` when the notification is not the presented one, `unavailable` when the target does not exist (no action, no overflow), `disposed`, or a reason why the handle is not valid. Do not call it when a notification arrives: that is the move the focus policy forbids.
+Do not call it when a notification arrives: that is the move the focus policy forbids.
 
 ## Reduced motion
 
 Under `prefers-reduced-motion`, every transition of the stack and the Island becomes a short crossfade: no movement, no scaling, no slide. Spinners stop and swipes are turned off; the keyboard and the buttons still do everything. Cloudlet follows the setting live, without a remount, and marks the host with `data-reduced-motion="true"`.
 
-In forced-colours mode Cloudlet uses system colours with visible borders and a solid focus ring. See [Theme](/docs/components/toaster/styling#theme).
+In forced-colours mode Cloudlet uses system colours with visible borders and a solid focus ring ([Theme](/docs/components/toaster/styling#theme)).
 
 ## Localization
 
@@ -117,48 +110,26 @@ Everything Cloudlet says comes from three partial objects; whatever you leave ou
 - **`announcements`** on the Toaster: the text spoken in the live regions.
 - **`messages`** of the controller: titles of fallback notifications, such as an operation that failed without a mapped error.
 
+A string or a formatter per key:
+
 ```tsx title="notifications.tsx"
-import {
-  CloudletProvider,
-  createCloudlet,
-  Toaster,
-  type AnnouncementFormatters,
-  type CloudletLabels,
-} from '@cloudlet/toast';
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
 
-const labels: Partial<CloudletLabels> = {
-  region: 'Notifications',
-  island: 'Notifications en cours',
-  close: 'Fermer la notification',
-  retry: 'Réessayer',
-  cancel: "Demander l'annulation",
-  collapse: 'Appuyez sur Échap pour réduire',
-  stackSummary: (title, count, missed) =>
-    [title, count > 1 ? `${count} notifications` : '', missed > 0 ? `${missed} manquées` : '']
-      .filter(Boolean)
-      .join(', '),
-  page: (index, total) => `${index} sur ${total}`,
-};
-
-const announcements: Partial<AnnouncementFormatters> = {
-  queued: (count) => `${count} notifications en attente`,
-  occurrences: (notification) => `${notification.content.title}. ${notification.occurrences} fois`,
-};
-
-const cloudlet = createCloudlet({
-  messages: { operationSuccess: 'Terminé', operationError: 'Échec', operationCancelled: 'Annulé' },
-});
+const cloudlet = createCloudlet({ messages: { operationError: 'Échec' } });
 
 export function Notifications() {
   return (
     <CloudletProvider controller={cloudlet}>
-      <Toaster labels={labels} announcements={announcements} />
+      <Toaster
+        labels={{ close: 'Fermer la notification', page: (index, total) => `${index} sur ${total}` }}
+        announcements={{ queued: (count) => `${count} notifications en attente` }}
+      />
     </CloudletProvider>
   );
 }
 ```
 
-A formatter that throws or returns an empty string falls back to the default and is reported to `onDiagnostic`. The full lists are in [Labels & announcements](/docs/components/toaster/api/labels).
+A formatter that throws or returns an empty string falls back to the default and is reported to `onDiagnostic`. Every key, and a complete translation, is in [Labels & announcements](/docs/components/toaster/api/labels).
 
 ## What is tested
 
@@ -180,8 +151,7 @@ Automation checks the DOM, not speech, so the rest is checked by hand:
 ## What stays with your application
 
 - **Keep important results in your interface.** A notification is a notice and can be missed, dismissed or closed by time. Anything the user must not lose also lives on the page.
-- **Translate** `labels`, `announcements` and `messages` with the rest of your interface.
-- **Choose the urgency**: `assertive` only for what cannot wait, `off` for what the page already shows.
-- **Keep rich content simple.** A rich description is text and inline formatting with its own `announcement`; interactive controls belong in `action`, not inside the description. Text input belongs in a [form action](/docs/components/toaster/forms), whose fields come labelled and announced.
+- **Translate** `labels`, `announcements` and `messages` ([Localization](#localization)), and **choose the urgency** of each notification ([Announcements](#announcements)).
+- **Keep rich content simple**: text and inline formatting with its own `announcement`. Controls belong in `action`, text input in a [form action](/docs/components/toaster/forms), whose fields come labelled and announced.
 - **Keep contrast** when you override colour tokens: 4.5:1 for text and 3:1 for the focus ring against the surface.
 - **Test with the screen readers your users have.** Delivery to a live region does not prove that it was spoken.
