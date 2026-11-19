@@ -126,6 +126,7 @@ cloudlet.show({
 - The Island opens 600 ms after admission. While the user hovers, focuses, swipes or moves between the notifications, the candidate waits, and the delay starts again once they stop.
 - There is one candidate at a time: the newest one wins. Dismissing it, or an `update` after which its rule no longer holds, cancels the opening.
 - If the Island is already open, it moves to the candidate.
+- While a form in the open Island holds a [draft](/docs/components/toaster/forms#drafts), the candidate waits in the stack instead.
 - A notification whose operation fails and becomes retryable is a candidate again at that moment.
 - Opening for attention never moves keyboard focus.
 

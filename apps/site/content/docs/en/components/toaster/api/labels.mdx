@@ -40,7 +40,7 @@ Read on every render of the Toaster.
 
 ## AnnouncementFormatters
 
-Read when an announcement is made, so the latest props apply. Cloudlet speaks through two permanent live regions, polite and assertive, chosen per notification by `announcementPriority`; `'off'` silences its automatic text but not its controls. Announcements within 300 ms are spoken together; progress updates, reflows and seeing a notification again are never announced. [Announcements](/docs/components/toaster/accessibility#announcements) has the whole rule.
+Read when an announcement is made, so the latest props apply. Cloudlet speaks through two permanent live regions, polite and assertive, chosen per notification by `announcementPriority`; `'off'` silences its automatic text but not its controls. Announcements within 300 ms are spoken together; progress updates, reflows and remounts are never announced, and a notification is read again only when the user moves back to it in the open Island. [Announcements](/docs/components/toaster/accessibility#announcements) has the whole rule.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
