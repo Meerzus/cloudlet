@@ -28,7 +28,7 @@ Handles and tokens are capabilities minted by the controller. They are never bui
 | `Priority` | `'normal' \| 'high'` | `show`, `track`: record metadata that does not reorder the stack. |
 | `AnnouncementPriority` | `'polite' \| 'assertive' \| 'off'` | `show`, [Labels & announcements](/docs/components/toaster/api/labels#announcementformatters) |
 | `Duration` | `number \| null` | `show`: readable milliseconds ≥ 0, or `null` to stay until closed. |
-| `Attention` | `'auto' \| 'open' \| 'stack'` | `show`, [Positioning & offsets](/docs/components/toaster/positioning#attention) |
+| `Attention` | `'auto' \| 'open' \| 'stack'` | `show`, [Notifications & time](/docs/components/toaster/notifications#attention) |
 | `NotificationContent` | `title`, `description?`, `icon?`, `progress?`, `action?`, `announcementPriority?`, `duration?`, `attention?` | What a notification shows; the content of `track`'s `pending`, `success`, `error` and `cancelled`. |
 | `NotificationSpec` | `NotificationContent` and `id?`, `kind?`, `priority?`, `dedupeKey?`, `onClose?` | [`show`](/docs/components/toaster/api/controller#show) |
 | `NotificationPatch` | the changeable fields, `null` removes | [`update`](/docs/components/toaster/api/controller#update) |

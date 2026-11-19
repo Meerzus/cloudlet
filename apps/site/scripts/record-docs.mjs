@@ -8,7 +8,7 @@
  * `position="auto"`), its Position, Side and Direction move that Toaster with the code under them,
  * from the mouse and the keyboard, Examples run where they put it and leaving the page resets it,
  * and its Examples run the whole catalog. Guides: every demo button of the
- * component page, Notifications, Operations and Positioning shows its own
+ * component page, Notifications, Operations and Forms shows its own
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
  * under Show code. Guides:
  * Styling, SSR and Accessibility pass axe, the page never scrolls sideways, and every table wider
@@ -266,7 +266,7 @@ async function preview(page, base, phone, still, failures) {
 }
 
 /** Pages whose every demo button is checked (`''` is the component page); a fresh load per demo, so each toast is its own. */
-const GUIDES = ['', 'notifications', 'operations', 'positioning'];
+const GUIDES = ['', 'notifications', 'operations', 'forms'];
 
 /**
  * Guides: each demo button shows a notification titled as its snippet; `dismiss-all` empties the

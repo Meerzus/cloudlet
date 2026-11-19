@@ -1,9 +1,9 @@
 ---
 title: Positioning & offsets
-description: Where the stack sits, how it avoids notches, navigation bars and the keyboard, when the Island opens on its own, and which element it renders into.
+description: Where the stack sits, how it avoids notches, navigation bars and the keyboard, and which element it renders into.
 ---
 
-The stack takes one spot at the top or bottom of the viewport: in the centre, or in a corner. This page explains how that spot is chosen, how Cloudlet keeps it clear of safe areas, your own navigation and the on-screen keyboard, how a notification decides whether to open the Island without being asked, and how to render the Toaster into an element of yours.
+The stack takes one spot at the top or bottom of the viewport: in the centre, or in a corner. This page explains how that spot is chosen, how Cloudlet keeps it clear of safe areas, your own navigation and the on-screen keyboard, and how to render the Toaster into an element of yours.
 
 ## Position
 
@@ -82,72 +82,6 @@ Values must be finite and not negative. Offsets apply on every edge whichever ed
 Cloudlet places the stack inside the visual viewport, the part of the page actually visible. When the on-screen keyboard opens, or a browser toolbar slides in, the available area shrinks and the stack moves with it. Do not add the keyboard's height to `offsets`: it would be counted twice.
 
 When the available height is short, the Island scrolls inside itself and its controls stay reachable. There is no limit on how many notifications fit by height; the [capacity](/docs/components/toaster/notifications#capacity-and-overflow) is a count.
-
-## Attention
-
-Every notification has an `attention` rule that decides whether it opens the Island on its own:
-
-- `auto`, the default, opens it when the notification has an action, a description, or is a failed operation that can be retried.
-- `open` always opens it.
-- `stack` never does; the notification waits in the stack.
-
-<Demos>
-
-```tsx demo="attention-auto"
-cloudlet.show({
-  title: 'Wind is picking up',
-  description: { kind: 'text', text: 'Gusts up to 40 km/h this afternoon.' },
-  attention: 'auto',
-});
-```
-
-```tsx demo="attention-upgrade"
-cloudlet.show({
-  title: 'Storm ahead: storage almost full',
-  kind: 'warning',
-  description: { kind: 'text', text: 'Only 3% of your sky is left.' },
-  action: {
-    kind: 'command',
-    label: 'Upgrade',
-    run: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 900));
-      cloudlet.show({ title: 'Clear skies: storage doubled', kind: 'success' });
-    },
-  },
-  attention: 'open',
-});
-```
-
-```tsx demo="attention-stack"
-cloudlet.show({
-  title: 'Drizzle expected tonight',
-  kind: 'warning',
-  description: { kind: 'text', text: 'Keep an umbrella by the door.' },
-  attention: 'stack',
-});
-```
-
-</Demos>
-
-The Island opens 600ms after admission. While the user hovers, focuses, swipes or moves between the notifications, the candidate waits, and the delay starts again once they stop. There is one candidate at a time: the newest one wins, and dismissing it, or an `update` after which its rule no longer holds, cancels the opening. If the Island is already open, it moves to the candidate. A notification whose operation fails and becomes retryable is a candidate again at that moment.
-
-Opening for attention never moves keyboard focus. Set the delay for a controller, or override it for one Toaster while it is mounted:
-
-```tsx title="attention.tsx"
-import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
-
-// A calmer default for every Toaster of this controller.
-const cloudlet = createCloudlet({ attentionDelay: 1200 });
-
-export function Notifications() {
-  return (
-    <CloudletProvider controller={cloudlet}>
-      {/* While this Toaster is mounted, its own delay wins. */}
-      <Toaster attention={{ delay: 300 }} />
-    </CloudletProvider>
-  );
-}
-```
 
 ## Portal container
 

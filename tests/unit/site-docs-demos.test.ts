@@ -105,7 +105,7 @@ describe('site docs runnable examples', () => {
     const problems = pages.flatMap((entry) => groupProblems(readFileSync(new URL(entry, CONTENT), 'utf8'), entry));
     expect(problems).toEqual([]);
     const grouped = pages.filter((entry) => readFileSync(new URL(entry, CONTENT), 'utf8').includes('<Demos>'));
-    expect(grouped).toEqual(['components/toaster/index.mdx', 'components/toaster/notifications.mdx', 'components/toaster/positioning.mdx']);
+    expect(grouped).toEqual(['components/toaster/index.mdx', 'components/toaster/notifications.mdx']);
   });
 
   it('names the file and line of a <Demos> that holds prose, one fence or no end', () => {

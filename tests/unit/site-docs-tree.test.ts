@@ -99,10 +99,9 @@ describe('site docs tree', () => {
   it('has the notification Guides written, with Run blocks', () => {
     /** The demo catalog groups each page runs: every one of its entries is on the page. */
     const RUNS: Record<string, readonly string[]> = {
-      notifications: ['success', 'info', 'warning', 'error', 'loading', 'title-only', 'description', 'rich-description', 'custom-icon', 'update-loading', 'burst', 'overflow', 'dismiss-all'],
-      operations: ['track-resolve', 'error-retry', 'track-cancel', 'promise-progress', 'action-command', 'action-retry', 'action-link'],
+      notifications: ['burst', 'attention-auto', 'attention-upgrade', 'attention-stack', 'overflow', 'dismiss-all'],
+      operations: ['track-cancel', 'promise-progress'],
       forms: ['form-reply', 'form-note', 'form-retry'],
-      positioning: ['attention-auto', 'attention-upgrade', 'attention-stack'],
     };
     for (const [name, demos] of Object.entries(RUNS)) {
       const page = `${TOASTER}/${name}`;

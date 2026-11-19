@@ -1,9 +1,9 @@
 ---
 title: Styling
-description: Theme Cloudlet with tokens and class names, and try them in the Style editor.
+description: Theme Cloudlet with CSS tokens, the theme and direction props and class names, and try them live in the Style editor.
 ---
 
-Cloudlet uses one external stylesheet and CSS tokens scoped to `.cloudlet-host`. The editor below lets you try them on a live Toaster and copy the CSS; every setting is a Toaster prop listed in [Toaster props](/docs/components/toaster/api/toaster).
+The editor below changes Cloudlet's CSS tokens on a live Toaster and copies the CSS; every setting is a Toaster prop listed in [Toaster props](/docs/components/toaster/api/toaster).
 
 ## Style editor
 
@@ -11,11 +11,9 @@ Cloudlet uses one external stylesheet and CSS tokens scoped to `.cloudlet-host`.
 
 ## The stylesheet
 
-Import `@cloudlet/toast/styles.css` once, from your global CSS entry or root layout (see [Import the styles](/docs/components/toaster#import-the-styles)). Rules and resets are scoped to `.cloudlet-host`.
-
-Keep it external under a strict Content Security Policy; [Content Security Policy](/docs/components/toaster/csp) has the rest of the setup.
-
-Put overrides in a stylesheet imported after Cloudlet's. Use tokens and class names to change the look; the renderer controls width, height, position, transform and clip path.
+- Import `@cloudlet/toast/styles.css` once, from your global CSS entry or root layout ([Import the styles](/docs/components/toaster#import-the-styles)). Its rules and resets are scoped to `.cloudlet-host`.
+- Keep it external under a strict Content Security Policy; [Content Security Policy](/docs/components/toaster/csp) has the rest of the setup.
+- Put overrides in a stylesheet imported after Cloudlet's. Change the look with tokens and class names; the renderer controls width, height, position, transform and clip path.
 
 ## Tokens
 
@@ -59,7 +57,7 @@ Colours, in the light and the dark theme:
 
 ### Overriding tokens
 
-Set theme-independent tokens and status colours on `.cloudlet-host`:
+Theme-independent tokens and status colours go on `.cloudlet-host`:
 
 ```css title="notifications.css"
 .cloudlet-host {
@@ -70,7 +68,7 @@ Set theme-independent tokens and status colours on `.cloudlet-host`:
 }
 ```
 
-Dark surfaces use a more specific selector, so `.cloudlet-host` alone changes light surfaces. To map both themes to your app's colour tokens, use the guarded rule below:
+Dark surfaces use a more specific selector, so `.cloudlet-host` alone changes only light surfaces. To map both themes to your app's colour tokens, use this guarded rule:
 
 ```css title="notifications.css"
 /* Your --surface/--text/--ring are defined on :root and on your .dark root. */
@@ -93,7 +91,7 @@ The tokens must reach the portal: define them on `:root` or on an ancestor of th
 - `system` follows the user's `prefers-color-scheme`.
 - `light` and `dark` force a theme, whatever the operating system prefers.
 
-Pass your app's resolved theme to keep Cloudlet's surface and native `color-scheme` in sync with the page. The host's `data-theme` keeps the prop value; the selector below reflects the active theme after mount:
+Pass your app's resolved theme to keep Cloudlet's surface and native `color-scheme` in sync with the page. The host's `data-theme` keeps the prop value; `data-resolved-theme` is the active theme after mount:
 
 ```css title="notifications.css"
 .cloudlet-host[data-resolved-theme="dark"] .app-toast-action { font-weight: 500; }
@@ -105,7 +103,7 @@ In forced-colours mode (Windows High Contrast), every theme uses system colours:
 
 ## Direction
 
-`<Toaster dir>` is `ltr` or `rtl`. When it is omitted, the Toaster follows `dir="rtl"` on the `<html>` element. In right-to-left mode, text aligns to the start, the badge and the slider are mirrored, and the arrow keys move between notifications in the reading direction. Use the RTL toggle in the [Playground](/toaster/playground) to see it.
+`<Toaster dir>` is `ltr` or `rtl`. When it is omitted, the Toaster follows `dir="rtl"` on the `<html>` element. In right-to-left mode, text aligns to the start, the badge and the slider are mirrored, and the arrow keys move between notifications in the reading direction. The Direction control of the [Preview](/docs/components/toaster#preview) shows it on this site's Toaster.
 
 ## Class names
 
@@ -141,9 +139,7 @@ Cloudlet's own rules use two classes, such as `.cloudlet-host .cloudlet-action`,
 .cloudlet-host .app-toast-action { font-weight: 600; }
 ```
 
-Utility classes that live in a cascade layer, as Tailwind's do, lose to Cloudlet's unlayered stylesheet for every property it sets. They still apply to properties Cloudlet leaves alone.
-
-To let utilities win, import the stylesheet into a layer of your own, ordered before `utilities`, instead of importing it from JavaScript:
+Utility classes in a cascade layer, as Tailwind's are, lose to Cloudlet's unlayered stylesheet for every property it sets and still apply to the properties it leaves alone. To let utilities win, import the stylesheet into a layer of your own, ordered before `utilities`, instead of importing it from JavaScript:
 
 ```css title="globals.css"
 @layer theme, base, cloudlet, components, utilities;
@@ -154,8 +150,3 @@ To let utilities win, import the stylesheet into a layer of your own, ordered be
 The stylesheet is unlayered on purpose: then a page's own resets, such as `button { all: unset }`, cannot break the notifications. Inside a layer, every unlayered rule of the page wins over Cloudlet, so check your global styles after the switch.
 
 The host also exposes its state as data attributes you can select on: `data-state` (`stack` or `island`), `data-island-reason`, `data-position`, `data-edge` (`top` or `bottom`), `data-align` (`left`, `center` or `right`), `data-theme`, `data-resolved-theme`, `data-reduced-motion` and `data-dragging`. The current notification carries `data-kind` and `data-current`.
-
-## Next steps
-
-- [Toaster props](/docs/components/toaster/api/toaster): every prop with its type and default.
-- [Positioning & offsets](/docs/components/toaster/positioning): where the stack sits, and rendering it into an element of yours.
