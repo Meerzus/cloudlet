@@ -19,7 +19,8 @@
  * parameter, Reset preserves foreign parameters, and Back skips intermediate edits. An editor
  * screenshot and axe audit per scenario cover light/dark × desktop/phone.
  * Reference:
- * the five pages fit the width (rows of three or more columns are a grid line with the description
+ * the five pages keep every section other pages link to and have no Next steps, fit the width
+ * (rows of three or more columns are a grid line with the description
  * under it, every row a card on phones), every link to a docs anchor lands on
  * an existing heading, and axe is clean. Search and agents: the search window opens from its
  * button, ⌘K / Ctrl K and `/` (not on the landing or the Playground, `/` stays a character in the
@@ -550,13 +551,20 @@ async function integration(page, base, still, failures) {
   return result;
 }
 
-const REFERENCE = ['create-cloudlet', 'controller', 'toaster', 'labels', 'types'];
+/** Reference pages and the section ids other pages link to: each must still be a heading of its page. */
+const REFERENCE = {
+  'create-cloudlet': ['options', 'messages', 'onoverflow', 'ondiagnostic'],
+  controller: ['show', 'admissionresult', 'update', 'mutationresult', 'gethandle', 'track', 'operationhandle', 'operationsnapshot', 'dismiss', 'clear', 'requestfocus', 'acknowledgeoverflow', 'getsnapshot-and-getserversnapshot', 'subscribe-and-onevent', 'dispose', 'notificationcontroller'],
+  toaster: ['props', 'toasteroffsets', 'toasterattention', 'toastermotion', 'classnames', 'cloudletprovider', 'usecloudlet', 'useoptionalcloudlet'],
+  labels: ['cloudletlabels', 'announcementformatters', 'controller-messages', 'a-complete-translation'],
+  types: ['identity', 'notifications', 'description', 'progress', 'primaryaction', 'closereason', 'operations', 'snapshots', 'notificationsnapshot', 'events', 'controller', 'react'],
+};
 
-/** Reference: no sideways scrolling of the page or a table, card rows on phones, docs links land on a real id. */
+/** Reference: its sections, no Next steps, no sideways scrolling of the page or a table, card rows on phones, docs links land on a real id. */
 async function reference(page, base, phone, still, failures) {
   const result = {};
   const ids = new Map();
-  for (const slug of REFERENCE) {
+  for (const [slug, sections] of Object.entries(REFERENCE)) {
     await page.goto(`${base}/docs/components/toaster/api/${slug}`);
     await wait(page, 600);
     await page.screenshot({ path: still.path(`full-api-${slug}`), fullPage: true });
@@ -567,8 +575,12 @@ async function reference(page, base, phone, still, failures) {
       // A Prop · Type · Default · Description row: a card on phones, a grid line on wider screens.
       rows: getComputedStyle(document.querySelector('table[data-grid="4"] tbody tr') ?? document.body).display,
       links: [...document.querySelectorAll('article a[href^="/docs/components/toaster"], article a[href^="#"]')].map((link) => link.getAttribute('href') ?? ''),
+      headings: [...document.querySelectorAll('article :is(h2, h3)')].map((heading) => heading.id),
     }));
-    const entry = { ...layout, links: layout.links.length, axe: await axe(page), brokenLinks: [] };
+    const missing = sections.filter((id) => !layout.headings.includes(id));
+    const entry = { ...layout, links: layout.links.length, headings: layout.headings.length, missingSections: missing, axe: await axe(page), brokenLinks: [] };
+    if (missing.length) failures.push(`reference ${slug}: sections without a heading ${missing.join(', ')}`);
+    if (layout.headings.includes('next-steps')) failures.push(`reference ${slug}: a Next steps section repeats the sidebar`);
     if (entry.overflow > 0 || entry.scrollingTables > 0) failures.push(`reference ${slug}: overflow ${entry.overflow}px, ${entry.scrollingTables} scrolling tables`);
     if (entry.tables === 0 || entry.rows !== (phone ? 'block' : 'grid')) failures.push(`reference ${slug}: ${entry.tables} tables, rows ${entry.rows}`);
     for (const href of new Set(layout.links)) {

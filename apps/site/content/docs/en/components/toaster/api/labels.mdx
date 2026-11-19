@@ -9,7 +9,7 @@ Cloudlet ships English texts for its controls, for what screen readers hear and 
 |---|---|---|
 | Names of controls and regions | `<Toaster labels>` | `CloudletLabels` |
 | What screen readers hear | `<Toaster announcements>` | `AnnouncementFormatters` |
-| Titles the controller writes when your content is missing or failed | `createCloudlet({ messages })` | `FallbackMessages` |
+| Titles the controller writes when your content is missing or failed | [`createCloudlet({ messages })`](/docs/components/toaster/api/create-cloudlet#messages) | `FallbackMessages` |
 | Text direction | `<Toaster dir>` | `'ltr' \| 'rtl'` |
 | Notification titles, descriptions, action labels | your `show` and `track` calls | `string` |
 
@@ -40,7 +40,7 @@ Read on every render of the Toaster.
 
 ## AnnouncementFormatters
 
-Cloudlet speaks through two permanent live regions, polite and assertive, chosen per notification by `announcementPriority`; `'off'` silences a notification's automatic text but not its controls. Announcements within 300 ms are spoken together. Progress updates, reflows and seeing a notification again are never announced. The formatters are read when an announcement is made, so the latest props apply.
+Read when an announcement is made, so the latest props apply. Cloudlet speaks through two permanent live regions, polite and assertive, chosen per notification by `announcementPriority`; `'off'` silences its automatic text but not its controls. Announcements within 300 ms are spoken together; progress updates, reflows and seeing a notification again are never announced. [Announcements](/docs/components/toaster/accessibility#announcements) has the whole rule.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
@@ -57,7 +57,7 @@ Cloudlet speaks through two permanent live regions, polite and assertive, chosen
 
 ## Controller messages
 
-Titles the controller writes itself, when a mapping function fails, a cancellation has no content of its own, or a rich slot cannot render. They are part of the notification, so they are set where the controller is created: see [`messages` on createCloudlet](/docs/components/toaster/api/create-cloudlet#messages) for the six fields and their defaults.
+Texts the controller writes itself: when a mapping function fails, a cancellation has no content of its own, a rich slot cannot render, or a form field fails its check. They are part of the notification, so they are set where the controller is created: [`messages` on createCloudlet](/docs/components/toaster/api/create-cloudlet#messages) lists the eight fields and their defaults.
 
 ## A complete translation
 

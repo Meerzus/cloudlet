@@ -113,13 +113,33 @@ The first three handle reasons are also exported together as `HandleRejection`.
 
 `getHandle(id: string): NotificationHandle | undefined`
 
-Returns the handle of the live notification with this ID, or `undefined`: for an unknown, empty or non-string ID, and always after `dispose()`. It never creates or opens anything. A handle is tied to one appearance of a notification: after it closes, the same ID can be used again and gets a new handle.
+| Result | When |
+|---|---|
+| `NotificationHandle` | A live notification has this ID. |
+| `undefined` | The ID is unknown, empty or not a string, and always after `dispose()`. |
+
+It never creates or opens anything. A handle is tied to one appearance of a notification: after it closes, the same ID can be used again and gets a new handle.
 
 ## track
 
 `track<T>(source: PromiseLike<T> | ReactOperationFactory<T>, options: ReactTrackOptions<T>): OperationHandle<T>`
 
-Shows a `loading` notification with the `pending` content, then replaces it with the result. The source is a promise you already have, or a factory `(context) => T | PromiseLike<T>` that Cloudlet calls once per attempt with a `ReactOperationContext`: `signal` (an `AbortSignal`), `token` and `attempt` (1, 2, …). Only a factory can be retried. A source that is neither a function nor a thenable throws a `TypeError`. [Operations & cancellation](/docs/components/toaster/operations) walks through it.
+Shows a `loading` notification with the `pending` content, then replaces it with the result; [Operations & cancellation](/docs/components/toaster/operations) walks through it.
+
+| `source` | Description |
+|---|---|
+| `PromiseLike<T>` | A promise you already have. Cannot be retried; cancellable only with the `cancel` option. |
+| `ReactOperationFactory<T>` | `(context: ReactOperationContext) => T \| PromiseLike<T>`, called once per attempt. Only a factory can be retried. |
+
+A source that is neither a function nor a thenable throws a `TypeError`.
+
+`ReactOperationContext`, the factory's argument:
+
+| Field | Type | Description |
+|---|---|---|
+| `signal` | `AbortSignal` | Aborted when cancellation of this attempt is requested. |
+| `token` | `OperationAttemptToken` | This attempt. |
+| `attempt` | `number` | 1, 2, … |
 
 `ReactTrackOptions<T>` is `TrackOptions<T, ReactNode, AbortSignal>`:
 
@@ -155,7 +175,15 @@ The handle is itself the first attempt: its `token`, `attempt` and `result` neve
 | `retry` | `() => AttemptStartResult<T>` | Starts a new attempt after the current one settled. Factory only. |
 | `restart` | `() => AttemptStartResult<T>` | Like `retry`, and while pending it abandons the current attempt and requests its abort. Factory only. |
 
-Each new attempt returns its own `OperationAttempt<T>`: `token`, `attempt` and `result`. Retrying never creates a new notification; after the notification closed, the attempt runs without one.
+Each new attempt returns its own `OperationAttempt<T>`:
+
+| Field | Type | Description |
+|---|---|---|
+| `token` | `OperationAttemptToken` | The new attempt's token. |
+| `attempt` | `number` | Its number: 2, 3, … |
+| `result` | `Promise<T>` | Its business promise, with the original value or rejection. |
+
+Retrying never creates a new notification; after the notification closed, the attempt runs without one.
 
 `AttemptStartResult<T>`:
 
@@ -188,7 +216,7 @@ Each new attempt returns its own `OperationAttempt<T>`: `token`, `attempt` and `
 
 `dismiss(handle: NotificationHandle): MutationResult`
 
-Closes the notification at once, with the close reason `programmatic`. A late result or animation can never bring it back. Dismissing a tracked operation's notification does not cancel the operation.
+Closes the notification at once, with the close reason `programmatic`. Returns `applied`, or `rejected` with `disposed` or a handle reason ([`MutationResult`](#mutationresult)); a notification that already closed is `stale-handle`. A late result or animation can never bring it back. Dismissing a tracked operation's notification does not cancel the operation.
 
 ## clear
 
@@ -226,7 +254,13 @@ Arrival and auto-open never move focus; this is the explicit way to do it, for e
 
 `acknowledgeOverflow(): MutationResult`
 
-Resets the missed count shown on the badge and in the Island: `applied`, `unchanged` when there was nothing to acknowledge, or `rejected` with `disposed`. It does not touch the notifications.
+Resets the missed count shown on the badge and in the Island. It does not touch the notifications.
+
+| Status | Fields | Meaning |
+|---|---|---|
+| `'applied'` | — | The count was reset. |
+| `'unchanged'` | — | There was nothing to acknowledge. |
+| `'rejected'` | `reason` | `'disposed'`. |
 
 ## getSnapshot and getServerSnapshot
 
@@ -278,7 +312,15 @@ const stop = cloudlet.onEvent((event) => {
 });
 ```
 
-Every `SemanticEvent` has the `EventBase` fields `controller`, `sequence` (a growing local number) and `at` (monotonic milliseconds, not wall-clock time), plus:
+Every `SemanticEvent` has the `EventBase` fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `controller` | `ControllerIdentity` | The controller that emitted it. |
+| `sequence` | `number` | A growing local number. |
+| `at` | `number` | Monotonic milliseconds, not wall-clock time. |
+
+Each `type` adds its own fields:
 
 | `type` | Fields | When |
 |---|---|---|
