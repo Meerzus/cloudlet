@@ -154,7 +154,7 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   reduced motion it appears at once. It opens on a click or a tap; Tab and the arrow keys move through
   it, and Escape, a press outside, focus leaving it or a new page close it. The logo leads to the
   kit's own page, Docs to the current component's docs or to `/docs`, and the header no longer links
-  to the Playground (the Toaster's landing does).
+  to the Playground.
 - Star on GitHub replaces the GitHub icon in the header: one button of two icons, the GitHub mark and
   a star, on every width. From 100 stars it shows the count beside them (`128`, `1.2k`), read from
   GitHub when the site is built; the browser never asks GitHub.
@@ -184,6 +184,31 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   permanently to the new ones. Search, `llms.txt`, `llms-full.txt`, the `.md` pages and the sitemap
   follow the new sidebar; `llms.txt` opens with a line about the kit.
 - The READMEs, the security policy and the issue template link to the new addresses.
+- The Toaster's documentation is 14 pages instead of 16, shorter and answering first: no
+  introductions, no retelling of the landing, no Next steps that repeat the sidebar, and every
+  fact kept. The sidebar shows the Toaster under Components, then Toaster guides (Notifications &
+  time, Operations & cancellation, Forms, Styling), Toaster advanced (Positioning & offsets, SSR &
+  Next.js, Content Security Policy, Accessibility) and Toaster reference (createCloudlet,
+  Controller, Toaster props, Labels & announcements, Types).
+- [/docs/components/toaster](https://cloudlet.dev/docs/components/toaster) is one component page:
+  Preview, Installation, Usage, Examples and API Reference. It takes in the former Installation and
+  Quick start pages, which redirect permanently to its Installation and Usage sections in one step
+  (their `.md` pages to the component page's `.md`).
+- Its Preview is a small playground: Show a notification and Show five run on the page's own
+  Toaster, Position, Side and Direction move it through all seven positions and right-to-left, and
+  the `<Toaster />` code under them follows with Copy. The buttons in Examples, which run every demo
+  of the catalog group by group, show their notifications where the Preview put the Toaster, and
+  leaving the page puts it back. In Markdown and `llms-full.txt` the Preview is the code with its
+  values.
+- Attention (what opens the Island on its own, after how long and how to change the delay) moved
+  from Positioning to Notifications & time. The guides keep the demos that show their rule and send
+  the rest to Examples.
+- The reference describes fields, arguments and results as table rows, and every type on Types links
+  to the page that uses it. Labels counted six controller messages; there are eight.
+- The Playground is gone: [/toaster/playground](https://cloudlet.dev/toaster/playground) and
+  `/playground` redirect permanently to the Toaster's component page, whose Preview and Examples
+  replace it. The hero of [/toaster](https://cloudlet.dev/toaster) leads with Read the docs next to
+  GitHub.
 - On the kit's own pages (Introduction, Installation) Docs in the header leads to the kit's
   Introduction instead of the Toaster's page.
 
@@ -198,10 +223,7 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   frame, which kept the clip a fraction of a pixel short of the panel's edges; in a WebKit that dropped
   frames it could stay far short, cutting off the panel's controls. Update the `color-picker` item to
   get the fix.
-- On a narrow phone the cards of the [Playground](https://cloudlet.dev/toaster/playground) keep inside
-  the page's margins and cut their longest labels short. The cards used to grow to the longest label,
-  which ran into the right margin and, with Linux fonts, scrolled the page sideways at 320 px.
-- The documentation, the Playground and the Color picker's page no longer load the stylesheets of
+- The documentation and the Color picker's page no longer load the stylesheets of
   other pages they do not use. The logo and Docs in the header prefetched their page as soon as they
   were on screen, which preloaded the kit's hero and the color picker's CSS everywhere; they now
   prefetch when the pointer comes over them, on focus or on touch.
