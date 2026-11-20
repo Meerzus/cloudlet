@@ -143,11 +143,26 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
     screenshot); the compact picker and the same color in four formats, each copied by a click;
   - the inline panel with a keyboard cheat sheet and a reduce-motion switch, the two install commands
     and an example, and a FAQ.
-- [/docs/components/color-picker](https://cloudlet.dev/docs/components/color-picker): install, use, every prop and label,
-  formats and their exact output, eyedropper and copy, keyboard and screen readers, styling, placement
-  limits and reduced motion, then the palette's install, use, props, keyboard and labels, each with a
-  live example. It is also in `llms.txt`, `llms-full.txt`, as
-  [Markdown](https://cloudlet.dev/docs/components/color-picker.md), in search and in the sitemap.
+- [/docs/components/color-picker](https://cloudlet.dev/docs/components/color-picker) is a component
+  page: Preview, Installation, Usage (with styling, placement limits and reduced motion), Examples
+  and API Reference — every prop and label, formats and their exact output, eyedropper and copy,
+  keyboard and screen readers. Its Preview is a small playground: Component (the swatch or the
+  inline panel), Format and Opacity change the live picker, the value its `onChange` gives and the
+  code under the controls, with Copy; picking a format in the picker itself moves the control. Six
+  live examples, each a picker to work with and its code: the inline panel, one format, opacity,
+  the format kept in your state, a swatch painted from a CSS variable, translated labels.
+- [/docs/components/color-palette](https://cloudlet.dev/docs/components/color-palette) is the
+  palette's own page, the third component in the sidebar: a Preview with Max, Format and Opacity,
+  installation, usage, three live examples (in a form, colors in OKLCH, opacity) and its props,
+  keyboard and labels; formats, the keys inside a picker and the picker's labels link to the color
+  picker's page instead of being repeated. The Palette section of
+  [/color-picker](https://cloudlet.dev/color-picker#palette) links to it under the palette, and
+  the Introduction and Installation of the docs lead to it.
+- Both pages are in `llms.txt`, `llms-full.txt`, as Markdown
+  ([color-picker.md](https://cloudlet.dev/docs/components/color-picker.md),
+  [color-palette.md](https://cloudlet.dev/docs/components/color-palette.md)), in search and in the
+  sitemap. In Markdown a live example is the code of its file, and a Preview is a code it makes
+  with what each control sets.
 - The header's Components button opens a panel of the kit's components: Toaster, Color picker and
   Color palette, each with a line of description, the current one marked. The panel grows out of the
   button on springs and shrinks back into it, a second press mid-way turns it around, and under
@@ -219,7 +234,8 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
 
 ### Fixes
 
-- Documentation pages keep the link card of their section (Toaster and Color picker); they had none.
+- Documentation pages keep the link card of their section (Toaster and Color picker; the color
+  palette's page shares the color picker's); they had none.
 - The cloud icon keeps its cut-outs in dark mode where the page sets a fill on SVGs, as the shadcn
   directory does.
 - At 320 px [/toaster](https://cloudlet.dev/toaster) no longer scrolls sideways by a pixel: the

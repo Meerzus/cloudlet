@@ -4,7 +4,7 @@ import { parseColor, rgbToOklch } from '../../apps/site/src/components/ui/color-
 import { harmoniesOf } from '../../apps/site/src/lib/harmonies';
 import { PICKER_FAQ } from '../../apps/site/src/lib/picker-faq';
 import { PICKER_GET_STARTED } from '../../apps/site/src/lib/picker-get-started';
-import { COLOR_PALETTE_COMMAND, COLOR_PICKER_COMMAND, SITE_URL } from '../../apps/site/src/lib/site';
+import { COLOR_PALETTE_COMMAND, COLOR_PALETTE_DOCS_PATH, COLOR_PICKER_COMMAND, SITE_URL } from '../../apps/site/src/lib/site';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url));
 const oklch = (hex: string) => rgbToOklch(parseColor(hex)!);
@@ -40,6 +40,12 @@ describe('color picker landing (COLOR_PICKER §8.1, §8.5)', () => {
     const page = read('apps/site/src/app/color-picker/page.tsx').toString('utf8');
     expect(page).not.toMatch(/combinations/i);
     expect([...page.matchAll(/\{ id: '([a-z-]+)'/g)].map((match) => match[1])).toEqual(['hero', 'palette', 'opacity', 'tools', 'keyboards', 'get-started', 'faq']);
+  });
+
+  it('the Palette section links to the palette page of the docs, by the constant of site.ts', () => {
+    const palette = read('apps/site/src/components/picker/palette.tsx').toString('utf8');
+    expect(palette).toMatch(/<Link href=\{COLOR_PALETTE_DOCS_PATH\} className="cp-palette-docs">\s*Read the palette docs\s*<\/Link>/u);
+    expect(COLOR_PALETTE_DOCS_PATH).toBe('/docs/components/color-palette');
   });
 
   it('answers the six questions of the spec', () => {
