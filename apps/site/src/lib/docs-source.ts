@@ -4,7 +4,7 @@ import { DOCS_PATH } from './site';
 
 /**
  * The documentation's content source, the whole kit in one tree: MDX pages under
- * `content/docs/en` (the kit's pages, `components/toaster/**`, `components/color-picker.mdx`),
+ * `content/docs/en` (the kit's pages, `components/toaster/**`, `components/color-picker.mdx`, `components/color-palette.mdx`),
  * English without a URL prefix. A future language adds a sibling folder and a `[lang]` segment;
  * the page tree, slugs and order come from `meta.json` files.
  *

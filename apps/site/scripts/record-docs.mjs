@@ -11,9 +11,11 @@
  * component page, Notifications, Operations and Forms shows its own
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
  * under Show code.
- * The color picker's page: its sections go Preview, Installation, Usage, Examples, API Reference;
- * every live example answers the keyboard in place and copies the code under it, every code block
- * copies, axe is clean and the page never scrolls sideways. Its two Previews: Component, Format
+ * The sidebar lists three components. The color picker's and the color palette's pages: their
+ * sections go Preview, Installation, Usage, Examples, API Reference; every live example answers
+ * the keyboard in place and copies the code under it, every code block copies, every link into
+ * the docs lands on a page and a heading, axe is clean and the page never scrolls sideways. Their
+ * Previews: Component, Format
  * and Opacity change the live picker, the value and the code (the picker's own format switch moves
  * the Format control, the open panel is not clipped); Max, Format and Opacity change the live
  * palette, its array and the code, and a smaller Max drops the last colors; both from the mouse
@@ -307,8 +309,9 @@ async function preview(page, base, phone, still, failures) {
   return result;
 }
 
-/** The color picker's page in the docs. */
+/** The color picker's and the color palette's pages in the docs. */
 const PICKER_PAGE = '/docs/components/color-picker';
+const PALETTE_PAGE = '/docs/components/color-palette';
 
 /** The codes the picker's and the palette's Preview show: the lines that follow the controls. */
 const pickerLine = (component, format, alpha) => `  return <${component} color={color} onChange={setColor}${format === 'hex' ? '' : ` defaultFormat="${format}"`}${alpha ? ' alpha' : ''} />;`;
@@ -536,34 +539,59 @@ async function liveExample(page, name, failures) {
   return entry;
 }
 
-/** The sections of the color picker's page, as table-of-contents links, and its live examples in order. */
-const PICKER_TOC = ['preview', 'installation', 'usage', 'styling', 'placement-and-limits', 'reduced-motion', 'examples', 'api-reference', 'props', 'formats', 'eyedropper-and-copy', 'keyboard-and-screen-readers', 'labels'].map((id) => `#${id}`);
-const PICKER_EXAMPLES = ['panel', 'one-format', 'opacity', 'format', 'swatch', 'labels'].map((name) => `color-picker/${name}`);
+/** The pages of the two color components: their sections as table-of-contents links, in order, and their live examples. */
+const COLOR_PAGES = {
+  picker: {
+    path: PICKER_PAGE,
+    toc: ['preview', 'installation', 'usage', 'styling', 'placement-and-limits', 'reduced-motion', 'examples', 'api-reference', 'props', 'formats', 'eyedropper-and-copy', 'keyboard-and-screen-readers', 'labels'],
+    examples: ['panel', 'one-format', 'opacity', 'format', 'swatch', 'labels'].map((name) => `color-picker/${name}`),
+  },
+  palette: {
+    path: PALETTE_PAGE,
+    toc: ['preview', 'installation', 'usage', 'examples', 'api-reference', 'props', 'keyboard', 'labels'],
+    examples: ['form', 'oklch', 'opacity'].map((name) => `color-palette/${name}`),
+  },
+};
 
 /**
- * The color picker's page: its sections are in the table of contents in the order Preview,
+ * The page of a color component: its sections are in the table of contents in the order Preview,
  * Installation, Usage, Examples, API Reference; every live example works in place and copies its
- * code, and every code block copies; axe; no sideways scroll.
+ * code, and every code block copies; every link to a section of the docs lands on a heading;
+ * axe; no sideways scroll.
  */
-async function pickerPage(page, base, phone, still, failures) {
-  await page.goto(`${base}${PICKER_PAGE}`);
+async function colorPage(page, base, name, phone, still, failures) {
+  const spec = COLOR_PAGES[name];
+  await page.goto(`${base}${spec.path}`);
   await wait(page, 600);
   const result = { examples: [] };
+  result.h1 = (await page.locator('article h1').textContent())?.trim();
   result.toc = await page.locator(phone ? '.docs-toc-mobile .docs-toc-item' : '.docs-toc .docs-toc-item').evaluateAll((items) => items.map((item) => item.getAttribute('href')));
-  const order = PICKER_TOC.map((entry) => result.toc.indexOf(entry));
-  if (order.includes(-1) || order.some((place, index) => index > 0 && place < order[index - 1])) failures.push(`color picker page: sections ${JSON.stringify(result.toc)}`);
+  const order = spec.toc.map((entry) => result.toc.indexOf(`#${entry}`));
+  if (order.includes(-1) || order.some((place, index) => index > 0 && place < order[index - 1])) failures.push(`${name} page: sections ${JSON.stringify(result.toc)}`);
   const names = await page.locator('[data-example]').evaluateAll((figures) => figures.map((figure) => figure.getAttribute('data-example')));
-  if (names.join() !== PICKER_EXAMPLES.join()) failures.push(`color picker page: examples ${names.join(', ')}`);
-  for (const name of names) result.examples.push(await liveExample(page, name, failures));
-  await still('picker-example');
+  if (names.join() !== spec.examples.join()) failures.push(`${name} page: examples ${names.join(', ')}`);
+  for (const example of names) result.examples.push(await liveExample(page, example, failures));
+  await still(`${name}-example`);
   result.blocks = [];
   for (const figure of await page.locator('.docs-code').all()) {
     const copied = await copyBlock(page, figure);
     result.blocks.push(copied);
-    if (!copied.ok) failures.push(`color picker page: Copy of "${copied.label}" gave ${copied.length} characters`);
+    if (!copied.ok) failures.push(`${name} page: Copy of "${copied.label}" gave ${copied.length} characters`);
+  }
+  // Links into the docs: the page exists, and so does the heading a link names.
+  result.links = [];
+  for (const href of await page.locator('.docs-prose a[href^="/docs"]').evaluateAll((links) => [...new Set(links.map((link) => link.getAttribute('href')))])) {
+    const [path, hash] = href.split('#');
+    const html = await page.evaluate(async (url) => {
+      const response = await fetch(url);
+      return response.ok ? response.text() : null;
+    }, `${base}${path}`);
+    const ok = html !== null && (!hash || html.includes(` id="${hash}"`));
+    result.links.push({ href, ok });
+    if (!ok) failures.push(`${name} page: link ${href} leads nowhere`);
   }
   result.sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  if (result.sideways > 0) failures.push(`color picker page scrolls sideways by ${result.sideways}px`);
+  if (result.sideways > 0) failures.push(`${name} page scrolls sideways by ${result.sideways}px`);
   await page.evaluate(() => window.scrollTo(0, 0));
   result.axe = await axe(page);
   return result;
@@ -1029,7 +1057,7 @@ async function search(page, base, phone, still, failures) {
 
 /** The output for agents is served next to the pages, as text and Markdown. */
 async function agents(page, base, failures) {
-  const files = { '/llms.txt': '# Cloudlet', '/llms-full.txt': '# Introduction', '/docs/components/toaster.md': '# Toaster', '/docs/components/toaster/accessibility.md': '# Accessibility', '/docs/components/toaster/api/toaster.md': '# Toaster props', '/r/toaster.json': '{' };
+  const files = { '/llms.txt': '# Cloudlet', '/llms-full.txt': '# Introduction', '/docs/components/toaster.md': '# Toaster', '/docs/components/color-picker.md': '# Color picker', '/docs/components/color-palette.md': '# Color palette', '/r/color-palette.json': '{', '/docs/components/toaster/accessibility.md': '# Accessibility', '/docs/components/toaster/api/toaster.md': '# Toaster props', '/r/toaster.json': '{' };
   const result = {};
   for (const [path, start] of Object.entries(files)) {
     result[path] = await page.evaluate(async (url) => {
@@ -1037,6 +1065,11 @@ async function agents(page, base, failures) {
       return { status: response.status, type: response.headers.get('content-type'), start: (await response.text()).split('\n')[0] };
     }, `${base}${path}`);
     if (result[path].status !== 200 || result[path].start !== start) failures.push(`agents ${path}: ${JSON.stringify(result[path])}`);
+  }
+  // The lists for agents, the sitemap and the search index know the color picker's and the color palette's pages.
+  for (const [file, mark] of [['/llms.txt', (url) => `](${url}.md)`], ['/llms-full.txt', (url) => `Source: ${url}\n`], ['/sitemap.xml', (url) => `<loc>${url}</loc>`], ['/api/search', (url) => `"${new URL(url).pathname}#`]]) {
+    const text = await page.evaluate(async (url) => (await fetch(url)).text(), `${base}${file}`);
+    for (const path of [PICKER_PAGE, PALETTE_PAGE]) if (!text.includes(mark(`https://cloudlet.dev${path}`))) failures.push(`agents ${file}: no ${path}`);
   }
   return result;
 }
@@ -1083,7 +1116,7 @@ async function run(name, scenario, base, out) {
 
   await page.goto(`${base}/docs/components/toaster`);
   await wait(page, 800);
-  const report = { name, pages: [], axe: {}, quiet: null, toc: null, copy: null, drawer: null, installation: null, preview: null, guides: null, picker: null, pickerPreview: null, palettePreview: null, integration: null, reference: null, search: null, agents: null };
+  const report = { name, pages: [], axe: {}, quiet: null, toc: null, copy: null, drawer: null, installation: null, preview: null, guides: null, picker: null, palette: null, pickerPreview: null, palettePreview: null, integration: null, reference: null, search: null, agents: null };
 
   // Quiet mode: no sky, no Lenis, a flat page colour.
   report.quiet = await page.evaluate(() => ({
@@ -1097,6 +1130,9 @@ async function run(name, scenario, base, out) {
 
   // Every sidebar page opens, with the right title and a clean console.
   const links = await sidebarLinks(page);
+  // Components in the sidebar: the Toaster, the color picker and the color palette, in the kit's order.
+  report.components = links.filter((link) => ['/docs/components/toaster', PICKER_PAGE, PALETTE_PAGE].includes(link.href)).map((link) => `${link.name} ${link.href}`);
+  if (report.components.join() !== `Toaster /docs/components/toaster,Color picker ${PICKER_PAGE},Color palette ${PALETTE_PAGE}`) failures.push(`sidebar components: ${report.components.join(', ')}`);
   for (const link of links.filter((item) => item.href.startsWith('/docs/components/toaster'))) {
     await page.goto(`${base}${link.href}`);
     await wait(page, 500);
@@ -1149,12 +1185,14 @@ async function run(name, scenario, base, out) {
     report.axe[slug] = entry.axe.page;
     report.axe[`${slug}Toast`] = entry.axe.toast ?? [];
   }
-  report.picker = await pickerPage(page, base, phone, still, failures);
+  report.picker = await colorPage(page, base, 'picker', phone, still, failures);
   report.axe.picker = report.picker.axe;
+  report.palette = await colorPage(page, base, 'palette', phone, still, failures);
+  report.axe.palette = report.palette.axe;
   report.pickerPreview = await pickerPreview(page, base, `${PICKER_PAGE}#preview`, still, failures);
   report.axe.pickerPreviewOpen = report.pickerPreview.axe.open;
   report.axe.pickerPreviewPanel = report.pickerPreview.axe.panel;
-  report.palettePreview = await palettePreview(page, base, `${PICKER_PAGE}#palette`, still, failures);
+  report.palettePreview = await palettePreview(page, base, `${PALETTE_PAGE}#preview`, still, failures);
   report.axe.palettePreview = report.palettePreview.axe.page;
   report.axe.palettePreviewOpen = report.palettePreview.axe.open;
   report.integration = await integration(page, base, still, failures);

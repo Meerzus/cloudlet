@@ -20,6 +20,7 @@ const SPEC_ORDER = [
   '---Components---',
   `${TOASTER}/index`,
   'components/color-picker',
+  'components/color-palette',
   '---Toaster guides---',
   `${TOASTER}/notifications`,
   `${TOASTER}/operations`,
@@ -92,7 +93,7 @@ describe('site docs tree', () => {
 
   it('lists only component pages under Components', () => {
     const group = meta.pages.slice(meta.pages.indexOf('---Components---') + 1, meta.pages.indexOf('---Toaster guides---'));
-    expect(group).toEqual([`${TOASTER}/index`, 'components/color-picker']);
+    expect(group).toEqual([`${TOASTER}/index`, 'components/color-picker', 'components/color-palette']);
   });
 
   it('has the notification Guides written, with Run blocks', () => {
@@ -155,9 +156,16 @@ describe('site docs tree', () => {
     }
   });
 
+  it('never links to the palette as a section of the color picker page: it has a page of its own', () => {
+    const pages = readdirSync(CONTENT, { recursive: true, encoding: 'utf8' }).filter((entry) => entry.endsWith('.mdx'));
+    expect(pages).toContain('components/color-palette.mdx');
+    for (const page of pages) expect(readFileSync(new URL(page, CONTENT), 'utf8'), page).not.toContain('color-picker#palette');
+    expect(readFileSync(new URL('../../../src/lib/docs-markdown.ts', CONTENT), 'utf8')).not.toContain('#palette');
+  });
+
   it("has the kit's Introduction and Installation, with commands in the forms of site.ts", () => {
     const intro = frontmatter('index').body;
-    for (const link of ['/docs/components/toaster', '/docs/components/color-picker', '/docs/components/color-picker#palette', '/docs/installation']) {
+    for (const link of ['/docs/components/toaster', '/docs/components/color-picker', '/docs/components/color-palette', '/docs/installation']) {
       expect(intro, `index: link to ${link}`).toContain(`](${link})`);
     }
     // The Markdown of every page and llms.txt are said once, for the whole docs, here.

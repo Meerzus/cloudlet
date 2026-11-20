@@ -8,7 +8,7 @@ import { exampleMarkdown } from './example-source';
 import { palettePreviewMarkdown, pickerPreviewMarkdown } from './picker-settings';
 import { demoSections, runnableMarkdown } from './runnable-markdown';
 import { GET_STARTED, type GetStartedTab } from './get-started';
-import { COLOR_PICKER_DOCS_PATH, DOCS_PATH, isUnder, SITE_URL, TOASTER_DOCS_PATH } from './site';
+import { COLOR_PALETTE_DOCS_PATH, COLOR_PICKER_DOCS_PATH, DOCS_PATH, isUnder, SITE_URL, TOASTER_DOCS_PATH } from './site';
 import { AUTO_BREAKPOINT, codeText, DIRECTIONS, POSITIONS, toasterCode } from './toaster-settings';
 
 /*
@@ -58,7 +58,7 @@ const RENDERERS: Record<string, (data: PlaceholderData) => string> = {
   Example: ({ attributes }) => exampleMarkdown(text(attributes.name)),
   /** The live Previews of the color picker and the color palette: their controls, as code and values. */
   PickerPreview: () => pickerPreviewMarkdown(`${SITE_URL}${COLOR_PICKER_DOCS_PATH}#preview`),
-  PalettePreview: () => palettePreviewMarkdown(`${SITE_URL}${COLOR_PICKER_DOCS_PATH}#palette`),
+  PalettePreview: () => palettePreviewMarkdown(`${SITE_URL}${COLOR_PALETTE_DOCS_PATH}#preview`),
   /** The live Preview of the Toaster: what its controls set, as one line of code and its values. */
   ToasterPreview: () => {
     const values = (list: readonly string[]) => list.map((value) => `\`${value}\``).join(', ');

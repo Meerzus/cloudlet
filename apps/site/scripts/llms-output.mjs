@@ -62,6 +62,8 @@ for (const url of urls) {
   for (const [pattern, what] of LEFTOVERS) if (pattern.test(markdown)) problems.push(`${url}.md: ${what} left`);
 }
 for (const [pattern, what] of LEFTOVERS) if (pattern.test(full)) problems.push(`llms-full.txt: ${what} left`);
+// The palette has a docs page of its own: nothing points at the old section of the color picker's page.
+for (const [file, text] of [['llms.txt', index], ['llms-full.txt', full]]) if (text.includes('/docs/components/color-picker#palette')) problems.push(`${file}: a link to the palette section of the color picker page`);
 // Crawlers get the same pages as agents: every documented page is in the sitemap.
 const sitemap = read('sitemap.xml');
 for (const url of urls) if (!sitemap.includes(`<loc>${SITE_URL}${url}</loc>`)) problems.push(`sitemap.xml does not list ${url}`);
