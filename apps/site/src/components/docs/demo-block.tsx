@@ -3,7 +3,8 @@
 import { Check, Copy } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
-import { useCopy, usePageNotifications } from '@/components/site/notifications';
+import { usePageNotifications } from '@/components/site/notifications';
+import { useCopied } from '@/components/site/use-copied';
 import { findDemo, isCodeLabel, type Demo } from '@/lib/demos';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
 import { cn } from '@/lib/utils';
@@ -47,21 +48,14 @@ function entries(items: readonly DemoItem[]): Entry[] {
 export function DemoBlock({ items, note = false }: { items: readonly DemoItem[]; note?: boolean }) {
   const list = entries(items);
   const controller = usePageNotifications();
-  const copy = useCopy({ toast: false });
+  const [copied, copy] = useCopied();
   const [selected, setSelected] = useState(0);
   const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
   const area = useRef<HTMLDivElement>(null);
   const settle = useRef<() => void>(() => {});
   const group = list.length > 1;
   const current = list[selected] ?? list[0]!;
   const folded = current.folds && !expanded;
-
-  useEffect(() => {
-    if (!copied) return;
-    const timer = window.setTimeout(() => setCopied(false), 1600);
-    return () => window.clearTimeout(timer);
-  }, [copied]);
 
   useEffect(() => () => settle.current(), []);
 
@@ -101,7 +95,7 @@ export function DemoBlock({ items, note = false }: { items: readonly DemoItem[];
 
   const onCopy = async () => {
     const text = area.current?.querySelector('pre')?.textContent ?? '';
-    setCopied(await copy(text.replace(/\n$/u, '')));
+    await copy(text.replace(/\n$/u, ''));
   };
 
   // The accessible name starts with the visible word, Copy or Copied (WCAG 2.5.3).
