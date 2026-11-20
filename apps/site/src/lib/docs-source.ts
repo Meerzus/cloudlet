@@ -17,7 +17,7 @@ const docs = defineDocs({
     // The Markdown of each page for agents, `page.data.getText('processed')`; the
     // MDX components stay placeholders that `docs-markdown.ts` expands into text and code.
     postprocess: {
-      includeProcessedMarkdown: { headingIds: false, mdxAsPlaceholder: ['Callout', 'GetStartedTabs', 'GetStartedCode', 'InstallCommand', 'Demos', 'StyleEditor', 'PickerDemo', 'PaletteDemo', 'ToasterPreview'] },
+      includeProcessedMarkdown: { headingIds: false, mdxAsPlaceholder: ['Callout', 'GetStartedTabs', 'GetStartedCode', 'InstallCommand', 'Demos', 'Example', 'StyleEditor', 'PickerDemo', 'PaletteDemo', 'ToasterPreview'] },
     },
   },
 });

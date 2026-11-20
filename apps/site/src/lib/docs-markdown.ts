@@ -4,6 +4,7 @@ import { groupTree } from '@/components/docs/nav';
 import { source, type DocsPage } from './docs-source';
 import { findDemo } from './demos';
 import { DOCS_UI } from './docs-ui-strings';
+import { exampleMarkdown } from './example-source';
 import { demoSections, runnableMarkdown } from './runnable-markdown';
 import { GET_STARTED, type GetStartedTab } from './get-started';
 import { COLOR_PICKER_DOCS_PATH, DOCS_PATH, isUnder, SITE_URL, TOASTER_DOCS_PATH } from './site';
@@ -52,6 +53,8 @@ const RENDERERS: Record<string, (data: PlaceholderData) => string> = {
   InstallCommand: ({ attributes }) => fence('sh', text(attributes.command) ?? '', 'Terminal'),
   /** A demo block of several fences: the fences, plain code already. */
   Demos: ({ children }) => children.trim(),
+  /** A live example: the code of its file, which is all of it away from the page. */
+  Example: ({ attributes }) => exampleMarkdown(text(attributes.name)),
   /** The live example of the color picker docs: nothing to read away from the page. */
   PickerDemo: () => `Live example at ${SITE_URL}${COLOR_PICKER_DOCS_PATH}: the swatch and the inline panel on one color.`,
   PaletteDemo: () => `Live example at ${SITE_URL}${COLOR_PICKER_DOCS_PATH}#palette: a palette of three colors and the array it gives back.`,

@@ -5,7 +5,7 @@
  * beside the `/docs/[[...slug]]` pages — and checks the output for agents: every page of
  * `content/docs/en` has its `.md`, is listed in `llms.txt` and is in `llms-full.txt`; no runnable
  * meta, MDX component or placeholder is left. Styling explains the live editor and its URL
- * parameters in both Markdown outputs. The Examples of the Toaster's page write a snippet a guide
+ * parameters in both Markdown outputs. A live example (`<Example>`) is the code of its file. The Examples of the Toaster's page write a snippet a guide
  * already shows as a line linking to a heading of that guide, whose Markdown has the code, and
  * every other snippet as code. Exits 1 with the list of problems.
  */
@@ -48,7 +48,7 @@ const full = read('llms-full.txt');
 const LEFTOVERS = [
   [/demo="|demo-note/u, 'runnable meta'],
   [/\0/u, 'placeholder'],
-  [/<(Callout|GetStartedTabs|GetStartedCode|StyleEditor|PickerDemo|PaletteDemo|InstallCommand|ToasterPreview)\b/u, 'MDX component'],
+  [/<(Callout|GetStartedTabs|GetStartedCode|Demos|Example|StyleEditor|PickerDemo|PaletteDemo|InstallCommand|ToasterPreview)\b/u, 'MDX component'],
 ];
 const urls = pageUrls(CONTENT);
 for (const url of urls) {
@@ -72,6 +72,21 @@ for (const [file, markdown] of [[`${TOASTER_DOCS_PATH.slice(1)}/styling.md`, rea
 }
 const stylingEntry = index.split('\n').find((line) => line.includes(`](${SITE_URL}${TOASTER_DOCS_PATH}/styling.md)`));
 if (!stylingEntry?.includes('Style editor')) problems.push('llms.txt: Styling description does not mention the Style editor');
+
+// Live examples: every `<Example name="…" />` of a page is the code of its file in the page's Markdown and in llms-full.txt.
+const mdxFiles = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => (entry.isDirectory() ? mdxFiles(join(dir, entry.name)) : entry.name.endsWith('.mdx') ? [join(dir, entry.name)] : []));
+for (const file of mdxFiles(CONTENT)) {
+  const slug = relative(CONTENT, file).slice(0, -'.mdx'.length).replace(/(^|\/)index$/u, '');
+  const page = `${DOCS_PATH.slice(1)}${slug ? `/${slug}` : ''}.md`;
+  for (const [, name] of readFileSync(file, 'utf8').matchAll(/^<Example name="([^"]+)" \/>$/gmu)) {
+    const source = join(SITE, 'src/components/docs/examples', `${name}.tsx`);
+    const code = existsSync(source) ? readFileSync(source, 'utf8').trimEnd() : null;
+    if (code === null) problems.push(`${page}: example "${name}" has no file`);
+    else for (const [where, markdown] of [[page, read(page)], ['llms-full.txt', full]]) {
+      if (!markdown.includes(`\`\`\`tsx title="${name.split('/').pop()}.tsx"\n${code}\n\`\`\``)) problems.push(`${where}: the code of example "${name}" is missing`);
+    }
+  }
+}
 
 // Examples in the Markdown: a snippet once. Fences of the MDX, by demo id, page by page.
 const demoFences = (mdx) => [...mdx.matchAll(/^```\S* [^\n]*demo="([^"]+)"[^\n]*\n([\s\S]*?)\n```$/gmu)].map((match) => ({ id: match[1], code: match[2] }));

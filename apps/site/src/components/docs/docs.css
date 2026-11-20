@@ -357,7 +357,13 @@ html:has(.docs-shell) { background: var(--background); }
 .docs-demo-fold:hover { background: color-mix(in oklab, var(--foreground) 8%, var(--background)); }
 .docs-demo-fold:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
 .docs-demo-code[data-folded] .docs-demo-fold { position: absolute; left: 50%; bottom: 1rem; z-index: 1; margin: 0; transform: translateX(-50%); }
-/* The Toaster's Preview: the demo block with the page Toaster's controls between the stage and the code. */
+/* A block with a color picker on its stage. The picker's panel is not portalled, so the block must
+   not clip it: the corners are rounded on the stage and the code instead, and the stage is raised
+   so an open panel covers the controls and the code under it. */
+.docs-demo-open { overflow: visible; }
+.docs-demo-open > .docs-demo-stage { position: relative; z-index: 1; border-radius: calc(1.25rem - 1px) calc(1.25rem - 1px) 0 0; }
+.docs-demo-open > .docs-demo-code { border-radius: 0 0 calc(1.25rem - 1px) calc(1.25rem - 1px); }
+/* A Preview: the demo block with the controls of the component's main props between the stage and the code. */
 .docs-preview-controls {
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; padding: 0.875rem 1.125rem;
   border-top: 1px solid var(--border);
