@@ -49,6 +49,29 @@ export const DOCS_UI = {
     styling: 'Customize the look',
     codeTitle: 'Toaster',
   },
+  /** The Preview of the color picker's page: the live picker with its main props. */
+  pickerPreview: {
+    settings: 'Color picker settings',
+    component: 'Component',
+    format: 'Format',
+    opacity: 'Opacity',
+    /** The names of the picker on the stage, apart from the page's other pickers. */
+    open: 'Open the preview picker',
+    panel: 'Preview picker',
+    field: 'Preview color value',
+    /** The value `onChange` gave last, next to the picker. */
+    value: 'Value from onChange',
+  },
+  /** The Preview of the color palette's page. */
+  palettePreview: {
+    settings: 'Color palette settings',
+    max: 'Max',
+    format: 'Format',
+    opacity: 'Opacity',
+    group: 'Preview palette',
+    value: 'Colors from onChange',
+    codeTitle: 'ColorPalette',
+  },
   styleEditor: {
     stage: 'Live preview',
     region: 'Style editor notifications',

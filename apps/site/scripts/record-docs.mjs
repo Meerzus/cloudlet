@@ -12,7 +12,11 @@
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
  * under Show code.
  * The color picker's page: every live example answers the keyboard in place and copies the code
- * under it, axe is clean and the page never scrolls sideways.
+ * under it, axe is clean and the page never scrolls sideways. Its two Previews: Component, Format
+ * and Opacity change the live picker, the value and the code (the picker's own format switch moves
+ * the Format control, the open panel is not clipped); Max, Format and Opacity change the live
+ * palette, its array and the code, and a smaller Max drops the last colors; both from the mouse
+ * and the keyboard, with Copy, reduced motion and axe.
  * Styling and the advanced pages (Positioning, SSR, CSP, Accessibility) pass axe, the page never scrolls sideways, and every table wider
  * than the column scrolls inside itself. Style editor: the stage frame shows a
  * pinned pill and an open Island that stays open while the controls are pressed, the radius control
@@ -304,6 +308,192 @@ async function preview(page, base, phone, still, failures) {
 
 /** The color picker's page in the docs. */
 const PICKER_PAGE = '/docs/components/color-picker';
+
+/** The codes the picker's and the palette's Preview show: the lines that follow the controls. */
+const pickerLine = (component, format, alpha) => `  return <${component} color={color} onChange={setColor}${format === 'hex' ? '' : ` defaultFormat="${format}"`}${alpha ? ' alpha' : ''} />;`;
+const paletteLine = (max, format, alpha) => `  return <ColorPalette colors={colors} onChange={setColors}${max === '4' ? '' : ` max={${max}}`}${format === 'hex' ? '' : ` defaultFormat="${format}"`}${alpha ? ' alpha' : ''} />;`;
+
+/**
+ * A Preview of a color component, on `path`: `figure` holds the live component, the value its
+ * `onChange` gave, the controls and the code. Shared by the picker's and the palette's scenarios.
+ */
+function colorPreview(page, selector) {
+  const figure = page.locator(selector);
+  return {
+    figure,
+    code: () => figure.locator('.docs-demo-code pre').evaluate((pre) => pre.textContent ?? ''),
+    value: () => figure.locator('.docs-preview-value').evaluate((output) => output.textContent ?? ''),
+    checked: (group) => figure.locator('.docs-preview-controls').getByRole('group', { name: group, exact: true }).locator('input:checked').getAttribute('value'),
+    pick: async (group, option) => {
+      const label = figure.locator('.docs-preview-controls').getByRole('group', { name: group, exact: true }).getByText(option, { exact: true });
+      await label.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+      await label.click();
+      await wait(page, 250);
+    },
+  };
+}
+
+/**
+ * Preview of the color picker: Component, Format and Opacity change the live picker, the value and
+ * the code, from the mouse and the keyboard; the picker's own format switch moves the Format
+ * control; the open panel is not clipped by the block; Copy gives the code; with reduced motion the
+ * code swaps without its fade; axe with the panel closed and open.
+ */
+async function pickerPreview(page, base, path, still, failures) {
+  await page.goto('about:blank');
+  await page.goto(`${base}${path}`);
+  await wait(page, 600);
+  const fail = (step, value) => failures.push(`picker preview ${step}: ${JSON.stringify(value)}`);
+  const preview = colorPreview(page, '.docs-picker-preview');
+  const { figure } = preview;
+  await figure.scrollIntoViewIfNeeded();
+  const result = { axe: {}, steps: [] };
+  const state = async () => ({ code: await preview.code(), value: await preview.value(), swatch: await figure.locator('.docs-demo-stage > .color-picker').count(), panel: await figure.locator('.docs-demo-stage > .color-picker-inline').count() });
+
+  result.initial = await state();
+  if (!result.initial.code.includes(pickerLine('ColorPicker', 'hex', false)) || result.initial.value !== '#245cdb' || result.initial.swatch !== 1) fail('defaults', result.initial);
+  await still('picker-preview');
+
+  // The swatch opens its panel over the controls and the code: nothing of the block clips it.
+  await figure.locator('.docs-demo-stage .color-picker-swatch').first().click();
+  await wait(page, 900);
+  result.open = await figure.locator('.color-picker-panel[data-phase="open"]').evaluate((panel) => {
+    const box = panel.getBoundingClientRect();
+    const at = (x, y) => panel.contains(document.elementFromPoint(x, y));
+    return { width: Math.round(box.width), height: Math.round(box.height), corners: [at(box.left + 12, box.top + 12), at(box.right - 12, box.top + 12), at(box.left + 12, box.bottom - 12), at(box.right - 12, box.bottom - 12)] };
+  });
+  if (result.open.corners.includes(false)) fail('open panel is covered or clipped', result.open);
+  await still('picker-preview-open');
+  result.axe.open = await axe(page);
+  // The keyboard picks in the open panel and the value follows; Escape closes it back onto the swatch.
+  await figure.locator('.color-picker-panel .color-picker-hue').focus();
+  await page.keyboard.press('Shift+ArrowRight');
+  await wait(page, 150);
+  result.keyboard = await preview.value();
+  if (result.keyboard === '#245cdb') fail('keyboard in the panel', result.keyboard);
+  await page.keyboard.press('Escape');
+  await wait(page, 700);
+  result.closed = { panels: await figure.locator('.color-picker-panel[data-phase="open"]').count(), focus: await page.evaluate(() => document.activeElement?.className ?? '') };
+  if (result.closed.panels !== 0 || !result.closed.focus.includes('color-picker-swatch')) fail('Escape', result.closed);
+
+  // Every control: the component, the value and the code follow.
+  await page.reload();
+  await wait(page, 600);
+  const steps = [
+    ['Component', 'Panel', 'ColorPickerPanel', 'hex', false, /^#245cdb$/u],
+    ['Format', 'rgb', 'ColorPickerPanel', 'rgb', false, /^rgb\(36 92 219\)$/u],
+    ['Opacity', 'On', 'ColorPickerPanel', 'rgb', true, /^rgb\(36 92 219\)$/u],
+    ['Format', 'oklch', 'ColorPickerPanel', 'oklch', true, /^oklch\(/u],
+    ['Component', 'Swatch', 'ColorPicker', 'oklch', true, /^oklch\(/u],
+    ['Opacity', 'Off', 'ColorPicker', 'oklch', false, /^oklch\(/u],
+    ['Format', 'hex', 'ColorPicker', 'hex', false, /^#245cdb$/u],
+  ];
+  for (const [group, option, component, format, alpha, value] of steps) {
+    await preview.pick(group, option);
+    const now = await state();
+    const ok = now.code.includes(pickerLine(component, format, alpha)) && now.code.includes(`import { ${component} }`) && value.test(now.value) && now.swatch === (component === 'ColorPicker' ? 1 : 0) && now.panel === (component === 'ColorPicker' ? 0 : 1);
+    result.steps.push({ group, option, ok, value: now.value });
+    if (!ok) fail(`${group} ${option}`, now);
+  }
+
+  // The panel: opacity appears with Opacity On; the reader's own switch of the format moves the control.
+  await preview.pick('Component', 'Panel');
+  await preview.pick('Opacity', 'On');
+  result.opacitySlider = await figure.locator('.docs-demo-stage .color-picker-alpha').count();
+  await figure.locator('.docs-demo-stage .color-picker-formats').getByText('hsl', { exact: true }).click();
+  await wait(page, 300);
+  result.ownSwitch = { control: await preview.checked('Format'), ...(await state()) };
+  if (result.opacitySlider !== 1 || result.ownSwitch.control !== 'hsl' || !/^hsl\(/u.test(result.ownSwitch.value) || !result.ownSwitch.code.includes(pickerLine('ColorPickerPanel', 'hsl', true))) fail('own format switch', result);
+  await still('picker-preview-panel');
+  result.axe.panel = await axe(page);
+
+  // Keyboard: arrows move inside a group and the code follows.
+  await figure.locator('.docs-preview-controls input[value="panel"]').focus();
+  await page.keyboard.press('ArrowLeft');
+  await wait(page, 250);
+  result.arrow = { checked: await preview.checked('Component'), code: (await preview.code()).includes(pickerLine('ColorPicker', 'hsl', true)) };
+  if (result.arrow.checked !== 'swatch' || !result.arrow.code) fail('arrows', result.arrow);
+
+  result.copy = await copyBlock(page, figure);
+  if (!result.copy.ok) fail('copy', result.copy);
+
+  // Reduced motion: the code swaps without its fade.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await preview.pick('Format', 'rgb');
+  result.reduced = await figure.locator('.docs-demo-code pre').evaluate((pre) => getComputedStyle(pre).animationName);
+  if (result.reduced !== 'none') fail('reduced motion', result.reduced);
+  await page.emulateMedia({ reducedMotion: null });
+  result.sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  if (result.sideways > 0) fail('sideways scroll', result.sideways);
+  return result;
+}
+
+/**
+ * Preview of the color palette: Max, Format and Opacity change the live palette, the array and the
+ * code; a Max below the number of colors drops the last ones and the control keeps the focus; the
+ * add button is gone at Max; Copy gives the code; axe.
+ */
+async function palettePreview(page, base, path, still, failures) {
+  await page.goto('about:blank');
+  await page.goto(`${base}${path}`);
+  await wait(page, 600);
+  const fail = (step, value) => failures.push(`palette preview ${step}: ${JSON.stringify(value)}`);
+  const preview = colorPreview(page, '.docs-palette-preview');
+  const { figure } = preview;
+  await figure.scrollIntoViewIfNeeded();
+  const result = { axe: {}, steps: [] };
+  const state = async () => ({
+    code: await preview.code(),
+    value: await preview.value(),
+    swatches: await figure.locator('.docs-demo-stage .color-palette .color-picker').count(),
+    add: await figure.locator('.docs-demo-stage').getByRole('button', { name: 'Add color' }).count(),
+  });
+  result.initial = await state();
+  if (!result.initial.code.includes(paletteLine('4', 'hex', false)) || result.initial.value !== '["#245cdb", "#f2b84b", "#2f8f9d"]' || result.initial.swatches !== 3 || result.initial.add !== 1) fail('defaults', result.initial);
+  await still('palette-preview');
+  result.axe.page = await axe(page);
+
+  const steps = [
+    ['Max', '3', '3', 'hex', false, 3, 0, '["#245cdb", "#f2b84b", "#2f8f9d"]'],
+    ['Max', '2', '2', 'hex', false, 2, 0, '["#245cdb", "#f2b84b"]'],
+    ['Format', 'rgb', '2', 'rgb', false, 2, 0, '["rgb(36 92 219)", "rgb(242 184 75)"]'],
+    ['Opacity', 'On', '2', 'rgb', true, 2, 0, '["rgb(36 92 219)", "rgb(242 184 75)"]'],
+    ['Max', '4', '4', 'rgb', true, 2, 1, '["rgb(36 92 219)", "rgb(242 184 75)"]'],
+  ];
+  for (const [group, option, max, format, alpha, swatches, add, value] of steps) {
+    await preview.pick(group, option);
+    const now = await state();
+    const ok = now.code.includes(paletteLine(max, format, alpha)) && now.value === value && now.swatches === swatches && now.add === add;
+    result.steps.push({ group, option, ok });
+    if (!ok) fail(`${group} ${option}`, now);
+  }
+  // The focus stays on the control that dropped a color.
+  result.focus = await page.evaluate(() => document.activeElement?.getAttribute('value') ?? document.activeElement?.tagName ?? null);
+  if (result.focus !== '4') fail('focus after Max', result.focus);
+
+  // Add from the stage: a third color, its picker open at once and not clipped; Escape closes it.
+  await figure.locator('.docs-demo-stage').getByRole('button', { name: 'Add color' }).click();
+  await wait(page, 900);
+  result.added = { ...(await state()), open: await figure.locator('.color-picker-panel[data-phase="open"]').count() };
+  if (result.added.swatches !== 3 || result.added.open !== 1 || JSON.parse(result.added.value).length !== 3) fail('add', result.added);
+  await still('palette-preview-open');
+  result.axe.open = await axe(page);
+  await page.keyboard.press('Escape');
+  await wait(page, 700);
+
+  // Keyboard: arrows in a group.
+  await figure.locator('.docs-preview-controls input[value="4"]').focus();
+  await page.keyboard.press('ArrowLeft');
+  await wait(page, 250);
+  result.arrow = { checked: await preview.checked('Max'), ...(await state()) };
+  if (result.arrow.checked !== '3' || !result.arrow.code.includes(paletteLine('3', 'rgb', true)) || result.arrow.add !== 0) fail('arrows', result.arrow);
+
+  result.copy = await copyBlock(page, figure);
+  if (!result.copy.ok) fail('copy', result.copy);
+  result.sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  if (result.sideways > 0) fail('sideways scroll', result.sideways);
+  return result;
+}
 
 /**
  * A live example of a page: the component on its stage answers the keyboard in place (the hue
@@ -861,7 +1051,7 @@ async function run(name, scenario, base, out) {
 
   await page.goto(`${base}/docs/components/toaster`);
   await wait(page, 800);
-  const report = { name, pages: [], axe: {}, quiet: null, toc: null, copy: null, drawer: null, installation: null, preview: null, guides: null, picker: null, integration: null, reference: null, search: null, agents: null };
+  const report = { name, pages: [], axe: {}, quiet: null, toc: null, copy: null, drawer: null, installation: null, preview: null, guides: null, picker: null, pickerPreview: null, palettePreview: null, integration: null, reference: null, search: null, agents: null };
 
   // Quiet mode: no sky, no Lenis, a flat page colour.
   report.quiet = await page.evaluate(() => ({
@@ -929,6 +1119,12 @@ async function run(name, scenario, base, out) {
   }
   report.picker = await pickerPage(page, base, still, failures);
   report.axe.picker = report.picker.axe;
+  report.pickerPreview = await pickerPreview(page, base, PICKER_PAGE, still, failures);
+  report.axe.pickerPreviewOpen = report.pickerPreview.axe.open;
+  report.axe.pickerPreviewPanel = report.pickerPreview.axe.panel;
+  report.palettePreview = await palettePreview(page, base, `${PICKER_PAGE}#palette`, still, failures);
+  report.axe.palettePreview = report.palettePreview.axe.page;
+  report.axe.palettePreviewOpen = report.palettePreview.axe.open;
   report.integration = await integration(page, base, still, failures);
   for (const [slug, entry] of Object.entries(report.integration)) report.axe[slug] = entry.axe;
   report.reference = await reference(page, base, phone, still, failures);

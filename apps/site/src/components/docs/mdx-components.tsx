@@ -9,8 +9,7 @@ import { CodeBlock, type CodeBlockProps } from './code-block';
 import { DemoBlock, type DemoItem } from './demo-block';
 import { Example } from './example';
 import { GetStartedCode, GetStartedTabs, InstallCommand } from './get-started-code';
-import { PaletteDemo } from './palette-demo';
-import { PickerDemo } from './picker-demo';
+import { PalettePreview, PickerPreview } from './picker-preview';
 import { Table } from './table';
 import { StyleEditor } from './style-editor/style-editor';
 import { ToasterPreview } from './toaster-preview';
@@ -90,8 +89,8 @@ export function getMDXComponents(): MDXComponents {
     GetStartedTabs,
     GetStartedCode,
     InstallCommand,
-    PaletteDemo,
-    PickerDemo,
+    PalettePreview,
+    PickerPreview,
     StyleEditor,
     ToasterPreview,
   };
