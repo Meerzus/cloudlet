@@ -12,7 +12,7 @@
  *   picker      color-picker-<browser>.json from audit-color-picker.mjs — contrast by route and mode, picker checks
  *   budget      the --json file of first-screen-budget.mjs — each budget line against its limit
  *   lighthouse  lighthouse.json from lighthouse-docs.mjs — the median scores and metrics per page
- *   walk        report.json from record-docs.mjs or record-playground.mjs — failures per scenario
+ *   walk        report.json from record-docs.mjs — failures per scenario
  *   log         any log file — its last lines (default 30) in a code block
  */
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
@@ -134,8 +134,7 @@ function walk(report) {
   const problems = [];
   for (const [name, entry] of entries) {
     const failures = entry.failures ?? [];
-    // The Playground's report names its console messages `errors`, the docs' `console`.
-    const errors = entry.errors ?? entry.console ?? [];
+    const errors = entry.console ?? [];
     const violations = Object.values(entry.axe ?? {}).flatMap((value) => (Array.isArray(value) ? value : []));
     rows.push([mark(!failures.length && !errors.length && !violations.length) + ' ' + name, failures.length, errors.length, violations.length]);
     for (const failure of failures) problems.push(`${name}: ${typeof failure === 'string' ? failure : JSON.stringify(failure)}`);

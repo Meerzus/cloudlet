@@ -3,15 +3,13 @@ title: SSR & Next.js
 description: What renders on the server, who owns the controller, and complete setups for Next.js and Vite.
 ---
 
-Cloudlet renders nothing on the server and appears after hydration, so it never causes a hydration mismatch. This page explains what that means for where the controller lives and when it ends, then gives complete setups for the Next.js App Router and Pages Router and a note on Vite.
-
 ## What renders on the server
 
-The Toaster's server output is empty, and so is its first render during hydration, even when notifications were accepted before it mounted. After mount it portals its host into the document and presents whatever is pending. Notifications you `show` before the Toaster mounts are not lost: they wait in the controller.
+Nothing. The Toaster's server output is empty, and so is its first render during hydration, even with notifications already accepted, so it never causes a hydration mismatch. Notifications you `show` before it mounts wait in the controller.
 
-The package keeps the `"use client"` directive on its React entry, so importing `Toaster`, `CloudletProvider` or `useCloudlet` from a Server Component file marks the boundary correctly. The controller itself is a live object with methods and subscriptions; it is not serializable and never crosses from a Server Component into a client one.
+The package keeps the `"use client"` directive on its React entry, so importing `Toaster`, `CloudletProvider` or `useCloudlet` from a Server Component file marks the boundary correctly. The controller is a live object with methods and subscriptions: it is not serializable and never crosses from a Server Component into a client one.
 
-If you read the controller's state in your own components, subscribe the same way the Toaster does. `getServerSnapshot()` returns an empty snapshot, so the server and the first client render agree, and the real state arrives right after hydration:
+Your own components read the state as the Toaster does: [`getServerSnapshot()`](/docs/components/toaster/api/controller#getsnapshot-and-getserversnapshot) makes the server and the first client render agree, and the real state arrives right after hydration:
 
 ```tsx title="notification-count.tsx"
 'use client';
@@ -32,10 +30,10 @@ export function NotificationCount() {
 
 ## One controller per session or request
 
-A controller holds one user's notifications. Create it once per browser session, and never share one between users:
+A controller holds one user's notifications; never share one between users.
 
-- **In the browser**, one controller lives as long as the page or the part of the application that owns it.
-- **On the server**, a controller that takes part in rendering belongs to that request alone. A module-level controller in code that also runs on the server would be shared by every request, so in server-rendered applications the controller is created in the browser, by a client component, as below.
+- **In the browser**, create it once per session: it lives as long as the page or the part of the application that owns it.
+- **On the server**, a controller that takes part in rendering belongs to that request alone. A module-level controller in code that also runs on the server would be shared by every request, so server-rendered applications create the controller in the browser, in a client component ([App Router](#nextjs-app-router)).
 
 When you render on the server yourself, create the controller inside the request and dispose it once the response is written:
 
@@ -67,25 +65,20 @@ The browser entry then creates its own controller and hydrates the same tree.
 
 ### When to dispose
 
-`dispose()` is final: it closes every notification, releases the controller's timers and subscriptions, and every later call returns `disposed`. Business operations you tracked keep running to their own result. Call it only when the session the controller belongs to is over: a test that finished, a micro-frontend removed for good, a server request that has been answered. A single-page application usually never calls it; the controller lives as long as the page.
+[`dispose()`](/docs/components/toaster/api/controller#dispose) is final. Call it only when the session the controller belongs to is over: a test that finished, a micro-frontend removed for good, a server request that has been answered. A single-page application usually never calls it; the controller lives as long as the page. Unmounting the Toaster does not end the controller ([Toaster props](/docs/components/toaster/api/toaster#props)): mounting a Toaster again resumes the same queue.
 
-Unmounting the Toaster is not the end of the controller. It pauses visible time and keeps every record and every tracked operation; mounting a Toaster again resumes the same queue.
-
-Two mistakes to avoid:
-
-- **Creating the controller in a component body.** Every render would create a new controller with an empty stack. Create it in the bootstrap, or in an effect of a client owner as in the [App Router](#nextjs-app-router) setup.
-- **Sharing a server controller between users.** On the server a controller belongs to one request.
+Never create the controller in a component body: every render would create a new controller with an empty stack. Create it in the bootstrap, or in an effect of a client owner as in the [App Router](#nextjs-app-router) setup.
 
 ## Next.js App Router
 
-The App Router renders every page on the server first, so the controller is owned by a client component. Its effect creates the controller, and its cleanup disposes exactly that instance. Your pages keep rendering on the server: until the controller exists, the Provider gets `null`, the Toaster renders nothing and your children render as usual.
+The App Router renders every page on the server first, so a client component owns the controller: its effect creates the controller, and its cleanup disposes exactly that instance. Until the controller exists, the Provider gets `null`, the Toaster renders nothing and your pages render on the server as usual.
 
 ```tsx title="components/notification-owner.tsx"
 'use client';
 import { useEffect, useState, type ReactNode } from 'react';
 import { CloudletProvider, createCloudlet, Toaster, type ReactCloudletController } from '@cloudlet/toast';
 
-export function NotificationOwner({ children }: { children: ReactNode }) {
+export function NotificationOwner({ children, nonce }: { children: ReactNode; nonce?: string | undefined }) {
   const [controller, setController] = useState<ReactCloudletController | null>(null);
 
   useEffect(() => {
@@ -99,13 +92,14 @@ export function NotificationOwner({ children }: { children: ReactNode }) {
   return (
     <CloudletProvider controller={controller}>
       {children}
-      <Toaster />
+      {/* The request's nonce, under a strict Content Security Policy. */}
+      <Toaster {...(nonce ? { nonce } : {})} />
     </CloudletProvider>
   );
 }
 ```
 
-Under a strict Content Security Policy the owner also passes the request's nonce to the Toaster: [Content Security Policy](/docs/components/toaster/csp#nextjs-app-router) shows how.
+`nonce` is optional: without a strict Content Security Policy leave it out; with one, [Content Security Policy](/docs/components/toaster/csp#nextjs-app-router) shows where the layout gets it ([`nonce`](/docs/components/toaster/api/toaster#props)).
 
 The root layout imports the stylesheet once and wraps the application in the owner:
 
@@ -125,7 +119,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 }
 ```
 
-Client components show notifications through `useOptionalCloudlet()`. Before mount it returns `null`, which only matters for code that runs during render; events fire after hydration, when the controller exists:
+Client components show notifications through [`useOptionalCloudlet()`](/docs/components/toaster/api/toaster#useoptionalcloudlet). It is `null` before the owner's effect runs, which matters only during render: events fire after hydration, when the controller exists:
 
 ```tsx title="components/save-button.tsx"
 'use client';
@@ -144,20 +138,20 @@ export function SaveButton() {
 }
 ```
 
-`useCloudlet()` throws while the controller is `null`, so keep it for components that render only after the owner has mounted, such as content of a dialog the user opens.
+Keep [`useCloudlet()`](/docs/components/toaster/api/toaster#usecloudlet), which throws while the controller is `null`, for components that render only after the owner has mounted, such as content of a dialog the user opens.
 
-The shadcn registry item works a little differently: its wrapper renders the Provider and the Toaster for a controller you pass in, and the `notification-owner.tsx` of [Installation](/docs/components/toaster/installation#the-shadcn-registry-item) renders it once that controller exists.
+The shadcn registry item works a little differently: its wrapper renders the Provider and the Toaster for a controller you pass in, and the `notification-owner.tsx` of [Installation](/docs/components/toaster#installation) renders it once that controller exists.
 
 ### React Strict Mode
 
-In development Strict Mode runs the owner's effect, its cleanup, and the effect again. The first controller is disposed before anything uses it, the second one is stored, and the Toaster attaches to the second. That works because the cleanup disposes the instance its own effect created. Two variants break under the replay:
+In development Strict Mode runs the owner's effect, its cleanup, and the effect again: the first controller is disposed before anything uses it, and the Toaster attaches to the second. That works because the cleanup disposes the instance its own effect created. Two variants break under the replay:
 
 - disposing the controller from state (`controller.dispose()` in a cleanup), which disposes the instance the second setup still needs;
 - creating the controller once outside the effect and disposing it in the cleanup, which leaves the remounted owner with a disposed controller.
 
 ## Next.js Pages Router
 
-In the Pages Router, global CSS is imported from the custom App, and the same client owner wraps every page. `_app` stays mounted across client-side navigations, so one controller serves the whole session:
+Global CSS is imported from the custom App, and the same client owner wraps every page. `_app` stays mounted across client-side navigations, so one controller serves the whole session:
 
 ```tsx title="pages/_app.tsx"
 import '@cloudlet/toast/styles.css';
@@ -173,15 +167,10 @@ export default function App({ Component, pageProps }: AppProps) {
 }
 ```
 
-With the shadcn wrapper, its two CSS imports move into `_app` too, in the order given in [Installation](/docs/components/toaster/installation#the-shadcn-registry-item).
+With the shadcn wrapper, its two CSS imports move into `_app` too, in the order given in [The shadcn registry item](/docs/components/toaster#the-shadcn-registry-item).
 
-Both routers need a matching pair of `react` and `react-dom`, in the range Cloudlet supports.
+Both routers need a matching pair of `react` and `react-dom` in the range of [Requirements](/docs/components/toaster#requirements).
 
 ## Vite and other client-only apps
 
-A single-page application without server rendering has nothing to hydrate. Create the controller once at module scope of the client entry and render the Provider and the Toaster there, as in the [Quick start](/docs/components/toaster/quick-start#mount-the-toaster). With Vite's SSR mode, the server entry follows [One controller per session or request](#one-controller-per-session-or-request).
-
-## Next steps
-
-- [Content Security Policy](/docs/components/toaster/csp): the request's nonce and a policy Cloudlet works under.
-- [Toaster props](/docs/components/toaster/api/toaster): `container`, `nonce` and every other prop.
+Without server rendering there is nothing to hydrate: create the controller once at module scope of the client entry and render the Provider and the Toaster there, as in [Usage](/docs/components/toaster#usage). With Vite's SSR mode, the server entry follows [One controller per session or request](#one-controller-per-session-or-request).

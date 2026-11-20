@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useRef, type CSSProperties } from 'react';
 import { CLOUD_SHAPES, CLOUD_WIDTHS } from '@/lib/clouds.generated';
 import { gsap, ScrollTrigger } from '@/lib/gsap';
-import { isQuietPath, PLAYGROUND_PATH } from '@/lib/site';
+import { isQuietPath } from '@/lib/site';
 import { useScrollScene } from './motion';
 
 type ShapeId = (typeof CLOUD_SHAPES)[number]['id'];
@@ -67,9 +67,6 @@ export function CloudImage({ shape, theme, w }: { shape: ShapeId; theme: 'day' |
   );
 }
 
-/** Pages whose sky is a still backdrop (the playground has no scroll effects). */
-const STILL_PATHS = [PLAYGROUND_PATH];
-
 /**
  * The fixed sky behind a landing: gradient, stars, glow and layers of clouds that rise by depth as
  * the page scrolls (vertically only). `layers` replaces the Toaster's clouds, for a page that wants
@@ -78,7 +75,6 @@ const STILL_PATHS = [PLAYGROUND_PATH];
 export function Sky({ layers = LAYERS }: { layers?: readonly SkyLayer[] }) {
   const root = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const still = STILL_PATHS.some((path) => pathname.startsWith(path));
   // Reading pages have no sky at all; the hooks below still run so their order is stable.
   const quiet = isQuietPath(pathname);
 
@@ -118,7 +114,7 @@ export function Sky({ layers = LAYERS }: { layers?: readonly SkyLayer[] }) {
       gsap.set(layers.map((layer) => layer.element), { clearProps: 'transform' });
       for (const layer of layers) if (layer.second) layer.second.style.top = `${PERIOD * 100}vh`;
     };
-  }, !still && !quiet);
+  }, !quiet);
 
   if (quiet) return null;
 

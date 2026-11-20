@@ -10,7 +10,6 @@ const vercel = JSON.parse(readFileSync(new URL('../../apps/site/vercel.json', im
 const source = (path: string) => readFileSync(new URL(`../../apps/site/src/app/${path}`, import.meta.url), 'utf8');
 
 const hostRedirects = (vercel.redirects ?? []).filter((rule) => rule.has);
-const pathRedirects = (vercel.redirects ?? []).filter((rule) => !rule.has);
 
 describe('site umbrella (launch P01)', () => {
   it('sends the public vercel.app aliases of production to the canonical host first', () => {
@@ -24,9 +23,7 @@ describe('site umbrella (launch P01)', () => {
   it("serves the root as the kit's own page: no redirect away from it", () => {
     expect(KIT_PATH).toBe('/');
     expect((vercel.redirects ?? []).filter((rule) => rule.source === '/')).toEqual([]);
-    // The playground's address from before the umbrella keeps working; the docs' former
-    // addresses are held by site-docs-redirects.test.ts.
-    expect(pathRedirects.at(-1)).toEqual({ source: '/playground', destination: `${TOASTER_PATH}/playground`, permanent: true });
+    // The former addresses (the docs', the Playground's) are held by site-docs-redirects.test.ts.
     expect(TOASTER_PATH).toBe('/toaster');
     expect(SITE_URL).toBe('https://cloudlet.dev');
   });

@@ -3,9 +3,9 @@ name: site-audits
 # pull request. The export is built once and shared as an artifact; every audit then runs in its own job,
 # in parallel. Gates (a red job is a failed audit): axe, keyboard and still layout of the landings in Chromium
 # and Firefox, text contrast over the paint without a GPU (SwiftShader `page` and no-WebGL `flat`), the pickers
-# from the keyboard in Chromium and WebKit, the first-screen budget, the paint smoke. Reports (they run and show
-# their results, a red one does not fail the run): the landings in Linux WebKit, the docs and Playground walks
-# (until the unused CSS preload is fixed), Lighthouse (Performance is noisy on shared runners). Local only (they
+# from the keyboard in Chromium and WebKit, the first-screen budget, the docs walk, the paint
+# smoke. Reports (they run and show their results, a red one does not fail the run): the landings in Linux
+# WebKit, Lighthouse (Performance is noisy on shared runners). Local only (they
 # need a GPU or hands): the `fixed` paint mode of audit-color-picker.mjs (ANGLE on Metal), scroll-bench.mjs
 # (frame times), Safari.
 on:
@@ -69,7 +69,7 @@ jobs:
     # on a Mac (the owner's decision, 2026-11-18).
     needs: export
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 75
     continue-on-error: ${{ matrix.browser == 'webkit' }}
     strategy:
       fail-fast: false
@@ -99,7 +99,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps ${{ matrix.browser }} && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - run: |
           mkdir -p artifacts/audits
           # Memory in the log every 20 s: the WebKit job was cut off by the runner itself when it ran out of
@@ -128,7 +134,7 @@ jobs:
     # the extremes and the palettes. One job per route and mode; the sky has no modes and runs once.
     needs: export
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -154,7 +160,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps chromium
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/audit-color-picker.mjs artifacts/audits/contrast --skip-pickers --routes ${{ matrix.route }} --modes ${{ matrix.mode == 'sky' && 'page' || matrix.mode }} 2>&1 | tee artifacts/audits/contrast.log
@@ -173,7 +185,7 @@ jobs:
     # values, Tab order, Escape, target sizes, reduced motion, forced colors (Chromium).
     needs: export
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
@@ -192,7 +204,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps ${{ matrix.browser }} && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/audit-color-picker.mjs artifacts/audits/pickers --skip-contrast --browser ${{ matrix.browser }} 2>&1 | tee artifacts/audits/pickers.log
@@ -207,19 +225,16 @@ jobs:
           path: artifacts/audits/
 
   walks:
-    # The docs and the Playground walked in Chromium: pages, demos, copy, search, axe (record-docs.mjs,
-    # record-playground.mjs); and the paint smoke of the color picker's top (smoke-picker-hero.mjs, a gate).
-    # The two walks count console warnings as failures, and today every page they open warns that the
-    # kit's and the picker's CSS were preloaded and not used: until that is fixed they report and do not
-    # fail the run (everything else in them passes). Drop continue-on-error once they are green.
+    # The docs walked in Chromium: pages, the Toaster's Preview, demos, copy, search, axe (record-docs.mjs);
+    # and the paint smoke of the color picker's top (smoke-picker-hero.mjs). Both are gates; the walk
+    # counts console warnings as failures.
     needs: export
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    continue-on-error: ${{ matrix.walk != 'smoke' }}
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        walk: [docs, playground, smoke]
+        walk: [docs, smoke]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -234,15 +249,17 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps chromium
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - if: matrix.walk == 'docs'
         run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/record-docs.mjs artifacts/audits/docs 2>&1 | tee artifacts/audits/docs.log
-      - if: matrix.walk == 'playground'
-        run: |
-          mkdir -p artifacts/audits
-          node apps/site/scripts/record-playground.mjs artifacts/audits/playground 2>&1 | tee artifacts/audits/playground.log
       - if: matrix.walk == 'smoke'
         run: |
           mkdir -p artifacts/audits
@@ -281,7 +298,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps chromium
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/first-screen-budget.mjs --json artifacts/audits/budget.json / /toaster 2>&1 | tee artifacts/audits/budget.log
@@ -315,7 +338,13 @@ jobs:
         with:
           name: site-export
           path: apps/site/out
-      - run: npx playwright install --with-deps chromium
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
       - run: |
           mkdir -p artifacts/audits
           node apps/site/scripts/lighthouse-docs.mjs artifacts/audits/lighthouse --runs 3 --report-only / /toaster /color-picker /docs/components/toaster /docs/components/toaster/notifications 2>&1 | tee artifacts/audits/lighthouse.log

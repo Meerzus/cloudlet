@@ -93,7 +93,7 @@ describe('site docs runnable examples', () => {
   const fences = allDemoFences();
 
   it('has runnable examples on the pages', () => {
-    expect(fences.map((fence) => fence.at)).toContainEqual(expect.stringContaining('quick-start.mdx'));
+    expect(fences.map((fence) => fence.at)).toContainEqual(expect.stringContaining('components/toaster/index.mdx'));
   });
 
   it('shows the catalog snippet of every demo fence verbatim', () => {
@@ -105,7 +105,7 @@ describe('site docs runnable examples', () => {
     const problems = pages.flatMap((entry) => groupProblems(readFileSync(new URL(entry, CONTENT), 'utf8'), entry));
     expect(problems).toEqual([]);
     const grouped = pages.filter((entry) => readFileSync(new URL(entry, CONTENT), 'utf8').includes('<Demos>'));
-    expect(grouped).toEqual(['components/toaster/notifications.mdx', 'components/toaster/positioning.mdx']);
+    expect(grouped).toEqual(['components/toaster/index.mdx', 'components/toaster/notifications.mdx']);
   });
 
   it('names the file and line of a <Demos> that holds prose, one fence or no end', () => {
@@ -175,7 +175,7 @@ describe('site docs runnable examples', () => {
     expect(metas).toEqual(['title="main.tsx"', `demo="success" ${DEMO_NOTE}`, 'demo="error"', null]);
   });
 
-  it('writes runnable fences as plain code in the Markdown for agents, the first after the note', () => {
+  it('keeps the demo id of runnable fences in the Markdown for agents, without a title or the note', () => {
     const source = 'Intro\n\n```tsx demo="success"\nshow();\n```\n\n```tsx demo="error" title="x.tsx"\nfail();\n```\n';
     const at = (text: string) => {
       const start = source.indexOf(text);
@@ -195,7 +195,7 @@ describe('site docs runnable examples', () => {
     const file = vfile(source);
     remarkDemoNote()(tree, file);
     const markdown = createStringifier(file).stringify(tree as never);
-    expect(markdown).toBe('Intro\n\nSnippets assume `const cloudlet = useCloudlet();`.\n\n```tsx\nshow();\n```\n\n```tsx\nfail();\n```\n');
+    expect(markdown).toBe('Intro\n\n```tsx demo="success"\nshow();\n```\n\n```tsx demo="error"\nfail();\n```\n');
   });
 });
 

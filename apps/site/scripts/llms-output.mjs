@@ -5,7 +5,9 @@
  * beside the `/docs/[[...slug]]` pages — and checks the output for agents: every page of
  * `content/docs/en` has its `.md`, is listed in `llms.txt` and is in `llms-full.txt`; no runnable
  * meta, MDX component or placeholder is left. Styling explains the live editor and its URL
- * parameters in both Markdown outputs. Exits 1 with the list of problems.
+ * parameters in both Markdown outputs. The Examples of the Toaster's page write a snippet a guide
+ * already shows as a line linking to a heading of that guide, whose Markdown has the code, and
+ * every other snippet as code. Exits 1 with the list of problems.
  */
 import { cpSync, existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -46,7 +48,7 @@ const full = read('llms-full.txt');
 const LEFTOVERS = [
   [/demo="|demo-note/u, 'runnable meta'],
   [/\0/u, 'placeholder'],
-  [/<(Callout|GetStartedTabs|GetStartedCode|StyleEditor|PickerDemo|PaletteDemo|InstallCommand)\b/u, 'MDX component'],
+  [/<(Callout|GetStartedTabs|GetStartedCode|StyleEditor|PickerDemo|PaletteDemo|InstallCommand|ToasterPreview)\b/u, 'MDX component'],
 ];
 const urls = pageUrls(CONTENT);
 for (const url of urls) {
@@ -70,6 +72,31 @@ for (const [file, markdown] of [[`${TOASTER_DOCS_PATH.slice(1)}/styling.md`, rea
 }
 const stylingEntry = index.split('\n').find((line) => line.includes(`](${SITE_URL}${TOASTER_DOCS_PATH}/styling.md)`));
 if (!stylingEntry?.includes('Style editor')) problems.push('llms.txt: Styling description does not mention the Style editor');
+
+// Examples in the Markdown: a snippet once. Fences of the MDX, by demo id, page by page.
+const demoFences = (mdx) => [...mdx.matchAll(/^```\S* [^\n]*demo="([^"]+)"[^\n]*\n([\s\S]*?)\n```$/gmu)].map((match) => ({ id: match[1], code: match[2] }));
+const TOASTER_CONTENT = join(CONTENT, 'components/toaster');
+const guideDemos = new Map(
+  readdirSync(TOASTER_CONTENT).filter((entry) => entry.endsWith('.mdx') && entry !== 'index.mdx')
+    .flatMap((entry) => demoFences(readFileSync(join(TOASTER_CONTENT, entry), 'utf8')).map((demo) => [demo.id, entry.slice(0, -'.mdx'.length)])),
+);
+const componentMarkdown = read(`${TOASTER_DOCS_PATH.slice(1)}.md`);
+let folded = 0;
+for (const { id, code } of demoFences(readFileSync(join(TOASTER_CONTENT, 'index.mdx'), 'utf8'))) {
+  const guide = guideDemos.get(id);
+  if (!guide) {
+    if (!componentMarkdown.includes(`\`\`\`tsx\n${code}\n\`\`\``)) problems.push(`${TOASTER_DOCS_PATH}.md: Examples lost the code of "${id}", which no guide shows`);
+    continue;
+  }
+  folded += 1;
+  const line = componentMarkdown.split('\n').find((text) => text.startsWith(`- \`${id}\``));
+  const anchor = line && new RegExp(`\\]\\(${SITE_URL}${TOASTER_DOCS_PATH}/${guide}#([a-z0-9-]+)\\)`, 'u').exec(line)?.[1];
+  if (!anchor) problems.push(`${TOASTER_DOCS_PATH}.md: Examples has no line for "${id}" linking to a section of ${guide}`);
+  else if (!read(`${TOASTER_DOCS_PATH.slice(1)}/${guide}.html`).includes(`id="${anchor}"`)) problems.push(`${TOASTER_DOCS_PATH}.md: "${id}" links to #${anchor}, which ${guide} does not have`);
+  if (componentMarkdown.includes(code)) problems.push(`${TOASTER_DOCS_PATH}.md: Examples repeats the code of "${id}" from ${guide}`);
+  if (!read(`${TOASTER_DOCS_PATH.slice(1)}/${guide}.md`).includes(code)) problems.push(`${TOASTER_DOCS_PATH}/${guide}.md: the code of "${id}" is missing`);
+}
+if (!folded) problems.push(`${TOASTER_DOCS_PATH}.md: no Examples snippet is folded into a guide link`);
 
 if (problems.length) {
   console.error(`llms-output: ${problems.length} problem(s)\n  ${problems.join('\n  ')}`);

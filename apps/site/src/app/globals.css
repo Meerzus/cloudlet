@@ -22,7 +22,7 @@
   --accent-foreground: oklch(0.24 0.06 258);
   /* A plain hairline on flat surfaces (docs, popovers): opaque, a tenth of the text over the page. */
   --border: oklch(0.9 0.015 250);
-  /* The rim of a glass panel on the sky (hero, Get started, FAQ, Playground): translucent white. */
+  /* The rim of a glass panel on the sky (hero, Get started, FAQ): translucent white. */
   --glass-border: oklch(1 0 0 / 0.55);
   --ring: oklch(0.55 0.17 255);
   --popover: oklch(1 0 0);

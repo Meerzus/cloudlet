@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: Documentation
     url: https://cloudlet.dev/docs
-    about: Guides, API reference and a Playground with every kind of notification.
+    about: Guides, API reference and a live preview with every kind of notification.
   - name: Report a vulnerability
     url: https://github.com/Meerzus/cloudlet/security/advisories/new
     about: Security problems are reported privately, not as issues.

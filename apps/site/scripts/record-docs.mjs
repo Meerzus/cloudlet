@@ -2,13 +2,16 @@
 /**
  * Walks /docs/components/toaster in headless Chromium against the static export: every page of
  * the sidebar opens with a clean console, the drawer and the table of contents work, Copy copies
- * the example, and axe finds no violations with the drawer closed and open. Getting started:
- * the Installation tabs switch from the keyboard and copy their example, the demo button on Quick
- * start shows the toast on the page Toaster (top on desktop, bottom on phones: `position="auto"`).
- * Guides: every demo button of Notifications, Operations and Positioning shows its own
+ * the example, and axe finds no violations with the drawer closed and open. The component page:
+ * the tabs of its Installation switch from the keyboard and copy their example, its Preview shows
+ * one notification and five on the page Toaster (top on desktop, bottom on phones:
+ * `position="auto"`), its Position, Side and Direction move that Toaster with the code under them,
+ * from the mouse and the keyboard, Auto keeps the Side at Center with Left and Right off, Examples run where they put it and leaving the page resets it,
+ * and its Examples run the whole catalog. Guides: every demo button of the
+ * component page, Notifications, Operations and Forms shows its own
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
- * under Show code. Guides:
- * Styling, SSR and Accessibility pass axe, the page never scrolls sideways, and every table wider
+ * under Show code.
+ * Styling and the advanced pages (Positioning, SSR, CSP, Accessibility) pass axe, the page never scrolls sideways, and every table wider
  * than the column scrolls inside itself. Style editor: the stage frame shows a
  * pinned pill and an open Island that stays open while the controls are pressed, the radius control
  * and the morphing color picker change the computed CSS and copied stylesheet for the site theme,
@@ -16,10 +19,11 @@
  * parameter, Reset preserves foreign parameters, and Back skips intermediate edits. An editor
  * screenshot and axe audit per scenario cover light/dark × desktop/phone.
  * Reference:
- * the five pages fit the width (rows of three or more columns are a grid line with the description
+ * the five pages keep every section other pages link to and have no Next steps, fit the width
+ * (rows of three or more columns are a grid line with the description
  * under it, every row a card on phones), every link to a docs anchor lands on
  * an existing heading, and axe is clean. Search and agents: the search window opens from its
- * button, ⌘K / Ctrl K and `/` (not on the landing or the Playground, `/` stays a character in the
+ * button, ⌘K / Ctrl K and `/` (not on the landings, `/` stays a character in the
  * field), a word from Accessibility finds the page and Enter opens it, arrows move, there is an
  * empty and a no-result state, Escape closes and gives the focus back, axe is clean with it open;
  * the drawer opens and closes from the keyboard; `/llms.txt`, `/llms-full.txt` and the `.md` of a
@@ -48,6 +52,9 @@ const SCENARIOS = {
 
 const wait = (page, ms) => page.waitForTimeout(ms);
 
+/** The component page's sections and its Examples groups (DEMO_GROUPS), as table-of-contents links. */
+const TOC_ENTRIES = ['preview', 'installation', 'usage', 'examples', 'kinds', 'content', 'actions', 'forms', 'promises', 'attention', 'stack', 'api-reference'].map((id) => `#${id}`);
+
 /** What the page Toaster shows: edge, state and the visible titles. */
 async function toaster(page) {
   return page.evaluate(() => {
@@ -75,9 +82,9 @@ async function copyBlock(page, figure) {
   return { ok: copied === source && copied.length > 0, length: copied.length, label: await figure.locator('.docs-code-title').textContent() };
 }
 
-/** Installation: npm / shadcn tabs from the keyboard, each tab's example copies verbatim. */
+/** Installation of the component page: npm / shadcn tabs from the keyboard, each tab's example copies verbatim. */
 async function installation(page, base, still, failures) {
-  await page.goto(`${base}/docs/components/toaster/installation`);
+  await page.goto(`${base}/docs/components/toaster#installation`);
   await wait(page, 600);
   await still('installation');
   const result = { axe: await axe(page), tabs: [] };
@@ -104,36 +111,196 @@ async function installation(page, base, still, failures) {
   return result;
 }
 
-/** Quick start: the demo button is enabled after mount, the page says what the snippets assume, and it shows the toast. */
-async function quickStart(page, base, phone, still, failures) {
-  await page.goto(`${base}/docs/components/toaster/quick-start`);
+/** The page's own Toaster (not a Toaster inside the article, as the Style editor has): where it sits. */
+async function pageHost(page) {
+  return page.evaluate(() => {
+    const host = [...document.querySelectorAll('.cloudlet-host')].find((element) => !element.closest('article'));
+    return { position: host?.dataset.position ?? null, edge: host?.dataset.edge ?? null, align: host?.dataset.align ?? null, dir: host?.getAttribute('dir') ?? null };
+  });
+}
+
+/** The code the Preview shows for a setting: `<Toaster />` with the props off their defaults. */
+const toasterCode = (position, dir) => `<Toaster${position === 'auto' ? '' : ` position="${position}"`}${dir === 'ltr' ? '' : ` dir="${dir}"`} />`;
+
+/**
+ * Preview of the component page, the live page Toaster: its two buttons are enabled after mount
+ * and show one notification and five; every control moves the page Toaster (`data-position`,
+ * `data-edge`, `data-align` and `dir` of its host) and the code under them follows and copies
+ * verbatim; a Run of the Examples lands where the controls put it; Tab goes button, button, the
+ * three radio groups (arrows move inside), the Styling link, Copy, the code; Auto takes the Side to
+ * Center and turns Left and Right off (neither a click nor an arrow reaches them), Top and Bottom
+ * take every side, and the code is `<Toaster />` on Auto at any width; with reduced motion
+ * the code swaps without its fade and the stack moves at once; leaving the page puts the Toaster
+ * back to `auto`, and coming back starts the controls at their defaults.
+ */
+async function preview(page, base, phone, still, failures) {
+  // A fresh document: after the Installation scenario a goto to #preview would be a fragment
+  // navigation, a history entry the app router never wrote, and Back to it leaves Styling on screen.
+  await page.goto('about:blank');
+  await page.goto(`${base}/docs/components/toaster#preview`);
   await wait(page, 600);
-  await still('quick-start');
-  const result = { axe: { page: await axe(page) } };
-  const figure = page.locator('.docs-demo[data-demo="success"]');
-  const runButton = figure.locator('.docs-demo-trigger[data-demo="success"]');
+  await still('preview');
+  const fail = (step, value) => failures.push(`preview ${step}: ${JSON.stringify(value)}`);
+  const result = { axe: { page: await axe(page) }, steps: [] };
+  const figure = page.locator('.docs-preview');
+  const one = figure.locator('[data-preview="one"]');
+  const five = figure.locator('[data-preview="five"]');
+  const code = () => figure.locator('pre').evaluate((pre) => pre.textContent ?? '');
+  // Mid-screen before every press: on a phone the stack sits at the bottom, over whatever is under it.
+  const press = async (locator) => {
+    await locator.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+    await locator.click();
+  };
+  const pick = async (group, option) => {
+    await press(figure.getByRole('group', { name: group, exact: true }).getByText(option, { exact: true }));
+    await wait(page, 300);
+  };
+  // position="auto": the top edge on a desktop, the bottom one on a phone.
+  const auto = phone ? 'bottom' : 'top';
+
+  // The page says once what the snippets assume, above the first demo block of the Examples.
   result.note = await page.locator('.docs-demo-note').count();
-  result.enabled = await runButton.isEnabled();
-  result.copy = await copyBlock(page, figure);
-  await runButton.click();
+  result.enabled = (await one.isEnabled()) && (await five.isEnabled());
+  result.initial = { code: await code(), host: await pageHost(page) };
+  if (result.note !== 1 || !result.enabled) fail('buttons', result);
+  if (result.initial.code !== '<Toaster />' || result.initial.host.position !== 'auto' || result.initial.host.edge !== auto || result.initial.host.dir !== 'ltr') fail('defaults', result.initial);
+
+  // Keyboard: Tab reaches every control once, a radio group by its checked option.
+  await one.focus();
+  const path = [];
+  for (let step = 0; step < 8; step += 1) {
+    path.push(await page.evaluate(() => {
+      const element = document.activeElement;
+      if (!element) return null;
+      if (element.matches('[data-preview]')) return element.getAttribute('data-preview');
+      if (element.matches('input[type="radio"]')) return `radio:${element.value}`;
+      if (element.matches('a')) return `link:${element.textContent}`;
+      if (element.matches('button')) return `button:${element.getAttribute('aria-label')}`;
+      return element.tagName.toLowerCase();
+    }));
+    await page.keyboard.press('Tab');
+  }
+  result.tab = path;
+  const expectedPath = ['one', 'five', 'radio:auto', 'radio:center', 'radio:ltr', 'link:Customize the look', 'button:Copy Toaster', 'pre'];
+  if (path.join(',') !== expectedPath.join(',')) fail('tab path', path);
+  // Arrows move inside a group and move the Toaster with it.
+  await figure.locator('input[value="auto"]').focus();
+  await page.keyboard.press('ArrowRight');
+  await wait(page, 300);
+  result.arrow = { checked: await figure.locator('fieldset:has(input[value="auto"]) input:checked').getAttribute('value'), host: await pageHost(page), code: await code() };
+  await page.keyboard.press('ArrowLeft');
+  await wait(page, 300);
+  if (result.arrow.checked !== 'top' || result.arrow.host.position !== 'top-center' || result.arrow.code !== toasterCode('top-center', 'ltr')) fail('arrows', result.arrow);
+  if ((await pageHost(page)).position !== 'auto') fail('arrow back', await pageHost(page));
+
+  await press(one);
   await wait(page, 1200);
   result.toast = await toaster(page);
   await still('run');
   result.axe.toast = await axe(page);
-  const edge = phone ? 'bottom' : 'top';
-  if (result.note !== 1 || !result.enabled || !result.copy.ok) failures.push(`quick start: ${JSON.stringify(result)}`);
-  if (result.toast.edge !== edge || !result.toast.titles.includes('Synced to the cloud')) failures.push(`run: ${JSON.stringify(result.toast)} (expected edge ${edge})`);
-  // Keyboard: the demo button is in the tab order; Enter runs it again (the stack grows to two).
-  await runButton.focus();
-  await page.keyboard.press('Enter');
-  await wait(page, 900);
-  result.keyboard = await toaster(page);
-  if (!/2/u.test(result.keyboard.pill ?? '')) failures.push(`run from the keyboard: ${JSON.stringify(result.keyboard)}`);
+  if (result.toast.edge !== auto || !result.toast.titles.includes('Synced to the cloud')) fail('show a notification', result.toast);
+
+  // Every control: the host and the code follow.
+  const steps = [
+    ['Position', 'Top', 'top-center', 'top', 'center', 'ltr'],
+    ['Side', 'Left', 'top-left', 'top', 'left', 'ltr'],
+    ['Side', 'Right', 'top-right', 'top', 'right', 'ltr'],
+    ['Position', 'Bottom', 'bottom-right', 'bottom', 'right', 'ltr'],
+    ['Direction', 'RTL', 'bottom-right', 'bottom', 'right', 'rtl'],
+    // Auto from Right: the Side goes to Center.
+    ['Position', 'Auto', 'auto', auto, 'center', 'rtl'],
+    ['Direction', 'LTR', 'auto', auto, 'center', 'ltr'],
+  ];
+  for (const [group, option, position, edge, align, dir] of steps) {
+    await pick(group, option);
+    const step = { group, option, host: await pageHost(page), code: await code() };
+    result.steps.push(step);
+    const host = step.host;
+    if (host.position !== position || host.edge !== edge || host.align !== align || host.dir !== dir || step.code !== toasterCode(position, dir)) fail(`${group} ${option}`, step);
+    if (option === 'RTL') await still('preview-rtl');
+  }
+
+  // Auto lives in the centre: Left and Right are shown but off, a click on them and the arrows
+  // inside the group leave Center checked and the Toaster at auto.
+  const sideGroup = figure.getByRole('group', { name: 'Side', exact: true });
+  const sides = () => sideGroup.locator('input').evaluateAll((inputs) => inputs.map((input) => `${input.value}${input.disabled ? ':off' : ''}${input.checked ? ':checked' : ''}`).join(','));
+  result.auto = { sides: await sides() };
+  // Forced: Playwright would wait for a disabled control to turn on; the browser drops the click.
+  await sideGroup.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  for (const option of ['Left', 'Right']) await sideGroup.getByText(option, { exact: true }).click({ force: true });
+  await wait(page, 300);
+  result.auto.clicked = { sides: await sides(), host: await pageHost(page), code: await code() };
+  await sideGroup.locator('input[value="center"]').focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await wait(page, 300);
+  result.auto.arrows = { sides: await sides(), host: await pageHost(page), focused: await page.evaluate(() => (document.activeElement instanceof HTMLInputElement ? document.activeElement.value : null)) };
+  await still('preview-auto');
+  const centred = 'left:off,center:checked,right:off';
+  if (result.auto.sides !== centred || result.auto.clicked.sides !== centred || result.auto.clicked.host.position !== 'auto' || result.auto.clicked.code !== '<Toaster />') fail('auto sides', result.auto);
+  if (result.auto.arrows.sides !== centred || result.auto.arrows.focused !== 'center' || result.auto.arrows.host.position !== 'auto') fail('auto arrows', result.auto.arrows);
+  // Top frees every side again.
+  await pick('Position', 'Top');
+  result.auto.top = await sides();
+  if (result.auto.top !== 'left,center:checked,right') fail('top sides', result.auto.top);
+
+  // Five notifications in a corner; the code copies as shown.
+  await pick('Position', 'Top');
+  await pick('Side', 'Left');
+  // An empty stack first: the notification shown above leaves on its timer, so the count after the
+  // press is this button's own.
+  await page.waitForFunction(() => !document.querySelector('.cloudlet-host .cloudlet-pill'), null, { timeout: 15000 }).catch(() => {});
+  const before = (await toaster(page)).pill;
+  await press(five);
+  await wait(page, 1200);
+  result.five = { ...(await toaster(page)), host: await pageHost(page), before };
+  await still('preview-five');
+  // The pill names how many are stacked: exactly five.
+  result.five.stacked = Number(/(\d+) notifications/u.exec(result.five.pill ?? '')?.[1] ?? 0);
+  if (before !== null || result.five.host.align !== 'left' || result.five.edge !== 'top' || !result.five.titles.includes('Altocumulus drifted by') || result.five.stacked !== 5) fail('show five', result.five);
+  result.copy = await copyBlock(page, figure);
+  if (!result.copy.ok || (await code()) !== toasterCode('top-left', 'ltr')) fail('copy', result.copy);
+
+  // A Run of the Examples lands where the Preview put the Toaster.
+  await pick('Position', 'Bottom');
+  const run = page.locator('.docs-demo:not(.docs-preview) .docs-demo-trigger[data-demo="error"]').first();
+  await press(run);
+  await wait(page, 1200);
+  result.examples = await toaster(page);
+  result.examples.host = await pageHost(page);
+  await still('preview-examples');
+  if (result.examples.edge !== 'bottom' || result.examples.host.align !== 'left' || !result.examples.titles.includes('Sync got lost in the fog')) fail('run in Examples', result.examples);
+
+  // Reduced motion: the new code is there without its fade, the stack is already on its side.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await press(figure.getByRole('group', { name: 'Side', exact: true }).getByText('Right', { exact: true }));
+  // A render and an effect later; nothing of either moves (a fade would still run its 220 ms).
+  await wait(page, 150);
+  result.reduced = await page.evaluate(() => {
+    const pre = document.querySelector('.docs-preview pre');
+    const host = [...document.querySelectorAll('.cloudlet-host')].find((element) => !element.closest('article'));
+    return { animation: pre ? getComputedStyle(pre).animationName : null, align: host?.dataset.align ?? null };
+  });
+  await page.emulateMedia({ reducedMotion: null });
+  if (result.reduced.animation !== 'none' || result.reduced.align !== 'right') fail('reduced motion', result.reduced);
+
+  // Leaving the page (a client-side link) puts the Toaster back; coming back resets the controls.
+  await press(figure.getByRole('link', { name: 'Customize the look' }));
+  await page.waitForURL('**/docs/components/toaster/styling');
+  await wait(page, 600);
+  result.left = await pageHost(page);
+  await page.goBack();
+  await page.waitForURL((url) => url.pathname === '/docs/components/toaster');
+  await wait(page, 600);
+  result.back = { checked: await figure.locator('input:checked').evaluateAll((inputs) => inputs.map((input) => input.value)), code: await code(), host: await pageHost(page) };
+  if (result.left.position !== 'auto' || result.left.dir !== 'ltr') fail('leave', result.left);
+  if (result.back.checked.join(',') !== 'auto,center,ltr' || result.back.code !== '<Toaster />' || result.back.host.position !== 'auto') fail('back', result.back);
   return result;
 }
 
-/** Pages whose every demo button is checked; a fresh load per demo, so each toast is its own. */
-const GUIDES = ['notifications', 'operations', 'positioning'];
+/** Pages whose every demo button is checked (`''` is the component page); a fresh load per demo, so each toast is its own. */
+const GUIDES = ['', 'notifications', 'operations', 'forms'];
 
 /**
  * Guides: each demo button shows a notification titled as its snippet; `dismiss-all` empties the
@@ -143,23 +310,28 @@ const GUIDES = ['notifications', 'operations', 'positioning'];
 async function guides(page, base, still, failures) {
   const result = {};
   for (const slug of GUIDES) {
-    await page.goto(`${base}/docs/components/toaster/${slug}`);
+    const url = `${base}/docs/components/toaster${slug && `/${slug}`}`;
+    const name = slug || 'toaster';
+    await page.goto(url);
     await wait(page, 600);
-    await page.screenshot({ path: still.path(`full-${slug}`), fullPage: true });
+    await page.screenshot({ path: still.path(`full-${name}`), fullPage: true });
     const entry = { axe: { page: await axe(page) }, runs: [], groups: [], folds: [] };
-    const ids = await page.locator('.docs-demo-trigger[data-demo]').evaluateAll((buttons) => buttons.map((button) => button.getAttribute('data-demo')));
-    for (const [index, id] of ids.entries()) {
+    // By block and button, not by id: the same demo may run from two blocks of a page.
+    const buttons = await page.locator('.docs-demo').evaluateAll((blocks) =>
+      blocks.flatMap((block, at) => [...block.querySelectorAll('.docs-demo-trigger[data-demo]')].map((button, index) => ({ at, index, id: button.getAttribute('data-demo') }))),
+    );
+    for (const [run, { at, index, id }] of buttons.entries()) {
       // dismiss-all clears what the demo before it (overflow) left; every other demo starts from an empty stack.
       if (id !== 'dismiss-all') {
-        await page.goto(`${base}/docs/components/toaster/${slug}`);
+        await page.goto(url);
         await wait(page, 600);
       }
-      const trigger = page.locator(`.docs-demo-trigger[data-demo="${id}"]`);
+      const figure = page.locator('.docs-demo').nth(at);
+      const trigger = figure.locator('.docs-demo-trigger').nth(index);
       await trigger.scrollIntoViewIfNeeded();
       await trigger.click();
       await wait(page, 900);
       // The pressed button's figure now shows its snippet (data-demo follows the selection).
-      const figure = page.locator(`.docs-demo[data-demo="${id}"]`);
       const source = await figure.locator('pre').evaluate((pre) => pre.textContent ?? '');
       // The first title of the snippet; of a template literal, its longest literal part (`${name} drifted by`).
       const title = /title: (['"`])(.*?)\1/u.exec(source)?.[2] ?? '';
@@ -168,17 +340,17 @@ async function guides(page, base, still, failures) {
       const shown = [toast.pill ?? '', ...toast.titles].join(' | ');
       const ok = id === 'dismiss-all' ? toast.pill === null && toast.titles.length === 0 : Boolean(expected) && shown.includes(expected);
       entry.runs.push({ id, expected, shown, ok });
-      if (!ok) failures.push(`run ${slug} ${id}: expected "${expected}", shown "${shown}"`);
-      if (index === 0) {
-        await still(`run-${slug}`);
+      if (!ok) failures.push(`run ${name} ${id}: expected "${expected}", shown "${shown}"`);
+      if (run === 0) {
+        await still(`run-${name}`);
         entry.axe.toast = await axe(page);
       }
     }
-    await page.goto(`${base}/docs/components/toaster/${slug}`);
+    await page.goto(url);
     await wait(page, 600);
-    entry.groups = await groups(page, slug, still, failures);
-    entry.folds = await folds(page, slug, still, failures);
-    result[slug] = entry;
+    entry.groups = await groups(page, name, still, failures);
+    entry.folds = await folds(page, name, still, failures);
+    result[name] = entry;
   }
   return result;
 }
@@ -235,7 +407,7 @@ async function folds(page, slug, still, failures) {
   return [check];
 }
 
-const INTEGRATION = ['styling', 'ssr', 'accessibility'];
+const INTEGRATION = ['styling', 'positioning', 'ssr', 'csp', 'accessibility'];
 
 /** Styling's editor: a stage frame with a pinned pill and an open Island, real CSSOM, clipboard and URL behaviour. */
 async function styleEditor(page, base, still, failures, previousUrl) {
@@ -372,7 +544,7 @@ async function styleEditor(page, base, still, failures, previousUrl) {
   return result;
 }
 
-/** Integration guides: no horizontal page scroll; a table wider than its column scrolls inside its own wrapper. */
+/** Styling and the advanced pages: no horizontal page scroll; a table wider than its column scrolls inside its own wrapper. */
 async function integration(page, base, still, failures) {
   const result = {};
   for (const slug of INTEGRATION) {
@@ -412,13 +584,20 @@ async function integration(page, base, still, failures) {
   return result;
 }
 
-const REFERENCE = ['create-cloudlet', 'controller', 'toaster', 'labels', 'types'];
+/** Reference pages and the section ids other pages link to: each must still be a heading of its page. */
+const REFERENCE = {
+  'create-cloudlet': ['options', 'messages', 'onoverflow', 'ondiagnostic'],
+  controller: ['show', 'admissionresult', 'update', 'mutationresult', 'gethandle', 'track', 'operationhandle', 'operationsnapshot', 'dismiss', 'clear', 'requestfocus', 'acknowledgeoverflow', 'getsnapshot-and-getserversnapshot', 'subscribe-and-onevent', 'dispose', 'notificationcontroller'],
+  toaster: ['props', 'toasteroffsets', 'toasterattention', 'toastermotion', 'classnames', 'cloudletprovider', 'usecloudlet', 'useoptionalcloudlet'],
+  labels: ['cloudletlabels', 'announcementformatters', 'controller-messages', 'a-complete-translation'],
+  types: ['identity', 'notifications', 'description', 'progress', 'primaryaction', 'closereason', 'operations', 'snapshots', 'notificationsnapshot', 'events', 'controller', 'react'],
+};
 
-/** Reference: no sideways scrolling of the page or a table, card rows on phones, docs links land on a real id. */
+/** Reference: its sections, no Next steps, no sideways scrolling of the page or a table, card rows on phones, docs links land on a real id. */
 async function reference(page, base, phone, still, failures) {
   const result = {};
   const ids = new Map();
-  for (const slug of REFERENCE) {
+  for (const [slug, sections] of Object.entries(REFERENCE)) {
     await page.goto(`${base}/docs/components/toaster/api/${slug}`);
     await wait(page, 600);
     await page.screenshot({ path: still.path(`full-api-${slug}`), fullPage: true });
@@ -429,8 +608,12 @@ async function reference(page, base, phone, still, failures) {
       // A Prop · Type · Default · Description row: a card on phones, a grid line on wider screens.
       rows: getComputedStyle(document.querySelector('table[data-grid="4"] tbody tr') ?? document.body).display,
       links: [...document.querySelectorAll('article a[href^="/docs/components/toaster"], article a[href^="#"]')].map((link) => link.getAttribute('href') ?? ''),
+      headings: [...document.querySelectorAll('article :is(h2, h3)')].map((heading) => heading.id),
     }));
-    const entry = { ...layout, links: layout.links.length, axe: await axe(page), brokenLinks: [] };
+    const missing = sections.filter((id) => !layout.headings.includes(id));
+    const entry = { ...layout, links: layout.links.length, headings: layout.headings.length, missingSections: missing, axe: await axe(page), brokenLinks: [] };
+    if (missing.length) failures.push(`reference ${slug}: sections without a heading ${missing.join(', ')}`);
+    if (layout.headings.includes('next-steps')) failures.push(`reference ${slug}: a Next steps section repeats the sidebar`);
     if (entry.overflow > 0 || entry.scrollingTables > 0) failures.push(`reference ${slug}: overflow ${entry.overflow}px, ${entry.scrollingTables} scrolling tables`);
     if (entry.tables === 0 || entry.rows !== (phone ? 'block' : 'grid')) failures.push(`reference ${slug}: ${entry.tables} tables, rows ${entry.rows}`);
     for (const href of new Set(layout.links)) {
@@ -560,9 +743,9 @@ async function search(page, base, phone, still, failures) {
     if (!opened || !closed) fail(`shortcut ${key}`, result.shortcuts[key]);
   }
 
-  // No search outside the documentation.
+  // No search outside the documentation (the landing; /color-picker's paint would fill the console with WebGL notes).
   result.elsewhere = {};
-  for (const path of ['/toaster', '/toaster/playground']) {
+  for (const path of ['/toaster']) {
     await page.goto(`${base}${path}`);
     await wait(page, 800);
     await page.keyboard.press('Meta+k');
@@ -630,7 +813,7 @@ async function run(name, scenario, base, out) {
 
   await page.goto(`${base}/docs/components/toaster`);
   await wait(page, 800);
-  const report = { name, pages: [], axe: {}, quiet: null, toc: null, copy: null, drawer: null, installation: null, quickStart: null, guides: null, integration: null, reference: null, search: null, agents: null };
+  const report = { name, pages: [], axe: {}, quiet: null, toc: null, copy: null, drawer: null, installation: null, preview: null, guides: null, integration: null, reference: null, search: null, agents: null };
 
   // Quiet mode: no sky, no Lenis, a flat page colour.
   report.quiet = await page.evaluate(() => ({
@@ -665,6 +848,10 @@ async function run(name, scenario, base, out) {
   const first = await toc.first().getAttribute('href');
   report.toc = { count: await toc.count(), first, target: first ? await page.locator(first).count() : 0 };
   if (report.toc.count === 0 || report.toc.target !== 1) failures.push(`toc: ${JSON.stringify(report.toc)}`);
+  // The component page's sections and the groups of its Examples are all in the table of contents.
+  report.toc.entries = await toc.evaluateAll((items) => items.map((item) => item.getAttribute('href')));
+  const missing = TOC_ENTRIES.filter((entry) => !report.toc.entries.includes(entry));
+  if (missing.length) failures.push(`toc misses ${missing.join(', ')}`);
   await toc.first().click();
   await wait(page, 600);
   await still('toc');
@@ -684,9 +871,9 @@ async function run(name, scenario, base, out) {
 
   report.installation = await installation(page, base, still, failures);
   report.axe.installation = report.installation.axe;
-  report.quickStart = await quickStart(page, base, phone, still, failures);
-  report.axe.quickStart = report.quickStart.axe.page;
-  report.axe.quickStartToast = report.quickStart.axe.toast;
+  report.preview = await preview(page, base, phone, still, failures);
+  report.axe.preview = report.preview.axe.page;
+  report.axe.previewToast = report.preview.axe.toast;
   report.guides = await guides(page, base, still, failures);
   for (const [slug, entry] of Object.entries(report.guides)) {
     report.axe[slug] = entry.axe.page;

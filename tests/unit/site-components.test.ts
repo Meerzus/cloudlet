@@ -10,7 +10,6 @@ import {
   DOCS_PATH,
   docsPathOf,
   isQuietPath,
-  PLAYGROUND_PATH,
   REGISTRY_ITEMS,
   TOASTER_DOCS_PATH,
   TOASTER_PATH,
@@ -38,7 +37,7 @@ describe('site components (COLOR_PICKER §8.1, §8.7, §9)', () => {
   it("knows which component a page belongs to; the kit's own pages belong to none", () => {
     const owner = (pathname: string) => componentOf(pathname)?.id;
     expect(owner(TOASTER_PATH)).toBe('toaster');
-    expect(owner(PLAYGROUND_PATH)).toBe('toaster');
+    expect(owner(`${TOASTER_PATH}/frame`)).toBe('toaster');
     expect(owner(TOASTER_DOCS_PATH)).toBe('toaster');
     expect(owner(`${TOASTER_DOCS_PATH}/api/toaster`)).toBe('toaster');
     expect(owner(`${TOASTER_DOCS_PATH}/styling`)).toBe('toaster');
@@ -55,7 +54,7 @@ describe('site components (COLOR_PICKER §8.1, §8.7, §9)', () => {
 
   it("leads Docs to the page's component in the docs, or to the docs of the whole kit", () => {
     expect(docsPathOf(TOASTER_PATH)).toBe(TOASTER_DOCS_PATH);
-    expect(docsPathOf(PLAYGROUND_PATH)).toBe(TOASTER_DOCS_PATH);
+    expect(docsPathOf(`${TOASTER_PATH}/frame`)).toBe(TOASTER_DOCS_PATH);
     expect(docsPathOf(`${TOASTER_DOCS_PATH}/styling`)).toBe(TOASTER_DOCS_PATH);
     expect(docsPathOf(COLOR_PICKER_PATH)).toBe(COLOR_PICKER_DOCS_PATH);
     expect(docsPathOf(COLOR_PICKER_DOCS_PATH)).toBe(COLOR_PICKER_DOCS_PATH);

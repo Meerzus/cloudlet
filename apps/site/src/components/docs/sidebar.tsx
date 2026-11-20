@@ -34,7 +34,7 @@ export function SidebarNav({ tree, onNavigate, className }: { tree: PageTree.Roo
                     className={cn('docs-nav-link', active && 'docs-nav-link-active')}
                   >
                     <span>{link.name}</span>
-                    {/* An arrow for links that leave the docs (the Playground, other sites). */}
+                    {/* An arrow for links that leave the docs (other sites). */}
                     {link.external || !isUnder(link.url, DOCS_PATH) ? (
                       <ArrowUpRight className="size-3.5 opacity-60" aria-hidden="true" />
                     ) : null}

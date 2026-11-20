@@ -3,7 +3,7 @@ title: Toaster props
 description: Every prop of the Toaster component, when it is read, and the provider and hook around it.
 ---
 
-`<Toaster>` renders the stack and the Island of the controller its `<CloudletProvider>` supplies. It has no controller prop. This page lists every prop and says when it is read: on every render, or once when the Toaster attaches to the controller after mount. A prop read on attach changes only after a remount, for example with a new `key`.
+`<Toaster>` renders the stack and the Island of the controller its `<CloudletProvider>` supplies; it has no controller prop. Each prop below says when it is read: on every render, or once when the Toaster attaches to the controller after mount. A prop read on attach changes only after a remount, for example with a new `key`.
 
 ```tsx title="app.tsx"
 import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
@@ -147,13 +147,11 @@ Do not ship `timeScale` to production either.
 
 `<CloudletProvider controller={cloudlet}>` makes a controller available to `useCloudlet`, `useOptionalCloudlet` and `<Toaster>` below it. It only supplies the instance: it never creates a controller and never disposes it.
 
-The controller may be `null` while it does not exist yet, for example when an effect creates it: the server render and the first client render then have no controller. Under a `null` controller `<Toaster>` renders nothing and `useOptionalCloudlet()` returns `null`, so your children can render on the server. See [SSR & Next.js](/docs/components/toaster/ssr).
-
 `CloudletProviderProps`:
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `controller` | `ReactCloudletController \| null` | — | Required. The controller you created and own, or `null` until it exists. |
+| `controller` | `ReactCloudletController \| null` | — | Required. The controller you created and own, or `null` while it does not exist yet: when an effect creates it, the server render and the first client render have none. Under `null`, `<Toaster>` renders nothing and `useOptionalCloudlet()` returns `null`, so your children render on the server; see [SSR & Next.js](/docs/components/toaster/ssr). |
 | `children` | `ReactNode` | — | Your application, including the `<Toaster>`. |
 
 ## useCloudlet
@@ -186,4 +184,11 @@ export function SaveButton() {
 }
 ```
 
-The signatures of the React exports are also exported as types: `CloudletProviderComponent`, `UseCloudlet`, `UseOptionalCloudlet` and `ToasterComponent`.
+The signatures of the React exports are also exported as types:
+
+| Type | Signature of |
+|---|---|
+| `CloudletProviderComponent` | `CloudletProvider` |
+| `UseCloudlet` | `useCloudlet` |
+| `UseOptionalCloudlet` | `useOptionalCloudlet` |
+| `ToasterComponent` | `Toaster` |

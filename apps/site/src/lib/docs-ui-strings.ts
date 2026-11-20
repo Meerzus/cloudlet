@@ -38,6 +38,17 @@ export const DOCS_UI = {
   demoGroup: 'Examples',
   showCode: 'Show code',
   hideCode: 'Hide code',
+  /** The Preview of the Toaster's component page: the page Toaster with its main props. */
+  preview: {
+    showOne: 'Show a notification',
+    showFive: 'Show five',
+    settings: 'Toaster settings',
+    position: 'Position',
+    side: 'Side',
+    direction: 'Direction',
+    styling: 'Customize the look',
+    codeTitle: 'Toaster',
+  },
   styleEditor: {
     stage: 'Live preview',
     region: 'Style editor notifications',
@@ -73,6 +84,5 @@ export const DOCS_UI = {
   linkToSection: 'Link to this section',
   /** A table wider than the column, focusable so the keyboard can scroll it. */
   scrollableTable: 'Scrollable table',
-  tryPlayground: 'Try it in the Playground',
   noteLabels: { note: 'Note', tip: 'Tip', warning: 'Warning' },
 } as const;

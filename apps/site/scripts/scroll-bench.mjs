@@ -8,12 +8,12 @@
  * so the audits workflow (.github/workflows/audits.yml) does not run it.
  *
  *   npm run build && npm run build:site
- *   node apps/site/scripts/scroll-bench.mjs [path ...]   (default: /toaster/playground /toaster)
+ *   node apps/site/scripts/scroll-bench.mjs [path ...]   (default: /toaster /)
  */
 import { chromium } from '@playwright/test';
 import { serve } from './serve-out.mjs';
 
-const PATHS = process.argv.slice(2).length ? process.argv.slice(2) : ['/toaster/playground', '/toaster'];
+const PATHS = process.argv.slice(2).length ? process.argv.slice(2) : ['/toaster', '/'];
 const SLOW_MS = 33;
 
 /** Wheel down and back up twice, as a trackpad would: small steps, one per frame. */

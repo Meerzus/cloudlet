@@ -2,7 +2,10 @@
 
 import { useId } from 'react';
 
-/** A native radio group drawn as a segmented control: arrows move inside it, Tab moves on. */
+/**
+ * A native radio group drawn as a segmented control: arrows move inside it, Tab moves on. An option
+ * with `disabled` stays in place but faded: a disabled radio is skipped by the arrows and the mouse.
+ */
 export function Segmented<Value extends string>({
   legend,
   options,
@@ -10,7 +13,7 @@ export function Segmented<Value extends string>({
   onChange,
 }: {
   legend: string;
-  options: readonly { value: Value; label: string }[];
+  options: readonly { value: Value; label: string; disabled?: boolean }[];
   value: Value;
   onChange: (value: Value) => void;
 }) {
@@ -22,13 +25,16 @@ export function Segmented<Value extends string>({
         {options.map((option) => (
           <label
             key={option.value}
-            className="relative cursor-pointer rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground has-[:checked]:bg-background has-[:checked]:text-foreground has-[:checked]:shadow-sm has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/60"
+            className={`relative rounded-full px-3 py-1.5 text-sm transition-colors has-[:checked]:bg-background has-[:checked]:text-foreground has-[:checked]:shadow-sm has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/60 ${
+              option.disabled ? 'cursor-default text-muted-foreground/45' : 'cursor-pointer text-muted-foreground hover:text-foreground'
+            }`}
           >
             <input
               type="radio"
               name={name}
               value={option.value}
               checked={value === option.value}
+              disabled={option.disabled}
               onChange={() => onChange(option.value)}
               className="sr-only"
             />

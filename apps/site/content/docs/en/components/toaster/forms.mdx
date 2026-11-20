@@ -1,13 +1,13 @@
 ---
 title: Forms
-description: Put one to three text fields in a notification and send them from the Island.
+description: One to three text fields in a notification, sent from the Island — the fields, the checks before sending, drafts and the keyboard.
 ---
 
-Some notifications ask for a few words back: a reply, a name, a short note. A form action puts the fields right in the Island, next to a round send button, so the answer goes out without a dialog or a page change. The form appears only in the open Island; the collapsed pill stays a pill.
+A form action puts one to three text fields and a round send button in the open Island, so a reply, a name or a short note goes out without a dialog or a page change. The collapsed pill stays a pill.
 
 ## A form action
 
-A form is the third kind of primary action, next to a command and a link: `{ kind: 'form', label, fields, run }`. `label` names the send button for screen readers; the button itself shows an arrow.
+A form is the third kind of primary action, next to a command and a link: `{ kind: 'form', label, fields, run }`; every prop is in [`FormAction`](/docs/components/toaster/api/types#primaryaction). The send button shows an arrow, and `label` is its name for screen readers. `run` receives `values`, typed by the field names.
 
 ```tsx demo="form-reply"
 cloudlet.show({
@@ -23,19 +23,13 @@ cloudlet.show({
 });
 ```
 
-`run` receives `values`, each field's text as typed, keyed by its `name`. TypeScript takes the names from `fields`, so `values.place` is a `string` and a misspelt name does not compile.
-
 ## Fields
 
-A form has one to three fields. Each is `'text'` for one line or `'textarea'` for several; a textarea starts at three rows and grows to six, then scrolls.
-
-Every field needs a `label`. Screen readers read it, and it is the hint inside the empty field unless you set a `placeholder`. The rest is optional: `defaultValue`, `required`, `maxLength`, `autoComplete` and `inputMode` for the on-screen keyboard. [Types](/docs/components/toaster/api/types#primaryaction) lists them all.
+Each field is `'text'` for one line or `'textarea'` for several; a textarea starts at three rows and grows to six, then scrolls. Its `label` is required and doubles as the placeholder. Every option is in [`FormField`](/docs/components/toaster/api/types#primaryaction).
 
 ## Checks before sending
 
-When the user sends, Cloudlet checks the fields in order: a `required` field that is empty or only spaces, then a value longer than its `maxLength`, then your own `validate(values)`. The first failing step stops the send; `run` is not called.
-
-`validate` returns `true` to send, a string for a message under the form, or messages keyed by field name for messages under those fields.
+On send, `required`, then `maxLength`, then your own `validate(values)` run in that order; the first that fails stops the send without calling `run`.
 
 ```tsx demo="form-note"
 cloudlet.show({
@@ -55,11 +49,11 @@ cloudlet.show({
 });
 ```
 
-A message under a field marks it invalid and moves focus to the first such field. Editing a field clears its message. The texts for the built-in checks are `messages.fieldRequired` and `messages.fieldTooLong` in [`createCloudlet`](/docs/components/toaster/api/create-cloudlet), ready for translation.
+A message under a field marks it invalid and moves focus to the first such field. Editing a field clears its message.
 
 ## Sending
 
-Sending works like a [command](/docs/components/toaster/operations#actions). While `run` is pending, the button shows a spinner, the fields turn read-only and a second send is refused. When `run` returns or resolves, the notification closes with the reason `action-success`. When it throws or rejects, the text stays, the message from `errorMessage(error)` appears under the form and is announced, and the user can send again.
+Sending works like a [command](/docs/components/toaster/operations#actions). While `run` is pending, the button shows a spinner, the fields turn read-only and a second send is refused. When `run` returns or resolves, the notification closes. When it throws or rejects, the text stays, the message from `errorMessage(error)` appears under the form and is announced, and the user can send again.
 
 ```tsx demo="form-retry"
 let tries = 0;
@@ -80,8 +74,6 @@ cloudlet.show({
 });
 ```
 
-While a send is pending, an `update` that replaces the action is rejected with `action-pending`.
-
 ## Drafts
 
 Typed text belongs to the notification, not to the screen. It stays when the Island collapses, when the user swipes to another notification and when the Toaster remounts. A new action object, a successful send or closing the notification starts over.
@@ -90,10 +82,10 @@ While a form holds unsent text:
 
 - its time stands still (the pause reason `'draft'`), even with a `duration`;
 - a press outside does not collapse the Island; Escape and the pill still do;
-- a notification arriving with [attention](/docs/components/toaster/positioning) waits in the stack instead of taking the Island over;
+- a notification arriving with [attention](/docs/components/toaster/notifications#attention) waits in the stack instead of taking the Island over;
 - the collapsed pill adds `labels.draft` to its name, so a screen reader says there is a draft.
 
-`NotificationSnapshot.draft` tells your code the same; the text itself stays inside Cloudlet.
+Your code sees only that there is a draft ([`NotificationSnapshot.draft`](/docs/components/toaster/api/types#notificationsnapshot)); the text stays inside Cloudlet.
 
 ## Keyboard
 
@@ -102,9 +94,3 @@ While a form holds unsent text:
 - **Escape** collapses the Island and keeps the draft.
 
 Focus never moves into a field on its own: a new notification, an auto-opened Island or a collapse leaves it where it was. The on-screen keyboard appears only when the user taps a field.
-
-## Next steps
-
-- [Operations & cancellation](/docs/components/toaster/operations#actions): commands and links, the other primary actions.
-- [Accessibility](/docs/components/toaster/accessibility): what is announced and how focus moves.
-- [Types](/docs/components/toaster/api/types#primaryaction): every field of `FormAction` and `FormField`.
