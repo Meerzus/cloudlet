@@ -57,7 +57,7 @@ const RENDERERS: Record<string, (data: PlaceholderData) => string> = {
   /** A live example: the code of its file, which is all of it away from the page. */
   Example: ({ attributes }) => exampleMarkdown(text(attributes.name)),
   /** The live Previews of the color picker and the color palette: their controls, as code and values. */
-  PickerPreview: () => pickerPreviewMarkdown(`${SITE_URL}${COLOR_PICKER_DOCS_PATH}`),
+  PickerPreview: () => pickerPreviewMarkdown(`${SITE_URL}${COLOR_PICKER_DOCS_PATH}#preview`),
   PalettePreview: () => palettePreviewMarkdown(`${SITE_URL}${COLOR_PICKER_DOCS_PATH}#palette`),
   /** The live Preview of the Toaster: what its controls set, as one line of code and its values. */
   ToasterPreview: () => {

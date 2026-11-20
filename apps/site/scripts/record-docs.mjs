@@ -11,8 +11,9 @@
  * component page, Notifications, Operations and Forms shows its own
  * toast; in a group the pressed button selects the snippet under the stage; a long snippet unfolds
  * under Show code.
- * The color picker's page: every live example answers the keyboard in place and copies the code
- * under it, axe is clean and the page never scrolls sideways. Its two Previews: Component, Format
+ * The color picker's page: its sections go Preview, Installation, Usage, Examples, API Reference;
+ * every live example answers the keyboard in place and copies the code under it, every code block
+ * copies, axe is clean and the page never scrolls sideways. Its two Previews: Component, Format
  * and Opacity change the live picker, the value and the code (the picker's own format switch moves
  * the Format control, the open panel is not clipped); Max, Format and Opacity change the live
  * palette, its array and the code, and a smaller Max drops the last colors; both from the mouse
@@ -496,8 +497,9 @@ async function palettePreview(page, base, path, still, failures) {
 }
 
 /**
- * A live example of a page: the component on its stage answers the keyboard in place (the hue
- * slider of its picker moves and the value follows), and Copy gives the code under it.
+ * A live example of a page: the component on its stage answers the keyboard in place (a swatch
+ * opens its picker, the hue slider moves and the value follows, Escape closes it), and Copy gives
+ * the code under it.
  */
 async function liveExample(page, name, failures) {
   const figure = page.locator(`[data-example="${name}"]`);
@@ -506,30 +508,60 @@ async function liveExample(page, name, failures) {
     failures.push(`example ${name}: not on the page`);
     return entry;
   }
-  await figure.scrollIntoViewIfNeeded();
+  await figure.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   const stage = figure.locator('.docs-demo-stage');
-  const value = () => stage.locator('.color-picker-value').first().inputValue();
+  // A swatch opens its picker first; an inline panel is there already.
+  const swatch = stage.locator('.color-picker > .color-picker-swatch');
+  entry.kind = (await swatch.count()) > 0 ? 'swatch' : 'panel';
+  if (entry.kind === 'swatch') {
+    await swatch.first().click();
+    await wait(page, 900);
+  }
+  const panel = entry.kind === 'swatch' ? stage.locator('.color-picker-panel[data-phase="open"]') : stage.locator('.color-picker-inline');
+  const value = () => panel.locator('.color-picker-value').inputValue();
   const before = await value();
-  await stage.getByRole('slider', { name: 'Hue' }).first().focus();
+  await panel.locator('.color-picker-hue').focus();
   await page.keyboard.press('Shift+ArrowRight');
   await wait(page, 150);
   entry.value = { before, after: await value() };
   if (entry.value.after === before) failures.push(`example ${name}: the hue slider did not change ${before}`);
+  if (entry.kind === 'swatch') {
+    await page.keyboard.press('Escape');
+    await wait(page, 700);
+    entry.closed = (await stage.locator('.color-picker-panel[data-phase="open"]').count()) === 0;
+    if (!entry.closed) failures.push(`example ${name}: Escape did not close the picker`);
+  }
   entry.copy = await copyBlock(page, figure);
   if (!entry.copy.ok) failures.push(`example ${name}: Copy gave ${entry.copy.length} characters, not the code shown`);
   return entry;
 }
 
-/** The color picker's page: its live examples work in place and copy their code; axe; no sideways scroll. */
-async function pickerPage(page, base, still, failures) {
+/** The sections of the color picker's page, as table-of-contents links, and its live examples in order. */
+const PICKER_TOC = ['preview', 'installation', 'usage', 'styling', 'placement-and-limits', 'reduced-motion', 'examples', 'api-reference', 'props', 'formats', 'eyedropper-and-copy', 'keyboard-and-screen-readers', 'labels'].map((id) => `#${id}`);
+const PICKER_EXAMPLES = ['panel', 'one-format', 'opacity', 'format', 'swatch', 'labels'].map((name) => `color-picker/${name}`);
+
+/**
+ * The color picker's page: its sections are in the table of contents in the order Preview,
+ * Installation, Usage, Examples, API Reference; every live example works in place and copies its
+ * code, and every code block copies; axe; no sideways scroll.
+ */
+async function pickerPage(page, base, phone, still, failures) {
   await page.goto(`${base}${PICKER_PAGE}`);
   await wait(page, 600);
   const result = { examples: [] };
-  for (const name of await page.locator('[data-example]').evaluateAll((figures) => figures.map((figure) => figure.getAttribute('data-example')))) {
-    result.examples.push(await liveExample(page, name, failures));
-  }
-  if (!result.examples.length) failures.push('color picker page: no live example');
+  result.toc = await page.locator(phone ? '.docs-toc-mobile .docs-toc-item' : '.docs-toc .docs-toc-item').evaluateAll((items) => items.map((item) => item.getAttribute('href')));
+  const order = PICKER_TOC.map((entry) => result.toc.indexOf(entry));
+  if (order.includes(-1) || order.some((place, index) => index > 0 && place < order[index - 1])) failures.push(`color picker page: sections ${JSON.stringify(result.toc)}`);
+  const names = await page.locator('[data-example]').evaluateAll((figures) => figures.map((figure) => figure.getAttribute('data-example')));
+  if (names.join() !== PICKER_EXAMPLES.join()) failures.push(`color picker page: examples ${names.join(', ')}`);
+  for (const name of names) result.examples.push(await liveExample(page, name, failures));
   await still('picker-example');
+  result.blocks = [];
+  for (const figure of await page.locator('.docs-code').all()) {
+    const copied = await copyBlock(page, figure);
+    result.blocks.push(copied);
+    if (!copied.ok) failures.push(`color picker page: Copy of "${copied.label}" gave ${copied.length} characters`);
+  }
   result.sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   if (result.sideways > 0) failures.push(`color picker page scrolls sideways by ${result.sideways}px`);
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -1117,9 +1149,9 @@ async function run(name, scenario, base, out) {
     report.axe[slug] = entry.axe.page;
     report.axe[`${slug}Toast`] = entry.axe.toast ?? [];
   }
-  report.picker = await pickerPage(page, base, still, failures);
+  report.picker = await pickerPage(page, base, phone, still, failures);
   report.axe.picker = report.picker.axe;
-  report.pickerPreview = await pickerPreview(page, base, PICKER_PAGE, still, failures);
+  report.pickerPreview = await pickerPreview(page, base, `${PICKER_PAGE}#preview`, still, failures);
   report.axe.pickerPreviewOpen = report.pickerPreview.axe.open;
   report.axe.pickerPreviewPanel = report.pickerPreview.axe.panel;
   report.palettePreview = await palettePreview(page, base, `${PICKER_PAGE}#palette`, still, failures);
