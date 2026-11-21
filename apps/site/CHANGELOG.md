@@ -165,6 +165,10 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   [color-palette.md](https://cloudlet.dev/docs/components/color-palette.md)), in search and in the
   sitemap. In Markdown a live example is the code of its file, and a Preview is a code it makes
   with what each control sets.
+- The segmented controls of the docs Previews (the Toaster's, the color picker's, the color
+  palette's) and the Theme switch on the kit's page have one look: a solid highlight slides under
+  the chosen option on a spring and the label on it inverts. Under reduced motion it moves at once,
+  and in forced-colors mode it takes the system's highlight.
 - The header's Components button opens a panel of the kit's components: Toaster, Color picker and
   Color palette, each with a line of description, the current one marked. The panel grows out of the
   button on springs and shrinks back into it, a second press mid-way turns it around, and under
