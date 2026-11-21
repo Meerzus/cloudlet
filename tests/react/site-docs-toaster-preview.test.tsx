@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToasterPreview } from '../../apps/site/src/components/docs/toaster-preview';
 import { Notifications } from '../../apps/site/src/components/site/notifications';
 
+// jsdom has no ResizeObserver: the segmented control's sliding highlight re-measures on it.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };
+
 /**
  * The Preview of the Toaster's component page against the site's real page-level Notifications:
  * its controls move the page Toaster (the host's position and direction), the code under them

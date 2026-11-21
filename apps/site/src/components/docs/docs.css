@@ -368,10 +368,6 @@ html:has(.docs-shell) { background: var(--background); }
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; padding: 0.875rem 1.125rem;
   border-top: 1px solid var(--border);
 }
-/* The shared segmented control is drawn as glass; on the flat page its rim is the plain hairline. */
-.docs-preview-controls fieldset > div { border-color: var(--border); background: color-mix(in oklab, var(--foreground) 3%, var(--background)); }
-/* At night the page colour under the chosen segment is darker than its track: lift it instead. */
-.dark .docs-preview-controls label:has(:checked) { background: color-mix(in oklab, var(--foreground) 14%, var(--background)); }
 /* On a phone the controls stack: one legend column, so the three tracks start on one line. */
 @media (max-width: 40rem) { .docs-preview-controls legend { width: 5rem; } }
 /* Underline, hover and focus ring come from the prose links. */
@@ -438,7 +434,9 @@ html:has(.docs-shell) { background: var(--background); }
 @media (prefers-reduced-motion: reduce) { .docs-search-close { transition: none; } }
 
 /* The Previews of the color picker and the color palette: the component above the value its onChange gave. */
-.docs-picker-preview .docs-demo-stage, .docs-palette-preview .docs-demo-stage { flex-direction: column; gap: 1rem; }
+/* One column that never wraps: while the stage's height glides, a wrapping column would put the value beside the
+   component. `safe center` keeps the top of a component taller than the moving stage in view. */
+.docs-picker-preview .docs-demo-stage, .docs-palette-preview .docs-demo-stage { flex-direction: column; flex-wrap: nowrap; justify-content: safe center; gap: 1rem; }
 /* The swatch and the panel swap: the one that arrives comes out of a blur while the stage's height glides (use-height-glide.ts). */
 .docs-preview-swap { display: flex; justify-content: center; max-width: 100%; animation: docs-preview-swap 320ms cubic-bezier(0.2, 0.7, 0.2, 1); }
 @keyframes docs-preview-swap { from { opacity: 0; filter: blur(8px); scale: 0.96; } }

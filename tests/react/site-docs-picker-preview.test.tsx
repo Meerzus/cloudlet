@@ -6,6 +6,9 @@ import type { CodeTable } from '../../apps/site/src/lib/code-table';
 import { codeTable } from '../../apps/site/src/lib/code-tokens';
 import { paletteCode, paletteCodes, pickerCode, pickerCodes } from '../../apps/site/src/lib/picker-settings';
 
+// jsdom has no ResizeObserver: the segmented control's sliding highlight re-measures on it.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };
+
 /**
  * The Previews of the color picker's and the color palette's pages: every control changes the live
  * component, the value its `onChange` gives and the code under the controls; the reader's own
