@@ -15,6 +15,7 @@ import {
   pickerCodes,
   pickerKey,
   pickerPreviewMarkdown,
+  rewriteColors,
 } from '../../apps/site/src/lib/picker-settings';
 import { codeText } from '../../apps/site/src/lib/toaster-settings';
 
@@ -33,6 +34,19 @@ describe('site picker and palette preview code', () => {
     expect(inFormat('rgb(36 92 219 / 0.5)', 'rgb', false)).toBe('rgb(36 92 219)');
     expect(inFormat('#245cdb80', 'hex', false)).toBe('#245cdb');
     expect(inFormat('var(--accent)', 'rgb', false)).toBe('var(--accent)');
+  });
+
+  it('rewrites a color from the one it came from, so a walk through the formats does not shift it', () => {
+    // From its own string every switch would lose a little: hsl keeps whole percents.
+    expect(inFormat(inFormat('#245cdb', 'hsl', false), 'hex', false)).toBe('#245bdb');
+    const origins = new Map<string, string>();
+    let colors: readonly string[] = ['#245cdb', '#f2b84b'];
+    for (const format of ['hsl', 'rgb', 'oklch', 'hsl'] as const) colors = rewriteColors(colors, format, false, origins);
+    expect(colors).toEqual(['hsl(222 72% 50%)', 'hsl(39 87% 62%)']);
+    expect(rewriteColors(colors, 'hex', false, origins)).toEqual(['#245cdb', '#f2b84b']);
+    // A color the reader changed has no origin: it is rewritten from itself, the others still from theirs.
+    expect(rewriteColors(['#245cdb', '#123456'], 'rgb', false, origins)).toEqual(['rgb(36 92 219)', 'rgb(18 52 86)']);
+    expect([...origins.keys()]).toEqual(['rgb(36 92 219)', 'rgb(18 52 86)']);
   });
 
   it('writes the picker with every default left out', () => {
@@ -90,12 +104,13 @@ describe('site picker and palette preview code', () => {
   });
 
   it('describes both Previews for agents: the address, a code, and what each control sets', () => {
-    const picker = pickerPreviewMarkdown('https://cloudlet.dev/docs/components/color-picker');
-    expect(picker).toContain('Live preview at https://cloudlet.dev/docs/components/color-picker:');
+    const picker = pickerPreviewMarkdown('https://cloudlet.dev/docs/components/color-picker#preview');
+    expect(picker).toContain('Live preview at https://cloudlet.dev/docs/components/color-picker#preview:');
     expect(picker).toContain(`\`\`\`tsx\n${pickerCode({ kind: 'panel', format: 'oklch', alpha: true })}\n\`\`\``);
     expect(picker).toContain('- `defaultFormat`: `hex` (the default), `rgb`, `hsl`, `oklch`;');
     expect(picker).toContain('`ColorPicker` (the swatch that opens the picker) or `ColorPickerPanel` (the picker inline)');
-    const palette = palettePreviewMarkdown('https://cloudlet.dev/docs/components/color-picker#palette');
+    const palette = palettePreviewMarkdown('https://cloudlet.dev/docs/components/color-palette#preview');
+    expect(palette).toContain('Live preview at https://cloudlet.dev/docs/components/color-palette#preview:');
     expect(palette).toContain(`\`\`\`tsx\n${paletteCode({ max: '3', format: 'oklch', alpha: true })}\n\`\`\``);
     expect(palette).toContain('- `max`: `2`, `3`, `4` (the default);');
     expect(palette).toContain('with every default the code is `<ColorPalette colors={colors} onChange={setColors} />`.');

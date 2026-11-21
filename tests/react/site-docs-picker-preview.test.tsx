@@ -95,6 +95,20 @@ describe('docs color picker preview', () => {
     expect(code()).toBe(pickerCode({ kind: 'panel', format: 'hsl', alpha: false }));
   });
 
+  it('gives the color back as it was after a walk through the formats', () => {
+    render(<PickerPreviewStage codes={picker} />);
+    // hsl keeps whole percents: rewritten from its own string, the hex would come back as #245bdb.
+    for (const format of ['hsl', 'rgb', 'oklch', 'hsl', 'hex']) pick('Format', format);
+    expect(value('Value from onChange')).toBe('#245cdb');
+    // A color the reader changed is rewritten from what the picker gave.
+    pick('Component', 'Panel');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Preview color value' }), { target: { value: '#123456' } });
+    pick('Format', 'hsl');
+    expect(value('Value from onChange')).toBe('hsl(210 65% 20%)');
+    pick('Format', 'hex');
+    expect(value('Value from onChange')).toBe('#123456');
+  });
+
   it('copies the code it shows', async () => {
     render(<PickerPreviewStage codes={picker} />);
     pick('Format', 'oklch');
@@ -143,6 +157,12 @@ describe('docs color palette preview', () => {
     pick('Max', '4');
     expect(swatches()).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Add color' })).toBeInTheDocument();
+  });
+
+  it('gives every color back as it was after a walk through the formats', () => {
+    render(<PalettePreviewStage codes={palette} />);
+    for (const format of ['hsl', 'oklch', 'hex']) pick('Format', format);
+    expect(value('Colors from onChange')).toBe('["#245cdb", "#f2b84b", "#2f8f9d"]');
   });
 
   it('copies the code it shows', async () => {

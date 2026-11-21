@@ -44,6 +44,22 @@ export function inFormat(color: string, format: ColorFormat, alpha: boolean): st
   return formatColor(alpha ? rgba : { ...rgba, a: 1 }, format);
 }
 
+/**
+ * `colors` rewritten in `format` by the Format control of a Preview. A format keeps fewer digits
+ * than a color has (hsl, whole percents), so a color rewritten from its own string would shift a
+ * little with every switch. `origins` remembers what each rewritten color came from: until the
+ * reader changes a color, every format is written from that one.
+ */
+export function rewriteColors(colors: readonly string[], format: ColorFormat, alpha: boolean, origins: Map<string, string>): string[] {
+  const rewritten = colors.map((color) => {
+    const origin = origins.get(color) ?? color;
+    return [inFormat(origin, format, alpha), origin] as const;
+  });
+  origins.clear();
+  for (const [value, origin] of rewritten) origins.set(value, origin);
+  return rewritten.map(([value]) => value);
+}
+
 export interface PickerSettings {
   readonly kind: PickerKind;
   readonly format: ColorFormat;
