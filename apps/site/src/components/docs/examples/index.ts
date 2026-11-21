@@ -3,7 +3,7 @@ import { BrandForm } from './color-palette/form';
 import { OklchPalette } from './color-palette/oklch';
 import { TranslucentPalette } from './color-palette/opacity';
 import { SavedFormat } from './color-picker/format';
-import { GermanPicker } from './color-picker/labels';
+import { SpanishPicker } from './color-picker/labels';
 import { HexOnly } from './color-picker/one-format';
 import { WithOpacity } from './color-picker/opacity';
 import { InlinePanel } from './color-picker/panel';
@@ -19,7 +19,7 @@ export const EXAMPLES: Readonly<Record<string, ComponentType>> = {
   'color-palette/oklch': OklchPalette,
   'color-palette/opacity': TranslucentPalette,
   'color-picker/format': SavedFormat,
-  'color-picker/labels': GermanPicker,
+  'color-picker/labels': SpanishPicker,
   'color-picker/one-format': HexOnly,
   'color-picker/opacity': WithOpacity,
   'color-picker/panel': InlinePanel,

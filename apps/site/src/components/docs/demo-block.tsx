@@ -1,19 +1,13 @@
 'use client';
 
 import { Check, Copy } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { flushSync } from 'react-dom';
+import { useState, type ReactNode } from 'react';
 import { usePageNotifications } from '@/components/site/notifications';
 import { useCopied } from '@/components/site/use-copied';
 import { findDemo, isCodeLabel, type Demo } from '@/lib/demos';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
 import { cn } from '@/lib/utils';
-
-/** A snippet longer than this many lines starts folded under Show code. */
-export const DEMO_FOLD_LINES = 8;
-/** The code area's height glides between snippets and when it unfolds. */
-const RESIZE_MS = 280;
-const RESIZE_EASE = 'cubic-bezier(0.2, 0.7, 0.2, 1)';
+import { DEMO_FOLD_LINES, useHeightGlide } from './use-height-glide';
 
 /** One runnable fence of a demo block: the catalog id and its highlighted code. */
 export interface DemoItem {
@@ -51,47 +45,10 @@ export function DemoBlock({ items, note = false }: { items: readonly DemoItem[];
   const [copied, copy] = useCopied();
   const [selected, setSelected] = useState(0);
   const [expanded, setExpanded] = useState(false);
-  const area = useRef<HTMLDivElement>(null);
-  const settle = useRef<() => void>(() => {});
+  const { ref: area, resize } = useHeightGlide();
   const group = list.length > 1;
   const current = list[selected] ?? list[0]!;
   const folded = current.folds && !expanded;
-
-  useEffect(() => () => settle.current(), []);
-
-  /** Applies a state change and glides the code area from its height before to its height after. */
-  const resize = (change: () => void) => {
-    const wrap = area.current;
-    if (!wrap) {
-      change();
-      return;
-    }
-    settle.current();
-    const from = wrap.offsetHeight;
-    // A glide in progress holds an inline height: release it before measuring the new content.
-    wrap.style.transition = 'none';
-    wrap.style.height = '';
-    flushSync(change);
-    const to = wrap.offsetHeight;
-    if (from === to || !window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
-      wrap.style.transition = '';
-      return;
-    }
-    wrap.style.height = `${from}px`;
-    void wrap.offsetHeight; // commit the start height before the transition
-    wrap.style.transition = `height ${RESIZE_MS}ms ${RESIZE_EASE}`;
-    wrap.style.height = `${to}px`;
-    const done = () => {
-      wrap.style.height = '';
-      wrap.style.transition = '';
-      wrap.removeEventListener('transitionend', done);
-      window.clearTimeout(timer);
-      settle.current = () => {};
-    };
-    const timer = window.setTimeout(done, RESIZE_MS + 80);
-    wrap.addEventListener('transitionend', done);
-    settle.current = done;
-  };
 
   const onCopy = async () => {
     const text = area.current?.querySelector('pre')?.textContent ?? '';

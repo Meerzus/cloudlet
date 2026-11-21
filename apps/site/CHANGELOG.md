@@ -150,7 +150,9 @@ Nothing changes for `@cloudlet/toast` or the `toaster` item.
   inline panel), Format and Opacity change the live picker, the value its `onChange` gives and the
   code under the controls, with Copy; picking a format in the picker itself moves the control. Six
   live examples, each a picker to work with and its code: the inline panel, one format, opacity,
-  the format kept in your state, a swatch painted from a CSS variable, translated labels.
+  the format kept in your state, a swatch painted from a CSS variable, labels translated into
+  Spanish; code longer than eight lines starts folded under Show code. Formats now says what
+  happens when your code changes `format`: `onChange` is not called until the color changes.
 - [/docs/components/color-palette](https://cloudlet.dev/docs/components/color-palette) is the
   palette's own page, the third component in the sidebar: a Preview with Max, Format and Opacity,
   installation, usage, three live examples (in a form, colors in OKLCH, opacity) and its props,

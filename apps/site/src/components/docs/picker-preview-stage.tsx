@@ -7,20 +7,26 @@ import { tableCode, type CodeTable } from '@/lib/code-table';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
 import { FORMATS, inFormat, OPACITIES, PICKER_COMPONENTS, PICKER_KINDS, pickerKey, PREVIEW_COLOR, type PickerKind } from '@/lib/picker-settings';
 import { PreviewShell } from './preview-shell';
+import { useHeightGlide } from './use-height-glide';
 
 const STRINGS = DOCS_UI.pickerPreview;
+/** The stage grows from the swatch to the panel and back on this spring: no overshoot to speak of, settled in about half a second. */
+const STAGE_SPRING = { stiffness: 260, damping: 28 };
 
 /**
  * The Preview of the color picker's page on the shared shell: the live picker as a swatch or an
  * inline panel, the value its `onChange` gives, the controls of its main props and the code they
  * make. Format is the picker's own format, so the reader's choice in the picker's switch moves the
  * control too; changing it from the control rewrites the value, as the picker does on a switch.
+ * The swatch and the panel differ in height: the stage glides between the two on a spring, and the
+ * component that arrives comes into focus.
  */
 export function PickerPreviewStage({ codes }: { codes: CodeTable }) {
   const [kind, setKind] = useState<PickerKind>('swatch');
   const [format, setFormat] = useState<ColorFormat>('hex');
   const [alpha, setAlpha] = useState(false);
   const [color, setColor] = useState(PREVIEW_COLOR);
+  const { ref: stage, resize } = useHeightGlide(STAGE_SPRING);
   const pickFormat = (next: ColorFormat) => {
     setFormat(next);
     setColor(inFormat(color, next, alpha));
@@ -34,9 +40,13 @@ export function PickerPreviewStage({ codes }: { codes: CodeTable }) {
   return (
     <PreviewShell
       className="docs-demo-open docs-picker-preview"
+      stageRef={stage}
       stage={
         <>
-          {kind === 'swatch' ? <ColorPicker {...props} labels={{ open: STRINGS.open, panel: STRINGS.panel }} /> : <ColorPickerPanel {...props} labels={{ value: STRINGS.field }} />}
+          {/* Keyed by the kind, so the component that arrives plays its entrance. */}
+          <div key={kind} className="docs-preview-swap">
+            {kind === 'swatch' ? <ColorPicker {...props} labels={{ open: STRINGS.open, panel: STRINGS.panel }} /> : <ColorPickerPanel {...props} labels={{ value: STRINGS.field }} />}
+          </div>
           {/* Not a live region: the picker announces its own changes. */}
           <output className="docs-preview-value" aria-label={STRINGS.value} aria-live="off">
             {color}
@@ -46,7 +56,7 @@ export function PickerPreviewStage({ codes }: { codes: CodeTable }) {
       settings={STRINGS.settings}
       controls={
         <>
-          <Segmented legend={STRINGS.component} options={PICKER_KINDS} value={kind} onChange={setKind} />
+          <Segmented legend={STRINGS.component} options={PICKER_KINDS} value={kind} onChange={(next) => resize(() => setKind(next))} />
           <Segmented legend={STRINGS.format} options={FORMATS} value={format} onChange={pickFormat} />
           <Segmented legend={STRINGS.opacity} options={OPACITIES} value={alpha ? 'on' : 'off'} onChange={(next) => pickAlpha(next === 'on')} />
         </>

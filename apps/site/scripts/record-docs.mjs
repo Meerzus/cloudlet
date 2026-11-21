@@ -355,7 +355,7 @@ async function pickerPreview(page, base, path, still, failures) {
   const { figure } = preview;
   await figure.scrollIntoViewIfNeeded();
   const result = { axe: {}, steps: [] };
-  const state = async () => ({ code: await preview.code(), value: await preview.value(), swatch: await figure.locator('.docs-demo-stage > .color-picker').count(), panel: await figure.locator('.docs-demo-stage > .color-picker-inline').count() });
+  const state = async () => ({ code: await preview.code(), value: await preview.value(), swatch: await figure.locator('.docs-preview-swap > .color-picker').count(), panel: await figure.locator('.docs-preview-swap > .color-picker-inline').count() });
 
   result.initial = await state();
   if (!result.initial.code.includes(pickerLine('ColorPicker', 'hex', false)) || result.initial.value !== '#245cdb' || result.initial.swatch !== 1) fail('defaults', result.initial);
@@ -536,6 +536,16 @@ async function liveExample(page, name, failures) {
     await wait(page, 700);
     entry.closed = (await stage.locator('.color-picker-panel[data-phase="open"]').count()) === 0;
     if (!entry.closed) failures.push(`example ${name}: Escape did not close the picker`);
+  }
+  // Long code starts folded: Show code unfolds it, and Copy below gives the whole file either way.
+  const fold = figure.locator('.docs-demo-fold');
+  if ((await fold.count()) > 0) {
+    const area = figure.locator('.docs-demo-code');
+    const folded = await area.evaluate((element) => element.offsetHeight);
+    await fold.click();
+    await wait(page, 500);
+    entry.fold = { expanded: await fold.getAttribute('aria-expanded'), grew: (await area.evaluate((element) => element.offsetHeight)) > folded };
+    if (entry.fold.expanded !== 'true' || !entry.fold.grew) failures.push(`example ${name}: Show code did not unfold the code`);
   }
   entry.copy = await copyBlock(page, figure);
   if (!entry.copy.ok) failures.push(`example ${name}: Copy gave ${entry.copy.length} characters, not the code shown`);

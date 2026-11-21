@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, Copy } from 'lucide-react';
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, type ReactNode, type Ref } from 'react';
 import { useCopied } from '@/components/site/use-copied';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
 import { codeText, type CodeToken } from '@/lib/toaster-settings';
@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
  */
 export function PreviewShell({
   stage,
+  stageRef,
   settings,
   controls,
   codeTitle,
@@ -23,6 +24,8 @@ export function PreviewShell({
 }: {
   /** What stands on the stage. */
   stage: ReactNode;
+  /** The stage's element, for a caller that glides its height. */
+  stageRef?: Ref<HTMLDivElement>;
   /** The accessible name of the group of controls. */
   settings: string;
   controls: ReactNode;
@@ -36,7 +39,9 @@ export function PreviewShell({
   const text = code.map(codeText).join('\n');
   return (
     <figure className={cn('docs-demo docs-preview', className)}>
-      <div className="docs-demo-stage">{stage}</div>
+      <div ref={stageRef} className="docs-demo-stage">
+        {stage}
+      </div>
       <div role="group" aria-label={settings} className="docs-preview-controls">
         {controls}
       </div>

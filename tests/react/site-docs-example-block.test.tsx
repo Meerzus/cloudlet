@@ -54,6 +54,24 @@ describe('docs live example block', () => {
     expect(screen.getByRole('button', { name: 'Copied panel.tsx' })).toBeInTheDocument();
   });
 
+  it('folds long code under Show code and shows short code whole', async () => {
+    const { code } = await block('color-picker/labels');
+    const figure = document.querySelector('[data-example="color-picker/labels"]')!;
+    const area = figure.querySelector('.docs-demo-code')!;
+    expect(area).toHaveAttribute('data-folded');
+    // Folded code is all there: Copy and readers of the markup get the whole file.
+    expect(figure.querySelector('pre')?.textContent).toBe(code);
+    const show = screen.getByRole('button', { name: 'Show code' });
+    expect(show).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(show);
+    expect(area).not.toHaveAttribute('data-folded');
+    expect(screen.getByRole('button', { name: 'Hide code' })).toHaveAttribute('aria-expanded', 'true');
+    cleanup();
+    await block('color-picker/one-format');
+    expect(document.querySelector('[data-example="color-picker/one-format"] .docs-demo-code')).not.toHaveAttribute('data-folded');
+    expect(screen.queryByRole('button', { name: 'Show code' })).toBeNull();
+  });
+
   it('fails on a name the list does not know', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => render(<ExampleBlock name="color-picker/nope" file="nope.tsx" code={[]} />)).toThrow(/Unknown example "color-picker\/nope"/u);
