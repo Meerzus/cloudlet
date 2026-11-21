@@ -22,14 +22,17 @@
  *    at a time; its text is the gate, the header over it a note (its contrast on `/` is not a
  *    gate). There `flat` is the still frame of the paint drawn without WebGL 2. The color comes from
  *    `?c=`, which the page reads but never writes.
- * 2. Every picker on /color-picker and /docs/components/color-picker, desktop 1440×900 and phone 390×844, light
+ * 2. Every picker on /color-picker and on the color picker's docs page (its Preview and live examples),
+ *    desktop 1440×900 and phone 390×844, light
  *    and dark: Enter on the swatch opens a named dialog with focus in the area; axe on the open panel;
  *    the panel inside the viewport; arrows, Shift and Home/End against the promised values
  *    ("Saturation 40%, Brightness 80%", "Hue 48°", "Opacity 50%"); the Tab order inside the panel;
  *    Tab out of the panel closes it; the format radios re-emit the value; copy announces itself;
  *    Escape (twice from an edited field) returns focus to the swatch; a press outside closes without
  *    moving focus there; target sizes; reduced motion opens without animations; forced colors draw
- *    the thumb and the frames (Chromium only).
+ *    the thumb and the frames (Chromium only). A picker is checked in its own words: the example with
+ *    translated labels in its translation (read from its file), one with a single format without the
+ *    format switch.
  *
  *   npm run build && npm run build:site
  *   node apps/site/scripts/audit-color-picker.mjs <out-dir> [--browser chromium|webkit] [--skip-contrast] [--skip-pickers]
@@ -41,7 +44,7 @@
  * (with an ARIA snapshot of each open panel); exits 1 on any failure.
  */
 import AxeBuilder from '@axe-core/playwright';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { chromium, webkit } from '@playwright/test';
 import { serve } from './serve-out.mjs';
@@ -551,6 +554,13 @@ async function kitSkyContrast() {
 // --- 2. Pickers -------------------------------------------------------------------------------------
 
 /** What the focus is on, for the Tab order: the accessible name the picker gives each stop. */
+/** The words a picker names its parts with (DEFAULT_LABELS of color-picker.tsx). */
+const WORDS = { close: 'Close', area: 'Saturation and brightness', saturation: 'Saturation', brightness: 'Brightness', hue: 'Hue', alpha: 'Opacity', value: 'Color value', eyedropper: 'Pick from screen', copy: 'Copy', copied: 'Copied' };
+/** The docs example that translates every label, read from its file so the two cannot drift; its swatch is told by `open`. */
+const TRANSLATED_FILE = new URL('../src/components/docs/examples/color-picker/labels.tsx', import.meta.url);
+const TRANSLATED = existsSync(TRANSLATED_FILE) ? Object.fromEntries([...readFileSync(TRANSLATED_FILE, 'utf8').matchAll(/^\s+(\w+): "([^"]+)",$/gmu)].map((match) => [match[1], match[2]])) : {};
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+
 const focusName = (page) =>
   page.evaluate(() => {
     const element = document.activeElement;
@@ -599,6 +609,7 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
   await trigger.evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
   await page.waitForTimeout(300);
   const name = await trigger.getAttribute('aria-label');
+  const words = TRANSLATED.open && name === TRANSLATED.open ? { ...WORDS, ...TRANSLATED } : WORDS;
   // The trigger's size while closed: open, the panel's own swatch covers it.
   const swatchExtent = await hitExtent(trigger);
   check('swatch is a collapsed button', (await trigger.getAttribute('aria-expanded')) === 'false', `aria-expanded=${await trigger.getAttribute('aria-expanded')}`);
@@ -634,7 +645,7 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
   }
 
   // The area: arrows, Shift, and the words a screen reader hears.
-  const AREA = /^Saturation (\d+)%, Brightness (\d+)%$/u;
+  const AREA = new RegExp(`^${escapeRegExp(words.saturation)} (\\d+)%, ${escapeRegExp(words.brightness)} (\\d+)%$`, 'u');
   const before = AREA.exec((await valueText(area)) ?? '');
   check('area value text', Boolean(before), await valueText(area));
   if (before) {
@@ -660,7 +671,9 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
   entry.tabOrder = order;
   const alpha = (await dialog.locator('.color-picker-alpha').count()) > 0;
   const eyedropper = await page.evaluate(() => typeof window.EyeDropper === 'function');
-  const expected = ['Close', 'Color value', 'Saturation and brightness', 'Hue', ...(alpha ? ['Opacity'] : []), 'radio', ...(eyedropper ? ['Pick from screen'] : []), 'Copy'];
+  // A picker with a single format has no format switch.
+  const switchable = (await dialog.locator('input[type="radio"]').count()) > 1;
+  const expected = [words.close, words.value, words.area, words.hue, ...(alpha ? [words.alpha] : []), ...(switchable ? ['radio'] : []), ...(eyedropper ? [words.eyedropper] : []), words.copy];
   const matches = order.length === expected.length && order.every((stop, index) => stop.startsWith(expected[index]));
   check('Tab order inside the panel', matches, order.join(' → '));
   await page.waitForTimeout(500);
@@ -680,13 +693,13 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
   const hueStep = await valueText(hue);
   await page.keyboard.press('End');
   const hueEnd = await valueText(hue);
-  check('hue value text, Home, → +1°, Shift+→ +10°, End', hueHome === 'Hue 0°' && hueStep === 'Hue 11°' && hueEnd === 'Hue 360°', `${hueHome} / ${hueStep} / ${hueEnd}`);
+  check('hue value text, Home, → +1°, Shift+→ +10°, End', hueHome === `${words.hue} 0°` && hueStep === `${words.hue} 11°` && hueEnd === `${words.hue} 360°`, `${hueHome} / ${hueStep} / ${hueEnd}`);
   if (alpha) {
     const opacity = dialog.locator('.color-picker-alpha');
     await opacity.focus();
     await page.keyboard.press('End');
     await page.keyboard.press('Shift+ArrowLeft');
-    check('opacity value text', (await valueText(opacity)) === 'Opacity 90%', await valueText(opacity));
+    check('opacity value text', (await valueText(opacity)) === `${words.alpha} 90%`, await valueText(opacity));
   }
 
   // The format radios: arrows move and re-emit the value in the new format.
@@ -703,14 +716,14 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
   }
 
   // Copy: the live region says so (a blocked clipboard stays silent by design).
-  const copy = dialog.getByRole('button', { name: 'Copy' });
+  const copy = dialog.getByRole('button', { name: words.copy });
   await copy.focus();
   await page.keyboard.press('Enter');
   await page.waitForTimeout(150);
   const live = await dialog.locator('[aria-live="polite"]').textContent();
   const clipboard = browserName === 'chromium' ? await page.evaluate(() => navigator.clipboard.readText()).catch(() => null) : null;
   entry.copy = { live, clipboard };
-  if (browserName === 'chromium') check('copy writes and announces', live === 'Copied' && clipboard === (await dialog.locator('.color-picker-value').inputValue()), `live “${live}”, clipboard ${clipboard}`);
+  if (browserName === 'chromium') check('copy writes and announces', live === words.copied && clipboard === (await dialog.locator('.color-picker-value').inputValue()), `live “${live}”, clipboard ${clipboard}`);
 
   // Target sizes through the centre (own hit areas included), on the panel at rest: its clip grows on animations
   // (fill: both), and a slow page (the paint drawn in software) can still be running them here.
