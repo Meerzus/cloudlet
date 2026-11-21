@@ -363,13 +363,26 @@ html:has(.docs-shell) { background: var(--background); }
 .docs-demo-open { overflow: visible; }
 .docs-demo-open > .docs-demo-stage { position: relative; z-index: 1; border-radius: calc(1.25rem - 1px) calc(1.25rem - 1px) 0 0; }
 .docs-demo-open > .docs-demo-code { border-radius: 0 0 calc(1.25rem - 1px) calc(1.25rem - 1px); }
+/* On a phone a swatch in the middle of the stage has no side with room for its 16rem panel, and the panel
+   flips but never shifts: it would hang over the edge of the screen. A stage with a swatch starts at the left there. */
+@media (max-width: 40rem) {
+  /* An example's stage is a row; a Preview's is a column. */
+  .docs-example > .docs-demo-stage:has(.color-picker) { justify-content: flex-start; }
+  .docs-picker-preview > .docs-demo-stage:has(.color-picker), .docs-palette-preview > .docs-demo-stage { align-items: flex-start; }
+}
 /* A Preview: the demo block with the controls of the component's main props between the stage and the code. */
 .docs-preview-controls {
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; padding: 0.875rem 1.125rem;
   border-top: 1px solid var(--border);
 }
-/* On a phone the controls stack: one legend column, so the three tracks start on one line. */
-@media (max-width: 40rem) { .docs-preview-controls legend { width: 5rem; } }
+/* On a phone the controls stack: one legend column, so the three tracks start on one line. A fieldset is
+   as wide as its content by default: on the narrowest phones a track that does not fit beside its legend
+   wraps under it instead of leaving the block (four formats at 320 px made the page scroll sideways). */
+@media (max-width: 40rem) {
+  .docs-preview-controls { padding-inline: 1rem; }
+  .docs-preview-controls legend { width: 5rem; }
+  .docs-preview-controls fieldset { flex-wrap: wrap; row-gap: 0.5rem; min-width: 0; }
+}
 /* Underline, hover and focus ring come from the prose links. */
 .docs-preview-link { margin-inline-start: auto; font-size: 0.875rem; }
 @media (prefers-reduced-motion: reduce) {
