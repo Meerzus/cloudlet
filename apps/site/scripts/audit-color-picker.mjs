@@ -658,7 +658,11 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
     check('area aria-valuenow is the saturation', Number(await area.getAttribute('aria-valuenow')) === expected[0], await area.getAttribute('aria-valuenow'));
   }
 
-  // Tab order from the panel's own swatch to the last tool, then out.
+  // Tab order from the panel's own swatch to the last tool, then out. What the panel has is read before
+  // the walk: past its last stop the panel closes, and under reduced motion it is gone at once.
+  const alpha = (await dialog.locator('.color-picker-alpha').count()) > 0;
+  // A picker with a single format has no format switch.
+  const switchable = (await dialog.locator('input[type="radio"]').count()) > 1;
   await dialog.locator('.color-picker-head .color-picker-swatch').focus();
   const order = [await focusName(page)];
   for (let index = 0; index < 10; index += 1) {
@@ -669,10 +673,7 @@ async function checkPopover(page, trigger, where, { reduced, forced, browserName
     order.push(await focusName(page));
   }
   entry.tabOrder = order;
-  const alpha = (await dialog.locator('.color-picker-alpha').count()) > 0;
   const eyedropper = await page.evaluate(() => typeof window.EyeDropper === 'function');
-  // A picker with a single format has no format switch.
-  const switchable = (await dialog.locator('input[type="radio"]').count()) > 1;
   const expected = [words.close, words.value, words.area, words.hue, ...(alpha ? [words.alpha] : []), ...(switchable ? ['radio'] : []), ...(eyedropper ? [words.eyedropper] : []), words.copy];
   const matches = order.length === expected.length && order.every((stop, index) => stop.startsWith(expected[index]));
   check('Tab order inside the panel', matches, order.join(' → '));
