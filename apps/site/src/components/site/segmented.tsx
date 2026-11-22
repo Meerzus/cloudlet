@@ -7,7 +7,8 @@ import { SEGMENT_STYLE, useSegmentIndicator } from './use-segment-indicator';
  * A native radio group drawn as a segmented control: arrows move inside it, Tab moves on. One solid
  * highlight slides under the chosen option on a spring and the label on it inverts; until the
  * highlight is placed (server render, before hydration) the chosen option paints its own
- * background, so the choice is visible either way. An option with `disabled` stays in place but
+ * background, so the choice is visible either way; under forced colours both are the system's
+ * highlight with its text colour, hovered or not. An option with `disabled` stays in place but
  * faded: a disabled radio is skipped by the arrows and the mouse.
  */
 export function Segmented<Value extends string>({
@@ -38,8 +39,8 @@ export function Segmented<Value extends string>({
           <label
             key={option.value}
             data-segment=""
-            className={`relative inline-flex h-8 items-center rounded-[0.625rem] px-2.5 text-sm font-medium whitespace-nowrap transition-colors duration-200 has-[:checked]:bg-foreground has-[:checked]:text-background in-data-segment-ready:has-[:checked]:bg-transparent has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/60 forced-colors:has-[:checked]:text-[HighlightText] forced-colors:has-[:checked]:forced-color-adjust-none ${
-              option.disabled ? 'cursor-default text-muted-foreground/45' : 'cursor-pointer text-muted-foreground hover:text-foreground has-[:checked]:hover:text-background'
+            className={`relative inline-flex h-8 items-center rounded-[0.625rem] px-2.5 text-sm font-medium whitespace-nowrap transition-colors duration-200 has-[:checked]:bg-foreground has-[:checked]:text-background in-data-segment-ready:has-[:checked]:bg-transparent has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/60 forced-colors:has-[:checked]:bg-[Highlight] forced-colors:has-[:checked]:text-[HighlightText] forced-colors:has-[:checked]:forced-color-adjust-none forced-colors:in-data-segment-ready:has-[:checked]:bg-transparent ${
+              option.disabled ? 'cursor-default text-muted-foreground/45' : 'cursor-pointer text-muted-foreground hover:text-foreground has-[:checked]:hover:text-background forced-colors:has-[:checked]:hover:text-[HighlightText]'
             }`}
           >
             <input

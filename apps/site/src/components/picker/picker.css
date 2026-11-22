@@ -273,6 +273,8 @@ html[data-cp-paint='page'] .site-edge-tint { background: linear-gradient(to bott
   .cp-keys kbd { border: 1px solid CanvasText; }
   .cp-keys kbd[data-pressed] { background: Highlight; color: HighlightText; }
   .cp-paint-pick:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
+  /* Forced colours drop the ring's box-shadow. */
+  .cp-palette-docs:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
 }
 
 /* --- The foot (§8.8): no rule over the footer; the paint softens under it into a progressive blur. --- */
