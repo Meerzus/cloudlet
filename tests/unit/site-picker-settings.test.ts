@@ -128,7 +128,7 @@ describe('site picker and palette preview code', () => {
         extends: `${root}apps/site/tsconfig.typecheck.json`,
         compilerOptions: { noEmit: true, incremental: false, plugins: [], paths: { '@/*': [`${root}apps/site/src/*`] } },
         include: [],
-        files: [`${root}apps/site/next-env.d.ts`, ...files],
+        files: [`${root}apps/site/src/types/next.d.ts`, ...files],
       };
       await writeFile(`${dir}/tsconfig.json`, JSON.stringify(config));
       const run = spawnSync(process.execPath, [`${root}node_modules/typescript/bin/tsc`, '--project', `${dir}/tsconfig.json`, '--pretty', 'false'], { encoding: 'utf8' });
