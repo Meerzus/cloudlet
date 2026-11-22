@@ -44,19 +44,31 @@ export function inFormat(color: string, format: ColorFormat, alpha: boolean): st
   return formatColor(alpha ? rgba : { ...rgba, a: 1 }, format);
 }
 
+/** What the Format control wrote for each color of a Preview, and the color it wrote it from. */
+export type ColorOrigins = (readonly [written: string, origin: string])[];
+
 /**
  * `colors` rewritten in `format` by the Format control of a Preview. A format keeps fewer digits
  * than a color has (hsl, whole percents), so a color rewritten from its own string would shift a
  * little with every switch. `origins` remembers what each rewritten color came from: until the
- * reader changes a color, every format is written from that one.
+ * reader changes a color, every format is written from that one. Each color keeps an entry of its
+ * own, since two colors can round to one string (`#ff0000` and `#fe0000` in hsl).
  */
-export function rewriteColors(colors: readonly string[], format: ColorFormat, alpha: boolean, origins: Map<string, string>): string[] {
-  const rewritten = colors.map((color) => {
-    const origin = origins.get(color) ?? color;
+export function rewriteColors(colors: readonly string[], format: ColorFormat, alpha: boolean, origins: ColorOrigins): string[] {
+  const entries: (ColorOrigins[number] | undefined)[] = [...origins];
+  const take = (at: number) => {
+    const origin = entries[at]?.[1];
+    if (origin !== undefined) entries[at] = undefined;
+    return origin;
+  };
+  // A color takes the entry at its own place; one that moved (a color before it was removed) then
+  // takes the first free entry with its string. A color the reader changed finds none.
+  const own = colors.map((color, index) => (entries[index]?.[0] === color ? take(index) : undefined));
+  const rewritten = colors.map((color, index) => {
+    const origin = own[index] ?? take(entries.findIndex((entry) => entry?.[0] === color)) ?? color;
     return [inFormat(origin, format, alpha), origin] as const;
   });
-  origins.clear();
-  for (const [value, origin] of rewritten) origins.set(value, origin);
+  origins.splice(0, origins.length, ...rewritten);
   return rewritten.map(([value]) => value);
 }
 

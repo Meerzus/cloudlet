@@ -5,7 +5,7 @@ import { Segmented } from '@/components/site/segmented';
 import { ColorPicker, ColorPickerPanel, type ColorFormat } from '@/components/ui/color-picker/color-picker';
 import { tableCode, type CodeTable } from '@/lib/code-table';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
-import { FORMATS, inFormat, OPACITIES, PICKER_COMPONENTS, PICKER_KINDS, pickerKey, PREVIEW_COLOR, rewriteColors, type PickerKind } from '@/lib/picker-settings';
+import { FORMATS, inFormat, OPACITIES, PICKER_COMPONENTS, PICKER_KINDS, pickerKey, PREVIEW_COLOR, rewriteColors, type ColorOrigins, type PickerKind } from '@/lib/picker-settings';
 import { PreviewShell } from './preview-shell';
 import { useHeightGlide } from './use-height-glide';
 
@@ -28,7 +28,7 @@ export function PickerPreviewStage({ codes }: { codes: CodeTable }) {
   const [alpha, setAlpha] = useState(false);
   const [color, setColor] = useState(PREVIEW_COLOR);
   const { ref: stage, resize } = useHeightGlide(STAGE_SPRING);
-  const origins = useRef(new Map<string, string>());
+  const origins = useRef<ColorOrigins>([]);
   const pickFormat = (next: ColorFormat) => {
     setFormat(next);
     setColor(rewriteColors([color], next, alpha, origins.current)[0] ?? color);

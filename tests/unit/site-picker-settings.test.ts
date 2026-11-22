@@ -16,6 +16,7 @@ import {
   pickerKey,
   pickerPreviewMarkdown,
   rewriteColors,
+  type ColorOrigins,
 } from '../../apps/site/src/lib/picker-settings';
 import { codeText } from '../../apps/site/src/lib/toaster-settings';
 
@@ -39,14 +40,24 @@ describe('site picker and palette preview code', () => {
   it('rewrites a color from the one it came from, so a walk through the formats does not shift it', () => {
     // From its own string every switch would lose a little: hsl keeps whole percents.
     expect(inFormat(inFormat('#245cdb', 'hsl', false), 'hex', false)).toBe('#245bdb');
-    const origins = new Map<string, string>();
+    const origins: ColorOrigins = [];
     let colors: readonly string[] = ['#245cdb', '#f2b84b'];
     for (const format of ['hsl', 'rgb', 'oklch', 'hsl'] as const) colors = rewriteColors(colors, format, false, origins);
     expect(colors).toEqual(['hsl(222 72% 50%)', 'hsl(39 87% 62%)']);
     expect(rewriteColors(colors, 'hex', false, origins)).toEqual(['#245cdb', '#f2b84b']);
     // A color the reader changed has no origin: it is rewritten from itself, the others still from theirs.
     expect(rewriteColors(['#245cdb', '#123456'], 'rgb', false, origins)).toEqual(['rgb(36 92 219)', 'rgb(18 52 86)']);
-    expect([...origins.keys()]).toEqual(['rgb(36 92 219)', 'rgb(18 52 86)']);
+    expect(origins).toEqual([['rgb(36 92 219)', '#245cdb'], ['rgb(18 52 86)', '#123456']]);
+  });
+
+  it('keeps an origin for each color when two round to one string', () => {
+    const origins: ColorOrigins = [];
+    const hsl = rewriteColors(['#ff0000', '#fe0000', '#245cdb'], 'hsl', false, origins);
+    expect(hsl).toEqual(['hsl(0 100% 50%)', 'hsl(0 100% 50%)', 'hsl(222 72% 50%)']);
+    expect(rewriteColors(hsl, 'hex', false, origins)).toEqual(['#ff0000', '#fe0000', '#245cdb']);
+    // A color that moved after one before it was removed still finds its origin.
+    rewriteColors(['#ff0000', '#fe0000', '#245cdb'], 'hsl', false, origins);
+    expect(rewriteColors(['hsl(0 100% 50%)', 'hsl(222 72% 50%)'], 'hex', false, origins)).toEqual(['#ff0000', '#245cdb']);
   });
 
   it('writes the picker with every default left out', () => {

@@ -6,7 +6,7 @@ import { ColorPalette } from '@/components/ui/color-palette/color-palette';
 import type { ColorFormat } from '@/components/ui/color-picker/color-picker';
 import { tableCode, type CodeTable } from '@/lib/code-table';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
-import { DEFAULT_MAX, FORMATS, inFormat, OPACITIES, PALETTE_MAXES, paletteKey, PREVIEW_COLORS, rewriteColors, type PaletteMax } from '@/lib/picker-settings';
+import { DEFAULT_MAX, FORMATS, inFormat, OPACITIES, PALETTE_MAXES, paletteKey, PREVIEW_COLORS, rewriteColors, type ColorOrigins, type PaletteMax } from '@/lib/picker-settings';
 import { PreviewShell } from './preview-shell';
 
 const STRINGS = DOCS_UI.palettePreview;
@@ -25,7 +25,7 @@ export function PalettePreviewStage({ codes }: { codes: CodeTable }) {
     setMax(next);
     setColors(colors.slice(0, Number(next)));
   };
-  const origins = useRef(new Map<string, string>());
+  const origins = useRef<ColorOrigins>([]);
   const pickFormat = (next: ColorFormat) => {
     setFormat(next);
     setColors(rewriteColors(colors, next, alpha, origins.current));
