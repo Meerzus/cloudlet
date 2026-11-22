@@ -7,9 +7,9 @@ import { DOCS_UI } from '@/lib/docs-ui-strings';
 import { Callout } from './callout';
 import { CodeBlock, type CodeBlockProps } from './code-block';
 import { DemoBlock, type DemoItem } from './demo-block';
+import { Example } from './example';
 import { GetStartedCode, GetStartedTabs, InstallCommand } from './get-started-code';
-import { PaletteDemo } from './palette-demo';
-import { PickerDemo } from './picker-demo';
+import { PalettePreview, PickerPreview } from './picker-preview';
 import { Table } from './table';
 import { StyleEditor } from './style-editor/style-editor';
 import { ToasterPreview } from './toaster-preview';
@@ -85,11 +85,12 @@ export function getMDXComponents(): MDXComponents {
     table: Table,
     Callout,
     Demos,
+    Example,
     GetStartedTabs,
     GetStartedCode,
     InstallCommand,
-    PaletteDemo,
-    PickerDemo,
+    PalettePreview,
+    PickerPreview,
     StyleEditor,
     ToasterPreview,
   };

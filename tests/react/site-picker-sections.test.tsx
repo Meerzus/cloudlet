@@ -49,6 +49,8 @@ describe('the sections have no pictures of their own (COLOR_PICKER §8.5–§8.7
     const { container } = render(<PickerColorProvider><Palette /><Opacity /><Tools /></PickerColorProvider>);
     expect(container.querySelector('canvas, img, picture')).toBeNull();
     expect(screen.getByRole('group', { name: 'Page palette' })).toBeInTheDocument();
+    // Under the palette's row, the way to its page in the docs.
+    expect(screen.getByRole('link', { name: 'Read the palette docs' })).toHaveAttribute('href', '/docs/components/color-palette');
   });
 });
 

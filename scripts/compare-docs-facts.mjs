@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Facts of the Toaster docs that a rewrite lost: reads a snapshot of the old `llms-full.txt`,
+ * Facts of a component's docs that a rewrite lost: reads a snapshot of the old `llms-full.txt`,
  * takes three kinds of facts from the old pages and looks for each one in the new text.
  *
  *   - code: inline code spans of the prose and tables (`attention: 'open'`), and the API names of
@@ -18,10 +18,12 @@
  * guards tokens, not sentences: a rule written only in words is checked by reading.
  *
  * Usage:
- *   node scripts/compare-docs-facts.mjs [--pages <slug,…>] [--old <file>] [--new <file>] [--json <file>]
+ *   node scripts/compare-docs-facts.mjs [--under <path>] [--pages <slug,…>] [--old <file>] [--new <file>] [--json <file>]
  *
- *   --pages  old pages to check, by their address under /docs/components/toaster: `index` (the
- *            component page), `installation`, `api/toaster`, …; default: every Toaster page.
+ *   --under  the component whose old pages are checked, as the address of its page under /docs
+ *            (default `components/toaster`; `components/color-picker` for the color picker).
+ *   --pages  old pages to check, by their address under that page: `index` (the component page),
+ *            `installation`, `api/toaster`, …; default: every page of the component.
  *   --old    the snapshot (default artifacts/docs-facts/baseline/llms-full.txt).
  *   --new    the text to check (default apps/site/out/llms-full.txt, after `npm run build:site`).
  *   --json   also write the full report, every place of every fact, to this file.
@@ -37,8 +39,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-/** The old pages are the Toaster's: every page whose source address starts here. */
-const TOASTER_URL = 'https://cloudlet.dev/docs/components/toaster';
+/** The old pages are one component's: every page whose source address is `--under` below this, or deeper. */
+const DOCS_URL = 'https://cloudlet.dev/docs';
+const DEFAULT_UNDER = 'components/toaster';
 
 /**
  * Lines and sections that are not facts, each with its reason. A line is tested after trimming.
@@ -55,7 +58,7 @@ const IGNORED_LINES = [
 const IGNORE_PAGE_DESCRIPTION = true;
 /** Whole sections whose content repeats the sidebar: their links and words are not facts. */
 const IGNORED_SECTIONS = [/^next steps$/iu];
-/** Names from fenced blocks that any TypeScript, JSX, CSS or shell text has: not facts about the Toaster. */
+/** Names from fenced blocks that any TypeScript, JSX, CSS or shell text has: not facts about a component. */
 const COMMON_NAMES = new Set([
   'import', 'from', 'export', 'default', 'const', 'let', 'var', 'function', 'return', 'if', 'else', 'await',
   'async', 'new', 'true', 'false', 'null', 'undefined', 'typeof', 'type', 'interface', 'extends', 'as', 'of',
@@ -87,11 +90,11 @@ function fail(message) {
 }
 
 function parseArgs(argv) {
-  const options = { old: 'artifacts/docs-facts/baseline/llms-full.txt', new: 'apps/site/out/llms-full.txt' };
+  const options = { under: DEFAULT_UNDER, old: 'artifacts/docs-facts/baseline/llms-full.txt', new: 'apps/site/out/llms-full.txt' };
   for (let index = 0; index < argv.length; index += 2) {
     const [name, value] = [argv[index], argv[index + 1]];
-    if (!['--pages', '--old', '--new', '--json'].includes(name) || value === undefined || value.startsWith('--')) {
-      fail(`unknown or incomplete argument "${name}"\nusage: node scripts/compare-docs-facts.mjs [--pages <slug,…>] [--old <file>] [--new <file>] [--json <file>]`);
+    if (!['--under', '--pages', '--old', '--new', '--json'].includes(name) || value === undefined || value.startsWith('--')) {
+      fail(`unknown or incomplete argument "${name}"\nusage: node scripts/compare-docs-facts.mjs [--under <path>] [--pages <slug,…>] [--old <file>] [--new <file>] [--json <file>]`);
     }
     options[name.slice(2)] = value;
   }
@@ -190,7 +193,6 @@ function pagesOf(text) {
   return pages.map((page, index) => ({ ...page, end: pages[index + 1]?.start ?? lines.length, lines }));
 }
 
-const slugOf = (url) => (url === TOASTER_URL ? 'index' : url.slice(TOASTER_URL.length + 1));
 
 /** Every fact of one old page with its place. */
 function factsOf(page) {
@@ -280,14 +282,16 @@ function group(facts) {
 }
 
 const options = parseArgs(process.argv.slice(2));
+const BASE_URL = `${DOCS_URL}/${options.under.replace(/^\/+|\/+$/gu, '')}`;
+const slugOf = (url) => (url === BASE_URL ? 'index' : url.slice(BASE_URL.length + 1));
 const oldText = readText(options.old);
 const newText = readText(options.new);
-const toasterPages = pagesOf(oldText).filter((page) => page.url === TOASTER_URL || page.url.startsWith(`${TOASTER_URL}/`));
-if (!toasterPages.length) fail(`${options.old} has no Toaster pages (no "Source: ${TOASTER_URL}…" line)`);
+const oldPages = pagesOf(oldText).filter((page) => page.url === BASE_URL || page.url.startsWith(`${BASE_URL}/`));
+if (!oldPages.length) fail(`${options.old} has no pages under ${options.under} (no "Source: ${BASE_URL}…" line)`);
 const wanted = options.pages?.split(',').map((slug) => slug.trim()).filter(Boolean);
-const unknown = wanted?.filter((slug) => !toasterPages.some((page) => slugOf(page.url) === slug)) ?? [];
-if (unknown.length) fail(`no such page in the snapshot: ${unknown.join(', ')}; pages: ${toasterPages.map((page) => slugOf(page.url)).join(', ')}`);
-const pages = wanted ? toasterPages.filter((page) => wanted.includes(slugOf(page.url))) : toasterPages;
+const unknown = wanted?.filter((slug) => !oldPages.some((page) => slugOf(page.url) === slug)) ?? [];
+if (unknown.length) fail(`no such page in the snapshot: ${unknown.join(', ')}; pages: ${oldPages.map((page) => slugOf(page.url)).join(', ')}`);
+const pages = wanted ? oldPages.filter((page) => wanted.includes(slugOf(page.url))) : oldPages;
 
 const index = indexOf(newText);
 const facts = group(pages.flatMap(factsOf));

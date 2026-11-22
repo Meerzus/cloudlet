@@ -8,7 +8,7 @@ import { PageNav } from '@/components/docs/page-nav';
 import { DesktopToc, MobileToc, TocProvider } from '@/components/docs/toc';
 import { markdownUrl } from '@/lib/docs-markdown';
 import { source } from '@/lib/docs-source';
-import { COLOR_PICKER_DOCS_PATH, COLOR_PICKER_PATH, SITE_URL } from '@/lib/site';
+import { COLOR_PALETTE_DOCS_PATH, COLOR_PICKER_DOCS_PATH, COLOR_PICKER_PATH, SITE_URL } from '@/lib/site';
 
 interface Props {
   params: Promise<{ slug?: string[] }>;
@@ -47,8 +47,9 @@ export function generateStaticParams() {
 }
 
 /**
- * The color picker's page in the docs shares its landing's card (the JPEGs next to
- * `app/color-picker/page.tsx`); every other docs page keeps the root card it inherits.
+ * The color picker's and the color palette's pages in the docs share the card of the picker's
+ * landing, where both live (the JPEGs next to `app/color-picker/page.tsx`); every other docs page
+ * keeps the root card it inherits.
  */
 function pickerCard(name: 'opengraph-image' | 'twitter-image') {
   const alt = readFileSync(join(process.cwd(), `src/app/color-picker/${name}.alt.txt`), 'utf8').trim();
@@ -62,7 +63,7 @@ export async function generateMetadata({ params }: Props, parent: ResolvingMetad
   const title = `${page.data.title} — Cloudlet Docs`;
   // A page's own openGraph replaces the parent's whole, file-based image included: carry it over.
   const { openGraph, twitter } = await parent;
-  const picker = page.url === COLOR_PICKER_DOCS_PATH;
+  const picker = page.url === COLOR_PICKER_DOCS_PATH || page.url === COLOR_PALETTE_DOCS_PATH;
   // Agents and crawlers: the canonical address and the page's own Markdown.
   return {
     title,

@@ -5,7 +5,7 @@
 //   node scripts/voiceover-safari-run.mjs [--only arrival,pill-island,slider,...,picker,palette] [--out-dir dir] [--site URL]
 //
 // Needs the lab served on 127.0.0.1:4173 (node scripts/serve-csp.mjs) for the Toaster's scenarios; the
-// color picker's (`picker`) serves the site's static export itself (npm run build:site), or uses --site,
+// color picker's and the color palette's (`picker`, `palette`) serve the site's static export themselves (npm run build:site), or use --site,
 // VoiceOver on with AppleScript
 // control (see scripts/voiceover-log.mjs) and Safari Settings > Developer > Allow remote automation.
 // Safari runs the session in its own automation window; do not touch the keyboard or mouse meanwhile.
@@ -99,8 +99,9 @@ const note = (scenario, label, value) => appendFile(stepsFile, `${JSON.stringify
 
 const clearButton = () => focus('button', 'Clear notifications');
 
-/** The color picker's docs page; set in main() once the site is served. */
+/** The color picker's and the color palette's docs pages; set in main() once the site is served. */
 let pickerPage = '';
+let palettePage = '';
 
 const scenarios = {
   arrival: async (name) => {
@@ -197,11 +198,11 @@ const scenarios = {
   // The color picker (COLOR_PICKER §5) on its docs page: each step names what VoiceOver should say,
   // as the docs and the Keyboards cheat sheet promise ("Saturation 40%, Brightness 80%", "Hue 48°").
   picker: async (name) => {
-    const swatch = '.docs-picker-demo .color-picker > .color-picker-swatch';
-    const panel = '.docs-picker-demo .color-picker [role="dialog"]';
+    const swatch = '.docs-picker-preview .color-picker > .color-picker-swatch';
+    const panel = '.docs-picker-preview .color-picker [role="dialog"]';
     await step(name, 'load /docs/components/color-picker', () => go(pickerPage));
-    await step(name, 'focus the swatch (“Open the example picker”, collapsed, button)', () => focus(swatch));
-    await step(name, 'Enter (“Example picker”; “Saturation 84%, Brightness 86%”, slider)', () => press('Enter'));
+    await step(name, 'focus the swatch (“Open the preview picker”, collapsed, button)', () => focus(swatch));
+    await step(name, 'Enter (“Preview picker”; “Saturation 84%, Brightness 86%”, slider)', () => press('Enter'));
     await step(name, '→ (“Saturation 85%, Brightness 86%”)', () => press('ArrowRight'));
     await step(name, 'Shift+↑ (“Saturation 85%, Brightness 96%”)', () => press('Shift+ArrowUp'));
     await step(name, 'Tab (“Hue 222°”, Hue, slider)', () => press('Tab'));
@@ -213,16 +214,17 @@ const scenarios = {
     await step(name, 'Tab (“Copy”, button; no eyedropper in Safari)', () => press('Tab'));
     await step(name, 'Enter on copy (“Copied”)', () => press('Enter'));
     await note(name, 'live region after copy', await js(`return document.querySelector('${panel} [aria-live]')?.textContent ?? null`));
-    await step(name, 'Escape (“Open the example picker”, collapsed, button)', () => press('Escape'));
+    await step(name, 'Escape (“Open the preview picker”, collapsed, button)', () => press('Escape'));
     await note(name, 'swatch after Escape', await js(`const s = document.querySelector('${swatch}'); return { focused: s === document.activeElement, expanded: s.getAttribute('aria-expanded') }`));
   },
-  // The color palette (COLOR_PALETTE §4) on the same docs page: add, change, remove. One Tab stop
+  // The color palette (COLOR_PALETTE §4) on its docs page: add, change, remove. One Tab stop
   // for the row; each swatch says its place and value; a removal is announced and focus moves on.
   palette: async (name) => {
-    const row = '.docs-palette-demo [role="group"]';
+    // The palette on the stage of the Preview; the controls under it are a group too.
+    const row = '.docs-palette-preview .docs-demo-stage [role="group"]';
     const current = () => js(`return [...document.querySelectorAll('${row} .color-picker > .color-picker-swatch')].map((s) => s.getAttribute('aria-label'))`);
-    await step(name, 'load /docs/components/color-picker', () => go(pickerPage));
-    await step(name, 'focus the first swatch (“Color 1 of 3, #245cdb”, button, Example palette, group)', () => focus(`${row} .color-picker > .color-picker-swatch`));
+    await step(name, 'load /docs/components/color-palette', () => go(palettePage));
+    await step(name, 'focus the first swatch (“Color 1 of 3, #245cdb”, button, Preview palette, group)', () => focus(`${row} .color-picker > .color-picker-swatch`));
     await step(name, '→ (“Color 2 of 3, #f2b84b”)', () => press('ArrowRight'));
     await step(name, 'End (“Add color”, button)', () => press('End'));
     await step(name, 'Enter — add (“Color picker”; “Saturation …, Brightness …”, slider)', () => press('Enter'));
@@ -270,7 +272,9 @@ async function main() {
       children.push({ kill: () => server.close() });
       site = `http://127.0.0.1:${server.address().port}`;
     }
-    pickerPage = `${site.replace(/\/$/u, '')}/docs/components/color-picker`;
+    const components = `${site.replace(/\/$/u, '')}/docs/components`;
+    pickerPage = `${components}/color-picker`;
+    palettePage = `${components}/color-palette`;
   }
   const driver = spawn('safaridriver', ['-p', String(port)], { stdio: 'ignore' });
   children.push(driver);

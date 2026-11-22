@@ -1,13 +1,15 @@
 ---
 title: Color picker
-description: A round swatch that morphs into a full picker — hex, rgb, hsl and oklch, optional opacity, the eyedropper, the keyboard and a screen reader — and a palette of up to four of them, installed as source with the shadcn CLI.
+description: A round swatch that morphs into a full color picker. Installed as source with the shadcn CLI.
 ---
 
-`ColorPicker` is a swatch that opens into the picker; `ColorPickerPanel` is the same picker in the flow of the page, for forms and sidebars. Both edit a color given as a CSS string and give back a string in the format you allow. They have no dependencies besides React.
+`ColorPicker` is a swatch that opens into the picker; `ColorPickerPanel` is the same picker in the flow of the page, for forms and sidebars. Both edit a color given as a CSS string and give back a string in the format you allow.
 
-<PickerDemo />
+## Preview
 
-## Install
+<PickerPreview />
+
+## Installation
 
 The color picker is a shadcn registry item, not an npm package: the CLI copies its source into your project, where it is yours to change.
 
@@ -23,7 +25,9 @@ It adds five files under your `ui` and `lib` aliases and nothing to `package.jso
 | `components/ui/color-picker/morph.ts` | The springs of the swatch-to-panel morph |
 | `lib/spring.ts` | The spring easing both use |
 
-## Use
+The stylesheet reads the shadcn tokens `--background`, `--foreground`, `--border`, `--ring` and, if your theme has it, `--muted`. It resets its own buttons, so it does not rely on Tailwind's preflight.
+
+## Usage
 
 Pass `color` and `onChange` and the picker is controlled, like an input. `onChange` receives the value in the current format on every change, and once more when the reader switches the format, so your state, the field and a hidden input always agree.
 
@@ -54,7 +58,78 @@ export function ThemeForm({ action }: { action: (data: FormData) => void }) {
 }
 ```
 
-## Props
+### Styling
+
+Everything is plain CSS in `color-picker.css`; change it there, or override a class in your own stylesheet:
+
+```css title="globals.css"
+.color-picker-panel {
+  width: 18rem;
+  border-radius: 1rem;
+}
+```
+
+### Placement and limits
+
+The panel opens down and to the right of the swatch and flips up and/or left when it would cross the edge of the viewport. It is not portalled, so it inherits the theme of its subtree and works inside an iframe — and an ancestor with `overflow: hidden` clips it. Give that container `overflow: visible`, or place the picker outside it.
+
+<Callout type="warning" title="Not inside a paragraph">
+The picker's root is a `<div>`, so it cannot sit inside a `<p>`: the browser would move it out and React reports a hydration error. Put it in a `<div>` instead.
+</Callout>
+
+### Reduced motion
+
+Under `prefers-reduced-motion: reduce` the swatch opens and closes in a single frame, without the morph, and the format switch and the copy check stop animating. An app with its own setting can ask for the same with `data-reduced-motion` on any ancestor:
+
+```tsx title="settings.tsx"
+import type { ReactNode } from "react";
+
+export function MotionSetting({ reduce, children }: { reduce: boolean; children: ReactNode }) {
+  return <div data-reduced-motion={reduce ? "" : undefined}>{children}</div>;
+}
+```
+
+## Examples
+
+### Inline panel
+
+`ColorPickerPanel` is the picker without the swatch, always open.
+
+<Example name="color-picker/panel" />
+
+### One format
+
+A single entry in `formats` fixes the output and hides the format switch.
+
+<Example name="color-picker/one-format" />
+
+### Opacity
+
+`alpha` adds the opacity slider; the value carries opacity only below 1.
+
+<Example name="color-picker/opacity" />
+
+### Format in your state
+
+`format` with `onFormatChange` keeps the reader's choice of a format where your app can save it.
+
+<Example name="color-picker/format" />
+
+### Swatch from a CSS variable
+
+`swatch` paints the button with any CSS color, here the variable the picker's value is written to.
+
+<Example name="color-picker/swatch" />
+
+### Translated labels
+
+A full `labels` object: every name and announcement in Spanish.
+
+<Example name="color-picker/labels" />
+
+## API Reference
+
+### Props
 
 `ColorPickerProps` for `ColorPicker`, `ColorPickerPanelProps` for `ColorPickerPanel`; every prop is optional.
 
@@ -63,7 +138,7 @@ export function ThemeForm({ action }: { action: (data: FormData) => void }) {
 | `color` | `string` | — | The color to show (controlled): hex, `rgb()`, `hsl()` or `oklch()`. A value that does not parse, such as `var(--accent)`, keeps the last valid color. |
 | `defaultColor` | `string` | `#ffffff` | The initial color when the picker owns its value. |
 | `onChange` | `(value: string) => void` | — | Called with the value in `format` on every change and when the format switches. |
-| `format` | `ColorFormat` | — | The output format (controlled); pair it with `onFormatChange`. |
+| `format` | `ColorFormat` | — | The output format (controlled); pair it with `onFormatChange`. Changing it from your code does not call `onChange`, see [Formats](#formats). |
 | `defaultFormat` | `ColorFormat` | the first of `formats` | The initial format when the picker owns it. |
 | `onFormatChange` | `(format: ColorFormat) => void` | — | Called when the reader picks another format. |
 | `formats` | `readonly ColorFormat[]` | all four | The formats the switch offers, in order. A single entry hides the switch. |
@@ -73,7 +148,7 @@ export function ThemeForm({ action }: { action: (data: FormData) => void }) {
 | `swatch` | `string` | the current value | `ColorPicker` only: any CSS color for the swatch button, such as a `var()` the picker cannot parse. |
 | `className` | `string` | — | `ColorPickerPanel` only: added to the panel. |
 
-## Formats
+### Formats
 
 `ColorFormat` is `'hex' | 'rgb' | 'hsl' | 'oklch'`. The picker reads `#rgb`, `#rgba`, `#rrggbb` and `#rrggbbaa`, `rgb()` and `rgba()` in the old and the new syntax, `hsl()` and `hsla()`, and `oklch()` with lightness as a percentage or a fraction (`none` counts as 0). It writes one canonical form per format: lowercase hex, space-separated channels, oklch lightness, chroma and hue rounded to at most one, three and one decimals, and opacity only below 1. For `#ff8000`:
 
@@ -84,13 +159,15 @@ export function ThemeForm({ action }: { action: (data: FormData) => void }) {
 | `hsl` | `hsl(30 100% 50%)` | `hsl(30 100% 50% / 0.5)` |
 | `oklch` | `oklch(73.2% 0.186 53)` | `oklch(73.2% 0.186 53 / 0.5)` |
 
+When the reader switches the format, `onChange` gets the same color in the new one. When your code changes `format`, it does not: the field and the hidden input show the new format at once, and `onChange` reports it from the next change of the color. If you store the value and switch the format from outside, rewrite the stored value yourself.
+
 The area edits saturation and brightness in sRGB. An `oklch()` color outside sRGB shows as given on the swatch; the first move of a handle keeps its lightness and hue and lowers the chroma until it fits.
 
-## Eyedropper and copy
+### Eyedropper and copy
 
 The eyedropper button appears only where the browser has the EyeDropper API, Chromium browsers today; elsewhere it is not rendered rather than shown disabled. Cancelling the eyedropper changes nothing. The copy button writes the value to the clipboard, turns into a check for a moment and announces `labels.copied`; a blocked clipboard leaves everything as it was.
 
-## Keyboard and screen readers
+### Keyboard and screen readers
 
 | Part | Role | Keys |
 | --- | --- | --- |
@@ -120,108 +197,3 @@ Every name and spoken word comes from `labels`; pass the ones you translate and 
 | `format` | `Format` | the format switch |
 | `eyedropper` | `Pick from screen` | the eyedropper button |
 | `copy`, `copied` | `Copy`, `Copied` | the copy button and its announcement |
-
-## Styling
-
-The stylesheet reads the shadcn tokens `--background`, `--foreground`, `--border`, `--ring` and, if your theme has it, `--muted`. It resets its own buttons, so it does not rely on Tailwind's preflight. Everything is plain CSS in `color-picker.css`; change it there, or override a class in your own stylesheet:
-
-```css title="globals.css"
-.color-picker-panel {
-  width: 18rem;
-  border-radius: 1rem;
-}
-```
-
-## Placement and limits
-
-The panel opens down and to the right of the swatch and flips up and/or left when it would cross the edge of the viewport. It is not portalled, so it inherits the theme of its subtree and works inside an iframe — and an ancestor with `overflow: hidden` clips it. Give that container `overflow: visible`, or place the picker outside it.
-
-<Callout type="warning" title="Not inside a paragraph">
-The picker's root is a `<div>`, so it cannot sit inside a `<p>`: the browser would move it out and React reports a hydration error. Put it in a `<div>` instead.
-</Callout>
-
-## Reduced motion
-
-Under `prefers-reduced-motion: reduce` the swatch opens and closes in a single frame, without the morph, and the format switch and the copy check stop animating. An app with its own setting can ask for the same with `data-reduced-motion` on any ancestor:
-
-```tsx title="settings.tsx"
-import type { ReactNode } from "react";
-
-export function MotionSetting({ reduce, children }: { reduce: boolean; children: ReactNode }) {
-  return <div data-reduced-motion={reduce ? "" : undefined}>{children}</div>;
-}
-```
-
-## Palette
-
-`ColorPalette` keeps a set of one to four colors in a row of swatches. Every swatch is a `ColorPicker`; a button adds a color, Delete or a small × removes one. It edits an array of CSS strings the way the picker edits one.
-
-<PaletteDemo />
-
-### Install the palette
-
-The palette is its own registry item. It lists the color picker as a registry dependency, so the CLI adds the picker too if your project does not have it yet:
-
-<InstallCommand command="npx shadcn@latest add https://cloudlet.dev/r/color-palette.json" />
-
-| File | What it holds |
-| --- | --- |
-| `components/ui/color-palette/color-palette.tsx` | `ColorPalette`, its props and labels |
-| `components/ui/color-palette/color-palette.css` | The styles, imported by the component itself |
-
-### Use the palette
-
-Pass `colors` and `onChange` to control it. `onChange` receives every color in the current format, in the reader's order, after any change, addition or removal; switching the format in one picker switches it for the whole palette and re-emits all of them. With `name`, the palette renders one hidden input per color, so `FormData.getAll()` gives back the array:
-
-```tsx title="brand-palette.tsx"
-"use client";
-
-import { useState } from "react";
-import { ColorPalette } from "@/components/ui/color-palette/color-palette";
-
-export function BrandPalette() {
-  const [colors, setColors] = useState<string[]>(["#245cdb", "#f2b84b"]);
-  return (
-    <form action={(data) => console.log(data.getAll("brand"))}>
-      <ColorPalette colors={colors} onChange={setColors} max={3} name="brand" labels={{ group: "Brand palette" }} />
-      <button type="submit">Save</button>
-    </form>
-  );
-}
-```
-
-A new color starts from the last one, turned around the OKLCH hue wheel by a full turn divided by `max` (a square of four at the default), and its picker opens at once. A grey has no hue to turn, so the new color steps in lightness instead.
-
-### Palette props
-
-`ColorPaletteProps`; every prop is optional.
-
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `colors` | `readonly string[]` | — | The colors (controlled): one to `max` strings in hex, `rgb()`, `hsl()` or `oklch()`. An empty array shows one default color. |
-| `defaultColors` | `readonly string[]` | — | The initial colors when the palette owns them. |
-| `onChange` | `(colors: string[]) => void` | — | Called with every color in `format` on any change, addition or removal. |
-| `max` | `number` | `4` | The most colors the palette holds; the add button is gone at this count. |
-| `format` | `ColorFormat` | — | The output format of every color (controlled); pair it with `onFormatChange`. |
-| `defaultFormat` | `ColorFormat` | the first of `formats` | The initial format when the palette owns it. |
-| `onFormatChange` | `(format: ColorFormat) => void` | — | Called when the reader picks another format in any picker. |
-| `formats` | `readonly ColorFormat[]` | all four | The formats every picker offers. A single entry hides the switch. |
-| `alpha` | `boolean` | `false` | Shows the opacity slider in every picker. |
-| `name` | `string` | — | Renders one `<input type="hidden">` per color under this name. |
-| `labels` | `Partial<ColorPaletteLabels>` | `DEFAULT_PALETTE_LABELS` | Names and announcements; anything left out keeps its English default. |
-| `className` | `string` | — | Added to the palette's row. |
-
-### Palette keyboard and labels
-
-The palette is one Tab stop: ← and → move between the swatches and the add button, Home and End jump to the ends, Enter or Space opens the focused swatch's picker, and Delete or Backspace removes its color while more than one is left. After a removal, focus moves to the neighbouring swatch and a screen reader hears `labels.removed`; after an addition, focus is already in the new color's picker. Each swatch says its place and value, "Color 2 of 3, #2f8f9d". In forced-colors mode the swatches, the add button and the × draw borders in system colors.
-
-| Key | Default | Where |
-| --- | --- | --- |
-| `group` | `Palette` | the group's name |
-| `color` | `Color {n} of {total}` | each swatch's name, before its value |
-| `add` | `Add color` | the add button |
-| `remove` | `Remove color` | the × on a swatch |
-| `removed` | `Color removed` | the announcement after a removal |
-| `picker` | `{}` | `labels` of every swatch's picker (its `open` is ignored: the swatch is named by `color`) |
-
-On touch screens, which have no hover, the × stays in view on every swatch. Under `prefers-reduced-motion: reduce` or inside `data-reduced-motion`, swatches appear and go without their springs.

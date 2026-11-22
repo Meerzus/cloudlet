@@ -1,8 +1,8 @@
 'use client';
 
 import { Check, Copy } from 'lucide-react';
-import { useEffect, useRef, useState, type ComponentProps } from 'react';
-import { useCopy } from '@/components/site/notifications';
+import { useRef, type ComponentProps } from 'react';
+import { useCopied } from '@/components/site/use-copied';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
 import { cn } from '@/lib/utils';
 import { DemoBlock } from './demo-block';
@@ -34,14 +34,7 @@ export function CodeBlock({
   ...rest
 }: CodeBlockProps) {
   const figure = useRef<HTMLElement>(null);
-  const copy = useCopy({ toast: false });
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!copied) return;
-    const timer = window.setTimeout(() => setCopied(false), 1600);
-    return () => window.clearTimeout(timer);
-  }, [copied]);
+  const [copied, copy] = useCopied();
 
   if (demoId !== undefined) {
     return <DemoBlock items={[{ id: demoId, code: children, className }]} note={demoNote !== undefined} />;
@@ -49,7 +42,7 @@ export function CodeBlock({
 
   const onCopy = async () => {
     const text = figure.current?.querySelector('pre')?.textContent ?? '';
-    setCopied(await copy(text.replace(/\n$/u, '')));
+    await copy(text.replace(/\n$/u, ''));
   };
 
   // The accessible name starts with the visible word, Copy or Copied (WCAG 2.5.3).

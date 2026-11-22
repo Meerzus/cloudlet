@@ -20,12 +20,12 @@ export const DOCS_PATH = '/docs';
 export const DOCS_URL = `${SITE_URL}${DOCS_PATH}`;
 /** The Toaster's page in the docs; its guides and reference live under it. */
 export const TOASTER_DOCS_PATH = `${DOCS_PATH}/components/toaster`;
-/** The color picker's page in the docs; the palette is a section of it until it has its own page. */
+/** The color picker's page in the docs. */
 export const COLOR_PICKER_DOCS_PATH = `${DOCS_PATH}/components/color-picker`;
 /** The color palette has no landing of its own: it is a section of the color picker's. */
 export const COLOR_PALETTE_PATH = `${COLOR_PICKER_PATH}#palette`;
-/** The color palette's page in the docs: the color picker's until the palette gets its own (`/docs/components/color-palette`). */
-export const COLOR_PALETTE_DOCS_PATH = COLOR_PICKER_DOCS_PATH;
+/** The color palette's page in the docs. */
+export const COLOR_PALETTE_DOCS_PATH = `${DOCS_PATH}/components/color-palette`;
 /** A component of the kit, as the header's Components panel and the footers list it. */
 export interface SiteComponent {
   readonly id: RegistryItem;
@@ -68,8 +68,8 @@ export function isUnder(pathname: string, path: string): boolean {
 /**
  * The component a page belongs to: its landing, the pages under it and its pages in the docs. The
  * kit's own pages (the root, `/docs`, `/docs/installation`) and unknown paths belong to none. The
- * palette lives on the color picker's landing and, for now, in its docs, so those pages are the
- * picker's: the first component in the kit's order wins.
+ * palette lives on the color picker's landing, so that page is the picker's (the first component
+ * in the kit's order wins); in the docs it has a page of its own.
  */
 export function componentOf(pathname: string): SiteComponent | undefined {
   return COMPONENTS.find((component) => isUnder(pathname, component.path) || isUnder(pathname, component.docs));

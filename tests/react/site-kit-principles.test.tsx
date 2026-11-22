@@ -8,6 +8,9 @@ import { morphClock } from '../../apps/site/src/components/ui/color-picker/morph
 import { KIT_FAQ } from '../../apps/site/src/lib/kit-faq';
 import { setStill, STILL_ATTRIBUTE } from '../../apps/site/src/lib/reduced-motion';
 
+// jsdom has no ResizeObserver: the segmented control's sliding highlight re-measures on it.
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };
+
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/' }));
 
 let systemReduced = false;

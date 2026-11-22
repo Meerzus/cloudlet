@@ -22,11 +22,11 @@ describe('site components (COLOR_PICKER §8.1, §8.7, §9)', () => {
     expect(COMPONENTS.map(({ id, name, path, docs }) => ({ id, name, path, docs }))).toEqual([
       { id: 'toaster', name: 'Toaster', path: '/toaster', docs: '/docs/components/toaster' },
       { id: 'color-picker', name: 'Color picker', path: '/color-picker', docs: '/docs/components/color-picker' },
-      // The palette is a section of the picker's landing and, until its own page, of the picker's docs.
-      { id: 'color-palette', name: 'Color palette', path: '/color-picker#palette', docs: '/docs/components/color-picker' },
+      // The palette is a section of the picker's landing; in the docs it has its own page.
+      { id: 'color-palette', name: 'Color palette', path: '/color-picker#palette', docs: '/docs/components/color-palette' },
     ]);
     expect(COMPONENTS.map((component) => component.id)).toEqual([...REGISTRY_ITEMS]);
-    expect([COLOR_PALETTE_PATH, COLOR_PALETTE_DOCS_PATH]).toEqual(['/color-picker#palette', COLOR_PICKER_DOCS_PATH]);
+    expect([COLOR_PALETTE_PATH, COLOR_PALETTE_DOCS_PATH]).toEqual(['/color-picker#palette', '/docs/components/color-palette']);
     for (const component of COMPONENTS) {
       // One line in the panel: a sentence, short enough not to wrap twice.
       expect(component.description).toMatch(/^[A-Z].*\.$/);
@@ -43,6 +43,8 @@ describe('site components (COLOR_PICKER §8.1, §8.7, §9)', () => {
     expect(owner(`${TOASTER_DOCS_PATH}/styling`)).toBe('toaster');
     expect(owner(COLOR_PICKER_PATH)).toBe('color-picker');
     expect(owner(COLOR_PICKER_DOCS_PATH)).toBe('color-picker');
+    // The palette shares the picker's landing, so that page is the picker's; its docs page is its own.
+    expect(owner(COLOR_PALETTE_DOCS_PATH)).toBe('color-palette');
     expect(owner('/')).toBeUndefined();
     expect(owner(DOCS_PATH)).toBeUndefined();
     expect(owner(`${DOCS_PATH}/installation`)).toBeUndefined();
@@ -58,6 +60,7 @@ describe('site components (COLOR_PICKER §8.1, §8.7, §9)', () => {
     expect(docsPathOf(`${TOASTER_DOCS_PATH}/styling`)).toBe(TOASTER_DOCS_PATH);
     expect(docsPathOf(COLOR_PICKER_PATH)).toBe(COLOR_PICKER_DOCS_PATH);
     expect(docsPathOf(COLOR_PICKER_DOCS_PATH)).toBe(COLOR_PICKER_DOCS_PATH);
+    expect(docsPathOf(COLOR_PALETTE_DOCS_PATH)).toBe(COLOR_PALETTE_DOCS_PATH);
     expect(docsPathOf('/')).toBe(DOCS_PATH);
     expect(docsPathOf(DOCS_PATH)).toBe(DOCS_PATH);
     expect(docsPathOf(`${DOCS_PATH}/installation`)).toBe(DOCS_PATH);

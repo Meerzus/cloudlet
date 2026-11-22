@@ -15,7 +15,7 @@ Add an item by its name under the `@cloudlet` namespace:
 | --- | --- | --- |
 | `toaster` | [Toaster](/docs/components/toaster) | A wrapper and a theme bridge for `@cloudlet/toast`, which it adds as a dependency |
 | `color-picker` | [Color picker](/docs/components/color-picker) | The picker's source, nothing in `package.json` |
-| `color-palette` | [Color palette](/docs/components/color-picker#palette) | The palette's source, and the `color-picker` item it needs |
+| `color-palette` | [Color palette](/docs/components/color-palette) | The palette's source, and the `color-picker` item it needs |
 
 If your CLI does not resolve the `@cloudlet` namespace, give it the item's address instead: `https://cloudlet.dev/r/<item>.json`.
 
@@ -34,4 +34,5 @@ Simple components have no package: add them with the shadcn CLI.
 ## Next steps
 
 - [Toaster](/docs/components/toaster): the stack, the Island and the controller.
-- [Color picker](/docs/components/color-picker): the swatch, the panel and the palette.
+- [Color picker](/docs/components/color-picker): the swatch and the panel.
+- [Color palette](/docs/components/color-palette): a row of up to four pickers.

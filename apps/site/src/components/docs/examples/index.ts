@@ -1,0 +1,27 @@
+import type { ComponentType } from 'react';
+import { BrandForm } from './color-palette/form';
+import { OklchPalette } from './color-palette/oklch';
+import { TranslucentPalette } from './color-palette/opacity';
+import { SavedFormat } from './color-picker/format';
+import { SpanishPicker } from './color-picker/labels';
+import { HexOnly } from './color-picker/one-format';
+import { WithOpacity } from './color-picker/opacity';
+import { InlinePanel } from './color-picker/panel';
+import { AccentVariable } from './color-picker/swatch';
+
+/**
+ * The live examples of the docs by name: `<component>/<file>` is the file next to this one that
+ * `<Example name="…" />` renders and shows as code. A file without an entry here, or an entry
+ * without a file, fails the build and tests/unit/site-docs-examples.test.ts.
+ */
+export const EXAMPLES: Readonly<Record<string, ComponentType>> = {
+  'color-palette/form': BrandForm,
+  'color-palette/oklch': OklchPalette,
+  'color-palette/opacity': TranslucentPalette,
+  'color-picker/format': SavedFormat,
+  'color-picker/labels': SpanishPicker,
+  'color-picker/one-format': HexOnly,
+  'color-picker/opacity': WithOpacity,
+  'color-picker/panel': InlinePanel,
+  'color-picker/swatch': AccentVariable,
+};

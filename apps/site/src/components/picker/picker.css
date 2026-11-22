@@ -99,6 +99,15 @@ html[data-cp-paint='page'] .site-edge-tint { background: linear-gradient(to bott
 /* --- Palette (§8.5): the palette and its hints; the page's paint shows it. --- */
 .cp-palette { display: flex; flex-direction: column; gap: 2.5rem; margin-top: 2.5rem; }
 .cp-palette-row { align-self: start; }
+/* The row and, under it, the quiet link to the palette's docs: the colour and weight of the hints' title. */
+.cp-palette-main { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
+.cp-palette-docs {
+  border-radius: 0.25rem; font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground);
+  text-decoration: underline; text-underline-offset: 4px; outline: none; transition: color 150ms;
+}
+.cp-palette-docs:hover { color: var(--foreground); }
+.cp-palette-docs:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+@media (prefers-reduced-motion: reduce) { .cp-palette-docs { transition: none; } }
 .cp-hints-title { margin-bottom: 0.75rem; font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
 .cp-hints-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .cp-hint {
@@ -264,6 +273,8 @@ html[data-cp-paint='page'] .site-edge-tint { background: linear-gradient(to bott
   .cp-keys kbd { border: 1px solid CanvasText; }
   .cp-keys kbd[data-pressed] { background: Highlight; color: HighlightText; }
   .cp-paint-pick:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
+  /* Forced colours drop the ring's box-shadow. */
+  .cp-palette-docs:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
 }
 
 /* --- The foot (§8.8): no rule over the footer; the paint softens under it into a progressive blur. --- */

@@ -199,13 +199,16 @@ async function axe(page, { pixels = false } = {}) {
 /** Safari (and WebKit) tab only to controls by default; Option+Tab reaches links too. */
 const TAB = engine === webkit ? 'Alt+Tab' : 'Tab';
 
+/** More stops than any audited page has (the color picker's docs page, with a picker in every example, has about 135): past it the pass is a focus trap. */
+const MAX_STOPS = 200;
+
 /** Tab through `path` from the top; returns the stops and the failures among them. */
 async function keyboard(page, path) {
   await visit(page, path);
   await page.waitForTimeout(600);
   const stops = [];
   const failures = [];
-  for (let index = 0; index < 120; index += 1) {
+  for (let index = 0; index < MAX_STOPS; index += 1) {
     await page.keyboard.press(TAB);
     await page.waitForTimeout(250);
     const stop = await page.evaluate(() => {
@@ -244,7 +247,7 @@ async function keyboard(page, path) {
       }
     }
   }
-  if (stops.length >= 120) failures.push({ name: 'no end after 120 stops (focus trap?)' });
+  if (stops.length >= MAX_STOPS) failures.push({ name: `no end after ${MAX_STOPS} stops (focus trap?)` });
   return { stops: stops.length, failures };
 }
 

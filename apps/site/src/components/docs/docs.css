@@ -340,7 +340,7 @@ html:has(.docs-shell) { background: var(--background); }
 .docs-demo-trigger[aria-current='true'] { background: var(--foreground); color: var(--background); border-color: transparent; }
 .docs-demo-trigger:disabled { cursor: not-allowed; opacity: 0.55; }
 .docs-demo .docs-code-bar { border-top: 1px solid var(--border); }
-/* The code area: its height glides between snippets (demo-block.tsx sets it inline while it moves). */
+/* The code area: its height glides between snippets (use-height-glide.ts sets it inline while it moves). */
 .docs-demo-code { position: relative; overflow: hidden; }
 .docs-demo-code .docs-code-pre { animation: docs-demo-in 220ms ease-out; }
 @keyframes docs-demo-in { from { opacity: 0; } }
@@ -357,17 +357,32 @@ html:has(.docs-shell) { background: var(--background); }
 .docs-demo-fold:hover { background: color-mix(in oklab, var(--foreground) 8%, var(--background)); }
 .docs-demo-fold:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
 .docs-demo-code[data-folded] .docs-demo-fold { position: absolute; left: 50%; bottom: 1rem; z-index: 1; margin: 0; transform: translateX(-50%); }
-/* The Toaster's Preview: the demo block with the page Toaster's controls between the stage and the code. */
+/* A block with a color picker on its stage. The picker's panel is not portalled, so the block must
+   not clip it: the corners are rounded on the stage and the code instead, and the stage is raised
+   so an open panel covers the controls and the code under it. */
+.docs-demo-open { overflow: visible; }
+.docs-demo-open > .docs-demo-stage { position: relative; z-index: 1; border-radius: calc(1.25rem - 1px) calc(1.25rem - 1px) 0 0; }
+.docs-demo-open > .docs-demo-code { border-radius: 0 0 calc(1.25rem - 1px) calc(1.25rem - 1px); }
+/* On a phone a swatch in the middle of the stage has no side with room for its 16rem panel, and the panel
+   flips but never shifts: it would hang over the edge of the screen. A stage with a swatch starts at the left there. */
+@media (max-width: 40rem) {
+  /* An example's stage is a row; a Preview's is a column. */
+  .docs-example > .docs-demo-stage:has(.color-picker) { justify-content: flex-start; }
+  .docs-picker-preview > .docs-demo-stage:has(.color-picker), .docs-palette-preview > .docs-demo-stage { align-items: flex-start; }
+}
+/* A Preview: the demo block with the controls of the component's main props between the stage and the code. */
 .docs-preview-controls {
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; padding: 0.875rem 1.125rem;
   border-top: 1px solid var(--border);
 }
-/* The shared segmented control is drawn as glass; on the flat page its rim is the plain hairline. */
-.docs-preview-controls fieldset > div { border-color: var(--border); background: color-mix(in oklab, var(--foreground) 3%, var(--background)); }
-/* At night the page colour under the chosen segment is darker than its track: lift it instead. */
-.dark .docs-preview-controls label:has(:checked) { background: color-mix(in oklab, var(--foreground) 14%, var(--background)); }
-/* On a phone the controls stack: one legend column, so the three tracks start on one line. */
-@media (max-width: 40rem) { .docs-preview-controls legend { width: 5rem; } }
+/* On a phone the controls stack: one legend column, so the three tracks start on one line. A fieldset is
+   as wide as its content by default: on the narrowest phones a track that does not fit beside its legend
+   wraps under it instead of leaving the block (four formats at 320 px made the page scroll sideways). */
+@media (max-width: 40rem) {
+  .docs-preview-controls { padding-inline: 1rem; }
+  .docs-preview-controls legend { width: 5rem; }
+  .docs-preview-controls fieldset { flex-wrap: wrap; row-gap: 0.5rem; min-width: 0; }
+}
 /* Underline, hover and focus ring come from the prose links. */
 .docs-preview-link { margin-inline-start: auto; font-size: 0.875rem; }
 @media (prefers-reduced-motion: reduce) {
@@ -431,16 +446,15 @@ html:has(.docs-shell) { background: var(--background); }
 @media (hover: none) and (pointer: coarse) { .docs-search-footer { display: none; } }
 @media (prefers-reduced-motion: reduce) { .docs-search-close { transition: none; } }
 
-/* The color picker docs' live example (picker-demo.tsx): the swatch with its value, then the inline panel. */
-.docs-picker-demo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 1.5rem 2.5rem;
-  margin: 1.75rem 0;
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: inset 0 0 0 1px var(--border);
+/* The Previews of the color picker and the color palette: the component above the value its onChange gave. */
+/* One column that never wraps: while the stage's height glides, a wrapping column would put the value beside the
+   component. `safe center` keeps the top of a component taller than the moving stage in view. */
+.docs-picker-preview .docs-demo-stage, .docs-palette-preview .docs-demo-stage { flex-direction: column; flex-wrap: nowrap; justify-content: safe center; gap: 1rem; }
+/* The swatch and the panel swap: the one that arrives comes out of a blur while the stage's height glides (use-height-glide.ts). */
+.docs-preview-swap { display: flex; justify-content: center; max-width: 100%; animation: docs-preview-swap 320ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+@keyframes docs-preview-swap { from { opacity: 0; filter: blur(8px); scale: 0.96; } }
+@media (prefers-reduced-motion: reduce) { .docs-preview-swap { animation: none; } }
+.docs-preview-value {
+  max-width: 100%; overflow-wrap: anywhere; text-align: center;
+  font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 0.8125rem; color: var(--muted-foreground);
 }
-.docs-picker-demo-swatch { display: flex; align-items: center; gap: 0.75rem; }
-.docs-palette-demo { flex-direction: column; gap: 1rem; }
