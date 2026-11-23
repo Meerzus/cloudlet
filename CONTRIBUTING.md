@@ -44,7 +44,12 @@ Other commands:
 
 - `npm run build:site` builds the website's static export;
 - `npm run test:tooling`, `npm run test:consumers`, `npm run test:managers` and
-  `npm run test:registry` run the tooling, installed-consumer, package-manager and registry suites;
+  `npm run test:registry` run the tooling, installed-consumer, package-manager and registry suites.
+  The last three install the packed archive, so run `npm run pack:local` first, and again after
+  every change to the package. `test:managers` needs `corepack` (it brings pnpm and yarn) and
+  [Bun](https://bun.sh) on your `PATH`; without Bun, limit the run to the managers you have:
+  `node scripts/package-managers.mjs --only npm,pnpm,yarn`. `test:registry` needs the shadcn CLI of
+  the registry tooling: `npm ci --prefix registry/tooling --ignore-scripts --no-audit --no-fund`;
 - `npm run release:verify` runs the whole chain from a clean install to the packed archive.
 
 Browser end-to-end tests build the production package and run Chromium, Firefox and WebKit under a
