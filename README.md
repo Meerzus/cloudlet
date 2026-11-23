@@ -17,7 +17,7 @@
 </div>
 
 <a href="https://cloudlet.dev">
-  <img src=".github/readme/showreel.webp" alt="The Cloudlet landing page: dragging the color picker's hue repaints the page from pink to sky blue, a notification flies from the Toaster into its Island, and the Island reports “Accent updated”" width="100%">
+  <img src=".github/readme/showreel.webp" alt="The Cloudlet landing page: dragging the color picker's hue repaints the page and its palette from pink to sky blue, and the Toaster's Island grows into a card that reports “Accent updated”" width="100%">
 </a>
 
 ## What's inside
