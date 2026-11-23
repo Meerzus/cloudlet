@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.3.0 — 2026-11-23
+## 1.3.0 — 2026-11-24
 
 The stack can sit in a corner. Nothing is removed or changed in behaviour; the new positions are
 additive (see API).

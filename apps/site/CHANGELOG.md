@@ -5,7 +5,7 @@ installed as source, so they have no versions: a section is named after the day 
 cloudlet.dev. The history of the npm package `@cloudlet/toast` is in the
 [root CHANGELOG](../../CHANGELOG.md).
 
-## 2026-11-23
+## 2026-11-24
 
 Cloudlet becomes a kit. [cloudlet.dev](https://cloudlet.dev) opens on the kit's own page, the
 documentation is one tree at [/docs](https://cloudlet.dev/docs) (the former addresses redirect), and
