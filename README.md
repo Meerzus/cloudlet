@@ -1,72 +1,57 @@
-<a href="https://cloudlet.dev/toaster">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset=".github/readme/wordmark-night.webp">
-    <img src=".github/readme/wordmark-day.webp" alt="Cloudlet, written in clouds across the sky" width="100%">
-  </picture>
+<div align="center">
+  <br />
+  <a href="https://cloudlet.dev"><img src=".github/readme/icon.svg" alt="Cloudlet" width="72" height="72"></a>
+  <h1>Cloudlet</h1>
+  <h3>Made to work together.</h3>
+  <p>A Toaster, a color picker and a palette for React.<br />Change one color and the whole kit answers.</p>
+  <p>
+    <a href="https://github.com/Meerzus/cloudlet/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/Meerzus/cloudlet?style=flat&logo=github&label=Stars&color=245cdb"></a>
+    <a href="https://github.com/Meerzus/cloudlet/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-245cdb?style=flat"></a>
+  </p>
+  <p>
+    <a href="https://cloudlet.dev/docs"><strong>Documentation</strong></a> ·
+    <a href="https://cloudlet.dev/docs/installation"><strong>Installation</strong></a> ·
+    <a href="https://cloudlet.dev"><strong>Components</strong></a>
+  </p>
+  <br />
+</div>
+
+<a href="https://cloudlet.dev">
+  <img src=".github/readme/showreel.webp" alt="The Cloudlet landing page: dragging the color picker's hue repaints the page from coral to cyan, the palette follows, and the Toaster's Island reports “Accent updated”" width="100%">
 </a>
 
-# Cloudlet
+## What's inside
 
-[![npm](https://img.shields.io/npm/v/@cloudlet/toast?color=245cdb)](https://www.npmjs.com/package/@cloudlet/toast)
-[![min+gzip](https://img.shields.io/badge/min%2Bgzip-9.3%20KB%20first%20load-245cdb)](https://cloudlet.dev/toaster#faq)
-[![CI](https://github.com/Meerzus/cloudlet/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Meerzus/cloudlet/actions/workflows/ci.yml)
-[![types](https://img.shields.io/npm/types/@cloudlet/toast)](https://www.npmjs.com/package/@cloudlet/toast)
-[![license](https://img.shields.io/npm/l/@cloudlet/toast)](https://github.com/Meerzus/cloudlet/blob/main/LICENSE)
+Every component is a shadcn registry item: the CLI copies its source into your project, and every
+line is yours.
 
-Cloudlet is a family of React components; this repository holds them, their website and their
-tests. The first one is the **Toaster**, `@cloudlet/toast`: one stack of notifications that collapses
-to a single pill and opens into the Island, a surface with a slider over every notification. Its
-[README](packages/toast/README.md) has the quickstart.
+| Component | What it does | |
+|---|---|---|
+| [Toaster](https://cloudlet.dev/toaster) | Notifications that stack softly and open into a card when it matters. | [Docs](https://cloudlet.dev/docs/components/toaster) |
+| [Color picker](https://cloudlet.dev/color-picker) | Hex, rgb, hsl and oklch, an eyedropper and full keyboard support. | [Docs](https://cloudlet.dev/docs/components/color-picker) |
+| [Color palette](https://cloudlet.dev/color-picker#palette) | Up to four colors, built on the color picker. | [Docs](https://cloudlet.dev/docs/components/color-palette) |
 
-**Documentation: https://cloudlet.dev/docs**
+## Installation
+
+```sh
+npx shadcn@latest add @cloudlet/toaster
+npx shadcn@latest add @cloudlet/color-picker
+npx shadcn@latest add @cloudlet/color-palette
+```
+
+The Toaster's registry item is a thin wrapper over its npm package, which also works on its own:
 
 ```sh
 npm install @cloudlet/toast
 ```
 
-## Workspace
-
-| Path | Contents |
-|---|---|
-| `packages/toast` | `@cloudlet/toast`: notification and operation controller, React adapter, the stack/Island shell, public types, CSS and its own build |
-| `apps/site` | The website at cloudlet.dev: landing pages and the documentation at `/docs` |
-| `apps/lab` | The interactive laboratory and the isolated fixtures the browser tests run on ([README](apps/lab/README.md)) |
-| `registry` | The shadcn registry item: a thin client wrapper and a CSS theme bridge ([README](registry/README.md)) |
-| `fixtures` | Installed-archive consumers: Vite/React 18.2 and 19, Next App/Pages, size measurement |
-| `tests` | Unit, React, contract, tooling and Playwright browser suites ([README](tests/README.md)) |
-| `scripts` | Packing, documentation checks, size reports, notices and release verification |
-
-## Development
-
-Node **24.17.0** and npm **11.12.1** are pinned (`.nvmrc`, `packageManager`, Volta). The workspace
-has one `package-lock.json`; isolated consumers and registry tooling keep their own lockfiles.
-
-```sh
-npm ci
-npm run check
-npm run dev
-```
-
-`check` runs the strict typecheck, unit tests, the library build, the tarball checks and the size
-report. `dev` starts the laboratory; `npm run dev:site` starts the website. Other commands:
-`npm run build:site`, `npm run check:docs` (typechecks every documentation example and requires every
-public export to be documented), `npm run test:tooling`, `npm run test:consumers`,
-`npm run test:managers`, `npm run test:registry`, `npm run release:verify` (the whole chain from a clean install to the packed
-archive).
-
-Browser end-to-end tests build the production package and run Chromium, Firefox and WebKit under a
-strict CSP:
-
-```sh
-npx playwright install chromium firefox webkit
-npm run test:e2e
-```
+If Cloudlet saves you some work, a star helps the next developer find it.
 
 ## Contributing
 
-Bug reports and ideas are welcome in [issues](https://github.com/Meerzus/cloudlet/issues); read
-[CONTRIBUTING](CONTRIBUTING.md) before a pull request. Security problems go through
-[SECURITY](SECURITY.md), not public issues. Everyone taking part follows the
+Bug reports and ideas are welcome in [issues](https://github.com/Meerzus/cloudlet/issues). The
+workspace, the commands and the checks are in [CONTRIBUTING](CONTRIBUTING.md). Security problems go
+through [SECURITY](SECURITY.md), not public issues. Everyone taking part follows the
 [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License

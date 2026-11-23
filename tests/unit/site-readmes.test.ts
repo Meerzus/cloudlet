@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DOCS_URL, formatKB, PACKAGE_SIZE, SITE_URL, TOASTER_DOCS_PATH } from '../../apps/site/src/lib/site';
+import { COMPONENTS, DOCS_URL, formatKB, PACKAGE_SIZE, registryCommand, SITE_URL, TOASTER_DOCS_PATH } from '../../apps/site/src/lib/site';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
@@ -24,9 +24,18 @@ describe('READMEs and changelog', () => {
     expect(read('packages/toast/CHANGELOG.md')).toBe(read('CHANGELOG.md'));
   });
 
-  it('print the measured first-load size in the size badge', () => {
+  it('print the measured first-load size in the package README size badge', () => {
     const badge = `min%2Bgzip-${encodeURIComponent(`${formatKB(PACKAGE_SIZE.start)} first load`)}-`;
-    for (const path of ['README.md', 'packages/toast/README.md']) expect(read(path), path).toContain(badge);
+    expect(read('packages/toast/README.md')).toContain(badge);
+  });
+
+  it('introduce every component of the kit in the root README: its landing, its docs and its install command', () => {
+    const readme = read('README.md');
+    for (const component of COMPONENTS) {
+      expect(readme, component.name).toContain(`](${SITE_URL}${component.path})`);
+      expect(readme, component.name).toContain(`](${SITE_URL}${component.docs})`);
+      expect(readme, component.name).toContain(registryCommand(component.id));
+    }
   });
 
   it('keep the rc.0 migration notes in the changelog', () => {
