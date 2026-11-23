@@ -1,16 +1,25 @@
 {
   "$schema": "https://context7.com/schema/context7.json",
-  "projectTitle": "Cloudlet Toast",
-  "description": "@cloudlet/toast: a notification toaster for React 18 and 19 and Next.js. One stack that collapses to a pill and morphs into the Island; operations that follow a promise with progress, retry and cancel; forms inside a notification; accessible, SSR-safe and strict-CSP friendly.",
-  "folders": ["apps/site/content/docs"],
+  "projectTitle": "Cloudlet",
+  "description": "Cloudlet: a kit of React components made to work together, installed with shadcn. The Toaster (also the npm package @cloudlet/toast) stacks notifications into one pill that opens into the Island, follows promises with progress, retry and cancel, and renders forms inside a notification; the Color picker edits hex, rgb, hsl and oklch with an eyedropper and full keyboard support; the Color palette holds up to four colors built on the picker. Accessible, SSR-safe and strict-CSP friendly.",
+  "folders": [
+    "apps/site/content/docs"
+  ],
   "excludeFolders": [],
-  "excludeFiles": ["CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "SECURITY.md"],
+  "excludeFiles": [
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+  ],
   "rules": [
     "Import '@cloudlet/toast/styles.css' once, create one controller with createCloudlet() and render <Toaster /> inside <CloudletProvider controller={...}>.",
     "Get the controller with useCloudlet() and call show, update, dismiss or track from event handlers or effects, never during render.",
     "In the Next.js App Router a 'use client' owner component creates the controller in an effect and disposes that same instance in the effect's cleanup.",
     "On the server create one controller per request and dispose it after the response; never share a controller between requests.",
     "Use cloudlet.track(promiseOrFactory, options) for async work; pass a factory ({ signal }) => ... to make the operation retryable and cancellable.",
-    "Dismissing a tracked notification never aborts its operation; call cancel() on the operation handle to stop the work."
+    "Dismissing a tracked notification never aborts its operation; call cancel() on the operation handle to stop the work.",
+    "Add the Color picker with `npx shadcn@latest add @cloudlet/color-picker` (or https://cloudlet.dev/r/color-picker.json); it is a registry item, not an npm package, and imports from '@/components/ui/color-picker/color-picker'.",
+    "Control ColorPicker like an input with color and onChange, or let it own its value with defaultColor; with name, a hidden input carries the value in a native form.",
+    "Add the Color palette with `npx shadcn@latest add @cloudlet/color-palette`; it lists the color picker as a registry dependency. Control it with colors and onChange; with name, FormData.getAll() returns the array."
   ]
 }

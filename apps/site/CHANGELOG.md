@@ -5,11 +5,14 @@ installed as source, so they have no versions: a section is named after the day 
 cloudlet.dev. The history of the npm package `@cloudlet/toast` is in the
 [root CHANGELOG](../../CHANGELOG.md).
 
-## 2026-11-15
+## 2026-11-24
 
-The Color picker, Cloudlet's second component. It is a shadcn registry item with no dependencies
-besides React: the CLI copies its source into your project, and there is no npm package to update.
-Nothing changes for `@cloudlet/toast` or the `toaster` item.
+Cloudlet becomes a kit. [cloudlet.dev](https://cloudlet.dev) opens on the kit's own page, the
+documentation is one tree at [/docs](https://cloudlet.dev/docs) (the former addresses redirect), and
+two components join the Toaster: the Color picker and the Color palette. Both are shadcn registry
+items with no dependencies besides React: the CLI copies their source into your project, and there is
+no npm package to update. The `toaster` item now installs `@cloudlet/toast@1.3.0`; what changed in
+the package is in the [root CHANGELOG](../../CHANGELOG.md).
 
 ### Color picker
 
