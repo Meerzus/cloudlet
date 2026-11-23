@@ -49,8 +49,9 @@ Other commands:
   every change to the package. `test:consumers` and `test:registry` open Chromium, Firefox and WebKit:
   install them once with `npx playwright install chromium firefox webkit`. `test:managers` needs
   `corepack` (it brings pnpm and yarn) and [Bun](https://bun.sh) on your `PATH`; without Bun, limit
-  the run to the managers you have: `node scripts/package-managers.mjs --only npm,pnpm,yarn`. `test:registry` needs the shadcn CLI of
-  the registry tooling: `npm ci --prefix registry/tooling --ignore-scripts --no-audit --no-fund`;
+  the run to the managers you have: `node scripts/package-managers.mjs --only npm,pnpm,yarn`.
+  `test:registry` needs the shadcn CLI of the registry tooling:
+  `npm ci --prefix registry/tooling --ignore-scripts --no-audit --no-fund`;
 - `npm run release:verify` runs the whole chain from a clean install to the packed archive.
 
 Browser end-to-end tests build the production package and run Chromium, Firefox and WebKit under a
