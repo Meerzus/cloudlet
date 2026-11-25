@@ -4,8 +4,9 @@ import type { ControllerSnapshot } from '../contracts/snapshots.js';
 import { getControllerKernel } from './controller.js';
 
 // The agent adapter's read-only way into a controller. Only the `agent` entry imports it, so the
-// root entry and the renderer chunk never carry it. It hands out no lease, no tokens of the
-// renderer and no mutators; form values are reduced to "holds text" here, before they leave core.
+// root entry and the renderer chunk never carry it. It hands out no lease and no mutators. Form
+// values reach the adapter only as "holds text": `forms` is reduced here, and `controller` is typed
+// as the public snapshot, although at runtime it is the renderer's object with its form drafts.
 
 const freeze = Object.freeze;
 
