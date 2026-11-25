@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { REGISTRY_ITEM_URL, SITE_URL, TOASTER_PATH } from '../../apps/site/src/lib/site';
+import { REGISTRY_ITEM_URL, SITE_URL } from '../../apps/site/src/lib/site';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
@@ -35,6 +35,7 @@ describe('site registry (/r)', () => {
 
   it('is the item the install command names', () => {
     expect(REGISTRY_ITEM_URL).toBe(`${SITE_URL}/r/toaster.json`);
-    expect(JSON.parse(read('registry/registry.json')).homepage).toBe(`${SITE_URL}${TOASTER_PATH}`);
+    // The registry serves the whole kit, so its homepage is the kit's page, not one component's landing.
+    expect(JSON.parse(read('registry/registry.json')).homepage).toBe(SITE_URL);
   });
 });
