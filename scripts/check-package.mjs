@@ -54,7 +54,7 @@ async function checkPackage(tarballPath) {
     assert.deepEqual(manifest.publishConfig, { access: 'public', tag: /-/u.test(manifest.version) ? 'next' : 'latest' }, 'publishConfig must be public, prereleases under next');
     assert.equal(manifest.homepage, 'https://cloudlet.dev/toaster');
     assert.deepEqual(manifest.repository, { type: 'git', url: 'git+https://github.com/Meerzus/cloudlet.git', directory: 'packages/toast' });
-    assert.deepEqual(Object.keys(manifest.exports).sort(), ['.', './styles.css']);
+    assert.deepEqual(Object.keys(manifest.exports).sort(), ['.', './agent', './styles.css']);
     // `types` must come first so TypeScript sees it; `default` must come last so it
     // only catches resolvers that arrive without the `import` condition (CommonJS
     // `require()` on Node 22.12+, `require.resolve`, Jest in CJS mode, lint resolvers).

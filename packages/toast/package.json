@@ -12,6 +12,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
+    "./agent": { "types": "./dist/agent.d.ts", "import": "./dist/agent.js", "default": "./dist/agent.js" },
     "./styles.css": "./dist/styles.css"
   },
   "files": ["dist", "src/**/*.ts", "src/**/*.tsx", "LICENSE", "THIRD_PARTY_NOTICES.md", "README.md", "CHANGELOG.md"],

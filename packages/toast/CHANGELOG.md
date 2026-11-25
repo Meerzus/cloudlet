@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- Experimental: `@cloudlet/toast/agent` exports `toasterAgent(controller, { name? })`, which lets an
+  agent read a controller through the kit's agent bridge (`@cloudlet/agent`). Its snapshot lists the
+  Toaster (Island, count, overflow, whether a `Toaster` is mounted) and every notification in
+  presentation order: title, text, kind, time left, operation state and the action, with the verbs
+  that apply. Form fields say whether they hold text; their values never leave Cloudlet. The subpath
+  reads the controller without the host lease, DOM or timers, and the root entry does not load it.
+
 ## 1.3.0 — 2026-11-24
 
 The stack can sit in a corner. Nothing is removed or changed in behaviour; the new positions are
