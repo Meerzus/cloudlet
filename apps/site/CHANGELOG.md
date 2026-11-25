@@ -5,7 +5,7 @@ installed as source, so they have no versions: a section is named after the day 
 cloudlet.dev. The history of the npm package `@cloudlet/toast` is in the
 [root CHANGELOG](../../CHANGELOG.md).
 
-## Unreleased
+## 2026-11-25
 
 ### Website
 
