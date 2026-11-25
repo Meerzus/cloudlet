@@ -23,6 +23,7 @@ export default defineConfig({
       entry: {
         index: rootEntry,
         react: fileURLToPath(new URL('./src/react.ts', import.meta.url)),
+        agent: fileURLToPath(new URL('./src/agent.ts', import.meta.url)),
         styles: fileURLToPath(new URL('./src/styles.css', import.meta.url)),
       },
       formats: ['es'],

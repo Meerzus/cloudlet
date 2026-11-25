@@ -1,0 +1,19 @@
+{
+  "name": "@cloudlet/agent",
+  "version": "0.1.0",
+  "description": "Experimental bridge that lets an agent read the state of Cloudlet components",
+  "license": "MIT",
+  "homepage": "https://cloudlet.dev",
+  "repository": { "type": "git", "url": "git+https://github.com/Meerzus/cloudlet.git", "directory": "packages/agent" },
+  "bugs": "https://github.com/Meerzus/cloudlet/issues",
+  "keywords": ["agent", "ai", "snapshot", "cloudlet", "ui-kit"],
+  "publishConfig": { "access": "public", "tag": "latest" },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" }
+  },
+  "files": ["dist", "src/**/*.ts", "LICENSE", "README.md", "CHANGELOG.md"],
+  "sideEffects": false,
+  "scripts": { "build": "vite build && tsc -p tsconfig.build.json" }
+}

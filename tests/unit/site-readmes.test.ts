@@ -5,7 +5,7 @@ import { COMPONENTS, DOCS_URL, formatKB, PACKAGE_SIZE, registryCommand, SITE_URL
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
 /** The English, public face of the repository. */
-const PUBLIC = ['README.md', 'packages/toast/README.md', 'CHANGELOG.md', 'packages/toast/CHANGELOG.md'];
+const PUBLIC = ['README.md', 'packages/toast/README.md', 'CHANGELOG.md', 'packages/toast/CHANGELOG.md', 'packages/agent/README.md', 'packages/agent/CHANGELOG.md'];
 
 describe('READMEs and changelog', () => {
   it('point to the site documentation, not to the package README', () => {

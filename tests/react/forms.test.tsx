@@ -86,6 +86,42 @@ describe('form actions in the Island', () => {
     expect(screen.queryByText('This field is required')).toBeNull();
   });
 
+  it('opens fields named like Object methods without an error, types, shows their validate message and sends', async () => {
+    const user = userEvent.setup();
+    const run = vi.fn();
+    const errors = vi.spyOn(console, 'error');
+    const instance = controller();
+    instance.show(spec({ action: reply({ run,
+      validate: (values) => values['constructor'] === 'class' ? { constructor: 'Pick another word' } : true,
+      fields: [
+        { name: 'constructor', kind: 'text', label: 'Constructor' },
+        { name: 'toString', kind: 'text', label: 'To string', required: true },
+      ] }) }));
+    render(tree(instance));
+    openIsland();
+    const first = screen.getByRole('textbox', { name: 'Constructor' });
+    const second = screen.getByRole('textbox', { name: 'To string' });
+    for (const field of [first, second]) {
+      expect(field).toHaveValue('');
+      expect(field).not.toHaveAttribute('aria-invalid');
+      expect(field).not.toHaveAttribute('aria-describedby');
+    }
+    expect(document.querySelector('.cloudlet-field-error')).toBeNull();
+    await user.type(first, 'class');
+    await user.type(second, 'text');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(first).toHaveFocus();
+    expect(first).toHaveAttribute('aria-invalid', 'true');
+    expect(first).toHaveAccessibleDescription('Pick another word');
+    expect(second).not.toHaveAttribute('aria-invalid');
+    await user.clear(first);
+    await user.type(first, 'kind');
+    expect(first).not.toHaveAttribute('aria-invalid');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(run).toHaveBeenCalledWith(expect.objectContaining({ values: { constructor: 'kind', toString: 'text' } }));
+    expect(errors).not.toHaveBeenCalled();
+  });
+
   it('sends on Enter in a text field, keeps the text read-only while pending and closes on success', async () => {
     const user = userEvent.setup();
     const sent = createDeferred<void>();

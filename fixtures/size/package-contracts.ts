@@ -61,3 +61,8 @@ notifications.track;
 const finalFactory: CreateCloudlet = createCloudlet;
 void finalFactory;
 notifications.dispose();
+
+// The experimental agent subpath resolves from the tarball and needs no bridge package.
+import { toasterAgent, type ToasterAgent } from '@cloudlet/toast/agent';
+const agentView: ToasterAgent = toasterAgent(createCloudlet(), { name: 'consumer' });
+void agentView.snapshot();

@@ -5,12 +5,14 @@ import { defineConfig } from 'vitest/config';
 const site = fileURLToPath(new URL('./apps/site/src', import.meta.url));
 /** Site components import the package by name; tests take its source, so a fresh clone needs no build. */
 const toast = fileURLToPath(new URL('./packages/toast/src/index.ts', import.meta.url));
+/** The agent bridge, likewise from source in both projects. */
+const agent = { find: /^@cloudlet\/agent$/, replacement: fileURLToPath(new URL('./packages/agent/src/index.ts', import.meta.url)) };
 
 export default defineConfig({
   test: {
     projects: [
-      { resolve: { alias: [{ find: '@', replacement: site }] }, test: { name: 'unit', environment: 'node', include: ['tests/unit/**/*.test.ts'] } },
-      { resolve: { alias: [{ find: /^@cloudlet\/toast$/, replacement: toast }, { find: '@', replacement: site }] }, test: {
+      { resolve: { alias: [agent, { find: '@', replacement: site }] }, test: { name: 'unit', environment: 'node', include: ['tests/unit/**/*.test.ts'] } },
+      { resolve: { alias: [{ find: /^@cloudlet\/toast$/, replacement: toast }, agent, { find: '@', replacement: site }] }, test: {
         name: 'react', environment: 'jsdom', include: ['tests/react/**/*.test.tsx'],
         setupFiles: ['tests/setup/react.ts'],
       } },

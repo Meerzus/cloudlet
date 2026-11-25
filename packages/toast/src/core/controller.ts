@@ -212,7 +212,8 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
   };
   const dirty = (record: RecordState<Slot>) => {
     const form = formOf(record);
-    return !!form && form.action.fields.some((field) => form.values[field.name] !== (field.defaultValue ?? ''));
+    return !!form && form.action.fields.some((field) =>
+      (Object.hasOwn(form.values, field.name) ? form.values[field.name] : '') !== (field.defaultValue ?? ''));
   };
   // A draft in the open Island holds it like a hand on it: attention never switches it away.
   const interacting = () => globalPauses.has('hover') || globalPauses.has('focus')

@@ -18,12 +18,12 @@
     "npm": "11.12.1"
   },
   "scripts": {
-    "build": "npm run build --workspace @cloudlet/toast",
+    "build": "npm run build --workspace @cloudlet/agent && npm run build --workspace @cloudlet/toast",
     "build:lab": "npm run build --workspace @cloudlet/lab",
     "build:site": "npm run build --workspace @cloudlet/site",
     "dev": "npm run dev --workspace @cloudlet/lab",
     "dev:site": "npm run dev --workspace @cloudlet/site",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p packages/toast/tsconfig.core.json --noEmit && tsc -p apps/site/tsconfig.typecheck.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p packages/toast/tsconfig.core.json --noEmit && tsc -p packages/agent/tsconfig.json --noEmit && tsc -p apps/site/tsconfig.typecheck.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:tooling": "node --test tests/tooling/local-candidate.test.mjs tests/tooling/doc-coverage.test.mjs tests/tooling/release-notes.test.mjs",

@@ -47,7 +47,8 @@ high contrast and the minimum browser versions are checked by hand.
 
 ## Package, consumers, registry, size
 
-- `npm run check` — typecheck, unit and React tests, build, the tarball guards (`check:package`) and the
+- `npm run check` — typecheck, unit and React tests, build, the tarball guards for `@cloudlet/toast`, `@cloudlet/agent`
+  and both together (`check:package`; `--tarball` and `--agent-tarball` take ready archives) and the
   size report.
 - `npm run test:consumers` — the packed archive installed into Vite React 18.2/19 and Next App/Pages
   under a strict CSP (`fixtures/integration`).

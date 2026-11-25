@@ -256,14 +256,15 @@ function Form({ action, draft, notification, bridge, lease, part, titleId, actio
     if (pending) return;
     const result = bridge.invokeAction(lease, notification.handle);
     if (result.status !== 'invalid') return;
-    const first = action.fields.find(field => result.errors.fields[field.name] !== undefined);
+    const first = action.fields.find(field => Object.hasOwn(result.errors.fields, field.name));
     if (first) fields.current.get(first.name)?.focus();
   };
   const field = (field: FormField, index: number, last: boolean) => {
     const fieldId = `${id}-${index}`;
-    const error = draft.errors.fields[field.name];
+    // Own keys only: a field named `constructor` must not read `Object.prototype`.
+    const error = Object.hasOwn(draft.errors.fields, field.name) ? draft.errors.fields[field.name] : undefined;
     const props = {
-      id: fieldId, name: field.name, className: part('field', 'cloudlet-field'), defaultValue: draft.values[field.name] ?? '',
+      id: fieldId, name: field.name, className: part('field', 'cloudlet-field'), defaultValue: Object.hasOwn(draft.values, field.name) ? draft.values[field.name] : '',
       placeholder: field.placeholder ?? field.label, required: field.required, maxLength: field.maxLength,
       autoComplete: field.autoComplete, inputMode: field.inputMode, readOnly: pending,
       'aria-invalid': error === undefined ? undefined : true, 'aria-describedby': error === undefined ? undefined : `${fieldId}-error`,

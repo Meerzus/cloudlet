@@ -23,6 +23,7 @@ import type {
 } from '../../packages/toast/src/index.js';
 
 import { CloudletProvider, createCloudlet, Toaster, useCloudlet, useOptionalCloudlet } from '../../packages/toast/src/index.js';
+import { toasterAgent, type ToasterAgent, type ToasterAgentEntry, type ToasterAgentOptions } from '../../packages/toast/src/agent.js';
 // @ts-expect-error The renderer bridge is package-private.
 import type { RendererBridge } from '../../packages/toast/src/index.js';
 
@@ -146,6 +147,30 @@ export function verifyRuntimeFactory(slot: ReactNode) {
   } });
   void [finalFactory, provider, result];
   controller.dispose();
+}
+
+export function verifyAgentSubpath() {
+  const controller: ReactCloudletController = createCloudlet();
+  const options: ToasterAgentOptions = { name: 'secondary' };
+  const component: ToasterAgent = toasterAgent(controller, options);
+  const notifications: NotificationController<ReactNode> = controller;
+  const projected: ToasterAgent = toasterAgent(notifications);
+  const entries: readonly ToasterAgentEntry[] = component.snapshot();
+  for (const entry of entries) {
+    if (entry.component === 'notification') {
+      const label: string = entry.label;
+      // @ts-expect-error Application content never reaches an agent record.
+      void entry.content;
+      // @ts-expect-error Form fields expose whether they hold text, never the text.
+      void entry.action?.fields?.[0]?.value;
+      void label;
+    } else {
+      const open: boolean = entry.island.open;
+      void open;
+    }
+  }
+  const unsubscribe: () => void = component.subscribe(() => undefined);
+  void [projected, unsubscribe];
 }
 
 void Toaster;
