@@ -259,7 +259,9 @@ function actionEntry<Slot>(item: NotificationSnapshot<Slot>, form: FormReading |
     ...common,
     fields: freeze(action.fields.map((field) => freeze({
       name: field.name, label: field.label, required: field.required ?? false,
-      filled: form?.filled.has(field.name) ?? false, error: errors?.fields[field.name] ?? null,
+      filled: form?.filled.has(field.name) ?? false,
+      // Own keys only: a field named `constructor` must not read `Object.prototype`.
+      error: errors && Object.hasOwn(errors.fields, field.name) ? errors.fields[field.name]! : null,
     }))),
     error: errors?.form ?? null,
   });

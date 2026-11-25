@@ -161,6 +161,21 @@ describe('form records', () => {
     expect(structuredClone(after)).toEqual(after);
   });
 
+  it('reads only own error keys, so a field named like an Object method stays a plain record', () => {
+    const { controller, bridge } = harness();
+    const lease = attach(bridge);
+    const handle = admit(controller, quiet('odd', { title: 'Odd names', action: form({ fields: [
+      { name: 'constructor', kind: 'text', label: 'Constructor' },
+      { name: 'toString', kind: 'text', label: 'To string', required: true },
+    ] }) }));
+    bridge.openIsland(lease, 'user', handle);
+    const fields = () => byLabel(toasterAgent(controller).snapshot(), 'Odd names').action?.fields;
+    expect(fields()?.map((field) => field.error)).toEqual([null, null]);
+    expect(bridge.invokeAction(lease, handle)).toMatchObject({ status: 'invalid' });
+    expect(fields()?.map((field) => field.error)).toEqual([null, 'This field is required']);
+    expect(() => structuredClone(toasterAgent(controller).snapshot())).not.toThrow();
+  });
+
   it('carries a form-wide message from validate', () => {
     const { controller, bridge } = harness();
     const lease = attach(bridge);
