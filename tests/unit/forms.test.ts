@@ -146,6 +146,35 @@ describe('form submits', () => {
     expect(record(controller, handle).action).toEqual({ status: 'idle' });
   });
 
+  it('reads only own keys, so fields named like Object methods start clean, check, clear and submit', async () => {
+    const run = vi.fn();
+    const validate = vi.fn((values: Readonly<Record<string, string>>) => values['constructor'] === 'class' ? { constructor: 'Pick another word' } : true);
+    const { controller, bridge } = harness();
+    const lease = attach(bridge);
+    const handle = admit(controller, spec({ action: reply({ run, validate, fields: [
+      { name: 'constructor', kind: 'text', label: 'Constructor' },
+      { name: 'toString', kind: 'text', label: 'To string', required: true },
+      { name: '__proto__', kind: 'text', label: 'Proto', required: true },
+    ] }) }));
+    expect(draftOf(bridge, 'anna')?.errors).toEqual({ form: null, fields: {} });
+    expect(record(controller, handle).draft).toBe(false);
+    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'invalid', errors: { form: null,
+      fields: Object.fromEntries([['toString', 'This field is required'], ['__proto__', 'This field is required']]) } });
+    bridge.setFormValue(lease, handle, 'constructor', 'class');
+    bridge.setFormValue(lease, handle, 'toString', 'text');
+    expect(Object.keys(draftOf(bridge, 'anna')!.errors.fields)).toEqual(['__proto__']);
+    bridge.setFormValue(lease, handle, '__proto__', 'p');
+    expect(draftOf(bridge, 'anna')?.errors.fields).toEqual({});
+    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'invalid', errors: { form: null, fields: { constructor: 'Pick another word' } } });
+    expect(bridge.setFormValue(lease, handle, 'constructor', 'class')).toEqual({ status: 'unchanged' });
+    bridge.setFormValue(lease, handle, 'constructor', 'kind');
+    expect(draftOf(bridge, 'anna')?.errors.fields).toEqual({});
+    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'started' });
+    await flushActions();
+    expect(run).toHaveBeenCalledWith(expect.objectContaining({
+      values: Object.fromEntries([['constructor', 'kind'], ['toString', 'text'], ['__proto__', 'p']]) }));
+  });
+
   it.each<[string, unknown, { form: string | null; fields: Record<string, string> } | null]>([
     ['true', true, null],
     ['an empty object', {}, null],

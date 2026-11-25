@@ -11,6 +11,14 @@
   that apply. Form fields say whether they hold text; their values never leave Cloudlet. The subpath
   reads the controller without the host lease, DOM or timers, and the root entry does not load it.
 
+### Fixes
+
+- A form field named like an `Object` method (`constructor`, `toString`, …) no longer opens as
+  invalid. The form used to read such a name from `Object.prototype`, so the field was marked
+  `aria-invalid` and showed a function as its message before any submit. Messages and values are now
+  read by the field's own name only; typing, the `validate` message and the submit work as for any
+  field, and a required field named `__proto__` keeps its message.
+
 ## 1.3.0 — 2026-11-24
 
 The stack can sit in a corner. Nothing is removed or changed in behaviour; the new positions are

@@ -57,13 +57,15 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
   /** `required` and `maxLength` first, then the form's own `validate`; null lets the submit run. */
   function checkForm(form: FormState, handle: NotificationHandle): FormErrors | null {
     const messages = k.options.messages;
-    const fields: Record<string, string> = {};
+    // Own keys only, read and written: a field named `constructor` must not meet `Object.prototype`,
+    // and one named `__proto__` must keep its message (an assignment would set the prototype).
+    const entries: [string, string][] = [];
     for (const field of form.action.fields) {
-      const value = form.values[field.name] ?? '';
-      if (field.required && !value.trim()) fields[field.name] = messages?.fieldRequired ?? 'This field is required';
-      else if (field.maxLength !== undefined && value.length > field.maxLength) fields[field.name] = messages?.fieldTooLong ?? 'This text is too long';
+      const value = Object.hasOwn(form.values, field.name) ? form.values[field.name]! : '';
+      if (field.required && !value.trim()) entries.push([field.name, messages?.fieldRequired ?? 'This field is required']);
+      else if (field.maxLength !== undefined && value.length > field.maxLength) entries.push([field.name, messages?.fieldTooLong ?? 'This text is too long']);
     }
-    if (Object.keys(fields).length) return freeze({ form: null, fields: freeze(fields) });
+    if (entries.length) return freeze({ form: null, fields: freeze(Object.fromEntries(entries)) });
     if (!form.action.validate) return null;
     let result: unknown;
     try {
@@ -271,11 +273,11 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
       if (!form) return reject('no-form');
       if (typeof value !== 'string' || !form.action.fields.some((field) => field.name === name)) return reject('invalid-input');
       if (record.action.status === 'pending') return reject('already-pending');
-      if (form.values[name] === value) return UNCHANGED;
+      if (Object.hasOwn(form.values, name) && form.values[name] === value) return UNCHANGED;
       return k.mutate(() => {
         form.values = freeze({ ...form.values, [name]: value });
         // Editing a field clears its own message; the rest wait for the next submit.
-        if (form.errors.fields[name] !== undefined) {
+        if (Object.hasOwn(form.errors.fields, name)) {
           const { [name]: _, ...fields } = form.errors.fields;
           form.errors = freeze({ form: form.errors.form, fields: freeze(fields) });
         }
