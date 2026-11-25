@@ -7,6 +7,7 @@
   <p>
     <a href="https://github.com/Meerzus/cloudlet/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/Meerzus/cloudlet?style=flat&logo=github&label=Stars&color=245cdb"></a>
     <a href="https://github.com/Meerzus/cloudlet/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-245cdb?style=flat"></a>
+    <a href="https://ui.shadcn.com/docs/directory"><img alt="shadcn add @cloudlet/&lt;item&gt;" src="https://img.shields.io/badge/shadcn-add%20%40cloudlet%2F%3Citem%3E-245cdb?style=flat&logo=shadcnui"></a>
   </p>
   <p>
     <a href="https://cloudlet.dev/docs"><strong>Documentation</strong></a> ·
