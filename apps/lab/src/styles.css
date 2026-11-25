@@ -150,3 +150,8 @@ body:has(.lab), body:has(.lab-unmounted) { margin: 0; background: #f5f6f8; color
 @media (prefers-color-scheme: dark) {
   .lab[data-theme="system"] { --lab-ink: #e5eaf4; --lab-muted: #adb8cb; --lab-line: #3e495b; --lab-paper: #202a3b; --lab-accent: #b7ceff; --lab-soft: #303e55; background: #18202e; }
 }
+.lab-agent { margin-top: 32px; padding: 24px; border: 1px solid var(--lab-line); border-radius: 16px; background: var(--lab-paper); }
+.lab-agent > p { color: var(--lab-muted); max-width: 80ch; font-size: 14px; }
+.lab .lab-agent-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 30px; margin-block: 20px 12px; color: var(--lab-muted); font-variant-numeric: tabular-nums; }
+.lab-agent-summary b { font-size: 23px; font-weight: 550; color: var(--lab-ink); margin-right: 5px; }
+.lab-agent-snapshot { margin: 0; max-height: 420px; overflow: auto; scrollbar-gutter: stable; padding: 14px; border: 1px solid var(--lab-line); border-radius: 10px; background: var(--lab-soft); font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--lab-ink); white-space: pre; tab-size: 2; }

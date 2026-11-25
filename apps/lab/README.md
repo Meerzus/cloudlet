@@ -13,11 +13,11 @@ npm run dev
 ```
 
 Open the Vite address from the terminal (usually `http://127.0.0.1:5173`). The laboratory takes the
-package from `packages/toast/dist`: rebuild it after changing the package.
+packages from `packages/toast/dist` and `packages/agent/dist`: rebuild them after changing a package.
 
 ```sh
 npm run build:lab   # a separate production consumer, after the library build
-npx playwright test tests/e2e/lab.spec.ts tests/e2e/island.spec.ts --project=chromium
+npx playwright test tests/e2e/lab.spec.ts tests/e2e/island.spec.ts tests/e2e/agent-panel.spec.ts --project=chromium
 ```
 
 ## The main page `/`
@@ -29,6 +29,9 @@ npx playwright test tests/e2e/lab.spec.ts tests/e2e/island.spec.ts --project=chr
   nothing; loading → success/error through `track`; overflow to 101 and acknowledge.
 - **Motion panel:** every motion constant as `motion.overrides`, live; reset, copy and paste JSON
   (`{ timeScale, motion, changed }`, the shape of `CloudletMotionConstants`), kept in the browser.
+- **Agent:** one `createAgent()` from `@cloudlet/agent` reads both controllers (`toasterAgent` from
+  `@cloudlet/toast/agent`, the second named `secondary`): a summary line and the live snapshot as
+  JSON, exactly what an agent gets. Form values never appear in it.
 - **Environment, identity and time, operations, capacity and stress, observation, a second
   controller, full reset:** the rest of the public API, each with its expected result on screen.
 
