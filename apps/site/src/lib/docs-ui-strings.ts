@@ -38,6 +38,40 @@ export const DOCS_UI = {
   demoGroup: 'Examples',
   showCode: 'Show code',
   hideCode: 'Hide code',
+  /** The Preview of the Toaster's component page: the page Toaster with its main props. */
+  preview: {
+    showOne: 'Show a notification',
+    showFive: 'Show five',
+    settings: 'Toaster settings',
+    position: 'Position',
+    side: 'Side',
+    direction: 'Direction',
+    styling: 'Customize the look',
+    codeTitle: 'Toaster',
+  },
+  /** The Preview of the color picker's page: the live picker with its main props. */
+  pickerPreview: {
+    settings: 'Color picker settings',
+    component: 'Component',
+    format: 'Format',
+    opacity: 'Opacity',
+    /** The names of the picker on the stage, apart from the page's other pickers. */
+    open: 'Open the preview picker',
+    panel: 'Preview picker',
+    field: 'Preview color value',
+    /** The value `onChange` gave last, next to the picker. */
+    value: 'Value from onChange',
+  },
+  /** The Preview of the color palette's page. */
+  palettePreview: {
+    settings: 'Color palette settings',
+    max: 'Max',
+    format: 'Format',
+    opacity: 'Opacity',
+    group: 'Preview palette',
+    value: 'Colors from onChange',
+    codeTitle: 'ColorPalette',
+  },
   styleEditor: {
     stage: 'Live preview',
     region: 'Style editor notifications',
@@ -73,6 +107,5 @@ export const DOCS_UI = {
   linkToSection: 'Link to this section',
   /** A table wider than the column, focusable so the keyboard can scroll it. */
   scrollableTable: 'Scrollable table',
-  tryPlayground: 'Try it in the Playground',
   noteLabels: { note: 'Note', tip: 'Tip', warning: 'Warning' },
 } as const;

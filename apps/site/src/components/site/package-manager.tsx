@@ -81,7 +81,8 @@ export function PackageManagerSwitch({ className }: { className?: string }) {
 export function PackageManagerCommand({ command, className }: { command: string; className?: string }) {
   const [manager] = usePackageManager();
   return (
-    <div className={cn('flex flex-col items-start gap-3', className)}>
+    // min-w-0 lets a centred block shrink to its container, so a long command is cut, not the page widened.
+    <div className={cn('flex min-w-0 max-w-full flex-col items-start gap-3', className)}>
       <PackageManagerSwitch />
       <CopyCommand command={commandFor(command, manager)} className="max-w-full" />
     </div>

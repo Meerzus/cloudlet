@@ -1,0 +1,145 @@
+---
+title: Styling
+description: Theme Cloudlet with CSS tokens, the theme and direction props and class names, and try them live in the Style editor.
+---
+
+The editor below changes Cloudlet's CSS tokens on a live Toaster and copies the CSS; every setting is a Toaster prop listed in [Toaster props](/docs/components/toaster/api/toaster).
+
+## Style editor
+
+<StyleEditor />
+
+## The stylesheet
+
+- Import `@cloudlet/toast/styles.css` once, from your global CSS entry or root layout ([Import the styles](/docs/components/toaster#import-the-styles)). Its rules and resets are scoped to `.cloudlet-host`.
+- Keep it external under a strict Content Security Policy; [Content Security Policy](/docs/components/toaster/csp) has the rest of the setup.
+- Put overrides in a stylesheet imported after Cloudlet's. Change the look with tokens and class names; the renderer controls width, height, position, transform and clip path.
+
+## Tokens
+
+Set tokens on `.cloudlet-host`. Text uses `--cloudlet-font-family` (`system-ui, sans-serif`) and `--cloudlet-font-size` (`.875rem`); descriptions and actions are smaller.
+
+| Token | Default | Description |
+|---|---|---|
+| `--cloudlet-pill-height` | `44px` | Minimum height of the collapsed pill. |
+| `--cloudlet-pill-radius` | `9999px` | Corner radius of the pill and its tails. |
+| `--cloudlet-pill-max-width` | `22rem` | The pill grows with its title up to this width. |
+| `--cloudlet-island-radius` | `24px` | Corner radius of the open Island. |
+| `--cloudlet-island-max-width` | `26rem` | Width of the open Island, within the viewport. |
+| `--cloudlet-tail-offset` | `4px` | How far each tail peeks out from behind the one in front. |
+| `--cloudlet-tail-scale` | `.9` | Scale of the first tail relative to the pill; the second is scaled again. |
+| `--cloudlet-control-min-size` | `44px` | Touch target of buttons and links. |
+| `--cloudlet-viewport-gutter` | `16px` | Gap to the viewport edge; see [Offsets](/docs/components/toaster/positioning#offsets). |
+| `--cloudlet-z-index` | `1000` | Stacking order of the fixed host. |
+
+The safe-area insets are tokens too: `--cloudlet-safe-top`, `--cloudlet-safe-right`, `--cloudlet-safe-bottom` and `--cloudlet-safe-left` default to the browser's `env(safe-area-inset-*)`.
+
+Colours, in the light and the dark theme:
+
+| Token | Light | Dark |
+|---|---|---|
+| `--cloudlet-background` | `#ffffff` | `#1c1c1e` |
+| `--cloudlet-foreground` | `#111113` | `#f5f5f7` |
+| `--cloudlet-muted` | `#6e6e76` | `#a1a1aa` |
+| `--cloudlet-focus` | `#245cdb` | `#93b4ff` |
+| `--cloudlet-shadow` | a soft two-layer shadow | a deeper single shadow |
+| `--cloudlet-tail-background` | the background | the foreground mixed into the background |
+| `--cloudlet-tail-border` | the border | the foreground at 18% |
+| `--cloudlet-border` | the foreground at 10% | the same mix |
+| `--cloudlet-action-background` | the foreground at 8% | the same mix |
+| `--cloudlet-success` | `oklch(0.723 0.219 142.136)` | the same |
+| `--cloudlet-error` | `oklch(0.637 0.237 25.331)` | the same |
+| `--cloudlet-info` | `oklch(0.685 0.169 237.323)` | the same |
+| `--cloudlet-warning` | `oklch(0.795 0.184 86.047)` | the same |
+| `--cloudlet-loading` | `oklch(0.556 0 0)` | the same |
+| `--cloudlet-badge` | `#d70015` | the same |
+| `--cloudlet-badge-foreground` | `#fff` | the same |
+
+### Overriding tokens
+
+Theme-independent tokens and status colours go on `.cloudlet-host`:
+
+```css title="notifications.css"
+.cloudlet-host {
+  --cloudlet-font-family: 'Inter', system-ui, sans-serif;
+  --cloudlet-pill-max-width: 24rem;
+  --cloudlet-island-radius: 20px;
+  --cloudlet-success: oklch(0.7 0.17 160);
+}
+```
+
+Dark surfaces use a more specific selector, so `.cloudlet-host` alone changes only light surfaces. To map both themes to your app's colour tokens, use this guarded rule:
+
+```css title="notifications.css"
+/* Your --surface/--text/--ring are defined on :root and on your .dark root. */
+@media (forced-colors: none) {
+  .cloudlet-host[data-theme] {
+    --cloudlet-background: var(--surface);
+    --cloudlet-foreground: var(--text);
+    --cloudlet-muted: var(--text-muted);
+    --cloudlet-focus: var(--ring);
+  }
+}
+```
+
+The tokens must reach the portal: define them on `:root` or on an ancestor of the [container](/docs/components/toaster/positioning#portal-container), not on a wrapper around your React tree, which does not contain the default portal on `document.body`. This is the approach of the shadcn registry item's `toaster.css`, which maps `--popover`, `--popover-foreground`, `--muted-foreground`, `--border`, `--ring`, `--accent` and `--font-sans`.
+
+## Theme
+
+[`theme`](/docs/components/toaster/api/toaster#props) is `system` by default; `light` and `dark` force a theme whatever the operating system prefers. Pass your app's resolved theme to keep Cloudlet's surface and native `color-scheme` in sync with the page. The host's `data-theme` keeps the prop value; `data-resolved-theme` is the active theme after mount:
+
+```css title="notifications.css"
+.cloudlet-host[data-resolved-theme="dark"] .app-toast-action { font-weight: 500; }
+```
+
+The built-in dark surface uses `prefers-color-scheme` and works before scripts run.
+
+In forced-colours mode (Windows High Contrast), every theme uses system colours: `Canvas`, `CanvasText` and `Highlight`, with visible borders on controls.
+
+## Direction
+
+Without [`dir`](/docs/components/toaster/api/toaster#props), the Toaster follows `dir="rtl"` on the `<html>` element. In right-to-left mode, text aligns to the start, the badge and the slider are mirrored, and the arrow keys move between notifications in the reading direction. The Direction control of the [Preview](/docs/components/toaster#preview) shows it on this site's Toaster.
+
+## Class names
+
+[`classNames`](/docs/components/toaster/api/toaster#classnames) adds your classes per part, next to Cloudlet's own `cloudlet-*` classes, which keep working:
+
+```tsx title="notifications.tsx"
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+import './notifications.css';
+
+const cloudlet = createCloudlet();
+
+export function Notifications() {
+  return (
+    <CloudletProvider controller={cloudlet}>
+      <Toaster
+        classNames={{
+          island: 'app-island',
+          title: 'app-toast-title',
+          action: 'app-toast-action',
+        }}
+      />
+    </CloudletProvider>
+  );
+}
+```
+
+Cloudlet's own rules use two classes, such as `.cloudlet-host .cloudlet-action`, so a selector with a single class of yours loses to them on the properties they set. Write rules at least as specific, or style through the tokens:
+
+```css title="notifications.css"
+.cloudlet-host .app-toast-title { letter-spacing: -0.01em; }
+.cloudlet-host .app-toast-action { font-weight: 600; }
+```
+
+Utility classes in a cascade layer, as Tailwind's are, lose to Cloudlet's unlayered stylesheet for every property it sets and still apply to the properties it leaves alone. To let utilities win, import the stylesheet into a layer of your own, ordered before `utilities`, instead of importing it from JavaScript:
+
+```css title="globals.css"
+@layer theme, base, cloudlet, components, utilities;
+@import "tailwindcss";
+@import "@cloudlet/toast/styles.css" layer(cloudlet);
+```
+
+The stylesheet is unlayered on purpose: then a page's own resets, such as `button { all: unset }`, cannot break the notifications. Inside a layer, every unlayered rule of the page wins over Cloudlet, so check your global styles after the switch.
+
+The host also exposes its state as data attributes you can select on: `data-state` (`stack` or `island`), `data-island-reason`, `data-position`, `data-edge` (`top` or `bottom`), `data-align` (`left`, `center` or `right`), `data-theme`, `data-resolved-theme`, `data-reduced-motion` and `data-dragging`. The current notification carries `data-kind` and `data-current`.

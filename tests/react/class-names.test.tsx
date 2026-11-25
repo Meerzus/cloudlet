@@ -138,6 +138,24 @@ describe('data attributes for styling and tests', () => {
     expect(host()).not.toHaveAttribute('data-island-reason');
   });
 
+  it('names the edge and the side of every position', () => {
+    const instance = crowded();
+    const view = render(tree(instance, { position: 'top-left' }));
+    const cases = [
+      ['top-left', 'top', 'left'], ['top-center', 'top', 'center'], ['top-right', 'top', 'right'],
+      ['bottom-left', 'bottom', 'left'], ['bottom-center', 'bottom', 'center'], ['bottom-right', 'bottom', 'right'],
+    ] as const;
+    for (const [position, edge, align] of cases) {
+      view.rerender(tree(instance, { position, dir: 'rtl' }));
+      expect(host()).toHaveAttribute('data-position', position);
+      expect(host()).toHaveAttribute('data-edge', edge);
+      // Physical: RTL does not mirror the side.
+      expect(host()).toHaveAttribute('data-align', align);
+    }
+    view.rerender(tree(instance, { position: 'auto' }));
+    expect(host()).toHaveAttribute('data-align', 'center');
+  });
+
   it('defaults to the system theme and reflects reduced motion', () => {
     const media = { matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() };
     vi.stubGlobal('matchMedia', vi.fn((query: string) => query.includes('reduced-motion') ? media : { ...media, matches: true }));

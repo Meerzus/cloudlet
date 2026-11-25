@@ -26,7 +26,8 @@ function band(index: number, count: number, edge: Edge): string {
 /**
  * Progressive blur along one viewport edge: stacked `backdrop-filter` layers whose masks overlap,
  * each twice as blurred as the one before it, so content softens gradually as it slides under the
- * edge. The strip is fixed and takes no pointer; its stacking layer comes from `className`.
+ * edge. The strip is fixed to the viewport (or, with `absolute`, to the edge of its positioned parent)
+ * and takes no pointer; its stacking layer comes from `className`.
  *
  * Each layer's box is cut down to its band plus the blur's reach, its mask still laid out over the
  * whole strip: a backdrop filter costs its box's area every frame, and without a GPU (software
@@ -38,6 +39,7 @@ export function EdgeBlur({
   strength = 1,
   layers = 5,
   className,
+  absolute = false,
   children,
 }: {
   edge: Edge;
@@ -47,6 +49,8 @@ export function EdgeBlur({
   strength?: number;
   layers?: number;
   className?: string;
+  /** Pinned to the edge of the positioned parent instead of the viewport's. */
+  absolute?: boolean;
   /** Extra layers drawn over the blur, such as a tint. */
   children?: ReactNode;
 }) {
@@ -54,7 +58,7 @@ export function EdgeBlur({
   return (
     <div
       aria-hidden="true"
-      className={cn('pointer-events-none fixed inset-x-0', className)}
+      className={cn('pointer-events-none inset-x-0', absolute ? 'absolute' : 'fixed', className)}
       style={{ [edge]: 0, height, '--edge-height': height } as CSSProperties}
     >
       {Array.from({ length: layers }, (_, index) => {

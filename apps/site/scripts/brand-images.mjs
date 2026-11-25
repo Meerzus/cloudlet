@@ -6,8 +6,9 @@
  *   npm run build && npm run build:site
  *   node apps/site/scripts/brand-images.mjs
  *
- * Writes src/app/apple-icon.png (180², full bleed: iOS rounds it itself) and
- * src/app/opengraph-image.png + twitter-image.png (1200×630, a hero frame with clouds).
+ * Writes src/app/apple-icon.png (180², full bleed: iOS rounds it itself) and the Toaster's card,
+ * opengraph-image.png + twitter-image.png (1200×630, a hero frame with clouds), next to the Toaster's
+ * layout (src/app/toaster/(site)/). The kit's card at the root is scripts/og-kit.mjs.
  */
 import { copyFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -16,6 +17,7 @@ import { chromium } from '@playwright/test';
 import { serve } from './serve-out.mjs';
 
 const APP = resolve(fileURLToPath(new URL('../src/app', import.meta.url)));
+const TOASTER = resolve(APP, 'toaster/(site)');
 const ICON = readFileSync(new URL('./brand/icon.svg', import.meta.url), 'utf8');
 
 /** Same clouds as the first screen of the sky (components/site/sky.tsx), placed for a 1200×630 card. */
@@ -52,8 +54,8 @@ try {
     document.body.innerHTML = html;
   }, card);
   await page.evaluate(() => Promise.all([document.fonts.ready, ...[...document.images].map((image) => image.decode())]));
-  await page.screenshot({ path: resolve(APP, 'opengraph-image.png') });
-  copyFileSync(resolve(APP, 'opengraph-image.png'), resolve(APP, 'twitter-image.png'));
+  await page.screenshot({ path: resolve(TOASTER, 'opengraph-image.png') });
+  copyFileSync(resolve(TOASTER, 'opengraph-image.png'), resolve(TOASTER, 'twitter-image.png'));
 
   const icon = await browser.newPage({ viewport: { width: 180, height: 180 } });
   await icon.setContent(`<style>html,body{margin:0}</style>${ICON.replace('<svg ', '<svg width="180" height="180" ').replace(' rx="8"', '')}`);
@@ -62,4 +64,4 @@ try {
   await browser.close();
   server.close();
 }
-console.log('wrote apple-icon.png, opengraph-image.png, twitter-image.png');
+console.log('wrote apple-icon.png and the Toaster card (opengraph-image.png, twitter-image.png) in toaster/(site)/');

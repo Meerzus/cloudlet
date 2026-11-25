@@ -1,0 +1,199 @@
+---
+title: Color picker
+description: A round swatch that morphs into a full color picker. Installed as source with the shadcn CLI.
+---
+
+`ColorPicker` is a swatch that opens into the picker; `ColorPickerPanel` is the same picker in the flow of the page, for forms and sidebars. Both edit a color given as a CSS string and give back a string in the format you allow.
+
+## Preview
+
+<PickerPreview />
+
+## Installation
+
+The color picker is a shadcn registry item, not an npm package: the CLI copies its source into your project, where it is yours to change.
+
+<InstallCommand command="npx shadcn@latest add https://cloudlet.dev/r/color-picker.json" />
+
+It adds five files under your `ui` and `lib` aliases and nothing to `package.json`:
+
+| File | What it holds |
+| --- | --- |
+| `components/ui/color-picker/color-picker.tsx` | `ColorPicker`, `ColorPickerPanel` and their types |
+| `components/ui/color-picker/color-picker.css` | The styles, imported by the component itself |
+| `components/ui/color-picker/color.ts` | Parsing, conversions and the canonical output |
+| `components/ui/color-picker/morph.ts` | The springs of the swatch-to-panel morph |
+| `lib/spring.ts` | The spring easing both use |
+
+The stylesheet reads the shadcn tokens `--background`, `--foreground`, `--border`, `--ring` and, if your theme has it, `--muted`. It resets its own buttons, so it does not rely on Tailwind's preflight.
+
+## Usage
+
+Pass `color` and `onChange` and the picker is controlled, like an input. `onChange` receives the value in the current format on every change, and once more when the reader switches the format, so your state, the field and a hidden input always agree.
+
+```tsx title="accent-field.tsx"
+"use client";
+
+import { useState } from "react";
+import { ColorPicker } from "@/components/ui/color-picker/color-picker";
+
+export function AccentField() {
+  const [accent, setAccent] = useState("#245cdb");
+  return <ColorPicker color={accent} onChange={setAccent} labels={{ open: "Pick accent" }} />;
+}
+```
+
+Leave `color` out and give `defaultColor` to let the picker own its value. With `name`, a hidden input carries the value in a native form, so a server action or a plain `<form>` receives it:
+
+```tsx title="theme-form.tsx"
+import { ColorPickerPanel } from "@/components/ui/color-picker/color-picker";
+
+export function ThemeForm({ action }: { action: (data: FormData) => void }) {
+  return (
+    <form action={action}>
+      <ColorPickerPanel defaultColor="oklch(70% 0.19 48)" defaultFormat="oklch" name="accent" alpha />
+      <button type="submit">Save</button>
+    </form>
+  );
+}
+```
+
+### Styling
+
+Everything is plain CSS in `color-picker.css`; change it there, or override a class in your own stylesheet:
+
+```css title="globals.css"
+.color-picker-panel {
+  width: 18rem;
+  border-radius: 1rem;
+}
+```
+
+### Placement and limits
+
+The panel opens down and to the right of the swatch and flips up and/or left when it would cross the edge of the viewport. It is not portalled, so it inherits the theme of its subtree and works inside an iframe — and an ancestor with `overflow: hidden` clips it. Give that container `overflow: visible`, or place the picker outside it.
+
+<Callout type="warning" title="Not inside a paragraph">
+The picker's root is a `<div>`, so it cannot sit inside a `<p>`: the browser would move it out and React reports a hydration error. Put it in a `<div>` instead.
+</Callout>
+
+### Reduced motion
+
+Under `prefers-reduced-motion: reduce` the swatch opens and closes in a single frame, without the morph, and the format switch and the copy check stop animating. An app with its own setting can ask for the same with `data-reduced-motion` on any ancestor:
+
+```tsx title="settings.tsx"
+import type { ReactNode } from "react";
+
+export function MotionSetting({ reduce, children }: { reduce: boolean; children: ReactNode }) {
+  return <div data-reduced-motion={reduce ? "" : undefined}>{children}</div>;
+}
+```
+
+## Examples
+
+### Inline panel
+
+`ColorPickerPanel` is the picker without the swatch, always open.
+
+<Example name="color-picker/panel" />
+
+### One format
+
+A single entry in `formats` fixes the output and hides the format switch.
+
+<Example name="color-picker/one-format" />
+
+### Opacity
+
+`alpha` adds the opacity slider; the value carries opacity only below 1.
+
+<Example name="color-picker/opacity" />
+
+### Format in your state
+
+`format` with `onFormatChange` keeps the reader's choice of a format where your app can save it.
+
+<Example name="color-picker/format" />
+
+### Swatch from a CSS variable
+
+`swatch` paints the button with any CSS color, here the variable the picker's value is written to.
+
+<Example name="color-picker/swatch" />
+
+### Translated labels
+
+A full `labels` object: every name and announcement in Spanish.
+
+<Example name="color-picker/labels" />
+
+## API Reference
+
+### Props
+
+`ColorPickerProps` for `ColorPicker`, `ColorPickerPanelProps` for `ColorPickerPanel`; every prop is optional.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `color` | `string` | — | The color to show (controlled): hex, `rgb()`, `hsl()` or `oklch()`. A value that does not parse, such as `var(--accent)`, keeps the last valid color. |
+| `defaultColor` | `string` | `#ffffff` | The initial color when the picker owns its value. |
+| `onChange` | `(value: string) => void` | — | Called with the value in `format` on every change and when the format switches. |
+| `format` | `ColorFormat` | — | The output format (controlled); pair it with `onFormatChange`. Changing it from your code does not call `onChange`, see [Formats](#formats). |
+| `defaultFormat` | `ColorFormat` | the first of `formats` | The initial format when the picker owns it. |
+| `onFormatChange` | `(format: ColorFormat) => void` | — | Called when the reader picks another format. |
+| `formats` | `readonly ColorFormat[]` | all four | The formats the switch offers, in order. A single entry hides the switch. |
+| `alpha` | `boolean` | `false` | Shows the opacity slider and the checkerboard. Without it, alpha is dropped from input and output. |
+| `name` | `string` | — | Renders `<input type="hidden">` with this name and the current value. |
+| `labels` | `Partial<ColorPickerLabels>` | `DEFAULT_LABELS` | Names and announcements; anything left out keeps its English default. |
+| `swatch` | `string` | the current value | `ColorPicker` only: any CSS color for the swatch button, such as a `var()` the picker cannot parse. |
+| `className` | `string` | — | `ColorPickerPanel` only: added to the panel. |
+
+### Formats
+
+`ColorFormat` is `'hex' | 'rgb' | 'hsl' | 'oklch'`. The picker reads `#rgb`, `#rgba`, `#rrggbb` and `#rrggbbaa`, `rgb()` and `rgba()` in the old and the new syntax, `hsl()` and `hsla()`, and `oklch()` with lightness as a percentage or a fraction (`none` counts as 0). It writes one canonical form per format: lowercase hex, space-separated channels, oklch lightness, chroma and hue rounded to at most one, three and one decimals, and opacity only below 1. For `#ff8000`:
+
+| Format | Output | With opacity below 1 |
+| --- | --- | --- |
+| `hex` | `#ff8000` | `#ff800080` |
+| `rgb` | `rgb(255 128 0)` | `rgb(255 128 0 / 0.5)` |
+| `hsl` | `hsl(30 100% 50%)` | `hsl(30 100% 50% / 0.5)` |
+| `oklch` | `oklch(73.2% 0.186 53)` | `oklch(73.2% 0.186 53 / 0.5)` |
+
+When the reader switches the format, `onChange` gets the same color in the new one. When your code changes `format`, it does not: the field and the hidden input show the new format at once, and `onChange` reports it from the next change of the color. If you store the value and switch the format from outside, rewrite the stored value yourself.
+
+The area edits saturation and brightness in sRGB. An `oklch()` color outside sRGB shows as given on the swatch; the first move of a handle keeps its lightness and hue and lowers the chroma until it fits.
+
+### Eyedropper and copy
+
+The eyedropper button appears only where the browser has the EyeDropper API, Chromium browsers today; elsewhere it is not rendered rather than shown disabled. Cancelling the eyedropper changes nothing. The copy button writes the value to the clipboard, turns into a check for a moment and announces `labels.copied`; a blocked clipboard leaves everything as it was.
+
+### Keyboard and screen readers
+
+| Part | Role | Keys |
+| --- | --- | --- |
+| Swatch | button, `aria-expanded` | Enter or Space opens the picker |
+| Picker | dialog named by `labels.panel` | focus starts in the area; Escape closes and returns focus to the swatch; a press outside, or Tab out of the panel, closes without moving focus |
+| Area | slider, "Saturation 40%, Brightness 80%" | ← → saturation, ↑ ↓ brightness, by 1%; with Shift by 10% |
+| Hue, opacity | sliders, "Hue 48°", "Opacity 50%" | ← → by 1° or 1%, Shift by 10, Home and End to the ends |
+| Value field | text field named by `labels.value` | typing applies every color that parses; Escape reverts, a second Escape closes |
+| Format switch | radio group | arrows move between formats |
+
+Tab moves through the swatch that closes the panel, the value field, the area, the sliders, the format switch, the eyedropper and copy, in that order; past copy, focus leaves the picker and the panel closes, so it never covers what Tab reaches next. `ColorPickerPanel` has no closing swatch and starts at the value field. In forced-colors mode the handles, the area and the switch draw borders in system colors, so every part stays findable without gradients.
+
+### Labels
+
+Every name and spoken word comes from `labels`; pass the ones you translate and the rest keep these defaults (`DEFAULT_LABELS`):
+
+| Key | Default | Where |
+| --- | --- | --- |
+| `open` | `Pick color` | the swatch button |
+| `panel` | `Color picker` | the dialog |
+| `close` | `Close` | the swatch inside the panel |
+| `area` | `Saturation and brightness` | the area's name |
+| `saturation`, `brightness` | `Saturation`, `Brightness` | the area's value, "Saturation 40%, Brightness 80%" |
+| `hue` | `Hue` | the hue slider's name and value, "Hue 48°" |
+| `alpha` | `Opacity` | the opacity slider's name and value, "Opacity 50%" |
+| `value` | `Color value` | the value field |
+| `format` | `Format` | the format switch |
+| `eyedropper` | `Pick from screen` | the eyedropper button |
+| `copy`, `copied` | `Copy`, `Copied` | the copy button and its announcement |

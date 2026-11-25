@@ -75,7 +75,7 @@ const registryServer = createServer(async (request, response) => {
     response.end(tarBytes);
     return;
   }
-  if (path === '/r/toaster.json' || path === '/r/registry.json') {
+  if (['/r/toaster.json', '/r/color-picker.json', '/r/color-palette.json', '/r/registry.json'].includes(path)) {
     response.setHeader('Content-Type', 'application/json');
     response.end(await readFile(resolve(root, `registry${path}`)));
     return;
@@ -132,6 +132,30 @@ try {
   report.checks.runtimeInstalledFromExactTarballByShadcn = 'passed';
   report.checks.publicImportsAndClientDirective = 'passed';
   report.checks.aliasesAndCss = 'passed';
+  // The color palette, which brings the color picker as its registry dependency `@cloudlet/color-picker`:
+  // the consumer points the @cloudlet namespace (in the shadcn directory: cloudlet.dev) at this server.
+  const componentsJson = await readJSON(join(consumer, 'components.json'));
+  await writeFile(join(consumer, 'components.json'), JSON.stringify({ ...componentsJson, registries: { '@cloudlet': `${origin}/r/{name}.json` } }, null, 2) + '\n');
+  const dependenciesBeforePalette = (await readJSON(join(consumer, 'package.json'))).dependencies;
+  await assert.rejects(readFile(join(consumer, 'components/ui/color-picker/color-picker.tsx'), 'utf8'));
+  const requestsBeforePalette = requests.length;
+  await run(process.execPath, [resolve(root, 'registry/tooling/node_modules/shadcn/dist/index.js'), 'add', `${origin}/r/color-palette.json`, '--yes', '--overwrite', '--cwd', consumer], consumer, 'shadcn-add-color-palette');
+  assert(requests.slice(requestsBeforePalette).some((request) => request.path === '/r/color-picker.json'), 'the palette must fetch the picker as its dependency');
+  assert.deepEqual((await readJSON(join(consumer, 'package.json'))).dependencies, dependenciesBeforePalette);
+  const installedPalette = await readFile(join(consumer, 'components/ui/color-palette/color-palette.tsx'), 'utf8');
+  await readFile(join(consumer, 'components/ui/color-palette/color-palette.css'), 'utf8');
+  assert(installedPalette.startsWith("'use client'"));
+  assert(installedPalette.includes("import './color-palette.css';"));
+  assert(installedPalette.includes("from '@/components/ui/color-picker/color-picker'"));
+  report.checks.colorPaletteInstalledWithPickerDependency = 'passed';
+  // The color picker came with it: five source files, no dependencies, its own CSS import, the consumer's lib alias.
+  const installedPicker = await readFile(join(consumer, 'components/ui/color-picker/color-picker.tsx'), 'utf8');
+  for (const file of ['color-picker.css', 'color.ts', 'morph.ts']) await readFile(join(consumer, 'components/ui/color-picker', file), 'utf8');
+  assert((await readFile(join(consumer, 'lib/spring.ts'), 'utf8')).includes('export function springRetarget'));
+  assert(installedPicker.startsWith("'use client'"));
+  assert(installedPicker.includes("import './color-picker.css';"));
+  assert(installedPicker.includes("from '@/lib/spring'"));
+  report.checks.colorPickerInstalledWithoutDependencies = 'passed';
   report.versions = Object.fromEntries(await Promise.all(['next', 'react', 'react-dom', 'typescript', 'tailwindcss'].map(async (name) => [name, (await readJSON(join(consumer, 'node_modules', name, 'package.json'))).version])));
   await run('npm', ['run', 'build'], consumer, 'consumer-build');
   await run('npm', ['run', 'typecheck'], consumer, 'consumer-types');
@@ -154,6 +178,7 @@ try {
   assert(html, `production server did not start: ${nextLog}`);
   assert(html.includes('Server rendered without a controller singleton.'));
   assert(!html.includes('class="cloudlet-host'));
+  assert(html.includes('aria-label="Pick accent"'));
   report.checks.productionSSR = 'passed';
   for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
     const browser = await engine.launch({ headless: true });
@@ -190,16 +215,75 @@ try {
         const snapshots = document.querySelectorAll('.cloudlet-exit, .cloudlet-slide-out, .cloudlet-chrome-out, .cloudlet-heading-out, .cloudlet-body-out');
         return shell && getComputedStyle(shell).opacity === '1' && [...snapshots].every((element) => element.childElementCount === 0);
       });
+      // The installed color picker (the page is dark by now): opens with focus in the area, reads the
+      // shadcn tokens, moves on the keyboard, closes on Escape back to its swatch; the inline panel feeds a form.
+      const swatch = page.getByRole('button', { name: 'Pick accent', exact: true });
+      await swatch.click();
+      const picker = page.getByRole('dialog', { name: 'Accent picker', exact: true });
+      await picker.waitFor();
+      await page.waitForFunction(() => document.activeElement?.classList.contains('color-picker-area'));
+      assert.equal(await picker.getByRole('textbox', { name: 'Color value', exact: true }).inputValue(), '#245cdb');
+      const pickerBackground = await picker.evaluate((element) => getComputedStyle(element).backgroundColor);
+      assert.equal(pickerBackground, 'rgb(17, 19, 24)');
+      await picker.getByRole('slider', { name: 'Hue', exact: true }).press('ArrowRight');
+      await page.waitForFunction(() => document.querySelector('[data-registry-color]')?.textContent !== '#245cdb');
+      const picked = await page.locator('[data-registry-color]').textContent();
+      assert.match(picked, /^#[\da-f]{6}$/);
+      // The evidence shows the settled panel, not a frame of the morph.
+      await page.waitForFunction(() => document.querySelector('.color-picker').getAnimations({ subtree: true }).every((animation) => animation.playState !== 'running'));
+      const fieldBackground = await picker.getByRole('textbox', { name: 'Color value', exact: true }).evaluate((element) => getComputedStyle(element).backgroundColor);
+      await page.screenshot({ path: resolve(evidencePath, `${name}-color-picker.png`), fullPage: true });
+      await page.keyboard.press('Escape');
+      await picker.waitFor({ state: 'detached' });
+      assert(await swatch.evaluate((element) => element === document.activeElement));
+      const inline = page.getByRole('form', { name: 'Inline picker form', exact: true });
+      const field = inline.locator('input[type="hidden"][name="accent"]');
+      const inlineBefore = await field.inputValue();
+      assert.match(inlineBefore, /^oklch\(/);
+      await inline.getByRole('slider', { name: 'Inline opacity', exact: true }).press('ArrowLeft');
+      await page.waitForFunction((before) => document.querySelector('input[name="accent"]').value !== before, inlineBefore);
+      const inlineAfter = await field.inputValue();
+      assert.match(inlineAfter, /^oklch\(.+ \/ 0\.\d+\)$/);
+      // The installed palette: one Tab stop, the add button opens the new color's picker, Escape returns to
+      // its swatch, Delete removes it and hands the focus on; one hidden input per color travels with the form.
+      const palette = page.getByRole('group', { name: 'Accent palette', exact: true });
+      const paletteSwatches = palette.getByRole('button', { name: /^Color \d of \d, / });
+      assert.equal(await paletteSwatches.count(), 2);
+      assert.equal(await palette.locator('[tabindex="0"]').count(), 1);
+      await palette.getByRole('button', { name: 'Add color', exact: true }).click();
+      const palettePicker = page.getByRole('dialog', { name: 'Palette picker', exact: true });
+      await palettePicker.waitFor();
+      await page.waitForFunction(() => document.activeElement?.classList.contains('color-picker-area'));
+      await page.waitForFunction(() => document.querySelector('[data-registry-palette]')?.textContent?.split(' ').length === 3);
+      await page.waitForFunction(() => document.querySelector('[aria-label="Accent palette"]').getAnimations({ subtree: true }).every((animation) => animation.playState !== 'running'));
+      await page.screenshot({ path: resolve(evidencePath, `${name}-color-palette.png`), fullPage: true });
+      await page.keyboard.press('Escape');
+      await palettePicker.waitFor({ state: 'detached' });
+      const third = paletteSwatches.nth(2);
+      assert(await third.evaluate((element) => element === document.activeElement));
+      const paletteAdded = await page.locator('[data-registry-palette]').textContent();
+      assert.equal(await page.locator('form[aria-label="Palette form"] input[type="hidden"][name="palette"]').count(), 3);
+      await page.keyboard.press('Delete');
+      await page.waitForFunction(() => document.querySelector('[data-registry-palette]')?.textContent?.split(' ').length === 2);
+      assert(await paletteSwatches.nth(1).evaluate((element) => element === document.activeElement));
+      await page.keyboard.press('ArrowLeft');
+      assert(await paletteSwatches.nth(0).evaluate((element) => element === document.activeElement));
+      const paletteAfter = await page.locator('[data-registry-palette]').textContent();
+      assert.equal(paletteAfter, '#ff6a3d #2f8f9d');
+      assert.equal(await page.locator('form[aria-label="Palette form"] input[type="hidden"][name="palette"]').count(), 2);
       assert.deepEqual(errors, []);
       await page.screenshot({ path: resolve(evidencePath, `${name}-dark.png`), fullPage: true });
-      report.browsers.push({ name, version: browser.version(), browserReactVersion, status: 'passed', beforeMount: 'passed', hydrationErrors: errors, explicitRuntimeCss: 'passed', light, dark, wrapperContext: 'passed', settledTransition: 'passed' });
+      report.browsers.push({ name, version: browser.version(), browserReactVersion, status: 'passed', beforeMount: 'passed', hydrationErrors: errors, explicitRuntimeCss: 'passed', light, dark, wrapperContext: 'passed', settledTransition: 'passed', colorPicker: { pickerBackground, fieldBackground, picked, inlineBefore, inlineAfter }, colorPalette: { added: paletteAdded, after: paletteAfter } });
       await page.close();
     } finally { await browser.close(); }
   }
   report.checks.browserThemeHydration = 'passed';
+  report.checks.colorPickerInBrowsers = 'passed';
+  report.checks.colorPaletteInBrowsers = 'passed';
   await cp(join(consumer, 'package-lock.json'), resolve(evidencePath, 'installed-package-lock.json'));
   await cp(join(consumer, 'package.json'), resolve(evidencePath, 'installed-package.json'));
   await cp(join(consumer, 'components'), resolve(evidencePath, 'installed-components'), { recursive: true });
+  await cp(join(consumer, 'lib'), resolve(evidencePath, 'installed-lib'), { recursive: true });
 } catch (error) {
   failure = error;
   report.error = error.stack;

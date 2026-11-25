@@ -38,6 +38,29 @@ describe('site frame protocol', () => {
     expect(parseParentMessage(null)).toBeNull();
   });
 
+  it('parses the Toaster scene messages and rejects malformed ones', () => {
+    const tag = { channel: FRAME_CHANNEL };
+    const toast = { title: 'Synced to the cloud', kind: 'success', duration: 4000 };
+    expect(parseParentMessage({ ...tag, type: 'toast-show', id: 'r1-a', toast })).toEqual({ type: 'toast-show', id: 'r1-a', toast });
+    expect(parseParentMessage({ ...tag, type: 'toast-update', id: 'r1-a', toast: { ...toast, kind: 'loading', duration: null } })).toEqual({
+      type: 'toast-update',
+      id: 'r1-a',
+      toast: { ...toast, kind: 'loading', duration: null },
+    });
+    expect(parseParentMessage({ ...tag, type: 'toast-dismiss', id: 'r1-a' })).toEqual({ type: 'toast-dismiss', id: 'r1-a' });
+
+    expect(parseParentMessage({ ...tag, type: 'toast-show', id: '', toast })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'toast-show', id: 'x'.repeat(65), toast })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'toast-show', id: 'r1-a' })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'toast-show', id: 'r1-a', toast: { ...toast, kind: 'error' } })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'toast-show', id: 'r1-a', toast: { ...toast, title: '' } })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'toast-show', id: 'r1-a', toast: { ...toast, duration: -1 } })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'toast-show', id: 'r1-a', toast: { ...toast, duration: Infinity } })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'toast-update', id: 'r1-a', toast: { ...toast, duration: undefined } })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'toast-dismiss' })).toBeNull();
+    expect(parseParentMessage({ type: 'toast-dismiss', id: 'r1-a' })).toBeNull();
+  });
+
   it('parses frame replies', () => {
     const tag = { channel: FRAME_CHANNEL };
     expect(parseFrameMessage({ ...tag, type: 'ready' })).toEqual({ type: 'ready' });

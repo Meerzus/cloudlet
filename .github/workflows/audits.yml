@@ -1,0 +1,359 @@
+name: site-audits
+# The site's audits on its static export, apart from ci.yml so they never hold up the required check of a
+# pull request. The export is built once and shared as an artifact; every audit then runs in its own job,
+# in parallel. Gates (a red job is a failed audit): axe, keyboard and still layout of the landings in Chromium
+# and Firefox, text contrast over the paint without a GPU (SwiftShader `page` and no-WebGL `flat`), the pickers
+# from the keyboard in Chromium and WebKit, the first-screen budget, the docs walk, the paint
+# smoke. Reports (they run and show their results, a red one does not fail the run): the landings in Linux
+# WebKit, Lighthouse (Performance is noisy on shared runners). Local only (they
+# need a GPU or hands): the `fixed` paint mode of audit-color-picker.mjs (ANGLE on Metal), scroll-bench.mjs
+# (frame times), Safari.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/site/**
+      - registry/**
+      - packages/toast/**
+      - package-lock.json
+      # Shared build inputs: the package and the site extend the base tsconfig; Node and the build
+      # scripts come from these.
+      - tsconfig.base.json
+      - package.json
+      - .nvmrc
+      - .github/workflows/audits.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: audits-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+defaults:
+  run:
+    # bash -eo pipefail: a failing audit piped through tee still fails its step.
+    shell: bash
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The jobs run the pull request's code and need no authenticated git after checkout.
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      # The site consumes the built package dist, so the package builds first.
+      - run: npm run build
+      - run: npm run build:site
+      - uses: actions/upload-artifact@v7
+        with:
+          name: site-export
+          # As long as GitHub lets a failed job be re-run (30 days): a re-run reuses this export.
+          retention-days: 30
+          include-hidden-files: true
+          path: apps/site/out/
+
+  landing:
+    # audit-landing.mjs: axe at every section and live place, the Tab path, the still layout under
+    # reduced motion and 320 px, desktop and phone, both themes, with and without motion. Chromium and
+    # Firefox run all eight scenarios in one job; WebKit runs one scenario per job — in one job it kept
+    # memory until the runner died after an hour (with its log), each scenario on a fresh runner does not.
+    # Chromium and Firefox are gates. WebKit here is Linux WebKit, not Safari, and it is a report: it ran
+    # runners out of memory, and once that was contained it reported a contrast and a scroll-into-view failure on
+    # /toaster that neither Chromium nor Firefox on the same runner nor WebKit on a Mac show. Safari is checked
+    # on a Mac (the owner's decision, 2026-11-18).
+    needs: export
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    continue-on-error: ${{ matrix.browser == 'webkit' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { browser: chromium, scenario: '' }
+          - { browser: firefox, scenario: '' }
+          - { browser: webkit, scenario: desktop-light }
+          - { browser: webkit, scenario: desktop-light-reduced }
+          - { browser: webkit, scenario: desktop-dark }
+          - { browser: webkit, scenario: desktop-dark-reduced }
+          - { browser: webkit, scenario: phone-light }
+          - { browser: webkit, scenario: phone-light-reduced }
+          - { browser: webkit, scenario: phone-dark }
+          - { browser: webkit, scenario: phone-dark-reduced }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          name: site-export
+          path: apps/site/out
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps ${{ matrix.browser }} && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
+      - run: |
+          mkdir -p artifacts/audits
+          # Memory in the log every 20 s: the WebKit job was cut off by the runner itself when it ran out of
+          # memory (exit 143), and the log is all that survives that.
+          (while sleep 20; do free -m | awk -v t="$(date -u +%T)" 'NR==2 { print "memory " t ": " $3 " of " $2 " MB used" }'; done) &
+          sampler=$!
+          # The sampler and its sleep must not outlive the audit: they hold the step's output open.
+          # Each command guarded: under bash -e a failed kill (no sleep running at that moment) would end the trap
+          # early and replace the audit's exit status.
+          trap 'pkill -P "$sampler" 2>/dev/null || true; kill "$sampler" 2>/dev/null || true' EXIT
+          if [ "${{ matrix.browser }}" = webkit ]; then export AUDIT_TRACE=1; fi
+          node apps/site/scripts/audit-landing.mjs artifacts/audits/landing --browser ${{ matrix.browser }} ${{ matrix.scenario }} 2>&1 | tee artifacts/audits/landing.log
+      - if: always()
+        run: node apps/site/scripts/audit-summary.mjs landing artifacts/audits/landing/axe-${{ matrix.browser }}.json --title "Landings — ${{ matrix.browser }}${{ matrix.scenario && format(' · {0}', matrix.scenario) || '' }}"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: audit-landing-${{ matrix.browser }}${{ matrix.scenario && format('-{0}', matrix.scenario) || '' }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: artifacts/audits/
+
+  contrast:
+    # audit-color-picker.mjs, contrast only: text against the paint's pixels with the paint drawn by
+    # SwiftShader once over the page (`page`) and with WebGL 2 taken away (`flat`), every start color,
+    # the extremes and the palettes. One job per route and mode; the sky has no modes and runs once.
+    needs: export
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { route: picker, mode: page }
+          - { route: picker, mode: flat }
+          - { route: kit, mode: page }
+          - { route: kit, mode: flat }
+          - { route: kit-hero, mode: page }
+          - { route: kit-hero, mode: flat }
+          - { route: kit-sky, mode: sky }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          name: site-export
+          path: apps/site/out
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
+      - run: |
+          mkdir -p artifacts/audits
+          node apps/site/scripts/audit-color-picker.mjs artifacts/audits/contrast --skip-pickers --routes ${{ matrix.route }} --modes ${{ matrix.mode == 'sky' && 'page' || matrix.mode }} 2>&1 | tee artifacts/audits/contrast.log
+      - if: always()
+        run: node apps/site/scripts/audit-summary.mjs picker artifacts/audits/contrast/color-picker-chromium.json --title "Contrast — ${{ matrix.route }} · ${{ matrix.mode }}"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: audit-contrast-${{ matrix.route }}-${{ matrix.mode }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: artifacts/audits/
+
+  pickers:
+    # audit-color-picker.mjs, pickers only: every picker opened from the keyboard, axe on the open panel,
+    # values, Tab order, Escape, target sizes, reduced motion, forced colors (Chromium).
+    needs: export
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          name: site-export
+          path: apps/site/out
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps ${{ matrix.browser }} && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
+      - run: |
+          mkdir -p artifacts/audits
+          node apps/site/scripts/audit-color-picker.mjs artifacts/audits/pickers --skip-contrast --browser ${{ matrix.browser }} 2>&1 | tee artifacts/audits/pickers.log
+      - if: always()
+        run: node apps/site/scripts/audit-summary.mjs picker artifacts/audits/pickers/color-picker-${{ matrix.browser }}.json --title "Pickers — ${{ matrix.browser }}"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: audit-pickers-${{ matrix.browser }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: artifacts/audits/
+
+  walks:
+    # The docs walked in Chromium: pages, the Toaster's Preview, demos, copy, search, axe (record-docs.mjs);
+    # and the paint smoke of the color picker's top (smoke-picker-hero.mjs). Both are gates; the walk
+    # counts console warnings as failures.
+    needs: export
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        walk: [docs, smoke]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          name: site-export
+          path: apps/site/out
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
+      - if: matrix.walk == 'docs'
+        run: |
+          mkdir -p artifacts/audits
+          node apps/site/scripts/record-docs.mjs artifacts/audits/docs 2>&1 | tee artifacts/audits/docs.log
+      - if: matrix.walk == 'smoke'
+        run: |
+          mkdir -p artifacts/audits
+          node apps/site/scripts/smoke-picker-hero.mjs 2>&1 | tee artifacts/audits/smoke.log
+      # The shot the smoke writes when it fails, kept apart so the failed step above still fails the job.
+      - if: always() && matrix.walk == 'smoke'
+        run: cp apps/site/scripts/smoke/picker-hero.actual.png artifacts/audits/ 2>/dev/null || true
+      - if: always() && matrix.walk != 'smoke'
+        run: node apps/site/scripts/audit-summary.mjs walk artifacts/audits/${{ matrix.walk }}/report.json --title "Walk — ${{ matrix.walk }}"
+      - if: always() && matrix.walk == 'smoke'
+        run: node apps/site/scripts/audit-summary.mjs log artifacts/audits/smoke.log --lines 10 --title "Paint smoke — /color-picker"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: audit-walk-${{ matrix.walk }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: artifacts/audits/
+
+  budget:
+    # first-screen-budget.mjs: start JS of / ≤ /toaster, first-screen media of / ≤ 150 KB in every context.
+    needs: export
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          name: site-export
+          path: apps/site/out
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
+      - run: |
+          mkdir -p artifacts/audits
+          node apps/site/scripts/first-screen-budget.mjs --json artifacts/audits/budget.json / /toaster 2>&1 | tee artifacts/audits/budget.log
+      - if: always()
+        run: node apps/site/scripts/audit-summary.mjs budget artifacts/audits/budget.json --title "First-screen budget"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: audit-budget
+          retention-days: 7
+          if-no-files-found: ignore
+          path: artifacts/audits/
+
+  lighthouse:
+    # Lighthouse mobile, three runs per page, the median in the summary. A report, not a gate
+    # (--report-only); a run that cannot finish still fails the job. The version is pinned in the script.
+    needs: export
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.12.1
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          name: site-export
+          path: apps/site/out
+      # apt on a runner now and then cannot reach its mirror; the install is safe to repeat.
+      - run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && break
+            [ "$attempt" -lt 3 ] || exit 1
+            sleep 30
+          done
+      - run: |
+          mkdir -p artifacts/audits
+          node apps/site/scripts/lighthouse-docs.mjs artifacts/audits/lighthouse --runs 3 --report-only / /toaster /color-picker /docs/components/toaster /docs/components/toaster/notifications 2>&1 | tee artifacts/audits/lighthouse.log
+      - if: always()
+        run: node apps/site/scripts/audit-summary.mjs lighthouse artifacts/audits/lighthouse/lighthouse.json --title "Lighthouse (report)"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: audit-lighthouse
+          retention-days: 7
+          if-no-files-found: ignore
+          path: artifacts/audits/

@@ -1,0 +1,1112 @@
+/*
+ * The kit's landing at the root. The hero is painted (the color picker's paint, section-paint.ts);
+ * everything under it stands on the Toaster's sky (the layout's <Sky> with KIT_SKY_LAYERS).
+ */
+
+/* The hero's paint covers the first screen: the sky's own clouds are out of the page (so not even
+   fetched) while the hero covers the screen, and fade in as its upper part scrolls away (SkyGate flips
+   the attribute at the sentinel) — they show in the ragged band where the paint runs into the sky. */
+html:has(.kit-hero) .sky-clouds { transition: opacity 700ms ease, display 700ms allow-discrete; }
+html:has(.kit-hero[data-sky-clouds='off']) .sky-clouds { display: none; opacity: 0; }
+@starting-style { html:has(.kit-hero) .sky-clouds { opacity: 0; } }
+.kit-hero-sentinel { position: absolute; top: 55%; left: 0; width: 1px; height: 1px; pointer-events: none; }
+
+/* ---------- Hero: the words, the command and two buttons on the paint; the kit beside them ---------- */
+
+/* Under the sticky header, so the paint runs to the window's top; no band there (the page starts in
+   paint), a ragged band at the bottom where it runs into the Toaster's sky. The words and the parts
+   end above that band. */
+.kit-hero {
+  --paint-edge-top: 0px;
+  --paint-edge-bottom: clamp(7rem, 22svh, 13rem);
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  margin-top: -3.5rem;
+}
+.kh-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2.75rem;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: calc(3.5rem + clamp(1.5rem, 5svh, 3rem)) 1rem calc(var(--paint-edge-bottom) * 0.7);
+}
+.kh-copy { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.kh-title {
+  max-width: 11ch;
+  font-size: clamp(2.75rem, 1.6rem + 4.6vw, 5.75rem);
+  font-weight: 600;
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.kh-title > span { display: inline-block; }
+.kh-lede { max-width: 30rem; margin-top: 1.25rem; font-size: 1.0625rem; line-height: 1.5; text-wrap: pretty; }
+.kh-install { margin-top: 1.75rem; }
+
+/* Browse components leads; Star on GitHub is the same pill as the last section's, on the page's surface. */
+.kh-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1.25rem; }
+.kh-browse {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1.125rem 0 1.25rem;
+  border-radius: 9999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  outline: none;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 14px 30px -16px rgb(0 0 0 / 0.5);
+}
+.kh-browse-arrow { width: 1rem; height: 1rem; transition: translate 200ms ease; }
+@media (hover: hover) { .kh-browse:hover .kh-browse-arrow { translate: 3px 0; } }
+.kh-browse:focus-visible { box-shadow: 0 0 0 3px var(--background), 0 0 0 6px color-mix(in oklab, var(--ring) 70%, transparent); }
+.ks-star.kh-star {
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  margin-top: 0;
+  padding: 0.25rem 0.3125rem 0.25rem 1rem;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.9375rem;
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 14px 30px -18px rgb(0 0 0 / 0.4);
+}
+.kh-star .ks-star-mark { width: 1.125rem; height: 1.125rem; }
+.kh-star .ks-star-count { height: 2.125rem; padding: 0 0.75rem; background: color-mix(in oklab, var(--foreground) 8%, transparent); }
+.kh-star .ks-star-icon { width: 1rem; height: 1rem; }
+.ks-star.kh-star:focus-visible { box-shadow: 0 0 0 3px var(--background), 0 0 0 6px color-mix(in oklab, var(--ring) 70%, transparent); }
+
+/* The kit: three parts at the same weight, each a label over the real component. One column on a
+   phone; beside the words from 64rem; from 80rem the Toaster and the palette stack beside the picker. */
+.kh-parts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  align-content: start;
+  gap: 1.5rem;
+  min-width: 0;
+}
+.kh-part { display: flex; flex-direction: column; gap: 0.625rem; width: 100%; max-width: 20rem; min-width: 0; }
+.kh-label { font-size: 0.875rem; font-weight: 600; letter-spacing: -0.005em; }
+.kh-note { max-width: 20rem; font-size: 0.875rem; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty; }
+.kh-panel { width: fit-content; }
+.kh-parts :is(.kh-panel, .kh-tray) { transition: opacity 200ms ease; }
+.kh-parts:not([data-started]) :is(.kh-panel, .kh-tray) { opacity: 0; }
+.kh-panel > .color-picker-inline {
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
+}
+/* The palette's row on a tray of the page's surface, like the picker's panel. */
+.kh-tray {
+  display: flex;
+  align-items: center;
+  width: 16rem;
+  max-width: 100%;
+  min-height: 3.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 1.25rem;
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
+}
+
+/* The Toaster's record, drawn as the package draws an Island: its surface, a 24 px status icon (the
+   glyph on 18 % of the kind's color), the title and the muted line under it. */
+.kh-toast {
+  --kh-status: oklch(0.723 0.219 142.136);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 16rem;
+  max-width: 100%;
+  min-height: 4.25rem;
+  padding: 12px 16px 12px 14px;
+  border-radius: 24px;
+  background: #ffffff;
+  color: #111113;
+  font-size: 0.875rem;
+  line-height: 1.43;
+  box-shadow: 0 0 0 1px color-mix(in oklab, #111113 10%, transparent), 0 10px 30px -12px rgb(0 0 0 / 0.25), 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.dark .kh-toast { background: #1c1c1e; color: #f5f5f7; box-shadow: 0 0 0 1px color-mix(in oklab, #f5f5f7 10%, transparent), 0 12px 32px -12px rgb(0 0 0 / 0.6); }
+:is(.kh-toast, .kh-kind)[data-kind='success'] { --kh-status: oklch(0.723 0.219 142.136); }
+:is(.kh-toast, .kh-kind)[data-kind='info'] { --kh-status: oklch(0.685 0.169 237.323); }
+:is(.kh-toast, .kh-kind)[data-kind='error'] { --kh-status: oklch(0.637 0.237 25.331); }
+:is(.kh-toast, .kh-kind)[data-kind='loading'] { --kh-status: oklch(0.556 0 0); }
+.kh-toast-icon, .kh-kind {
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: 9999px;
+  color: var(--kh-status);
+  background: color-mix(in oklab, var(--kh-status) 18%, transparent);
+}
+.kh-toast-icon { width: 24px; height: 24px; }
+:is(.kh-toast-icon, .kh-kind) svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.kh-toast-words { display: flex; flex-direction: column; min-width: 0; padding-top: 1px; }
+.kh-toast-title { font-weight: 500; }
+.kh-toast-text { color: #6e6e76; font-size: 0.8125rem; line-height: 1.45; }
+.dark .kh-toast-text { color: #a1a1aa; }
+
+/* The kinds: the record's icon, one per kind, ringed when chosen; then Send. */
+.kh-toast-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; width: 16rem; max-width: 100%; }
+.kh-kinds { display: flex; gap: 0.375rem; }
+.kh-kind {
+  --kh-kind-fill: color-mix(in oklab, var(--kh-status) 18%, var(--background));
+  width: 2rem;
+  height: 2rem;
+  background: var(--kh-kind-fill);
+  outline: none;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kh-status) 30%, transparent), 0 6px 16px -10px rgb(0 0 0 / 0.4);
+  transition: box-shadow 150ms ease, translate 200ms ease;
+}
+@media (hover: hover) { .kh-kind:hover { translate: 0 -2px; } }
+.kh-kind[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--background), 0 0 0 3.5px var(--foreground); }
+.kh-kind:focus-visible { box-shadow: 0 0 0 2px var(--background), 0 0 0 5px color-mix(in oklab, var(--ring) 70%, transparent); }
+.kh-send {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.25rem;
+  padding: 0 1rem 0 0.875rem;
+  border-radius: 9999px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 10px 24px -14px rgb(0 0 0 / 0.4);
+}
+.kh-send:disabled { opacity: 0.6; }
+.kh-send:focus-visible { box-shadow: 0 0 0 3px var(--background), 0 0 0 6px color-mix(in oklab, var(--ring) 70%, transparent); }
+.kh-send-icon { width: 0.9375rem; height: 0.9375rem; }
+/* A phone keeps both buttons on one row: Star is short, the GitHub mark says where. */
+@media (max-width: 39.99rem) {
+  .kh-browse { padding: 0 1rem; font-size: 0.875rem; }
+  .ks-star.kh-star { padding-left: 0.875rem; font-size: 0.875rem; }
+  .kh-star .kh-star-long { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-reduced-motion]) .kh-spinner { animation: kh-spin 800ms linear infinite; }
+}
+@keyframes kh-spin { to { rotate: 360deg; } }
+
+@media (min-width: 64rem) {
+  .kh-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 3rem;
+    min-height: calc(100svh - var(--paint-edge-bottom) * 0.35);
+    padding: calc(3.5rem + 2rem) 2rem calc(var(--paint-edge-bottom) * 0.75);
+  }
+  .kh-lede { font-size: 1.1875rem; }
+  .kh-install { margin-top: 2.25rem; }
+  .kh-parts { grid-template-columns: 16rem; }
+}
+@media (min-width: 80rem) {
+  .kh-parts {
+    grid-template-columns: repeat(2, 16rem);
+    grid-template-areas: 'toaster picker' 'palette picker' 'note note';
+    column-gap: 1.75rem;
+  }
+  .kh-part[data-part='toaster'] { grid-area: toaster; }
+  .kh-part[data-part='color-picker'] { grid-area: picker; }
+  .kh-part[data-part='color-palette'] { grid-area: palette; }
+  .kh-note { grid-area: note; max-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kh-kind, .kh-browse-arrow { transition: none; }
+  .kh-kind:hover { translate: none; }
+}
+html[data-reduced-motion] :is(.kh-kind, .kh-browse-arrow) { transition: none; }
+html[data-reduced-motion] .kh-kind:hover { translate: none; }
+@media (forced-colors: active) {
+  .kh-browse, .kh-send, .kh-toast, .kh-tray { outline: 1px solid CanvasText; }
+  .kh-kind { forced-color-adjust: none; outline: 1px solid CanvasText; }
+  .kh-kind[aria-pressed='true'] { outline: 3px solid Highlight; }
+  :is(.kh-browse, .kh-send, .kh-kind):focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+}
+
+/* Hover lifts, a press sinks, both on the press spring (star-link.tsx); a new press retargets mid-way. */
+.kit-press { transition: translate var(--press-duration) var(--press-ease), scale var(--press-duration) var(--press-ease); }
+@media (hover: hover) { .kit-press:hover { translate: 0 -2px; } }
+.kit-press:active { translate: 0 0; scale: 0.97; }
+
+/* ---------- The install command and the switch of the kit's components ---------- */
+
+.kit-install { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; max-width: 100%; }
+.kit-install-center { align-items: center; }
+.kit-install-items {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0.25rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--background) 70%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+.kit-install-indicator { top: 0.25rem; bottom: 0.25rem; background: var(--foreground); }
+.kit-install-items button {
+  position: relative;
+  z-index: 1;
+  height: 2rem;
+  padding: 0 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  outline: none;
+  transition: color 200ms ease;
+}
+@media (hover: hover) { .kit-install-items button:hover { color: var(--foreground); } }
+.kit-install-items button[aria-pressed='true'] { color: var(--background); }
+.kit-install-items button:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.kit-install-command {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 100%;
+  min-height: 3rem;
+  padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+  border-radius: 1.5rem;
+  background: color-mix(in oklab, var(--background) 88%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 10px 30px -18px rgb(0 0 0 / 0.35);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  text-align: left;
+  outline: none;
+  transition: scale 160ms ease;
+}
+.kit-install-command:active { scale: 0.985; }
+.kit-install-command:focus-visible { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.kit-install-prompt { color: var(--muted-foreground); user-select: none; }
+.kit-install-text { min-width: 0; }
+.kit-install-item { display: inline-block; font-weight: 600; }
+.kit-install-copy {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+  color: var(--muted-foreground);
+  transition: color 150ms ease;
+}
+@media (hover: hover) { .kit-install-command:hover .kit-install-copy { color: var(--foreground); } }
+/* The copy icon and the check swap by blur in one spot. */
+.kit-install-icon { grid-area: 1 / 1; width: 1rem; height: 1rem; transition: opacity 200ms ease, filter 200ms ease, scale 200ms ease; }
+.kit-install-icon[data-icon='check'],
+.kit-install-command[data-copied] .kit-install-icon[data-icon='copy'] { opacity: 0; filter: blur(4px); scale: 0.6; }
+.kit-install-command[data-copied] .kit-install-icon[data-icon='check'] { opacity: 1; filter: none; scale: 1; }
+@media (max-width: 39.99rem) {
+  .kit-install-items button { padding: 0 0.625rem; font-size: 0.75rem; }
+  .kit-install-command { font-size: 0.75rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kit-install-icon, .kit-install-command, .kit-press { transition: opacity 150ms ease; }
+  .kit-press:active, .kit-install-command:active { scale: none; }
+}
+/* The page's own switch (lib/reduced-motion.ts): the same stillness as the media query, beside each one. */
+html[data-reduced-motion] :is(.kit-install-icon, .kit-install-command, .kit-press) { transition: opacity 150ms ease; }
+html[data-reduced-motion] :is(.kit-press, .kit-install-command):active { scale: none; }
+
+/* A changed word comes in by blur, never by a cut. */
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-reduced-motion]) .kit-swap { animation: kit-blur-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+}
+@keyframes kit-blur-in {
+  from { opacity: 0; filter: blur(6px); }
+}
+
+@media (forced-colors: active) {
+  .kit-install-items, .kit-install-command { outline: 1px solid CanvasText; }
+  .kit-install-command:focus-visible, .kit-install-items button:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+  .kit-install-indicator { background: Highlight; forced-color-adjust: none; }
+  .kit-install-items button[aria-pressed='true'] { color: HighlightText; }
+}
+
+/* ---------- The Toaster's chapter: a plain stack and Toaster on two phones, one input ---------- */
+
+.kit-toaster { position: relative; padding: clamp(3rem, 12svh, 7.5rem) 1rem clamp(3rem, 10svh, 6rem); }
+.kit-toaster-grid {
+  display: grid;
+  grid-template-areas: 'intro' 'compare' 'outro';
+  gap: 2rem;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+.kit-toaster-intro { grid-area: intro; max-width: 34rem; }
+.kit-toaster-outro { grid-area: outro; display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem; min-width: 0; }
+.kt-compare { grid-area: compare; min-width: 0; }
+@media (min-width: 64rem) {
+  .kit-toaster-grid {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    grid-template-areas: 'intro compare' 'outro compare';
+    grid-template-rows: auto 1fr;
+    column-gap: clamp(2.5rem, 5vw, 5rem);
+    row-gap: 2.25rem;
+    align-items: center;
+  }
+  .kit-toaster-intro { align-self: end; }
+  .kit-toaster-outro { align-self: start; }
+}
+
+.kit-eyebrow { font-size: 0.875rem; font-weight: 600; letter-spacing: -0.01em; color: var(--muted-foreground); }
+.kit-toaster-title {
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.kit-toaster-title > span { display: inline-block; }
+.kit-toaster-lede { margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+
+.kit-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  outline: none;
+}
+.kit-open:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.kit-open-arrow { width: 1rem; height: 1rem; transition: translate 200ms ease; }
+@media (hover: hover) { .kit-open:hover .kit-open-arrow { translate: 3px 0; } }
+
+/* ---------- The color picker's chapter: the sky runs into the paint and out of it ---------- */
+
+/* The bands are where the sky turns into paint and back (paint-section.tsx reads them): the copy
+   starts below the top one and ends above the bottom one. */
+.kit-picker {
+  --paint-edge-top: clamp(9rem, 32svh, 19rem);
+  --paint-edge-bottom: clamp(8rem, 28svh, 17rem);
+  position: relative;
+  isolation: isolate;
+  padding: calc(var(--paint-edge-top) + 1.5rem) 1rem calc(var(--paint-edge-bottom) + 1.5rem);
+}
+.kit-picker-copy {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3.5rem, 9svh, 6rem);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+.kit-picker-intro { max-width: 40rem; }
+.kit-picker-title {
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.kit-picker-title > span { display: inline-block; }
+.kit-picker-lede { max-width: 34rem; margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+
+/* Each comparison: its words, then the input for both and the two sheets, then the way on — as the
+   Toaster's chapter lays out its phones. */
+.kc-pair {
+  display: grid;
+  grid-template-areas: 'intro' 'compare' 'outro';
+  gap: 1.75rem;
+}
+.kc-intro { grid-area: intro; max-width: 30rem; }
+.kc-compare { grid-area: compare; display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.kc-outro { grid-area: outro; display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem; min-width: 0; }
+@media (min-width: 64rem) {
+  .kc-pair {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    grid-template-areas: 'intro compare' 'outro compare';
+    grid-template-rows: auto 1fr;
+    column-gap: clamp(2.5rem, 5vw, 5rem);
+    row-gap: 2rem;
+    align-items: center;
+  }
+  .kc-intro { align-self: end; }
+  .kc-outro { align-self: start; }
+}
+.kc-title { font-size: 1.5rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.025em; }
+.kc-lede { margin-top: 0.625rem; font-size: 1rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+
+/* The one input for both sides. */
+.kc-try { display: flex; flex-direction: column; align-items: flex-start; gap: 0.625rem; }
+.kc-try-label { font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
+.kc-chips, .kc-hints { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.kc-hints .cp-hint { font-size: 0.875rem; }
+.kc-chip {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background: var(--kc-chip);
+  box-shadow: 0 0 0 2px var(--background), inset 0 0 0 1px rgb(0 0 0 / 0.14), 0 6px 16px -8px rgb(0 0 0 / 0.4);
+  outline: none;
+  transition: box-shadow 150ms ease, translate 200ms ease;
+}
+@media (hover: hover) { .kc-chip:hover { translate: 0 -2px; } }
+.kc-chip[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--background), 0 0 0 3.5px var(--foreground), inset 0 0 0 1px rgb(0 0 0 / 0.14); }
+.kc-chip:focus-visible { box-shadow: 0 0 0 2px var(--background), 0 0 0 5px color-mix(in oklab, var(--ring) 70%, transparent); }
+
+/* Two identical sheets, the material of the picker's own panel; native controls follow the theme. */
+.kc-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem 1rem; }
+/* Caption and sheet on rows shared by both sides: a caption that wraps keeps the sheets level. */
+.kc-side { display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0.625rem; margin: 0; min-width: 0; }
+.kc-caption { display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.875rem; }
+.kc-caption-label { font-weight: 600; }
+.kc-caption-note { color: var(--muted-foreground); font-size: 0.8125rem; }
+.kc-sheet {
+  display: flex;
+  align-items: center;
+  min-height: 5.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1.25rem;
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
+  color-scheme: light;
+}
+.dark .kc-sheet { color-scheme: dark; }
+.kc-field { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; width: 100%; min-width: 0; }
+.kc-field-column { flex-direction: column; align-self: flex-start; align-items: flex-start; justify-content: flex-start; gap: 0.75rem; }
+.kc-field-text { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+.kc-field-label { font-size: 0.875rem; font-weight: 500; }
+.kc-value {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kc-row { min-height: 2.75rem; display: flex; align-items: center; }
+
+/* The browser's controls as the browser draws them: the site's reset is undone. */
+.kc-native { all: revert; }
+.kc-plain { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.kc-plain-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.kc-plain-item { display: flex; align-items: center; gap: 0.125rem; }
+
+@media (max-width: 39.99rem) {
+  .kit-picker-copy { gap: 2.75rem; }
+  .kc-pair { gap: 1.25rem; }
+  .kc-compare { gap: 1rem; }
+  /* The picker's sheets stay side by side; the palette's rows need the width and stand one above the other. */
+  .kc-sides { column-gap: 0.625rem; row-gap: 0.375rem; }
+  .kc-sides-stack { grid-template-columns: minmax(0, 1fr); }
+  .kc-sheet { min-height: 4.25rem; padding: 0.75rem 0.875rem; }
+  .kc-field { gap: 0.5rem; }
+  .kc-side { row-gap: 0.375rem; }
+  .kc-sides-stack .kc-side + .kc-side { margin-top: 0.5rem; }
+  .kc-sides-stack .kc-caption { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 0.5rem; }
+  .kc-sides:not(.kc-sides-stack) .kc-caption-note { display: none; }
+  .kc-hints .cp-hint { min-height: 2.25rem; gap: 0.5rem; padding-right: 0.75rem; font-size: 0.8125rem; }
+  .kc-hints .cp-hint-chip { width: 1rem; height: 1rem; }
+  .kc-hints { gap: 0.375rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kc-chip { transition: none; }
+  .kc-chip:hover { translate: none; }
+}
+html[data-reduced-motion] .kc-chip { transition: none; }
+html[data-reduced-motion] .kc-chip:hover { translate: none; }
+@media (forced-colors: active) {
+  .kc-chip { forced-color-adjust: none; outline: 1px solid CanvasText; }
+  .kc-chip[aria-pressed='true'] { outline: 3px solid Highlight; }
+  .kc-chip:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+  .kc-sheet { outline: 1px solid CanvasText; }
+}
+
+/* One input for both phones. */
+.kt-compare { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+.kt-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+.kt-control {
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--background) 88%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 8px 24px -16px rgb(0 0 0 / 0.35);
+  font-size: 0.875rem;
+  font-weight: 500;
+  outline: none;
+}
+@media (max-width: 39.99rem) {
+  .kit-toaster { padding-block: 2.5rem; }
+  .kit-toaster-grid { gap: 1.5rem; }
+  .kt-compare { gap: 1rem; }
+  .kt-controls { gap: 0.375rem; }
+  .kt-control { min-height: 2.25rem; padding: 0 0.75rem; font-size: 0.8125rem; }
+}
+.kt-control:focus-visible { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+
+/* The phones: natural px scaled by --kt-scale (measured on resize), each showing --kt-shown px of
+   its height from the bottom. Before the first measure they keep a close guess and stay hidden. */
+.kt-phones { --kt-scale: 0.68; --kt-shown: 905.34; display: flex; justify-content: center; gap: 24px; width: 100%; }
+.kt-phones:not([data-fit]) .kt-slot { visibility: hidden; }
+.kt-phones[data-stacked] { flex-direction: column; align-items: center; gap: 1.25rem; }
+.kt-side { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin: 0; min-width: 0; }
+.kt-caption { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; text-align: center; font-size: 0.875rem; }
+.kt-caption-label { font-weight: 600; }
+.kt-caption-note { color: var(--muted-foreground); font-size: 0.8125rem; }
+.kt-phones[data-stacked] .kt-caption-note { display: none; }
+.kt-phones[data-stacked] .kt-side { gap: 0.5rem; }
+.kt-slot {
+  position: relative;
+  width: calc(433.66px * var(--kt-scale));
+  height: calc(var(--kt-shown) * 1px * var(--kt-scale));
+}
+/* One above the other: the upper part of each phone fades into the sky. */
+.kt-phones[data-stacked] .kt-slot {
+  overflow: clip;
+  mask-image: linear-gradient(to bottom, transparent, #000 12%);
+}
+.kt-device {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 433.66px;
+  height: 905.34px;
+  transform: scale(var(--kt-scale));
+  transform-origin: 0 100%;
+}
+/* The shell's parts of other devices (laptop base, foldable spine) stay out of the layout. */
+.kt-device :is(.dv-base, .dv-feet, .dv-spine, .dv-strip, .dv-hinge) { display: none; }
+/* A soft shadow under the body, drawn once (no filter over the live screen). */
+.kt-device::before {
+  content: '';
+  position: absolute;
+  inset: 4% 6% 1%;
+  border-radius: 64px;
+  box-shadow: 0 40px 70px -24px rgb(10 30 70 / 0.38);
+}
+.kt-frame {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+.kt-frame[data-visible] { opacity: 1; }
+
+/* The plain stack, at the screen's natural px: above the tab bar, as the Toaster's is. */
+.kt-plain {
+  position: absolute;
+  z-index: 5;
+  left: 16px;
+  right: 16px;
+  bottom: 99px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kt-plain-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 14px 10px 12px;
+  border-radius: 14px;
+  background: #fff;
+  color: #1d1d1f;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  box-shadow: 0 0 0 1px rgb(17 17 19 / 0.06), 0 10px 24px -12px rgb(0 0 0 / 0.3);
+  animation: kt-plain-in 300ms ease both;
+}
+.kt-plain-toast[data-phase='out'] { animation: kt-plain-out 300ms ease both; }
+.dark .kt-plain-toast { background: #1c1c1e; color: #f5f5f7; box-shadow: 0 0 0 1px rgb(245 245 247 / 0.1), 0 12px 28px -12px rgb(0 0 0 / 0.6); }
+@keyframes kt-plain-in { from { opacity: 0; } }
+@keyframes kt-plain-out { to { opacity: 0; } }
+.kt-plain-icon { display: grid; flex: none; place-items: center; width: 22px; height: 22px; border-radius: 9999px; color: #fff; }
+.kt-plain-icon[data-kind='success'] { background: oklch(0.62 0.17 145); }
+.kt-plain-icon[data-kind='info'] { background: oklch(0.58 0.16 252); }
+.kt-plain-icon svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.kt-plain-spinner { border: 2.5px solid color-mix(in oklab, currentColor 20%, transparent); border-top-color: currentColor; color: inherit; animation: kt-spin 900ms linear infinite; }
+@keyframes kt-spin { to { rotate: 1turn; } }
+.kt-plain-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kt-plain-spinner { animation-duration: 2.4s; }
+  .kit-open-arrow { transition: none; }
+}
+html[data-reduced-motion] .kt-plain-spinner { animation-duration: 2.4s; }
+html[data-reduced-motion] .kit-open-arrow { transition: none; }
+@media (forced-colors: active) {
+  .kt-control { outline: 1px solid CanvasText; }
+  .kt-control:focus-visible, .kit-open:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+  .kt-plain-toast { outline: 1px solid CanvasText; }
+}
+
+/* ---------- Install: the command per component, the same item by its address, the lines that run ---------- */
+
+.kit-install-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2rem, 5svh, 3rem);
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(3rem, 12svh, 7.5rem) 1rem clamp(3rem, 10svh, 6rem);
+}
+.ki-intro { max-width: 40rem; }
+.ki-title {
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.ki-title > span { display: inline-block; }
+.ki-lede { max-width: 34rem; margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+
+.ki-grid { display: grid; gap: 2rem; min-width: 0; }
+@media (min-width: 64rem) {
+  .ki-grid { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); column-gap: clamp(2.5rem, 5vw, 4.5rem); align-items: start; }
+}
+.ki-commands { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; min-width: 0; }
+.ki-adds { max-width: 30rem; font-size: 0.9375rem; line-height: 1.5; text-wrap: pretty; }
+.ki-fallback { display: flex; flex-direction: column; align-items: flex-start; gap: 0.625rem; max-width: 100%; margin-top: 0.5rem; }
+.ki-note { max-width: 30rem; font-size: 0.875rem; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty; }
+.ki-note code { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--foreground); }
+.kit-install-command.ki-url { min-height: 2.5rem; padding: 0.25rem 0.25rem 0.25rem 1rem; font-size: 0.75rem; }
+.ki-url .kit-install-copy { width: 1.75rem; height: 1.75rem; }
+
+/* The code sits on a sheet of the page's own background, like the color picker's sheets. */
+.ki-code {
+  --tok-keyword: oklch(0.42 0.2 300); --tok-string: oklch(0.44 0.14 155); --tok-tag: oklch(0.44 0.17 250);
+  --tok-type: oklch(0.47 0.15 50); --tok-function: oklch(0.42 0.16 260); --tok-number: oklch(0.47 0.15 50);
+  --tok-comment: oklch(0.47 0.03 255); --tok-punctuation: oklch(0.42 0.04 255);
+  min-width: 0;
+  margin: 0;
+  border-radius: 1.25rem;
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
+}
+.dark .ki-code {
+  --tok-keyword: oklch(0.78 0.13 305); --tok-string: oklch(0.8 0.12 155); --tok-tag: oklch(0.8 0.11 240);
+  --tok-type: oklch(0.82 0.11 70); --tok-function: oklch(0.8 0.1 260); --tok-number: oklch(0.82 0.11 70);
+  --tok-comment: oklch(0.68 0.03 255); --tok-punctuation: oklch(0.75 0.03 255);
+}
+.ki-code-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0.625rem 0.625rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.ki-code-label { font-size: 0.8125rem; color: var(--muted-foreground); }
+.ki-code-label > span { display: inline-block; font-weight: 600; color: var(--foreground); }
+.ki-code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  outline: none;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+@media (hover: hover) { .ki-code-copy:hover { color: var(--foreground); background: color-mix(in oklab, var(--foreground) 6%, transparent); } }
+.ki-code-copy:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.ki-code-copy-icon { width: 0.875rem; height: 0.875rem; }
+
+/* All three snippets share one cell: the sheet keeps the tallest one's height and a switch swaps them by blur. */
+.ki-snippets { display: grid; padding: 1rem 1.25rem 1.25rem; }
+.ki-snippet {
+  grid-area: 1 / 1;
+  margin: 0;
+  overflow: visible;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  opacity: 0;
+  visibility: hidden;
+  filter: blur(6px);
+  transition: opacity 240ms ease, filter 240ms ease, visibility 0s linear 240ms;
+}
+.ki-snippet[data-active] { z-index: 1; opacity: 1; visibility: visible; filter: none; transition: opacity 320ms ease, filter 320ms ease, visibility 0s; }
+.ki-snippet[data-active]:has(.color-picker-shadow, .color-palette :focus-within) { z-index: 2; }
+.ki-snippet code { display: flex; flex-direction: column; }
+.ki-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 1rem;
+  row-gap: 0.25rem;
+  min-height: 1.875rem;
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
+  border-radius: 0.5rem;
+}
+.ki-src { min-width: 0; padding-left: 2ch; text-indent: -2ch; }
+.ki-gap { height: 0.75rem; }
+/* What the line renders, right after it: proportional type, normal wrapping. */
+.ki-live { display: inline-flex; align-items: center; gap: 0.75rem; min-height: 2.25rem; font-family: var(--font-sans); white-space: normal; overflow-wrap: normal; }
+/* The Toaster's line lights up when a notification leaves it (it remounts on each Run). */
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-reduced-motion]) .ki-flash { animation: ki-flash 900ms ease-out; }
+}
+.ki-flash { border-radius: 0.25rem; }
+@keyframes ki-flash {
+  from { background: color-mix(in oklab, var(--tok-tag) 22%, transparent); }
+}
+.ki-snippet:not([data-active]) .ki-flash { animation: none; }
+/* Editable values look like the code around them, with a dotted underline that says "this one is yours". */
+.ki-edit {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  outline: none;
+  text-decoration: underline dotted color-mix(in oklab, currentColor 60%, transparent);
+  text-underline-offset: 5px;
+  border-radius: 0.25rem;
+}
+input.ki-edit { field-sizing: content; min-width: 1ch; max-width: 100%; caret-color: currentColor; }
+.ki-edit:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.ki-edit-kind { cursor: pointer; color: var(--tok-string); }
+.ki-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.875rem 0 0.75rem;
+  border-radius: 9999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  outline: none;
+  transition: scale 160ms ease;
+}
+.ki-run:active { scale: 0.96; }
+.ki-run:disabled { opacity: 0.5; }
+.ki-run:focus-visible { box-shadow: 0 0 0 2px var(--background), 0 0 0 5px color-mix(in oklab, var(--ring) 70%, transparent); }
+.ki-run-icon { width: 0.875rem; height: 0.875rem; }
+
+/* The pill that flies out to the page's Island, drawn like the package's own: light or dark with the page, its icon a tinted circle with the glyph in the kind's colour. */
+.ki-pill {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1001;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 44px;
+  padding: 0 1.125rem 0 0.625rem;
+  border-radius: 9999px;
+  background: #fff;
+  color: #111113;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  transform-origin: 0 50%;
+  will-change: transform, opacity;
+  box-shadow: 0 0 0 1px rgb(17 17 19 / 0.08), 0 10px 30px -12px rgb(0 0 0 / 0.25), 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.dark .ki-pill { background: #1c1c1e; color: #f5f5f7; box-shadow: 0 0 0 1px rgb(245 245 247 / 0.1), 0 12px 32px -12px rgb(0 0 0 / 0.6); }
+.ki-pill-icon { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 9999px; color: var(--ki-status); background: color-mix(in oklab, var(--ki-status) 18%, transparent); }
+.ki-pill-icon[data-kind='success'] { --ki-status: oklch(0.723 0.219 142.136); }
+.ki-pill-icon[data-kind='info'] { --ki-status: oklch(0.685 0.169 237.323); }
+.ki-pill-icon[data-kind='warning'] { --ki-status: oklch(0.795 0.184 86.047); }
+.ki-pill-icon[data-kind='error'] { --ki-status: oklch(0.637 0.237 25.331); }
+.ki-pill-icon[data-kind='loading'] { --ki-status: oklch(0.556 0 0); }
+.ki-pill-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 39.99rem) {
+  .ki-snippets { padding: 0.75rem 1rem 1rem; }
+  .ki-snippet { font-size: 0.8125rem; }
+  .ki-code-bar { padding-left: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ki-snippet, .ki-snippet[data-active] { filter: none; transition: opacity 150ms ease, visibility 0s linear 150ms; }
+  .ki-snippet[data-active] { transition: opacity 150ms ease, visibility 0s; }
+  .ki-run { transition: none; }
+  .ki-run:active { scale: none; }
+}
+html[data-reduced-motion] :is(.ki-snippet, .ki-snippet[data-active]) { filter: none; transition: opacity 150ms ease, visibility 0s linear 150ms; }
+html[data-reduced-motion] .ki-snippet[data-active] { transition: opacity 150ms ease, visibility 0s; }
+html[data-reduced-motion] .ki-run { transition: none; }
+html[data-reduced-motion] .ki-run:active { scale: none; }
+@media (forced-colors: active) {
+  .ki-code, .ki-run { outline: 1px solid CanvasText; }
+  .ki-code-copy:focus-visible, .ki-run:focus-visible, .ki-edit:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+}
+
+/* ---------- The last word: Star on GitHub, large, and the command once more ---------- */
+
+.kit-star {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: clamp(4rem, 14svh, 9rem) 1rem clamp(3rem, 10svh, 6rem);
+  text-align: center;
+}
+.ks-title {
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.ks-title > span { display: inline-block; }
+.ks-lede { max-width: 30rem; margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: balance; }
+.ks-star {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.75rem;
+  margin-top: 2.25rem;
+  padding: 0.5rem 0.625rem 0.5rem 1.5rem;
+  border-radius: 9999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 1.1875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  outline: none;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 18px 40px -18px rgb(0 0 0 / 0.5);
+}
+.ks-star:focus-visible { box-shadow: 0 0 0 3px var(--background), 0 0 0 6px color-mix(in oklab, var(--ring) 70%, transparent); }
+.ks-star-mark { width: 1.375rem; height: 1.375rem; }
+.ks-star-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--background) 16%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+.ks-star-icon { width: 1.125rem; height: 1.125rem; transition: rotate 400ms ease, scale 400ms ease; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  html:not([data-reduced-motion]) .ks-star:hover .ks-star-icon { rotate: 72deg; scale: 1.12; }
+}
+.ks-install { margin-top: 1.75rem; }
+@media (max-width: 39.99rem) {
+  .ks-star { gap: 0.625rem; min-height: 3.25rem; padding-left: 1.125rem; font-size: 1.0625rem; }
+  .ks-star-count { height: 2.25rem; padding: 0 0.75rem; }
+}
+@media (forced-colors: active) {
+  .ks-star { outline: 1px solid CanvasText; }
+  .ks-star:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+}
+
+/* ---------- Principles: four promises, each shown live on the sky; then the kit's FAQ ---------- */
+
+.kit-principles {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3.5rem, 11svh, 6.5rem);
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(3rem, 12svh, 7.5rem) 1rem clamp(2rem, 6svh, 4rem);
+}
+.kp-intro { max-width: 40rem; }
+.kp-heading {
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.kp-heading > span { display: inline-block; }
+.kp-lede { max-width: 34rem; margin-top: 1rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+
+.kp-principle { display: grid; gap: 1.5rem; min-width: 0; }
+@media (min-width: 64rem) {
+  .kp-principle { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); column-gap: clamp(2.5rem, 5vw, 4.5rem); align-items: start; }
+}
+.kp-copy { max-width: 30rem; }
+.kp-title { margin-top: 0.375rem; font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.125rem); font-weight: 600; line-height: 1.1; letter-spacing: -0.03em; text-wrap: balance; }
+.kp-text p { margin-top: 0.75rem; font-size: 1.0625rem; line-height: 1.55; color: var(--muted-foreground); text-wrap: pretty; }
+.kp-proof { min-width: 0; }
+
+/* The material of the picker's sheets and the code sheet: the page's own background, a hairline, a soft drop. */
+.kp-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 1.25rem;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
+  color-scheme: light;
+}
+.dark .kp-sheet { color-scheme: dark; }
+/* An open panel lies over what follows. */
+.kp-sheet:has(.color-picker-shadow) { position: relative; z-index: 2; }
+.kp-note { font-size: 0.875rem; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty; }
+.kp-note code { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--foreground); }
+.kp-note kbd {
+  display: inline-block;
+  min-width: 1.5rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 0.375rem;
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 0 var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--foreground);
+  text-align: center;
+}
+
+.kp-motion-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 1.5rem; min-height: 2.75rem; }
+
+/* A switch: the track fills with the text color, the thumb slides on a soft spring. */
+.kp-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.625rem 0.25rem 0.25rem;
+  border-radius: 9999px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: left;
+  outline: none;
+}
+.kp-switch:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.kp-switch[aria-disabled='true'] { cursor: not-allowed; }
+.kp-switch-track {
+  position: relative;
+  flex: none;
+  width: 2.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 22%, transparent);
+  transition: background-color 200ms ease;
+}
+.kp-switch[aria-checked='true'] .kp-switch-track { background: var(--foreground); }
+.kp-switch[aria-disabled='true'] .kp-switch-track { opacity: 0.55; }
+.kp-switch-thumb {
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background: var(--background);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  transition: translate 250ms cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+.kp-switch[aria-checked='true'] .kp-switch-thumb { translate: 1rem 0; }
+
+.kp-access { display: grid; gap: 1rem; }
+.kp-still { align-items: flex-start; gap: 0.5rem; }
+.kp-focus-picker { display: flex; align-items: center; min-height: 2.75rem; }
+/* The path Tab took: each stop by its name, the current one ringed. */
+.kp-path { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 0.25rem; min-height: 1.875rem; margin: 0; padding: 0; list-style: none; font-size: 0.8125rem; }
+.kp-path li { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--muted-foreground); }
+.kp-path li:not(:last-child)::after { content: '→'; padding-left: 0.25rem; color: var(--muted-foreground); }
+.kp-path li[data-current] { padding: 0.1875rem 0.625rem; border-radius: 9999px; color: var(--foreground); font-weight: 600; box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--ring) 75%, transparent); }
+.kp-path-empty { font-style: italic; }
+
+/* A preset sets the shadcn tokens on this wrapper only (lib/theme-presets.ts), both themes side by side. */
+.kp-theme[data-preset] {
+  --background: var(--tp-light-background);
+  --foreground: var(--tp-light-foreground);
+  --muted: var(--tp-light-muted);
+  --muted-foreground: var(--tp-light-muted-foreground);
+  --border: var(--tp-light-border);
+  --ring: var(--tp-light-ring);
+  font-family: var(--tp-font, inherit);
+}
+.dark .kp-theme[data-preset] {
+  --background: var(--tp-dark-background);
+  --foreground: var(--tp-dark-foreground);
+  --muted: var(--tp-dark-muted);
+  --muted-foreground: var(--tp-dark-muted-foreground);
+  --border: var(--tp-dark-border);
+  --ring: var(--tp-dark-ring);
+}
+.kp-theme-proof { display: grid; gap: 1rem; min-width: 0; }
+.kp-theme-sheet { gap: 0; transition: background-color 300ms ease, color 300ms ease; }
+/* A fieldset is as wide as its content by default: on a narrow phone the theme switch wraps under its legend. */
+.kp-theme-sheet fieldset { flex-wrap: wrap; row-gap: 0.5rem; min-width: 0; }
+.kp-theme-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; min-height: 3.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.kp-theme-label { font-size: 0.9375rem; font-weight: 500; }
+.kp-theme-code { padding: 1rem 1.25rem; font-family: var(--font-mono); font-size: 0.8125rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kp-tok-selector { color: var(--tok-keyword); }
+.kp-tok-name { color: var(--tok-tag); }
+.kp-tok-value { color: var(--tok-string); }
+.kp-tok-comment { color: var(--tok-comment); }
+.kp-link { display: inline-flex; margin-top: 0.25rem; color: var(--foreground); font-size: 0.9375rem; }
+
+/* What the repository runs: a line each, with the files that run it. */
+.kp-tested { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--glass-border); }
+.kp-tested li { display: grid; gap: 0.25rem; padding: 1rem 0; border-bottom: 1px solid var(--glass-border); }
+.kp-tested-title { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
+.kp-tested-text { font-size: 0.9375rem; line-height: 1.5; color: var(--muted-foreground); text-wrap: pretty; }
+.kp-tested-proof { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: 0.25rem; }
+.kp-repo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.75rem;
+  border-radius: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
+  text-underline-offset: 4px;
+  outline: none;
+}
+.kp-repo svg { width: 0.875rem; height: 0.875rem; }
+@media (hover: hover) { .kp-repo:hover { text-decoration-color: currentColor; } }
+.kp-repo:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+
+.kit-faq { max-width: 72rem; margin: 0 auto; padding: clamp(3rem, 10svh, 6rem) 1rem 0; }
+.kit-faq .faq-list { max-width: 52rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kp-switch-track, .kp-switch-thumb, .kp-theme-sheet { transition: none; }
+}
+html[data-reduced-motion] :is(.kp-switch-track, .kp-switch-thumb, .kp-theme-sheet) { transition: none; }
+@media (forced-colors: active) {
+  .kp-sheet { outline: 1px solid CanvasText; }
+  .kp-switch-track { border: 1px solid CanvasText; }
+  .kp-switch[aria-checked='true'] .kp-switch-track { background: Highlight; forced-color-adjust: none; }
+  .kp-switch:focus-visible, .kp-repo:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+  .kp-path li[data-current] { outline: 2px solid Highlight; }
+}
+
+/* ---------- Night: the copy over the sky ---------- */
+
+/* At night the clouds are moonlit, lighter than the sky, and drift under the copy of the sections
+   below the hero. Here they are dimmer than on the Toaster's landing (its scenes keep their copy
+   clear of them), and the copy takes a soft halo of the night sky with it: a cloud passing behind a
+   line dims around the letters and the text keeps 4.5:1 (audit-color-picker measures it by pixels).
+   The painted chapter has its own paper; the text of sheets, pills and buttons sits on their own fill. */
+.dark:has(.kit-site) .sky-cloud { opacity: calc((0.55 + var(--depth) * 0.45) * 0.5); }
+.dark .kit-site :is(main > section:not(#hero, #color-picker), .site-footer) :is(h2, h3, p, li, summary, a, span, code):not(:where(.ks-star, .kit-open, .kit-install-command, button, [class*='sheet'], [class*='code']) *, .ks-star, .kit-open, button) {
+  text-shadow:
+    0 0 2px oklch(0.15 0.04 266),
+    0 0 6px oklch(0.15 0.04 266 / 0.9),
+    0 0 12px oklch(0.15 0.04 266 / 0.8),
+    0 0 24px oklch(0.15 0.04 266 / 0.6);
+}

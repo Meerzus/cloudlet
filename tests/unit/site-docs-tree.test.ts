@@ -1,31 +1,38 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { DEMO_GROUPS, DEMOS } from '../../apps/site/src/lib/demos';
+import { INSTALL_COMMAND, REGISTRY_ITEMS, registryCommand, registryUrlCommand } from '../../apps/site/src/lib/site';
 
 /**
- * The documentation's page tree: `meta.json` lists the pages in that order,
- * every written page is listed, and every listed page is either written or still pending.
- * A page that lands must leave PENDING, so the list below is the honest state of the series.
+ * The documentation's page tree, one for the whole kit: the root `meta.json` lists every page
+ * in sidebar order by its path, every written page is listed, and every listed page is either
+ * written or still pending. A page that lands must leave PENDING, so the list below is the honest
+ * state of the series. Pages are named by their path under `content/docs/en`.
  */
 const CONTENT = new URL('../../apps/site/content/docs/en/', import.meta.url);
+const TOASTER = 'components/toaster';
 
-/** The pages in sidebar order; `...api` inlines the Reference folder. */
+/** The pages in sidebar order; `...components/toaster/api` inlines the Toaster's Reference folder. */
 const SPEC_ORDER = [
   '---Getting started---',
   'index',
   'installation',
-  'quick-start',
-  '[Playground](/toaster/playground)',
-  '---Guides---',
-  'notifications',
-  'operations',
-  'forms',
-  'positioning',
-  'styling',
-  'ssr',
-  'csp',
-  'accessibility',
-  '---Reference---',
-  '...api',
+  '---Components---',
+  `${TOASTER}/index`,
+  'components/color-picker',
+  'components/color-palette',
+  '---Toaster guides---',
+  `${TOASTER}/notifications`,
+  `${TOASTER}/operations`,
+  `${TOASTER}/forms`,
+  `${TOASTER}/styling`,
+  '---Toaster advanced---',
+  `${TOASTER}/positioning`,
+  `${TOASTER}/ssr`,
+  `${TOASTER}/csp`,
+  `${TOASTER}/accessibility`,
+  '---Toaster reference---',
+  `...${TOASTER}/api`,
 ];
 
 const REFERENCE_PAGES = ['create-cloudlet', 'controller', 'toaster', 'labels', 'types'];
@@ -63,7 +70,7 @@ describe('site docs tree', () => {
   });
 
   it('has every written page in the tree, and every pending page still unwritten', () => {
-    const listed = new Set([...meta.pages.filter(isPage), ...REFERENCE_PAGES.map((page) => `api/${page}`)]);
+    const listed = new Set([...meta.pages.filter(isPage), ...REFERENCE_PAGES.map((page) => `${TOASTER}/api/${page}`)]);
     for (const page of written) expect(listed.has(page), `${page}.mdx is not in the page tree`).toBe(true);
     for (const page of listed) {
       if (written.includes(page)) expect(PENDING.has(page), `${page} is written: remove it from PENDING`).toBe(false);
@@ -79,24 +86,25 @@ describe('site docs tree', () => {
     }
   });
 
-  it('has the whole Getting started group written', () => {
-    const group = meta.pages.slice(meta.pages.indexOf('---Getting started---') + 1, meta.pages.indexOf('---Guides---'));
-    expect(group).toEqual(['index', 'installation', 'quick-start', '[Playground](/toaster/playground)']);
-    for (const page of group.filter(isPage)) {
-      expect(written, `${page}.mdx`).toContain(page);
-      expect(PENDING.has(page), `${page} is pending`).toBe(false);
-    }
+  it('lists every page once', () => {
+    const pages = meta.pages.filter(isPage);
+    expect(new Set(pages).size).toBe(pages.length);
+  });
+
+  it('lists only component pages under Components', () => {
+    const group = meta.pages.slice(meta.pages.indexOf('---Components---') + 1, meta.pages.indexOf('---Toaster guides---'));
+    expect(group).toEqual([`${TOASTER}/index`, 'components/color-picker', 'components/color-palette']);
   });
 
   it('has the notification Guides written, with Run blocks', () => {
     /** The demo catalog groups each page runs: every one of its entries is on the page. */
     const RUNS: Record<string, readonly string[]> = {
-      notifications: ['success', 'info', 'warning', 'error', 'loading', 'title-only', 'description', 'rich-description', 'custom-icon', 'update-loading', 'burst', 'overflow', 'dismiss-all'],
-      operations: ['track-resolve', 'error-retry', 'track-cancel', 'promise-progress', 'action-command', 'action-retry', 'action-link'],
+      notifications: ['burst', 'attention-auto', 'attention-upgrade', 'attention-stack', 'overflow', 'dismiss-all'],
+      operations: ['track-cancel', 'promise-progress'],
       forms: ['form-reply', 'form-note', 'form-retry'],
-      positioning: ['attention-auto', 'attention-upgrade', 'attention-stack'],
     };
-    for (const [page, demos] of Object.entries(RUNS)) {
+    for (const [name, demos] of Object.entries(RUNS)) {
+      const page = `${TOASTER}/${name}`;
       expect(written, `${page}.mdx`).toContain(page);
       expect(PENDING.has(page), `${page} is pending`).toBe(false);
       const { body } = frontmatter(page);
@@ -105,29 +113,23 @@ describe('site docs tree', () => {
     }
   });
 
-  it('sends readers to the Playground from Introduction and Quick start only', () => {
-    const nextSteps = (page: string) => frontmatter(page).body.split('## Next steps')[1] ?? '';
-    for (const page of ['index', 'quick-start']) expect(nextSteps(page), page).toContain('](/toaster/playground)');
-    for (const page of ['installation', 'notifications', 'operations', 'forms', 'positioning', 'styling', 'ssr', 'csp', 'accessibility']) {
-      expect(nextSteps(page), page).not.toContain('](/toaster/playground)');
-    }
-  });
-
   it('has the integration Guides written, with typechecked examples and links to the Reference', () => {
     /** Integration guides configure the Toaster rather than show a notification: no Run blocks. */
     const LINKS: Record<string, readonly string[]> = {
-      styling: ['/toaster/docs/api/toaster'],
-      ssr: ['/toaster/docs/api/toaster'],
-      csp: ['/toaster/docs/api/toaster'],
-      accessibility: ['/toaster/docs/api/toaster', '/toaster/docs/api/labels'],
+      styling: ['/docs/components/toaster/api/toaster'],
+      ssr: ['/docs/components/toaster/api/toaster'],
+      csp: ['/docs/components/toaster/api/toaster'],
+      accessibility: ['/docs/components/toaster/api/toaster', '/docs/components/toaster/api/labels'],
     };
-    for (const [page, links] of Object.entries(LINKS)) {
+    for (const [name, links] of Object.entries(LINKS)) {
+      const page = `${TOASTER}/${name}`;
       expect(written, `${page}.mdx`).toContain(page);
       expect(PENDING.has(page), `${page} is pending`).toBe(false);
       const { body } = frontmatter(page);
       expect(body, `${page}: tsx example`).toMatch(/^```tsx title="[^"]+"$/mu);
       expect(body, `${page}: demo= blocks`).not.toMatch(/demo="/u);
-      for (const link of links) expect(body, `${page}: link to ${link}`).toContain(`](${link})`);
+      // The page itself or one of its sections: a link to a prop lands on the Props table.
+      for (const link of links) expect(body.includes(`](${link})`) || body.includes(`](${link}#`), `${page}: link to ${link}`).toBe(true);
     }
   });
 
@@ -140,10 +142,10 @@ describe('site docs tree', () => {
       labels: 'Labels & announcements',
       types: 'Types',
     };
-    const folder = JSON.parse(readFileSync(new URL('api/meta.json', CONTENT), 'utf8')) as { pages: string[] };
+    const folder = JSON.parse(readFileSync(new URL(`${TOASTER}/api/meta.json`, CONTENT), 'utf8')) as { pages: string[] };
     expect(folder.pages).toEqual(REFERENCE_PAGES);
     for (const slug of REFERENCE_PAGES) {
-      const page = `api/${slug}`;
+      const page = `${TOASTER}/api/${slug}`;
       expect(written, `${page}.mdx`).toContain(page);
       expect(PENDING.has(page), `${page} is pending`).toBe(false);
       const { fields, body } = frontmatter(page);
@@ -154,9 +156,72 @@ describe('site docs tree', () => {
     }
   });
 
-  it('keeps Introduction with a typechecked example and the English locale only', () => {
-    expect(written).toContain('index');
-    expect(frontmatter('index').body).toMatch(/^```tsx/mu);
+  it('never links to the palette as a section of the color picker page: it has a page of its own', () => {
+    const pages = readdirSync(CONTENT, { recursive: true, encoding: 'utf8' }).filter((entry) => entry.endsWith('.mdx'));
+    expect(pages).toContain('components/color-palette.mdx');
+    for (const page of pages) expect(readFileSync(new URL(page, CONTENT), 'utf8'), page).not.toContain('color-picker#palette');
+    expect(readFileSync(new URL('../../../src/lib/docs-markdown.ts', CONTENT), 'utf8')).not.toContain('#palette');
+  });
+
+  it("has the kit's Introduction and Installation, with commands in the forms of site.ts", () => {
+    const intro = frontmatter('index').body;
+    for (const link of ['/docs/components/toaster', '/docs/components/color-picker', '/docs/components/color-palette', '/docs/installation']) {
+      expect(intro, `index: link to ${link}`).toContain(`](${link})`);
+    }
+    // The Markdown of every page and llms.txt are said once, for the whole docs, here.
+    for (const link of ['https://cloudlet.dev/llms.txt', 'https://cloudlet.dev/llms-full.txt']) expect(intro, `index: link to ${link}`).toContain(`](${link})`);
+    expect(intro).toMatch(/Markdown version at its address plus `\.md`/u);
+    expect(frontmatter(`${TOASTER}/index`).body, 'the Toaster page leaves llms.txt to the Introduction').not.toContain('llms.txt');
+    const installation = frontmatter('installation').body;
+    const commands = [...installation.matchAll(/<InstallCommand command="([^"]+)" \/>/gu)].map((match) => match[1]);
+    expect(commands).toEqual([registryCommand('color-picker'), registryUrlCommand('color-picker'), INSTALL_COMMAND]);
+    for (const item of REGISTRY_ITEMS) expect(installation, `installation: item ${item}`).toMatch(new RegExp(`^\\| \`${item}\` \\|`, 'mu'));
+    const registry = JSON.parse(readFileSync(new URL('../../registry/registry.json', import.meta.url), 'utf8')) as { items: { name: string }[] };
+    expect(registry.items.map((entry) => entry.name)).toEqual([...REGISTRY_ITEMS]);
+    expect(installation).toContain('`https://cloudlet.dev/r/<item>.json`');
+    expect(installation).toContain('](/docs/components/toaster#installation)');
+  });
+
+  it('keeps the Toaster on one component page: Preview, Installation, Usage, Examples, API Reference', () => {
+    expect(written).toContain(`${TOASTER}/index`);
+    const { fields, body } = frontmatter(`${TOASTER}/index`);
+    expect(fields['title']).toBe('Toaster');
+    expect([...body.matchAll(/^## (.+)$/gmu)].map((match) => match[1])).toEqual(['Preview', 'Installation', 'Usage', 'Examples', 'API Reference']);
+    const section = (name: string) => body.split(`\n## ${name}\n`)[1]?.split('\n## ')[0] ?? '';
+    expect(section('Preview'), 'Preview: the live preview of the page Toaster').toMatch(/^<ToasterPreview \/>$/mu);
+    expect(section('Preview'), 'Preview: no demo block, the Examples run the catalog').not.toMatch(/^```tsx demo=/mu);
+    expect(section('Preview'), 'Preview: a link to the Examples it moves').toContain('](#examples)');
+    expect(section('Installation'), 'Installation: the npm / shadcn tabs').toContain('<GetStartedTabs />');
+    expect(section('Installation'), 'Installation: the kit page for the namespace').toContain('](/docs/installation)');
+    for (const heading of ['Requirements', 'Import the styles', 'The shadcn registry item']) expect(section('Installation')).toContain(`\n### ${heading}\n`);
+    expect(section('Usage'), 'Usage: a typechecked example').toMatch(/^```tsx title="[^"]+"$/mu);
+    for (const link of ['/docs/components/toaster/ssr#nextjs-app-router', '/docs/components/toaster/api/labels', '/docs/components/toaster/styling']) {
+      expect(section('Usage'), `Usage: link to ${link}`).toContain(`](${link})`);
+    }
+    // Three columns: the export as code, what it is, a link to its reference page named by that page.
+    expect(section('API Reference')).toContain('\n| Export | What it is | Reference |\n');
+    for (const name of ['createCloudlet', 'CloudletProvider', 'useCloudlet', 'Toaster']) {
+      expect(section('API Reference'), `API Reference: ${name}`).toMatch(
+        new RegExp(`^\\| \`${name}\` \\| [^|]+ \\| \\[(?:createCloudlet|Toaster props)\\]\\(/docs/components/toaster/api/[^)]+\\) \\|$`, 'mu'),
+      );
+    }
+  });
+
+  it('runs the whole demo catalog in Examples, a group per heading with its blurb, in catalog order', () => {
+    const examples = frontmatter(`${TOASTER}/index`).body.split('\n## Examples\n')[1]?.split('\n## ')[0] ?? '';
+    const groups = examples.split(/^### /mu).slice(1);
+    expect(groups.map((group) => group.split('\n')[0])).toEqual(DEMO_GROUPS.map((group) => group.id));
+    for (const [index, { id, blurb }] of DEMO_GROUPS.entries()) {
+      const group = groups[index] ?? '';
+      expect(group, `${id}: blurb`).toContain(`\n${blurb} `);
+      expect(group, `${id}: a link to the guide`).toMatch(/\]\(\/docs\/components\/toaster\/[a-z-]+(?:#[a-z-]+)?\)\.\n/u);
+      expect(group, `${id}: one <Demos>`).toMatch(/<Demos>[\s\S]*<\/Demos>/u);
+      const used = [...group.matchAll(/^```tsx demo="([^"]+)"$/gmu)].map((match) => match[1]);
+      expect(used, `${id}: demo= blocks`).toEqual(DEMOS.filter((demo) => demo.group === id).map((demo) => demo.id));
+    }
+  });
+
+  it('has the English locale only', () => {
     const locales = readdirSync(new URL('../', CONTENT), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
     expect(locales).toEqual(['en']);
   });

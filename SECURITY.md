@@ -32,9 +32,9 @@ stay anonymous.
 
 - The `@cloudlet/toast` package: its runtime, its stylesheet and the published archive.
 - The shadcn registry item in [`registry`](registry).
-- The website at cloudlet.dev, including its Playground and documentation.
+- The website at cloudlet.dev, including its documentation.
 
 Content your application passes to Cloudlet stays your responsibility: rich descriptions and icons
 are React nodes, and rendering untrusted markup in them is outside Cloudlet's control. The
-[Content Security Policy guide](https://cloudlet.dev/toaster/docs/csp) lists what Cloudlet itself
+[Content Security Policy guide](https://cloudlet.dev/docs/components/toaster/csp) lists what Cloudlet itself
 needs from a strict policy.

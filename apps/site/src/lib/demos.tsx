@@ -3,7 +3,7 @@ import { GITHUB_URL } from './site';
 
 /**
  * Shared demo catalog. One entry = one call through the public API
- * plus the snippet a visitor copies; `/playground` renders every group. A unit test runs every snippet and its `run` against a
+ * plus the snippet a visitor copies; the Examples of the Toaster's docs page run every group. A unit test runs every snippet and its `run` against a
  * recording controller and requires identical calls, so the two cannot drift.
  *
  * Snippets are plain JavaScript (JSX where a slot takes a React node) that assume `const cloudlet = useCloudlet();`.
@@ -19,7 +19,7 @@ export interface Demo {
   readonly snippet: string;
 }
 
-/** Playground sections, in page order. */
+/** Demo groups, in the order the Examples show them. */
 export const DEMO_GROUPS: readonly { readonly id: DemoGroup; readonly blurb: string }[] = [
   { id: 'Kinds', blurb: 'Five kinds of weather. Success and info drift off after six seconds; the rest stay until you close them.' },
   { id: 'Content', blurb: 'A title, a line of description, rich text or an icon of your own.' },

@@ -3,14 +3,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMotion } from './motion';
 
-/** The landing's chapters, in page order: the section id and the label shown on hover and focus. */
-const CHAPTERS = [
+/** A landing's chapters, in page order: the section id and the label shown on hover and focus. */
+export type ChapterList = readonly { readonly id: string; readonly label: string }[];
+
+/** The Toaster landing's chapters. */
+export const TOASTER_CHAPTERS: ChapterList = [
   { id: 'hero', label: 'Intro' },
   { id: 'life', label: 'Life of a notification' },
   { id: 'drifting', label: 'Drifting by' },
   { id: 'get-started', label: 'Get started' },
   { id: 'faq', label: 'FAQ' },
-] as const;
+];
 
 /** A chapter counts as reached when its start is this far into the viewport. */
 const REACHED = 0.3;
@@ -24,7 +27,7 @@ const HIDE_BEFORE_FOOTER = 0.5;
  * Wide screens only (CSS: from 80rem the content column leaves a margin); visible from the first
  * screen, hidden under the footer wordmark like the header.
  */
-export function Chapters() {
+export function Chapters({ chapters = TOASTER_CHAPTERS }: { chapters?: ChapterList }) {
   const { lenis, reduced } = useMotion();
   const fills = useRef<(HTMLSpanElement | null)[]>([]);
   const starts = useRef<number[]>([]);
@@ -35,7 +38,7 @@ export function Chapters() {
     const header = () => document.querySelector<HTMLElement>('.site-header')?.offsetHeight ?? 0;
     /** Where each chapter starts: the top of a pinned scene's spacer, or the section under the header. */
     const measure = () => {
-      starts.current = CHAPTERS.map(({ id }, index) => {
+      starts.current = chapters.map(({ id }, index) => {
         const section = document.getElementById(id);
         if (!section || index === 0) return 0;
         const spacer = section.querySelector<HTMLElement>('.pin-spacer');
@@ -75,7 +78,7 @@ export function Chapters() {
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', update);
     };
-  }, []);
+  }, [chapters]);
 
   const jump = (index: number) => {
     const top = starts.current[index] ?? 0;
@@ -86,7 +89,7 @@ export function Chapters() {
   return (
     <nav aria-label="Sections" className="chapters" data-shown={shown} inert={!shown}>
       <ol>
-        {CHAPTERS.map(({ id, label }, index) => (
+        {chapters.map(({ id, label }, index) => (
           <li key={id}>
             <button
               type="button"

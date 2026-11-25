@@ -21,7 +21,7 @@ import {
 } from '@/lib/frame-protocol';
 import { DEVICE_IDS, type DeviceId, type FoldPose } from '@/lib/devices';
 import { playIntro, type IntroRun } from '@/lib/intro';
-import { DOCS_PATH, GITHUB_URL, PLAYGROUND_PATH } from '@/lib/site';
+import { GITHUB_URL, TOASTER_DOCS_PATH } from '@/lib/site';
 import { cn } from '@/lib/utils';
 import { DeviceStage, type StageFrame } from './device-stage';
 import { FoldToggle } from './fold-toggle';
@@ -42,7 +42,7 @@ const DEVICES = {
 } as const;
 
 /** Phone visitors (< 48rem, the Toaster's own breakpoint) get no mockup: the page Toaster is the demo. */
-// The hero has no demo chips: trying every kind is the playground's job (owner decision).
+// The hero has no demo chips: trying every kind is the job of the docs' Preview and Examples (owner decision).
 const WIDE_QUERY = '(min-width: 48rem)';
 
 const pageToasterHost = () => document.querySelector('.cloudlet-host');
@@ -268,10 +268,7 @@ export function Hero() {
           <InstallTabs />
           <div className="flex flex-wrap justify-center gap-3">
             <Button asChild size="lg">
-              <Link href={PLAYGROUND_PATH}>Open playground</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href={DOCS_PATH}>Read the docs</Link>
+              <Link href={TOASTER_DOCS_PATH}>Read the docs</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <ExternalLink href={GITHUB_URL}>

@@ -1,20 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
-import Link from 'next/link';
 import { gsap, ScrollTrigger } from '@/lib/gsap';
-import { DOCS_PATH, LICENSE_URL } from '@/lib/site';
 import { WORDMARK_HALO_PAD, WORDMARK_WIDTHS, WORDMARKS } from '@/lib/wordmark.generated';
-import { ExternalLink } from './external-link';
 import { BANK, FooterClouds } from './footer-clouds';
-import { CloudletIcon } from './icons';
+import { FooterLinks } from './footer-links';
 import { useMotion, useScrollScene } from './motion';
 
 /** The owner's wordmark, Figma 37:1195 (`wide`), picked over 37:1197; the manifest holds just it. */
 const [WORDMARK] = WORDMARKS;
-
-const LINK =
-  'rounded-sm font-normal text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/60';
 
 /**
  * The wordmark's motions (owner's picks from a side-by-side of four; a spring "landing" was dropped):
@@ -274,21 +268,8 @@ export function Footer() {
   return (
     <>
       <footer ref={footer} className="site-footer" style={{ '--wordmark-aspect': WORDMARK.aspect } as CSSProperties}>
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 pt-12 pb-6 font-semibold tracking-tight sm:px-6">
-          <CloudletIcon idPrefix="footer-icon" className="size-6" />
-          Cloudlet
-          <span className="font-normal text-muted-foreground" aria-hidden="true">
-            ·
-          </span>
-          <ExternalLink href={LICENSE_URL} className={LINK}>
-            MIT License
-          </ExternalLink>
-          <span className="font-normal text-muted-foreground" aria-hidden="true">
-            ·
-          </span>
-          <Link href={DOCS_PATH} className={LINK}>
-            Docs
-          </Link>
+        <div className="mx-auto max-w-6xl px-4 pt-12 pb-6 font-semibold tracking-tight sm:px-6">
+          <FooterLinks idPrefix="footer-icon" iconClassName="size-6" />
         </div>
         <div ref={box} className="footer-wordmark" aria-hidden="true">
           <FooterClouds bankRef={bank} layerRefs={layers} />

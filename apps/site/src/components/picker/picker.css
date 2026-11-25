@@ -1,0 +1,317 @@
+/*
+ * The color picker landing (app/color-picker, COLOR_PICKER §8). The picked color lives on <html> as
+ * `--cp-color`, written before first paint by START_SCRIPT (lib/picker-start.ts) and then by
+ * picker-color.tsx. One paint lies under the whole page (paint-page.tsx): a canvas fixed to the window
+ * (`data-cp-paint="fixed"` on <html>) or, on a software WebGL, one over the whole page ("page").
+ * Text and controls keep the theme's tokens: the theme picks the paint's scene.
+ */
+html:has(.cp-site) { background: var(--background); }
+
+/* The flat background: shown until the paint draws, and for good without WebGL 2. flatOf in lib/picker-ramp.ts mixes the same,
+   lightness clamped per theme (FLAT_LIGHTNESS) so the muted text keeps 4.5:1; a browser without relative colors keeps the plain mix. */
+html:has(.cp-paint) {
+  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background));
+  background: oklch(from color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background)) max(l, 0.64) c h);
+}
+html.dark:has(.cp-paint) { background: oklch(from color-mix(in oklch, var(--cp-color, #ff6a3d) 35%, var(--background)) min(l, 0.4) c h); }
+.cp-paint { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.cp-paint[data-mode='page'] { position: absolute; inset: 0 0 auto; height: 100%; }
+.cp-paint[data-mode='flat'] { display: none; }
+html:has(.cp-paint) main, .cp-paint-footer { position: relative; z-index: 1; }
+/* The header lies on lifted paper over a fixed paint: its own tint would only grey it. */
+html[data-cp-paint='fixed'] .site-edge-tint { opacity: 0; }
+/* On a software WebGL the paint is drawn once over the whole page and cannot lift its paper under the header
+   (which stays at the window's top): the tint does that work there, dense behind the controls, fading below them. */
+html[data-cp-paint='page'] .site-edge-tint { background: linear-gradient(to bottom, color-mix(in oklab, var(--background) 88%, transparent) 55%, transparent); }
+
+.cp-hero {
+  position: relative;
+  min-height: 100svh;
+  /* Under the sticky header: the paint runs to the top edge. */
+  margin-top: -3.5rem;
+}
+
+/* Copy on the frame's paper, the panel open beside it (§8.4). */
+.cp-hero-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3rem;
+  max-width: 72rem;
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: calc(3.5rem + 3rem) 1.5rem 3rem;
+}
+.cp-hero-title {
+  max-width: 10ch;
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  font-weight: 600;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.cp-hero-lede {
+  max-width: 28rem;
+  margin-top: 1.5rem;
+  font-size: 1.125rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.cp-hero-panel { transition: opacity 240ms ease; }
+/* Until the start color is known the panel would show the server's color: it appears with the right one. */
+.cp-hero:not([data-started]) .cp-hero-panel { opacity: 0; }
+.cp-hero-panel > .color-picker-inline {
+  box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.32);
+}
+@media (max-width: 639px) {
+  .cp-hero-inner {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 2rem;
+    padding-top: calc(3.5rem + 5svh);
+  }
+  .cp-hero-lede { font-size: 1rem; }
+}
+
+/* --- The sections over the paint --- */
+.cp-section-title {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.cp-section-lede {
+  max-width: 42rem;
+  margin-top: 1rem;
+  font-size: 1.125rem;
+  color: var(--muted-foreground);
+  text-wrap: pretty;
+}
+@media (min-width: 640px) { .cp-section-lede { font-size: 1.25rem; } }
+.cp-code {
+  padding: 0.1em 0.35em;
+  border-radius: 0.375rem;
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  font: 0.875em var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* --- Palette (§8.5): the palette and its hints; the page's paint shows it. --- */
+.cp-palette { display: flex; flex-direction: column; gap: 2.5rem; margin-top: 2.5rem; }
+.cp-palette-row { align-self: start; }
+/* The row and, under it, the quiet link to the palette's docs: the colour and weight of the hints' title. */
+.cp-palette-main { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
+.cp-palette-docs {
+  border-radius: 0.25rem; font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground);
+  text-decoration: underline; text-underline-offset: 4px; outline: none; transition: color 150ms;
+}
+.cp-palette-docs:hover { color: var(--foreground); }
+.cp-palette-docs:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+@media (prefers-reduced-motion: reduce) { .cp-palette-docs { transition: none; } }
+.cp-hints-title { margin-bottom: 0.75rem; font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
+.cp-hints-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.cp-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.5rem;
+  padding: 0.375rem 0.875rem 0.375rem 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 0.9375rem;
+  outline: none;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+.cp-hint:hover { background: color-mix(in oklab, var(--foreground) 9%, var(--background)); }
+.cp-hint:focus-visible { box-shadow: inset 0 0 0 1px var(--border), 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.cp-hint[aria-pressed='true'] { box-shadow: inset 0 0 0 1.5px var(--foreground); }
+.cp-hint-chips { display: inline-flex; }
+.cp-hint-chip {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2px var(--background), inset 0 0 0 1px rgb(0 0 0 / 0.12);
+}
+.cp-hint-chip + .cp-hint-chip { margin-left: -0.375rem; }
+
+/* --- Built for keyboards (§8.5) --- */
+.cp-keyboards { display: grid; align-items: start; gap: 2rem; margin-top: 2.5rem; }
+@media (min-width: 768px) { .cp-keyboards { grid-template-columns: auto 1fr; gap: 3rem; } }
+.cp-keys { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+.cp-keys tr + tr > * { border-top: 1px solid var(--border); }
+.cp-keys th { padding: 0.625rem 1.5rem 0.625rem 0; font-weight: 400; text-align: left; white-space: nowrap; vertical-align: top; }
+.cp-keys td { padding: 0.9rem 0 0.625rem; color: var(--muted-foreground); }
+.cp-keys kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  height: 2rem;
+  margin-right: 0.375rem;
+  padding: 0 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px var(--border), 0 2px 0 var(--border);
+  font: 500 0.8125rem var(--font-geist-mono), ui-monospace, monospace;
+  transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+.cp-keys kbd[data-pressed] {
+  transform: translateY(2px);
+  background: color-mix(in oklch, var(--cp-color, #ff6a3d) 24%, var(--background));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--cp-color, #ff6a3d) 60%, var(--border));
+}
+.cp-motion-demo { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; margin-top: 3rem; }
+.cp-motion-demo > p { flex: 1 1 18rem; }
+.cp-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  border-radius: 9999px;
+  font-size: 0.9375rem;
+  outline: none;
+}
+.cp-switch:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.cp-switch-track {
+  position: relative;
+  width: 2.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 22%, transparent);
+  transition: background-color 200ms ease;
+}
+.cp-switch[aria-checked='true'] .cp-switch-track { background: var(--foreground); }
+.cp-switch-thumb {
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background: var(--background);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  transition: transform 250ms cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+.cp-switch[aria-checked='true'] .cp-switch-thumb { transform: translateX(1rem); }
+
+/* --- Opacity and Tools (§8.6–§8.7): no pictures of their own; the veil and the pick lie on the page's paint. --- */
+.cp-veil-section, .cp-pick-section { position: relative; }
+.cp-section-content { position: relative; z-index: 1; }
+.cp-section-layout { margin-top: 2.5rem; }
+.cp-section-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 2rem; min-width: 0; }
+/* Opacity: the theme's background over the paint at 1 − alpha, fading in and out at the section's edges. */
+.cp-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--background);
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent, #000 8rem, #000 calc(100% - 8rem), transparent);
+}
+.cp-copy-value { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+.cp-copy-text {
+  font: 500 clamp(1.5rem, 3.5vw, 2rem) / 1.1 var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.cp-copy-button, .cp-format {
+  min-height: 2.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 0.9375rem;
+  outline: none;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+.cp-copy-button { padding: 0.375rem 1rem; }
+.cp-copy-button:hover, .cp-format:hover { background: color-mix(in oklab, var(--foreground) 9%, var(--background)); }
+.cp-copy-button:focus-visible, .cp-format:focus-visible { box-shadow: inset 0 0 0 1px var(--border), 0 0 0 3px color-mix(in oklab, var(--ring) 60%, transparent); }
+.cp-tools-picker { display: flex; align-items: center; gap: 1rem; }
+.cp-formats { display: grid; gap: 0.5rem; }
+.cp-format {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: 0.875rem;
+  text-align: left;
+}
+.cp-format-name { flex: 0 0 3.25rem; font-size: 0.8125rem; color: var(--muted-foreground); }
+.cp-format[data-copied]::after { content: 'copied' / ''; margin-left: auto; font-size: 0.8125rem; color: var(--foreground); }
+.cp-format-value { min-width: 0; font: 0.875rem var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+/* Tools: a click on the paint anywhere in the section takes its color; the button is that for the keyboard. */
+.cp-pick-section { cursor: crosshair; }
+.cp-pick-section [data-paint-skip] { cursor: auto; }
+.cp-paint-pick { position: absolute; inset: 0; z-index: 0; width: 100%; cursor: crosshair; outline: none; }
+.cp-paint-pick:focus-visible { box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--ring) 80%, transparent); }
+/* The crosshair shows while the paint has keyboard focus: the arrows move it, Enter takes its color. */
+.cp-aim {
+  position: absolute;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -1.125rem 0 0 -1.125rem;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.95), 0 0 0 1px rgb(0 0 0 / 0.35), inset 0 0 0 3px rgb(0 0 0 / 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+.cp-aim::after { content: ''; position: absolute; inset: 50% auto auto 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 9999px; background: #fff; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35); }
+.cp-paint-pick:focus-visible .cp-aim { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-hero-panel, .cp-hint, .cp-keys kbd, .cp-switch-track, .cp-switch-thumb,
+  .cp-copy-button, .cp-format, .cp-aim { transition: none; }
+}
+@media (forced-colors: active) {
+  .cp-hint-chip { forced-color-adjust: none; }
+  .cp-hint[aria-pressed='true'] { outline: 2px solid Highlight; }
+  .cp-switch-track { border: 1px solid CanvasText; }
+  .cp-switch[aria-checked='true'] .cp-switch-track { background: Highlight; }
+  .cp-keys kbd { border: 1px solid CanvasText; }
+  .cp-keys kbd[data-pressed] { background: Highlight; color: HighlightText; }
+  .cp-paint-pick:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
+  /* Forced colours drop the ring's box-shadow. */
+  .cp-palette-docs:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+}
+
+/* --- The foot (§8.8): no rule over the footer; the paint softens under it into a progressive blur. --- */
+.cp-paint-footer { padding-top: 6rem; }
+.cp-paint-footer .docs-footer { position: relative; border-top: 0; }
+.cp-paint-footer-tint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, color-mix(in oklab, var(--background) 22%, transparent), transparent);
+}
+
+/* --- The paint inside one section of another page (paint-section.tsx, the kit's landing) ---
+   The section sets the bands its paint fades in and out over; they are registered lengths so the
+   renderer reads them in px. Until the paint draws (and for good while it waits for its frame), the
+   flat color fills the section between the same bands; a canvas fixed to the window then draws only
+   the section's rectangle, a software WebGL one canvas over the section, no WebGL 2 a still frame. */
+@property --paint-edge-top { syntax: '<length>'; inherits: true; initial-value: 240px; }
+@property --paint-edge-bottom { syntax: '<length>'; inherits: true; initial-value: 240px; }
+.paint-section {
+  --paint-flat: color-mix(in oklch, var(--paint-color, var(--cp-color, #ff6a3d)) 35%, var(--background));
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--paint-flat) var(--paint-edge-top), var(--paint-flat) calc(100% - var(--paint-edge-bottom)), transparent);
+}
+@supports (color: oklch(from red l c h)) {
+  .paint-section { --paint-flat: oklch(from color-mix(in oklch, var(--paint-color, var(--cp-color, #ff6a3d)) 35%, var(--background)) max(l, 0.64) c h); }
+  .dark .paint-section { --paint-flat: oklch(from color-mix(in oklch, var(--paint-color, var(--cp-color, #ff6a3d)) 35%, var(--background)) min(l, 0.4) c h); }
+}
+.paint-section[data-state='drawn'] { background: none; }
+.paint-section-gl, .paint-section-still { display: none; inset: 0; width: 100%; height: 100%; }
+.paint-section[data-paint='fixed'] .paint-section-gl { display: block; position: fixed; }
+/* Far from the window the loop stands and the canvas is out of the compositor's way. */
+.paint-section[data-paint='fixed'][data-active='false'] .paint-section-gl { visibility: hidden; }
+.paint-section[data-paint='page'] .paint-section-gl { display: block; position: absolute; }
+.paint-section[data-paint='still'][data-state='drawn'] .paint-section-still { display: block; position: absolute; }
+@media (forced-colors: active) {
+  .paint-section { display: none; }
+}

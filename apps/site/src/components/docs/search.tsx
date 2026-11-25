@@ -7,8 +7,7 @@ import { cn } from '@/lib/utils';
 
 /*
  * Search of the documentation. The provider lives in the docs shell only, so the
- * button and the shortcuts exist on `/docs/*` and nowhere else (not on the landing or the
- * Playground). The window is a separate chunk, loaded when it first opens (or when the pointer
+ * button and the shortcuts exist on `/docs/*` and nowhere else (not on the landings). The window is a separate chunk, loaded when it first opens (or when the pointer
  * or focus reaches the button); the index is downloaded by the window on the first query.
  */
 

@@ -86,3 +86,51 @@ export function springEase(config: SpringConfig): SpringEase {
   const { samples, seconds } = trace(config);
   return { ease: sampler(samples), duration: seconds };
 }
+
+export interface SpringRetarget {
+  /** CSS `linear(...)` over the normalised distance: 0 is `from`, 1 is `to`; overshoot goes past 1. */
+  readonly easing: string;
+  /** Settling time in milliseconds. */
+  readonly duration: number;
+}
+
+/** Settled when within this fraction of the distance and this fraction of the distance per second. */
+const SETTLE_POSITION = 0.001;
+const SETTLE_SPEED = 0.01;
+
+/**
+ * A spring that starts at `from` moving at `velocity` (units per second) and seeks `to`, as a
+ * `linear()` easing over the normalised distance — the easing of a transition that picks up a
+ * movement in flight (interruptibility: no stop, no restart, the speed carries over). The two
+ * channels of a morph, size and radius, each take one. `null` when there is nothing to move.
+ */
+export function springRetarget({ stiffness, damping, mass = 1 }: SpringConfig, from: number, velocity: number, to: number, points = 48): SpringRetarget | null {
+  const distance = to - from;
+  // With no distance the keyframes coincide and the easing cannot show the leftover speed: let it go.
+  if (Math.abs(distance) < 1e-6) return null;
+  const scale = Math.abs(distance);
+  const samples: number[] = [];
+  let position = from;
+  let speed = velocity;
+  let time = 0;
+  for (; time < MAX_SECONDS; time += STEP) {
+    samples.push(position);
+    const force = -stiffness * (position - to) - damping * speed;
+    speed += (force / mass) * STEP;
+    position += speed * STEP;
+    if (Math.abs(position - to) < SETTLE_POSITION * scale && Math.abs(speed) < SETTLE_SPEED * scale) break;
+  }
+  samples.push(to);
+  const sample = sampler(samples.map((value) => (value - from) / distance));
+  const stops: string[] = [];
+  for (let index = 0; index <= points; index += 1) {
+    stops.push(index === points ? '1' : String(Math.round(sample(index / points) * 10000) / 10000));
+  }
+  return { easing: `linear(${stops.join(', ')})`, duration: Math.max(1, Math.round(time * 1000)) };
+}
+
+/** Velocity (units per second) of the same spring at `time`, from the positions a step apart. */
+export function springVelocityAt(config: SpringConfig, from: number, velocity: number, to: number, time: number) {
+  if (time <= 0) return velocity;
+  return (springAt(config, from, velocity, to, time) - springAt(config, from, velocity, to, time - STEP)) / STEP;
+}

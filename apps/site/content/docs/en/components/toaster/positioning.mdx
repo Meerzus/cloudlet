@@ -1,0 +1,101 @@
+---
+title: Positioning & offsets
+description: Where the stack sits, how it avoids notches, navigation bars and the keyboard, and which element it renders into.
+---
+
+## Position
+
+[`position`](/docs/components/toaster/api/toaster#props) is `auto` by default: the top centre on wide viewports, the bottom centre below 48rem, where a thumb reaches it. The threshold is in `rem`, so it follows the user's font size rather than device pixels. `auto` is always centred; the six other values fix both the edge and the side, so a corner is always your explicit choice.
+
+At the bottom edge everything is mirrored vertically: the Island grows upwards, the tails peek above the pill, and notifications enter and leave from the bottom. In a corner the pill and its tails keep to their side, and the Island grows away from it: its edge on that side does not move while it opens and closes. The Island is as wide as in the centre, so on a phone it still spans the screen between the gutters.
+
+```tsx title="notifications.tsx"
+import type { ReactNode } from 'react';
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+export function Notifications({ children }: { children: ReactNode }) {
+  return (
+    <CloudletProvider controller={cloudlet}>
+      {children}
+      <Toaster position="bottom-right" />
+    </CloudletProvider>
+  );
+}
+```
+
+The side is physical, like [offsets](#offsets): `-left` stays on the left in `dir="rtl"`. The host reports where it sits as `data-edge` and `data-align` ([Class names](/docs/components/toaster/styling#class-names)). The [Preview](/docs/components/toaster#preview) moves this site's Toaster through every position and RTL.
+
+## Safe area
+
+The stack stays inside the safe area on all four sides: notches, rounded corners and home indicators are never covered. Browsers report a safe area only for pages that extend under them, so an edge-to-edge application needs `viewport-fit=cover` in its viewport meta:
+
+```html title="index.html"
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+```
+
+In the Next.js App Router the same is `export const viewport = { viewportFit: 'cover' }` in the root layout. Cloudlet never disables zoom and does not counter pinch zoom with an inverse scale: text keeps the size the user chose.
+
+## Offsets
+
+[`offsets`](/docs/components/toaster/api/toaster#toasteroffsets) adds space on each physical edge, in CSS pixels. Each edge is the sum of three parts:
+
+```text
+safe area inset + gutter + obstruction
+```
+
+The `gutter` is the gap between the stack and the edge; the `obstruction` is your own interface on that edge, such as a tab bar, a bottom navigation or a sticky header. The safe area is already counted, so an obstruction never includes it again. A bottom navigation that is 80px tall *including* the 34px home-indicator area obstructs 46px beyond the safe area:
+
+```tsx title="notifications.tsx"
+import type { ReactNode } from 'react';
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+
+const cloudlet = createCloudlet();
+
+export function Notifications({ children }: { children: ReactNode }) {
+  return (
+    <CloudletProvider controller={cloudlet}>
+      {children}
+      {/* 80px navigation, of which 34px is safe area: pass 46, not 80. */}
+      <Toaster offsets={{ obstruction: { bottom: 46 } }} />
+    </CloudletProvider>
+  );
+}
+```
+
+Offsets apply on every edge whichever edge the stack sits on, so an obstruction at the bottom also limits how tall an Island at the top may grow.
+
+## Keyboard and visual viewport
+
+Cloudlet places the stack inside the visual viewport, the part of the page actually visible. When the on-screen keyboard opens, or a browser toolbar slides in, the available area shrinks and the stack moves with it. Do not add the keyboard's height to `offsets`: it would be counted twice.
+
+When the available height is short, the Island scrolls inside itself and its controls stay reachable. There is no limit on how many notifications fit by height; the [capacity](/docs/components/toaster/notifications#capacity-and-overflow) is a count.
+
+## Portal container
+
+By default the Toaster renders into `document.body` through a portal; [`container`](/docs/components/toaster/api/toaster#props) renders it into a connected element of yours outside Shadow DOM. The container is read once, on attach: to move the Toaster into another element, remount it, for example by changing its `key`.
+
+A modal `<dialog>` puts the rest of the page behind it, so notifications that belong to the dialog should render inside it. One Toaster is active per controller, so such a dialog gets its own controller:
+
+```tsx title="editor-dialog.tsx"
+import { useRef, type ReactNode } from 'react';
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+
+// The dialog's own notifications: the page Toaster keeps its controller.
+const dialogCloudlet = createCloudlet();
+
+export function EditorDialog({ children }: { children: ReactNode }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  return (
+    <dialog ref={dialog}>
+      <CloudletProvider controller={dialogCloudlet}>
+        {children}
+        <Toaster container={() => dialog.current} />
+      </CloudletProvider>
+    </dialog>
+  );
+}
+```
+
+You are responsible for the container being visible and suitable. The host is `position: fixed`; an ancestor with a `transform`, `filter` or `overflow: hidden` can clip it or become its containing block, and no `z-index` overcomes that.

@@ -1,17 +1,15 @@
 import { notFound } from 'next/navigation';
-import { markdownUrl, pageMarkdown } from '@/lib/docs-markdown';
-import { source } from '@/lib/docs-source';
+import { markdownPages, pageMarkdown } from '@/lib/docs-markdown';
 
 /**
- * The Markdown of each page at `/llms.mdx/toaster/docs/<slug>.md`. A route cannot sit
- * next to the `/toaster/docs/[[...slug]]` pages, so the export writes the files here and
- * `scripts/llms-output.mjs` moves them to `/toaster/docs/<slug>.md` (and `/toaster/docs.md` for the index)
- * after `next build`.
+ * The Markdown of each page at `/llms.mdx/docs/<slug>.md`. A route cannot sit next to the
+ * `/docs/[[...slug]]` pages, so the export writes the files here and `scripts/llms-output.mjs`
+ * moves them to `/docs/<slug>.md` (and `/docs.md` for the index) after `next build`.
  */
 export const revalidate = false;
 export const dynamicParams = false;
 
-const byPath = () => new Map(source.getPages().map((page) => [markdownUrl(page).slice(1), page]));
+const byPath = markdownPages;
 
 export async function GET(_request: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const page = byPath().get((await params).path.join('/'));

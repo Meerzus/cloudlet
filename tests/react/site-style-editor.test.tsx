@@ -346,9 +346,13 @@ describe('docs style editor', () => {
     fireEvent.click(swatch);
     expect(swatch).toHaveAttribute('aria-expanded', 'true');
     const dialog = screen.getByRole('dialog', { name: 'Background color picker' });
-    // White has no hue to turn: darken it in the saturation area (react-colorful reads keyCode).
-    fireEvent.keyDown(within(dialog).getByRole('slider', { name: 'Color' }), { key: 'ArrowDown', keyCode: 40 });
+    // The editor's picker speaks hex only: no format switch, no opacity.
+    expect(within(dialog).queryByRole('group', { name: 'Format' })).toBeNull();
+    expect(within(dialog).queryByRole('slider', { name: 'Opacity' })).toBeNull();
+    // White has no hue to turn: darken it in the saturation × brightness area.
+    fireEvent.keyDown(within(dialog).getByRole('slider', { name: 'Saturation and brightness' }), { key: 'ArrowDown' });
     expect(screen.getByRole('textbox', { name: 'Background' })).not.toHaveValue('#ffffff');
+    expect((screen.getByRole('textbox', { name: 'Background' }) as HTMLInputElement).value).toMatch(/^#[\da-f]{6}$/);
     expect(code()).toContain('--cloudlet-background:');
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(swatch).toHaveAttribute('aria-expanded', 'false');
@@ -362,7 +366,7 @@ describe('docs style editor', () => {
     fireEvent.change(input, { target: { value: 'var(--surface)' } });
     expect(input).not.toHaveAttribute('aria-invalid', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Pick background color' }));
-    expect(within(screen.getByRole('dialog')).getByText('#336699')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByRole('textbox', { name: 'Color value' })).toHaveValue('#336699');
     expect(previewRule().style.getPropertyValue('--cloudlet-background')).toBe('var(--surface)');
     expect(code()).toContain('--cloudlet-background: var(--surface);');
   });

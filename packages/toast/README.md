@@ -23,7 +23,7 @@ can carry a command, a link, or a short form of up to three text fields that is 
 **Status.** Stable since `1.0.0`; the API follows semantic versioning.
 Screen readers, physical phones and the minimum browser versions are checked by hand on top of the
 automated suite; see
-[What is tested](https://cloudlet.dev/toaster/docs/accessibility#what-is-tested).
+[What is tested](https://cloudlet.dev/docs/components/toaster/accessibility#what-is-tested).
 
 ## Installation
 
@@ -65,7 +65,7 @@ is permanently finished: in a React effect, clean up exactly the instance that e
 
 ## Documentation
 
-Full documentation: **https://cloudlet.dev/toaster/docs**
+Full documentation: **https://cloudlet.dev/docs/components/toaster**
 
 - Getting started: Introduction, Installation (npm and the shadcn registry item), Quick start.
 - Guides: Notifications & time, Operations & cancellation, Forms, Positioning & offsets, Styling,

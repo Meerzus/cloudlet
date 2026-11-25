@@ -27,6 +27,9 @@ export function islandState(controller: ReactCloudletController): IslandState {
   };
 }
 
+/** Every `ToasterProps.position`, for query parameters. */
+export const positions = ['auto', 'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'] as const;
+
 export const pick = <T extends string>(value: string | null, options: readonly T[], fallback: T): T =>
   options.includes(value as T) ? value as T : fallback;
 
@@ -36,7 +39,7 @@ export function toasterQuery(params: URLSearchParams): { theme: NonNullable<Toas
   return {
     theme: pick(params.get('theme'), ['system', 'light', 'dark'] as const, 'light'),
     dir: pick(params.get('dir'), ['ltr', 'rtl'] as const, 'ltr'),
-    position: pick(params.get('position'), ['auto', 'top-center', 'bottom-center'] as const, 'top-center'),
+    position: pick(params.get('position'), positions, 'top-center'),
     timeScale: Number.isFinite(scale) && scale > 0 ? scale : 1,
   };
 }

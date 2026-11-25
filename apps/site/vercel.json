@@ -9,9 +9,21 @@
     { "source": "/:path*", "has": [{ "type": "host", "value": "cloudlet-five.vercel.app" }], "destination": "https://cloudlet.dev/:path*", "permanent": true },
     { "source": "/:path*", "has": [{ "type": "host", "value": "cloudlet-meerzus-projects.vercel.app" }], "destination": "https://cloudlet.dev/:path*", "permanent": true },
     { "source": "/:path*", "has": [{ "type": "host", "value": "cloudlet-git-prod-meerzus-projects.vercel.app" }], "destination": "https://cloudlet.dev/:path*", "permanent": true },
-    { "source": "/", "destination": "/toaster", "permanent": false },
-    { "source": "/docs", "destination": "/toaster/docs", "permanent": true },
-    { "source": "/docs/:path*", "destination": "/toaster/docs/:path*", "permanent": true },
-    { "source": "/playground", "destination": "/toaster/playground", "permanent": true }
+    { "source": "/toaster/docs", "destination": "/docs/components/toaster", "permanent": true },
+    { "source": "/toaster/docs.md", "destination": "/docs/components/toaster.md", "permanent": true },
+    { "source": "/toaster/docs/installation", "destination": "/docs/components/toaster#installation", "permanent": true },
+    { "source": "/toaster/docs/installation.md", "destination": "/docs/components/toaster.md", "permanent": true },
+    { "source": "/toaster/docs/quick-start", "destination": "/docs/components/toaster#usage", "permanent": true },
+    { "source": "/toaster/docs/quick-start.md", "destination": "/docs/components/toaster.md", "permanent": true },
+    { "source": "/toaster/docs/:path*", "destination": "/docs/components/toaster/:path*", "permanent": true },
+    { "source": "/docs/components/toaster/installation", "destination": "/docs/components/toaster#installation", "permanent": true },
+    { "source": "/docs/components/toaster/installation.md", "destination": "/docs/components/toaster.md", "permanent": true },
+    { "source": "/docs/components/toaster/quick-start", "destination": "/docs/components/toaster#usage", "permanent": true },
+    { "source": "/docs/components/toaster/quick-start.md", "destination": "/docs/components/toaster.md", "permanent": true },
+    { "source": "/color-picker/docs", "destination": "/docs/components/color-picker", "permanent": true },
+    { "source": "/color-picker/docs.md", "destination": "/docs/components/color-picker.md", "permanent": true },
+    { "source": "/docs/components", "destination": "/docs", "permanent": false },
+    { "source": "/toaster/playground", "destination": "/docs/components/toaster", "permanent": true },
+    { "source": "/playground", "destination": "/docs/components/toaster", "permanent": true }
   ]
 }

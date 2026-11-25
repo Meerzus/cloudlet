@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 import { DOCS_UI } from '@/lib/docs-ui-strings';
-import { DOCS_PATH } from '@/lib/site';
+import { DOCS_PATH, isUnder } from '@/lib/site';
 import { cn } from '@/lib/utils';
 import { groupTree, normalizePath } from './nav';
 
@@ -34,7 +34,8 @@ export function SidebarNav({ tree, onNavigate, className }: { tree: PageTree.Roo
                     className={cn('docs-nav-link', active && 'docs-nav-link-active')}
                   >
                     <span>{link.name}</span>
-                    {link.external || !link.url.startsWith(DOCS_PATH) ? (
+                    {/* An arrow for links that leave the docs (other sites). */}
+                    {link.external || !isUnder(link.url, DOCS_PATH) ? (
                       <ArrowUpRight className="size-3.5 opacity-60" aria-hidden="true" />
                     ) : null}
                   </Link>

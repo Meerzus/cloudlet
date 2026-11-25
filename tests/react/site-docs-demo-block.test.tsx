@@ -1,7 +1,8 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactCloudletController } from '../../packages/toast/src/index.js';
-import { DEMO_FOLD_LINES, DemoBlock, type DemoItem } from '../../apps/site/src/components/docs/demo-block';
+import { DemoBlock, type DemoItem } from '../../apps/site/src/components/docs/demo-block';
+import { DEMO_FOLD_LINES } from '../../apps/site/src/components/docs/use-height-glide';
 import { findDemo } from '../../apps/site/src/lib/demos';
 
 /**

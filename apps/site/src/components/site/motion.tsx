@@ -8,16 +8,18 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
   type RefObject,
 } from 'react';
 import { gsap, Lenis, loadMotionRuntime, ScrollTrigger } from '@/lib/gsap';
+import { pageStill, switchedStill, watchStill } from '@/lib/reduced-motion';
 import { isQuietPath } from '@/lib/site';
 
 interface MotionState {
   /** GSAP, ScrollTrigger and Lenis have loaded (`@/lib/gsap`); false on reading pages. */
   readonly ready: boolean;
-  /** True until the client proves `prefers-reduced-motion: no-preference`. */
+  /** True until the client proves `prefers-reduced-motion: no-preference`, and while the page's own switch is on. */
   readonly reduced: boolean;
   /** Smooth wheel scrolling; null with reduced motion and on touch/coarse pointers. */
   readonly lenis: Lenis | null;
@@ -30,6 +32,9 @@ const QUERIES = {
   motion: '(prefers-reduced-motion: no-preference)',
   fine: '(pointer: fine)',
 } as const;
+
+/** The runtime has loaded once: a later re-run (the page's switch) sets up at once, not a frame later. */
+let loaded = false;
 
 /** Runs `task` after the next frame has been presented (rAF, then a task after it). */
 function afterFirstPaint(task: () => void) {
@@ -49,22 +54,51 @@ function afterFirstPaint(task: () => void) {
  * The single owner of page motion. Lenis follows the official ScrollTrigger
  * integration (GSAP ticker drives Lenis, Lenis scroll updates ScrollTrigger).
  * gsap.matchMedia re-runs on preference changes, so switching to reduced motion
- * at runtime destroys Lenis and every scene reverts to its static layout.
+ * at runtime destroys Lenis and every scene reverts to its static layout. A page's own switch
+ * (`data-reduced-motion` on `<html>`, lib/reduced-motion.ts) counts as reduced motion the same way.
  */
 export function MotionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<MotionState>(INITIAL);
   // Reading pages get native scrolling and no scenes; leaving them re-runs the setup.
   const quiet = isQuietPath(usePathname());
+  const [switched, setSwitched] = useState(false);
+
+  useEffect(() => {
+    const read = () => setSwitched(switchedStill());
+    read();
+    return watchStill(read);
+  }, []);
 
   useEffect(() => {
     if (quiet) {
       setState(INITIAL);
       return;
     }
+    if (switched) {
+      // Reduced at once: no Lenis, no scenes. The runtime still loads, as under the system setting.
+      const still = () => setState({ ready: true, reduced: true, lenis: null });
+      if (loaded) {
+        still();
+        return;
+      }
+      setState((current) => ({ ...current, reduced: true, lenis: null }));
+      let live = true;
+      const start = afterFirstPaint(() =>
+        void loadMotionRuntime().then(() => {
+          loaded = true;
+          if (live) still();
+        }, () => {}),
+      );
+      return () => {
+        live = false;
+        start.cancel();
+      };
+    }
     let live = true;
     let mm: gsap.MatchMedia | null = null;
     const setup = () => {
       if (!live) return;
+      loaded = true;
       mm = gsap.matchMedia();
       mm.add(QUERIES, (context) => {
         const { motion, fine } = context.conditions ?? {};
@@ -92,19 +126,28 @@ export function MotionProvider({ children }: { children: ReactNode }) {
     };
     // The runtime loads once the first frame is on screen, not during hydration. If it fails to
     // load the page keeps its static, reduced-motion layout, which is complete on its own.
-    const start = afterFirstPaint(() => void loadMotionRuntime().then(setup, () => {}));
+    const start = loaded ? null : afterFirstPaint(() => void loadMotionRuntime().then(setup, () => {}));
+    if (loaded) setup();
     return () => {
       live = false;
-      start.cancel();
+      start?.cancel();
       mm?.revert();
     };
-  }, [quiet]);
+  }, [quiet, switched]);
 
   return <MotionContext.Provider value={state}>{children}</MotionContext.Provider>;
 }
 
 export function useMotion() {
   return useContext(MotionContext);
+}
+
+/**
+ * The system setting or a page's own switch asks for stillness, live; false on the server and during
+ * hydration. For copy that says so, and for motion outside MotionProvider's scenes.
+ */
+export function usePageStill(): boolean {
+  return useSyncExternalStore(watchStill, pageStill, () => false);
 }
 
 /**

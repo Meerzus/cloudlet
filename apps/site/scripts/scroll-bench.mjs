@@ -4,14 +4,16 @@
  * compositing, CPU ×4 slower, 1440×900 at 2×) — a stand-in for a laptop on integrated graphics —
  * and prints how long the frames took. Backdrop filters over a fixed sky show up here first: a
  * frame over 33 ms is one the screen missed at 60 Hz. A measurement, not a test: it never fails.
+ * Local only: on a shared CI runner the frame times say more about the runner than about the page,
+ * so the audits workflow (.github/workflows/audits.yml) does not run it.
  *
  *   npm run build && npm run build:site
- *   node apps/site/scripts/scroll-bench.mjs [path ...]   (default: /toaster/playground /toaster)
+ *   node apps/site/scripts/scroll-bench.mjs [path ...]   (default: /toaster /)
  */
 import { chromium } from '@playwright/test';
 import { serve } from './serve-out.mjs';
 
-const PATHS = process.argv.slice(2).length ? process.argv.slice(2) : ['/toaster/playground', '/toaster'];
+const PATHS = process.argv.slice(2).length ? process.argv.slice(2) : ['/toaster', '/'];
 const SLOW_MS = 33;
 
 /** Wheel down and back up twice, as a trackpad would: small steps, one per frame. */

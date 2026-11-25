@@ -1,6 +1,9 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  // The site's `@/` imports, for the stands that borrow its components (the color picker morph).
+  resolve: { alias: { '@': fileURLToPath(new URL('../site/src', import.meta.url)) } },
   build: {
     rolldownOptions: {
       onwarn(warning, defaultHandler) {

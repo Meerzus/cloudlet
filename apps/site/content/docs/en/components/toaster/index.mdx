@@ -1,0 +1,444 @@
+---
+title: Toaster
+description: One notification stack that collapses to a pill and opens into the Island, with operations, retry and cancel. From npm as @cloudlet/toast, or as a shadcn registry item themed with your tokens.
+---
+
+<Callout type="note" title="Release status">
+  Cloudlet is stable since `1.0.0`. [Accessibility](/docs/components/toaster/accessibility#what-is-tested) lists what is tested automatically and by hand.
+</Callout>
+
+## Preview
+
+Every notification goes into one **stack**, newest first, collapsed at rest to a single **pill** with tails for the ones behind it and a badge with the count. Activating the pill opens the **Island**: one surface with a slider over every notification, moved by a swipe, the arrow keys or the trackpad, where you read, retry, cancel or close. Escape collapses it with every notification kept.
+
+The controls below move this page's Toaster, and the code under them does the same in your app. The buttons in [Examples](#examples) show their notifications where the controls put it.
+
+<ToasterPreview />
+
+Need a plain toast, without the Island and the motion? [Sonner](https://sonner.emilkowal.ski) is a great choice.
+
+## Installation
+
+Cloudlet installs as one package, `@cloudlet/toast`, or as the shadcn registry item `toaster`: a small wrapper you own on top of the same package. The `@cloudlet` namespace and installing an item by its address are on the kit's [Installation](/docs/installation).
+
+<GetStartedTabs />
+
+### Requirements
+
+- **React and React DOM** `^18.2.0 || ^19.0.0` are peer dependencies. Use a matching pair: the same version of `react` and `react-dom`.
+- **ESM only.** The package ships ES modules with TypeScript declarations; there is no CommonJS or UMD build. Deep imports into its internals are closed on purpose: everything public comes from `@cloudlet/toast`.
+- **No runtime dependencies.** The springs and tweens that move the stack and the Island are Cloudlet's own.
+- **No Tailwind or shadcn/ui requirement.** The npm package styles itself with plain CSS and custom properties; the shadcn item only bridges them to your tokens.
+- **Browsers.** Chromium and Edge 111, Firefox 114, Safari and iOS 16.4 or newer. The automated suite runs on current versions, and the minimum versions are checked by hand ([What is tested](/docs/components/toaster/accessibility#what-is-tested)).
+- **TypeScript.** The declarations work with `strict` and `exactOptionalPropertyTypes`; with the latter, leave an optional field out rather than passing `undefined`.
+
+### Import the styles
+
+Cloudlet's CSS is one explicit file. Import it once, where your application imports its global CSS: the client entry of a single-page app, or the root layout of a Next.js App Router project.
+
+```tsx title="app/layout.tsx"
+import '@cloudlet/toast/styles.css';
+```
+
+In the Next.js Pages Router, global CSS must come from the custom App, so the import goes into `pages/_app.tsx`. The stylesheet does not need a build plugin; under a strict Content Security Policy keep it external, as described in [Content Security Policy](/docs/components/toaster/csp).
+
+### The shadcn registry item
+
+The `toaster` item copies two files into your project and adds `@cloudlet/toast` as a dependency:
+
+- **`components/ui/toaster.tsx`**: a thin `"use client"` adapter that renders the Provider and the Toaster for a controller you pass in. Every public Toaster option passes through unchanged.
+- **`components/ui/toaster.css`**: a theme bridge that maps your shadcn tokens (`--popover`, `--popover-foreground`, `--muted-foreground`, `--border`, `--ring`, `--accent`, `--font-sans`) to Cloudlet's tokens.
+
+Both files are yours to edit. The notification runtime itself stays in the package: the item copies no controller, renderer or animation code.
+
+The wrapper deliberately does not create a controller: a client component owns it, as `notification-owner.tsx` in the shadcn tab above does, for the reasons in [SSR & Next.js](/docs/components/toaster/ssr#nextjs-app-router).
+
+A few details of the bridge:
+
+- The wrapper imports `@cloudlet/toast/styles.css` and then `./toaster.css`; keep that order. In the Pages Router, move both imports into `pages/_app.tsx` in the same order and remove them from the wrapper.
+- Define light tokens on `:root` and dark tokens on your `.dark` root, then pass the matching `theme="light"` or `theme="dark"` to the Toaster so the native `color-scheme` agrees.
+- The tokens must be inherited by the portal container. A wrapper element around your React tree does not theme the default portal on `document.body`.
+
+## Usage
+
+Create one controller where your application starts, and render the Toaster inside its Provider. In the Next.js App Router a client component creates the controller instead: [SSR & Next.js](/docs/components/toaster/ssr#nextjs-app-router) has the setup.
+
+```tsx title="main.tsx"
+import '@cloudlet/toast/styles.css';
+import { createRoot } from 'react-dom/client';
+import { CloudletProvider, createCloudlet, Toaster } from '@cloudlet/toast';
+import { App } from './app';
+
+// Once, when the browser application starts.
+const cloudlet = createCloudlet();
+
+createRoot(document.getElementById('root')!).render(
+  <CloudletProvider controller={cloudlet}>
+    <App />
+    <Toaster />
+  </CloudletProvider>,
+);
+```
+
+Any component under the Provider shows a notification:
+
+```tsx title="app.tsx"
+import { useCloudlet } from '@cloudlet/toast';
+
+export function App() {
+  const cloudlet = useCloudlet();
+  return <button onClick={() => cloudlet.show({ title: 'Synced to the cloud', kind: 'success' })}>Sync</button>;
+}
+```
+
+Every call returns a value you can act on rather than a promise that is silently dropped: `show` tells you whether a record was created, deduplicated or rejected and why, and `dismiss` and `update` report a stale handle instead of doing nothing ([Show a notification](/docs/components/toaster/notifications#show-a-notification)).
+
+### Controller, Provider, Toaster
+
+Cloudlet splits into a core that knows nothing about the DOM and a React shell that renders it.
+
+- **`createCloudlet()`** returns a **controller**: the owner of notifications, their time, operations and announcements. Creating it allocates no timers and touches no DOM.
+- **`CloudletProvider`** hands the controller to a React tree. It does not render anything itself.
+- **`useCloudlet()`** returns the controller to any component under the Provider, so a save button can call `show` without prop drilling.
+- **`Toaster`** renders the stack and the Island for the controller it finds in context, in a portal after mount. Unmounting it pauses visible time and keeps every record; mounting it again resumes the same queue.
+
+### What stays with your application
+
+Cloudlet owns the stack, its time and its accessibility. A few things stay yours by design:
+
+- **The controller's lifetime.** One controller per browser session or server request, disposed only when it ends: see [One controller per session or request](/docs/components/toaster/ssr#one-controller-per-session-or-request) and [When to dispose](/docs/components/toaster/ssr#when-to-dispose).
+- **Important data.** A notification is a notice, not a record: anything the user must not lose also lives in your main interface.
+- **Words.** Every label, announcement and fallback message is a string or a formatter you can replace ([Labels & announcements](/docs/components/toaster/api/labels)), so the Toaster speaks your product's language.
+- **Styling.** Cloudlet ships CSS tokens for colour, radius and spacing and adds your class names per part ([Styling](/docs/components/toaster/styling)); it does not require Tailwind or shadcn/ui.
+
+## Examples
+
+### Kinds
+
+Five kinds of weather. Success and info drift off after six seconds; the rest stay until you close them. More in [Notifications & time](/docs/components/toaster/notifications#kinds).
+
+<Demos>
+
+```tsx demo="success"
+cloudlet.show({ title: 'Synced to the cloud', kind: 'success' });
+```
+
+```tsx demo="error"
+cloudlet.show({ title: 'Sync got lost in the fog', kind: 'error' });
+```
+
+```tsx demo="info"
+cloudlet.show({ title: 'Light breeze from the west', kind: 'info' });
+```
+
+```tsx demo="warning"
+cloudlet.show({ title: 'Clouds are gathering', kind: 'warning' });
+```
+
+```tsx demo="loading"
+cloudlet.show({ title: 'Gathering clouds…', kind: 'loading' });
+```
+
+</Demos>
+
+### Content
+
+A title, a line of description, rich text or an icon of your own. More in [Notifications & time](/docs/components/toaster/notifications#content).
+
+<Demos>
+
+```tsx demo="title-only"
+cloudlet.show({ title: 'A small cloud drifted by' });
+```
+
+```tsx demo="description"
+cloudlet.show({
+  title: 'Forecast updated',
+  description: { kind: 'text', text: 'Sunny above the clouds, light drizzle below.' },
+});
+```
+
+```tsx demo="rich-description"
+cloudlet.show({
+  title: 'Cruising altitude reached',
+  description: {
+    kind: 'rich',
+    content: <>Above the clouds at <strong>10,000 m</strong>, the sky is <em>perfectly</em> clear.</>,
+    announcement: 'Above the clouds at 10,000 m, the sky is perfectly clear.',
+  },
+});
+```
+
+```tsx demo="custom-icon"
+cloudlet.show({
+  title: 'Spotted a cloud shaped like a cat',
+  icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M7 19a5 5 0 0 1-.6-9.96 6.5 6.5 0 0 1 12.3 1.7A4.2 4.2 0 0 1 17.8 19z" />
+    </svg>
+  ),
+});
+```
+
+</Demos>
+
+### Actions
+
+A command, a real link, and a command that fails once and offers a retry. More in [Operations & cancellation](/docs/components/toaster/operations#actions).
+
+<Demos>
+
+```tsx demo="action-command"
+cloudlet.show({
+  title: 'Photo moved to the archive',
+  action: {
+    kind: 'command',
+    label: 'Undo',
+    run: () => {
+      cloudlet.show({ title: 'Photo is back in the sky', kind: 'success' });
+    },
+  },
+});
+```
+
+```tsx demo="action-link"
+cloudlet.show({
+  title: 'These clouds are open source',
+  action: { kind: 'link', label: 'GitHub', href: 'https://github.com/Meerzus/cloudlet', target: '_blank', rel: 'noreferrer' },
+});
+```
+
+```tsx demo="action-retry"
+let tries = 0;
+cloudlet.show({
+  title: 'Album ready to share',
+  action: {
+    kind: 'command',
+    label: 'Share',
+    errorMessage: () => 'A gust blew it away. Try again?',
+    run: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      tries += 1;
+      if (tries === 1) throw new Error('Gust of wind');
+      cloudlet.show({ title: 'Album shared with the sky', kind: 'success' });
+    },
+  },
+});
+```
+
+</Demos>
+
+### Forms
+
+A field right in the Island: a quick reply, a note with a check, and a send that fails once. More in [Forms](/docs/components/toaster/forms).
+
+<Demos>
+
+```tsx demo="form-reply"
+cloudlet.show({
+  title: 'A cloud asks where to drift',
+  action: {
+    kind: 'form',
+    label: 'Send',
+    fields: [{ name: 'place', kind: 'text', label: 'Where to', required: true }],
+    run: ({ values }) => {
+      cloudlet.show({ title: `Drifting to ${values.place}`, kind: 'success' });
+    },
+  },
+});
+```
+
+```tsx demo="form-note"
+cloudlet.show({
+  title: 'Leave a note for the sky',
+  action: {
+    kind: 'form',
+    label: 'Send note',
+    fields: [
+      { name: 'name', kind: 'text', label: 'Your name', autoComplete: 'name' },
+      { name: 'note', kind: 'textarea', label: 'Note', required: true, maxLength: 280 },
+    ],
+    validate: (values) => values.note.trim().length >= 3 || { note: 'A few more words, please' },
+    run: () => {
+      cloudlet.show({ title: 'Note tucked into a cloud', kind: 'success' });
+    },
+  },
+});
+```
+
+```tsx demo="form-retry"
+let tries = 0;
+cloudlet.show({
+  title: 'Send a postcard to the clouds',
+  action: {
+    kind: 'form',
+    label: 'Send',
+    fields: [{ name: 'message', kind: 'text', label: 'Message', required: true }],
+    errorMessage: () => 'The wind took it. Try again?',
+    run: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      tries += 1;
+      if (tries === 1) throw new Error('Gust of wind');
+      cloudlet.show({ title: 'Postcard delivered', kind: 'success' });
+    },
+  },
+});
+```
+
+</Demos>
+
+### Promises
+
+track() follows an operation from pending to its result; update() changes a card in place. More in [Operations & cancellation](/docs/components/toaster/operations).
+
+<Demos>
+
+```tsx demo="track-resolve"
+cloudlet.track(new Promise((resolve) => setTimeout(resolve, 1500)), {
+  pending: { title: 'Condensing water vapour…' },
+  success: { title: 'A fresh cloud formed' },
+  error: { title: 'The cloud evaporated' },
+});
+```
+
+```tsx demo="error-retry"
+cloudlet.track(async ({ attempt }) => {
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  if (attempt === 1) throw new Error('No signal above the clouds');
+}, {
+  pending: { title: 'Reaching the sky…' },
+  success: { title: 'Back in the sky' },
+  error: {
+    title: "Couldn't reach the sky",
+    description: { kind: 'text', text: 'Thick clouds in the way. The second try gets through.' },
+  },
+});
+```
+
+```tsx demo="promise-progress"
+const abort = new AbortController();
+const upload = cloudlet.track(uploadPhotos(), {
+  pending: { title: 'Uploading 12 photos…', progress: { kind: 'determinate', value: 0 } },
+  success: { title: '12 photos are in the cloud' },
+  error: { title: 'Upload drifted off' },
+  cancel: () => abort.abort(),
+});
+
+async function uploadPhotos() {
+  for (let photo = 1; photo <= 12; photo += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    abort.signal.throwIfAborted();
+    if (upload.admission.status === 'created') {
+      cloudlet.update(upload.admission.handle, {
+        progress: { kind: 'determinate', value: photo / 12, label: `${photo} of 12` },
+      });
+    }
+  }
+}
+```
+
+```tsx demo="track-cancel"
+cloudlet.track(async ({ signal }) => {
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, 8000);
+    signal.addEventListener('abort', () => { clearTimeout(timer); reject(signal.reason); }, { once: true });
+  });
+}, {
+  pending: {
+    title: 'Drifting to the coast…',
+    description: { kind: 'text', text: 'A long flight. Cancel lands it early.' },
+  },
+  success: { title: 'Landed on the coast' },
+  error: { title: 'Lost the wind' },
+  cancelled: { title: 'Landed early' },
+});
+```
+
+```tsx demo="update-loading"
+const packing = cloudlet.show({ title: 'Packing the clouds…', kind: 'loading' });
+setTimeout(() => {
+  if (packing.status === 'created') {
+    cloudlet.update(packing.handle, { title: 'Clouds packed', kind: 'success' });
+  }
+}, 1500);
+```
+
+</Demos>
+
+### Attention
+
+Whether a notification opens the Island on its own: auto, open or stack. More in [Notifications & time](/docs/components/toaster/notifications#attention).
+
+<Demos>
+
+```tsx demo="attention-auto"
+cloudlet.show({
+  title: 'Wind is picking up',
+  description: { kind: 'text', text: 'Gusts up to 40 km/h this afternoon.' },
+  attention: 'auto',
+});
+```
+
+```tsx demo="attention-upgrade"
+cloudlet.show({
+  title: 'Storm ahead: storage almost full',
+  kind: 'warning',
+  description: { kind: 'text', text: 'Only 3% of your sky is left.' },
+  action: {
+    kind: 'command',
+    label: 'Upgrade',
+    run: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      cloudlet.show({ title: 'Clear skies: storage doubled', kind: 'success' });
+    },
+  },
+  attention: 'open',
+});
+```
+
+```tsx demo="attention-stack"
+cloudlet.show({
+  title: 'Drizzle expected tonight',
+  kind: 'warning',
+  description: { kind: 'text', text: 'Keep an umbrella by the door.' },
+  attention: 'stack',
+});
+```
+
+</Demos>
+
+### Stack
+
+Newest on top, one pill at rest. Push it past 100 and the badge counts what was missed. More in [Notifications & time](/docs/components/toaster/notifications#the-stack-and-the-island).
+
+<Demos>
+
+```tsx demo="burst"
+for (const name of ['Cumulus', 'Stratus', 'Cirrus', 'Nimbus', 'Altocumulus']) {
+  cloudlet.show({ title: `${name} drifted by` });
+}
+```
+
+```tsx demo="overflow"
+// The stack holds 100 notifications; the rest are counted as missed.
+for (let cloud = 1; cloud <= 105; cloud += 1) {
+  cloudlet.show({ title: `Cloud #${cloud} on the horizon` });
+}
+```
+
+```tsx demo="dismiss-all"
+cloudlet.clear();
+cloudlet.acknowledgeOverflow(); // the missed count survives clear()
+```
+
+</Demos>
+## API Reference
+
+| Export | What it is | Reference |
+| --- | --- | --- |
+| `createCloudlet` | Creates a controller, the object that owns every notification, its time and its operations. | [createCloudlet](/docs/components/toaster/api/create-cloudlet) |
+| `CloudletProvider` | Hands a controller to a React tree; renders nothing itself. | [Toaster props](/docs/components/toaster/api/toaster#cloudletprovider) |
+| `useCloudlet` | Returns the controller of the nearest Provider. | [Toaster props](/docs/components/toaster/api/toaster#usecloudlet) |
+| `Toaster` | Renders the stack and the Island of that controller, in a portal after mount. | [Toaster props](/docs/components/toaster/api/toaster#props) |
+
+The controller's methods are on [Controller](/docs/components/toaster/api/controller), the other public types on [Types](/docs/components/toaster/api/types).
