@@ -62,7 +62,7 @@ const agent = createAgent({
 
 const result = await agent.act({
   steps: [
-    { ref: 'toaster:3', action: 'fill', args: ['Reply', 'On my way'] },
+    { ref: 'toaster:3', action: 'fill', args: ['reply', 'On my way'] }, // the field's name, not its label
     { ref: 'toaster:3', action: 'submit' },
   ],
 });
