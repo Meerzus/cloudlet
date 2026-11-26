@@ -59,7 +59,12 @@ export function parseCall(input: unknown, options: unknown): { readonly steps: r
     if (typeof ref !== 'string') return invalid(index, `${at}.ref must be a string`);
     if (typeof action !== 'string') return invalid(index, `${at}.action must be a string`);
     if (args !== undefined && !Array.isArray(args)) return invalid(index, `${at}.args must be an array`);
-    steps.push(freeze({ ref, action, args: args === undefined ? NO_ARGS : freeze([...args as unknown[]]) }));
+    // A deep frozen copy: what `allow` is asked about is what runs, whatever the caller does to its own objects meanwhile.
+    let copied = NO_ARGS;
+    if (args !== undefined) {
+      try { copied = cloneValue(args) as readonly unknown[]; } catch { return invalid(index, `${at}.args must hold plain data`); }
+    }
+    steps.push(freeze({ ref, action, args: copied }));
   }
   if (options !== undefined && !isObject(options)) return invalid(0, 'options must be an object');
   const signal = options?.signal;
@@ -72,9 +77,6 @@ type Settled<T> =
   | { readonly kind: 'error'; readonly error: unknown }
   | { readonly kind: 'timeout' }
   | { readonly kind: 'cancelled' };
-
-const isThenable = (value: unknown): value is PromiseLike<unknown> =>
-  (typeof value === 'object' || typeof value === 'function') && value !== null && typeof (value as PromiseLike<unknown>).then === 'function';
 
 function timeoutReason(): Error {
   const error = new Error('The agent step timed out');
@@ -90,9 +92,15 @@ function timeoutReason(): Error {
 function wait<T>(work: (signal: AgentSignal) => T | PromiseLike<T>, outer: AgentSignal | undefined, timeout: number): Settled<T> | Promise<Settled<T>> {
   const controller = new AbortController();
   let answer: T | PromiseLike<T>;
-  try { answer = work(controller.signal); } catch (error) { return { kind: 'error', error }; }
-  if (!isThenable(answer)) return { kind: 'value', value: answer };
+  // `then` is read once, here: a getter may answer differently, or throw, the second time.
+  let then: unknown;
+  try {
+    answer = work(controller.signal);
+    if ((typeof answer === 'object' || typeof answer === 'function') && answer !== null) then = (answer as PromiseLike<T>).then;
+  } catch (error) { return { kind: 'error', error }; }
+  if (typeof then !== 'function') return { kind: 'value', value: answer as T };
   const pending = answer;
+  const subscribe = then as PromiseLike<T>['then'];
   return new Promise<Settled<T>>((resolve) => {
     let settled = false;
     const settle = (result: Settled<T>, reason?: unknown): void => {
@@ -107,7 +115,7 @@ function wait<T>(work: (signal: AgentSignal) => T | PromiseLike<T>, outer: Agent
     const timer = setTimeout(() => { settle({ kind: 'timeout' }, timeoutReason()); }, timeout);
     outer?.addEventListener('abort', cancel, { once: true });
     if (outer?.aborted) cancel();
-    Promise.resolve(pending).then(
+    new Promise<T>((fulfil, refuse) => { subscribe.call(pending, fulfil, refuse); }).then(
       (value) => { settle({ kind: 'value', value }); },
       (error: unknown) => { settle({ kind: 'error', error }); },
     );
@@ -116,17 +124,18 @@ function wait<T>(work: (signal: AgentSignal) => T | PromiseLike<T>, outer: Agent
 
 /** Copies a step's result as plain data, so the call's result stays frozen and cloneable. */
 function cloneValue(value: unknown): AgentValue {
-  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  // JSON turns NaN and the infinities into null, so they are not plain data here.
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (Array.isArray(value)) return freeze(value.map(cloneValue));
   if (typeof value === 'object') {
     const prototype: unknown = Object.getPrototypeOf(value);
     if (prototype === Object.prototype || prototype === null) {
-      const copy: Record<string, AgentValue> = {};
-      for (const key of Object.keys(value)) copy[key] = cloneValue((value as Record<string, unknown>)[key]);
-      return freeze(copy);
+      // `fromEntries` defines own properties, so a key named `__proto__` stays a key.
+      return freeze(Object.fromEntries(Object.keys(value).map((key) => [key, cloneValue((value as Record<string, unknown>)[key])])));
     }
   }
-  throw new TypeError(`A step result must be plain data: ${Object.prototype.toString.call(value)}`);
+  throw new TypeError(`Expected plain data: ${typeof value === 'number' ? String(value) : Object.prototype.toString.call(value)}`);
 }
 
 const quote = JSON.stringify;
@@ -162,9 +171,16 @@ export async function runSteps(steps: readonly AgentStepCall[], signal: AgentSig
   const done: ActStepResult[] = [];
   for (let index = 0; index < steps.length; index++) {
     const step = steps[index]!;
-    const message = await runStep(step, signal, env, (result) => {
-      done.push(freeze({ step: index, ref: step.ref, ...result }));
-    });
+    let message: string | undefined;
+    try {
+      message = await runStep(step, signal, env, (result) => {
+        done.push(freeze({ step: index, ref: step.ref, ...result }));
+      });
+    } catch (error) {
+      // A component that throws where nothing guards it (its snapshot, say) fails this step only.
+      env.report(error);
+      message = texts.broken(step);
+    }
     if (message !== undefined) return failed(index, message, done);
   }
   return freeze({ ok: true as const, steps: freeze(done) });
@@ -182,10 +198,11 @@ async function runStep(step: AgentStepCall, signal: AgentSignal | undefined, env
   if (!check || !run) return texts.noSteps(step);
 
   let verdict: AgentStepCheck;
-  try { verdict = check(step); } catch (error) { env.report(error); return texts.broken(step); }
+  try { verdict = check.call(component, step); } catch (error) { env.report(error); return texts.broken(step); }
   if (!isObject(verdict)) { env.report(new TypeError('check() must return an object')); return texts.broken(step); }
   if (verdict.available !== true) return typeof verdict.message === 'string' ? verdict.message : texts.unavailable(step, entry.actions);
-  const { permission, names } = verdict;
+  const { permission } = verdict;
+  let { names } = verdict;
   // Anything but the two known grants is treated as a denial: an unclear answer never runs a step.
   if (permission !== 'allow' && permission !== 'confirm') {
     if (permission !== 'deny') env.report(new TypeError(`Unknown permission: ${String(permission)}`));
@@ -207,11 +224,24 @@ async function runStep(step: AgentStepCall, signal: AgentSignal | undefined, env
   }
   if (!approved) {
     if (!needsPerson) return timedOut ? texts.noAnswer(step) : texts.saidNo(step);
+    // The wait may have been long: the handoff names what the person will find now, not what was there.
+    if (allow) {
+      let fresh: AgentStepCheck;
+      try { fresh = check.call(component, step); } catch (error) { env.report(error); return texts.broken(step); }
+      if (!isObject(fresh)) { env.report(new TypeError('check() must return an object')); return texts.broken(step); }
+      if (fresh.available !== true) {
+        if (typeof fresh.message === 'string') return fresh.message;
+        const now = env.locate(step.ref);
+        return now.found ? texts.unavailable(step, now.entry.actions) : texts.noEntry(step.ref, env.refs());
+      }
+      if (fresh.permission !== 'allow' && fresh.permission !== 'confirm') return texts.denied(step, fresh.names);
+      names = fresh.names;
+    }
     let reached = false;
     let note: string | undefined;
     if (summon) {
       try {
-        const summoned: unknown = summon(step);
+        const summoned: unknown = summon.call(component, step);
         if (!isObject(summoned)) reached = summoned === true;
         else if (typeof summoned.reached === 'boolean' && typeof summoned.note === 'string') {
           reached = summoned.reached;
@@ -222,7 +252,7 @@ async function runStep(step: AgentStepCall, signal: AgentSignal | undefined, env
     return texts.needsPerson(step, names, reached, note);
   }
 
-  const outcome = await wait<AgentRunOutcome>((own) => run(step, freeze({ signal: own, approved: permission })), signal, env.timeout);
+  const outcome = await wait<AgentRunOutcome>((own) => run.call(component, step, freeze({ signal: own, approved: permission })), signal, env.timeout);
   switch (outcome.kind) {
     case 'cancelled': return texts.cancelledDuring(step);
     case 'timeout': succeed({ result: 'pending' }); return undefined;

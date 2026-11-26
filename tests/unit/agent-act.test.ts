@@ -643,9 +643,167 @@ describe('act: order and errors', () => {
     agent.connect({ ...box.component, snapshot: () => { if (broken) throw new Error('snapshot broke'); return []; } });
     broken = true;
     const result = await agent.act(press);
-    expect(errorOf(result).message).toBe('The agent bridge failed. No further step ran.');
+    expect(errorOf(result).message).toBe('"press" on "box:1" failed inside its component.');
     expect(reported).toHaveLength(1);
     broken = false;
     expect(errorOf(await agent.act(press)).message).toBe('No entry "box:1". Current refs: none.');
+  });
+
+  it('keeps the steps already done when a later step breaks where nothing guards it', async () => {
+    const reported = captureReports();
+    const box = stepper();
+    let broken = false;
+    const agent = createAgent();
+    agent.connect({ ...box.component, run: () => { broken = true; return { status: 'done' }; }, snapshot: () => { if (broken) throw new Error('snapshot broke'); return box.component.snapshot(); } });
+    const result = await agent.act({ steps: [{ ref: 'box:1', action: 'press' }, { ref: 'box:1', action: 'dismiss' }] });
+    expect(result).toEqual({
+      ok: false,
+      error: { step: 1, message: '"dismiss" on "box:1" failed inside its component. Step 0 stayed done.' },
+      steps: [{ step: 0, ref: 'box:1' }],
+    });
+    expect(reported).toHaveLength(1);
+  });
+});
+
+describe('act: what the review of the bridge found', () => {
+  it('copies args deeply, so what allow approved is what runs', async () => {
+    const answer = deferred<boolean>();
+    const box = stepper();
+    const agent = createAgent({ allow: () => answer.promise });
+    agent.connect(box.component);
+    const target = { name: 'draft-a' };
+    const pending = agent.act({ steps: [{ ref: 'box:1', action: 'press', args: [target] }] });
+    await settle();
+    target.name = 'draft-b';
+    answer.resolve(true);
+    await pending;
+    expect(box.run.mock.calls[0]![0].args).toEqual([{ name: 'draft-a' }]);
+    expect(Object.isFrozen(box.run.mock.calls[0]![0].args[0])).toBe(true);
+  });
+
+  it('calls args that are not plain data an invalid call', async () => {
+    const box = stepper();
+    const agent = createAgent();
+    agent.connect(box.component);
+    for (const value of [new Date(0), () => 1, undefined, Number.NaN, Infinity]) {
+      expect(errorOf(await agent.act({ steps: [{ ref: 'box:1', action: 'press', args: [value] }] })).message)
+        .toBe('Invalid call: steps[0].args must hold plain data. No step ran.');
+    }
+    expect(box.check).not.toHaveBeenCalled();
+  });
+
+  it('calls an input that throws when read an invalid call', async () => {
+    const agent = createAgent();
+    const input = { get steps(): never { throw new Error('no steps for you'); } };
+    expect(errorOf(await agent.act(input)).message).toBe('Invalid call: its input could not be read. No step ran.');
+  });
+
+  it("reads an answer's then once and uses that one", async () => {
+    const box = stepper();
+    let reads = 0;
+    const answer = { get then() { reads++; if (reads > 1) throw new Error('read twice'); return (fulfil: (value: boolean) => void) => { fulfil(true); }; } };
+    const agent = createAgent({ allow: () => answer as unknown as PromiseLike<boolean> });
+    agent.connect(box.component);
+    expect((await agent.act(press)).ok).toBe(true);
+    expect(reads).toBe(1);
+  });
+
+  it('treats an answer whose then throws as an allow that threw', async () => {
+    const reported = captureReports();
+    const box = stepper();
+    const answer = { get then(): never { throw new Error('no then'); } };
+    const agent = createAgent({ allow: () => answer as unknown as PromiseLike<boolean> });
+    agent.connect(box.component);
+    expect(errorOf(await agent.act(press)).message).toBe('The app said no to "press" on "box:1".');
+    expect(reported).toHaveLength(1);
+    expect(box.run).not.toHaveBeenCalled();
+  });
+
+  it('drops a result with a number JSON cannot carry but keeps the step done', async () => {
+    const reported = captureReports();
+    const box = stepper('box', { run: () => ({ status: 'done', result: { ratio: Number.NaN } }) });
+    const agent = createAgent();
+    agent.connect(box.component);
+    expect(await agent.act(press)).toEqual({ ok: true, steps: [{ step: 0, ref: 'box:1' }] });
+    expect(reported).toHaveLength(1);
+  });
+
+  it('keeps a result key named __proto__ as a key', async () => {
+    const result = JSON.parse('{"__proto__": {"polluted": true}, "plain": 1}') as never;
+    const box = stepper('box', { run: () => ({ status: 'done', result }) });
+    const agent = createAgent();
+    agent.connect(box.component);
+    const step = (await agent.act(press)).steps[0]!.result as Record<string, unknown>;
+    expect(Object.keys(step)).toEqual(['__proto__', 'plain']);
+    expect(Object.getPrototypeOf(step)).toBe(Object.prototype);
+    expect(JSON.parse(JSON.stringify(step))).toEqual(JSON.parse('{"__proto__": {"polluted": true}, "plain": 1}'));
+  });
+
+  it('calls check, run and summon on their component', async () => {
+    class Box {
+      readonly protocol = 1 as const;
+      readonly name = 'box';
+      permission: 'allow' | 'confirm' = 'allow';
+      ran = 0;
+      summoned = 0;
+      snapshot(): AgentEntry[] { return [{ ref: 'box:1', component: 'item', actions: ['press'] }]; }
+      subscribe(): () => void { return () => {}; }
+      check(): AgentStepCheck { return { available: true, permission: this.permission }; }
+      run(): AgentRunOutcome { this.ran++; return { status: 'done' }; }
+      summon(): boolean { this.summoned++; return true; }
+    }
+    const box = new Box();
+    const agent = createAgent();
+    agent.connect(box);
+    expect((await agent.act(press)).ok).toBe(true);
+    box.permission = 'confirm';
+    expect(errorOf(await agent.act(press)).message).toMatch(/^Needs a person/);
+    expect([box.ran, box.summoned]).toEqual([1, 1]);
+  });
+
+  it('names what the person will find now when the action changed while allow waited', async () => {
+    const answer = deferred<boolean>();
+    let label = 'Undo';
+    const box = stepper('box', { check: () => ({ available: true, permission: 'confirm', names: { target: label, within: 'File deleted' } }) });
+    const agent = createAgent({ allow: () => answer.promise });
+    agent.connect(box.component);
+    const pending = agent.act(press);
+    await settle();
+    label = 'Delete';
+    answer.resolve(false);
+    expect(errorOf(await pending).message)
+      .toBe('Needs a person: "Delete" on "File deleted". It is on screen in front of them now. Ask them to press "Delete" themselves.');
+  });
+
+  it('summons no one for a step the component denies by the time allow says no', async () => {
+    const answer = deferred<boolean>();
+    let permission: 'confirm' | 'deny' = 'confirm';
+    const box = stepper('box', { check: () => ({ available: true, permission, names: { target: 'Delete', within: 'Draft saved' } }) });
+    const agent = createAgent({ allow: () => answer.promise });
+    agent.connect(box.component);
+    const pending = agent.act(press);
+    await settle();
+    permission = 'deny';
+    answer.resolve(false);
+    expect(errorOf(await pending).message).toMatch(/^Not allowed: the app does not let an agent press "Delete"/);
+    expect(box.summon).not.toHaveBeenCalled();
+  });
+
+  it('does not find a queued step in a component connected under the same name after the call was made', async () => {
+    const answer = deferred<boolean>();
+    const first = stepper();
+    const agent = createAgent({ allow: () => answer.promise });
+    const disconnect = agent.connect(first.component);
+    const waiting = agent.act(press);
+    const queued = agent.act({ steps: [{ ref: 'box:1', action: 'dismiss' }] });
+    await settle();
+    disconnect();
+    const second = stepper();
+    agent.connect(second.component);
+    answer.resolve(true);
+    await waiting;
+    expect(errorOf(await queued).message).toBe('No entry "box:1". Current refs: box, box:1.');
+    expect(second.run).not.toHaveBeenCalled();
+    expect((await agent.act({ steps: [{ ref: 'box:1', action: 'dismiss' }] })).ok).toBe(true);
   });
 });

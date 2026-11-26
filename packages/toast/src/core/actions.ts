@@ -53,6 +53,9 @@ export function invokeAction<Slot>(k: ControllerKernel<Slot>, record: RecordStat
       k.mutate(() => { form.errors = errors; });
       return { status: 'invalid' as const, errors };
     }
+    // `validate` is the app's code and may have replaced the action it was checking: the press was
+    // for the one that is gone, so neither runs.
+    if (k.records.get(handle.id) !== record || record.content.action !== action) return reject('action-replaced');
   }
   const actionToken = k.token() as ActionAttemptToken;
   const live = () => !k.disposed && k.records.get(handle.id) === record &&
@@ -89,7 +92,7 @@ export function invokeAction<Slot>(k: ControllerKernel<Slot>, record: RecordStat
   }, failed).catch((error: unknown) => {
     if (!k.disposed) k.failure('callback-error', 'action-settlement', error, handle);
   });
-  return { status: 'started' as const };
+  return { status: 'started' as const, token: actionToken };
 }
 
 /** Writes one field of the record's form as the person; editing a field clears its own message. */

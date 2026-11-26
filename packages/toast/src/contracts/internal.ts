@@ -124,7 +124,8 @@ export type ActionResult =
   | { readonly status: 'started' }
   /** A form failed `required`, `maxLength` or `validate`; the messages are in the record's draft. */
   | { readonly status: 'invalid'; readonly errors: FormErrors }
-  | { readonly status: 'rejected'; readonly reason: BridgeRejection | 'no-command' | 'already-pending' };
+  /** `action-replaced`: the form's own `validate` put another action on the record; neither runs. */
+  | { readonly status: 'rejected'; readonly reason: BridgeRejection | 'no-command' | 'already-pending' | 'action-replaced' };
 
 export type RetryOperationResult =
   | { readonly status: 'started'; readonly token: OperationAttemptToken }

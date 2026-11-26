@@ -506,6 +506,7 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
         }
         const ended = await started;
         if (ended.status === 'done') return GONE;
+        if (ended.status === 'replaced') return STALE;
         if (ended.status === 'failed') return freeze({ status: 'failed', message: texts.failed(label, ended.message) });
         if (ended.status === 'invalid') return freeze({ status: 'failed', message: texts.notSent(label, describe(action as FormAction, ended.errors)) });
         return freeze({ status: 'done', result: 'pending', ...(ended.gone ? { gone: true } : {}) });

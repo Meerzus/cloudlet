@@ -188,7 +188,11 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
     }),
     // The button lives only in the open Island.
     clearAll: withLease(() => k.island ? k.clear('clear-button') : reject('island-closed')),
-    invokeAction: withLease(k.withRecord((record) => invokeAction(k, record))),
+    invokeAction: withLease(k.withRecord((record) => {
+      const result = invokeAction(k, record);
+      // The attempt's token is for callers without a snapshot; the renderer reads it there.
+      return result.status === 'started' ? { status: 'started' as const } : result;
+    })),
     setFormValue: withLease(k.withRecord((record, name: string, value: string) => setFormValue(k, record, name, value))),
     retryOperation: withLease(withOperation((operation) => {
       const result = operation.retry();

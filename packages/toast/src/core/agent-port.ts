@@ -47,6 +47,8 @@ export type PressOutcome =
   | { readonly status: 'failed'; readonly message: string }
   /** The form did not pass its checks and was not sent; the person sees the same messages. */
   | { readonly status: 'invalid'; readonly errors: FormErrors }
+  /** The form's `validate` replaced the action it was checking; neither ran. */
+  | { readonly status: 'replaced' }
   /** The step stopped waiting: the notification closed otherwise, the action was replaced, or the signal ended the wait. */
   | { readonly status: 'pending'; readonly gone: boolean };
 
@@ -189,11 +191,16 @@ function press<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>, grant
     // Listeners first: the command may close or replace its notification synchronously.
     const started = invokeAction(k, record);
     if (started.status === 'invalid') { finish({ status: 'invalid', errors: started.errors }); return; }
-    if (started.status !== 'started') { finish({ status: 'pending', gone: k.records.get(handle.id) !== record }); return; }
-    const state = record.action;
+    if (started.status !== 'started') {
+      finish(started.reason === 'action-replaced' ? { status: 'replaced' } : { status: 'pending', gone: k.records.get(handle.id) !== record });
+      return;
+    }
     if (settled) return;
-    if (state.status !== 'pending') { finish({ status: 'pending', gone: false }); return; }
-    token = state.token;
-    if (signal.aborted) abort();
+    // This press's own attempt: a listener of `action-started` may already have begun another one.
+    token = started.token;
+    const state = record.action;
+    if (state.status === 'failed' && state.token === token) finish({ status: 'failed', message: state.message });
+    else if (state.status === 'idle' || state.token !== token) finish({ status: 'pending', gone: false });
+    else if (signal.aborted) abort();
   });
 }

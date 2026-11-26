@@ -31,7 +31,9 @@ export interface AgentSignal {
 }
 
 /**
- * A value a step may return: what survives `structuredClone` and JSON alike.
+ * Plain data, in a step's `args` and in what a step returns: what survives `structuredClone` and
+ * JSON alike. Numbers are finite: `NaN` and the infinities are not plain data. A call whose `args`
+ * hold anything else is invalid; a result that does is left out of the step's record.
  *
  * @experimental The protocol may change in any 0.x release.
  */
@@ -238,7 +240,8 @@ export interface AgentComponent {
   readonly run?: (step: AgentStepCall, context: AgentRunContext) => AgentRunOutcome | PromiseLike<AgentRunOutcome>;
   /**
    * Brings a `confirm` step that nobody approved in front of a person, without moving focus, and
-   * says where they find it.
+   * says where they find it. Optional even for a component with `confirm` steps: without it the
+   * agent is told the step is not on screen and should tell the person what it does.
    */
   readonly summon?: (step: AgentStepCall) => AgentSummonOutcome;
 }

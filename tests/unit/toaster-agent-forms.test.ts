@@ -333,6 +333,31 @@ describe('submit', () => {
     expect(replacement.run).not.toHaveBeenCalled();
   });
 
+  it('a submit runs neither form when the form\'s own validate replaces the action', async () => {
+    const t = setup({ allow: () => true });
+    const replacement = form({ label: 'Delete account', agent: 'allow' });
+    let handle!: NotificationHandle;
+    const approved = form({ validate: () => { t.controller.update(handle, { action: replacement }); return true; } });
+    handle = admit(t.controller, quiet('anna', { title: TITLE, action: approved }));
+    t.type(handle, 'reply', 'Yes');
+    expect(error(await t.act(['submit']))).toMatch(/changed while it waited, so it did not run/);
+    expect(approved.run).not.toHaveBeenCalled();
+    expect(replacement.run).not.toHaveBeenCalled();
+    expect(t.entry().action).toMatchObject({ label: 'Delete account', status: 'idle' });
+  });
+
+  it('a person\'s submit runs neither form in the same case', () => {
+    const t = setup();
+    const replacement = form({ label: 'Delete account' });
+    let handle!: NotificationHandle;
+    const pressed = form({ validate: () => { t.controller.update(handle, { action: replacement }); return true; } });
+    handle = admit(t.controller, quiet('anna', { title: TITLE, action: pressed }));
+    t.type(handle, 'reply', 'Yes');
+    expect(t.bridge.invokeAction(t.lease, handle)).toEqual({ status: 'rejected', reason: 'action-replaced' });
+    expect(pressed.run).not.toHaveBeenCalled();
+    expect(replacement.run).not.toHaveBeenCalled();
+  });
+
   it('a successful submit closes the notification and its draft with it', async () => {
     const t = setup({ allow: () => true });
     const run = vi.fn<(context: FormContext) => void>();

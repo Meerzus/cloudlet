@@ -6,7 +6,7 @@ Experimental first version: the agent reads and acts under the app's permission.
 
 ### Features
 
-- `createAgent()` returns `{ connect, snapshot, subscribe }`.
+- `createAgent()` returns `{ connect, snapshot, subscribe, act }`.
 - `agent.connect(component)` takes `{ protocol: 1, name, snapshot(), subscribe(listener) }` and
   returns an idempotent disconnect. An unknown `protocol`, a name outside `[a-z][a-z0-9-]*` and a
   name that is already connected throw a `TypeError`.
@@ -23,6 +23,12 @@ Experimental first version: the agent reads and acts under the app's permission.
   component brings it in front of a person and the agent is told to ask them. A `deny` step never
   runs. Cancelling through `signal` stops the wait. The promise never rejects and resolves to a
   frozen `{ ok, error?: { step, message }, steps: [{ step, ref, result?, gone? }] }`.
+- A step's `args` and what a step returns are plain data with finite numbers. `args` are copied
+  deeply when the call is made, so what `allow` was asked about is what runs; a call whose `args`
+  hold anything else, or whose input cannot be read, is an invalid call. A step keeps its ref only
+  within the components connected when the call was made: one connected later under the same name
+  is not searched. When a later step breaks inside its component, the steps before it stay in the
+  result. A handoff to a person names the action that is there when `allow` answers.
 - The component protocol gains optional `check`, `run` and `summon`; a component without them stays
   read-only. `protocol` stays `1`. `summon` answers `true` or `false` (in front of the person now or
   not), or `{ reached, note }`, whose sentence the agent reads in place of the bridge's own.

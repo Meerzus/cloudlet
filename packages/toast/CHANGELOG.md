@@ -21,7 +21,8 @@
   (`dismiss` closes as `programmatic`, `clear` as `clear`, `open` and `show` open the Island for
   attention). `press` follows the action's `agent` marker and reads it again right before the
   command runs, so a marker made stricter while the step waited for approval stops it, and so does an
-  action the app replaced in the meantime: an approval covers the action it was asked about; it waits for
+  action the app replaced in the meantime: an approval covers the action it was asked about, and a form whose own `validate` replaces
+  its action is not sent, by an agent or by a person; it waits for
   the command and, when it fails, returns the message the person sees. `cancel` and `retry` return at
   once (`requested`, `started`). `open` and `show` need a mounted `Toaster` and are listed only while
   one is. No step moves focus or takes the host from a `Toaster`.
