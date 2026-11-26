@@ -54,7 +54,8 @@ describe('toasterAgent component', () => {
 
 describe('notification records', () => {
   it('describes text, rich and icon notifications without their content objects', () => {
-    const { controller } = harness();
+    const { controller, bridge } = harness();
+    attach(bridge);
     const node = { type: 'strong', props: { children: 'Rich node' } };
     admit(controller, quiet('text', { title: 'Saved', kind: 'success', description: { kind: 'text', text: 'All changes saved' } }));
     admit(controller, quiet('rich', { title: 'Shared', description: { kind: 'rich', content: node, announcement: 'Shared with Anna' } }));
@@ -88,7 +89,8 @@ describe('notification records', () => {
   });
 
   it('describes a command and a link with the link href', async () => {
-    const { controller } = harness();
+    const { controller, bridge } = harness();
+    attach(bridge);
     const run = createDeferred<void>();
     admit(controller, quiet('undo', { title: 'Deleted', action: { kind: 'command', label: 'Undo', run: () => run.promise } }));
     admit(controller, quiet('open', { title: 'Report ready', action: { kind: 'link', label: 'Open', href: '/reports/7' } }));
@@ -104,7 +106,8 @@ describe('notification records', () => {
   });
 
   it('reads the agent marker of a command, confirm by default, and drops press under deny', () => {
-    const { controller } = harness();
+    const { controller, bridge } = harness();
+    attach(bridge);
     const command = (agent?: 'allow' | 'confirm' | 'deny') => ({
       kind: 'command' as const, label: 'Run', run: vi.fn(), ...(agent ? { agent } : {}),
     });
@@ -190,7 +193,8 @@ describe('form records', () => {
   });
 
   it('reads the agent marker of a form and keeps fill but not submit under deny', () => {
-    const { controller } = harness();
+    const { controller, bridge } = harness();
+    attach(bridge);
     admit(controller, quiet('none', { title: 'None', action: form() }));
     admit(controller, quiet('allow', { title: 'Allow', action: form({ agent: 'allow' }) }));
     admit(controller, quiet('deny', { title: 'Deny', action: form({ agent: 'deny' }) }));

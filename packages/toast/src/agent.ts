@@ -3,7 +3,7 @@ import type { NotificationHandle } from './contracts/identity.js';
 import type { NotificationKind, Priority } from './contracts/notifications.js';
 import type { CancellationSignal, OperationStatus } from './contracts/operations.js';
 import type { NotificationLocation, NotificationSnapshot, PauseReason } from './contracts/snapshots.js';
-import { createToasterReadPort, type FormReading } from './core/agent-port.js';
+import { createToasterPort, type FormReading, type ToasterReading } from './core/agent-port.js';
 
 // The Toaster's side of the agent bridge. Its protocol types are declared here structurally:
 // this package never imports the bridge package, not even its types.
@@ -196,7 +196,7 @@ export type OperationEntry = {
 export type NotificationEntry = {
   readonly ref: string;
   readonly component: 'notification';
-  /** `dismiss`, `show`, `press`, `fill`, `submit`, `cancel`, `retry`, by state. */
+  /** `dismiss`, `show` (with a mounted `Toaster`), `press`, `fill`, `submit`, `cancel`, `retry`, by state. */
   readonly actions: readonly string[];
   /** The title. */
   readonly label: string;
@@ -225,6 +225,12 @@ export type ToasterAgentEntry = ToasterEntry | NotificationEntry;
 export interface ToasterAgent extends AgentComponentShape<ToasterAgentEntry> {
   /** The same frozen array until the controller changes; empty after `dispose`. */
   snapshot(): readonly ToasterAgentEntry[];
+  /** Whether a step is available now and the class it needs; no side effects. */
+  readonly check: (step: AgentStepCallShape) => AgentStepCheckShape;
+  /** Reads the controller again and runs the step, unless it changed since it was approved. */
+  readonly run: (step: AgentStepCallShape, context: AgentRunContextShape) => AgentRunOutcomeShape | PromiseLike<AgentRunOutcomeShape>;
+  /** Whether the step's record is in front of a person: a `Toaster` is mounted. */
+  readonly summon: (step: AgentStepCallShape) => boolean;
 }
 
 /** @experimental The protocol may change before the bridge reaches 1.0. */
@@ -235,11 +241,59 @@ export interface ToasterAgentOptions {
 
 const freeze = Object.freeze;
 const EMPTY: readonly never[] = freeze([]);
+const quote = JSON.stringify;
+const TOASTER_VERBS: ReadonlySet<string> = new Set(['open', 'close', 'clear', 'acknowledge']);
+const NOTIFICATION_VERBS: ReadonlySet<string> = new Set(['dismiss', 'show', 'press', 'fill', 'submit', 'cancel', 'retry']);
+const STRICTNESS = { allow: 0, confirm: 1, deny: 2 } as const;
+const DONE: AgentRunOutcomeShape = freeze({ status: 'done' });
+const GONE: AgentRunOutcomeShape = freeze({ status: 'done', gone: true });
+const STALE: AgentRunOutcomeShape = freeze({ status: 'stale' });
+const UNAVAILABLE: AgentRunOutcomeShape = freeze({ status: 'unavailable' });
+
+// Refusals the adapter words itself; the bridge words the rest from the record's `actions`.
+// Labels and titles come from the app, so they are quoted.
+const texts = {
+  noScreen: (action: string) => `No Toaster is on screen: ${quote(action)} needs one.`,
+  noArguments: (step: AgentStepCallShape) => `${quote(step.action)} on ${quote(step.ref)} takes no arguments.`,
+  running: (label: string) => `${quote(label)} is already running.`,
+  failed: (label: string, message: string) => `${quote(label)} failed: ${message}`,
+  finished: 'This operation has already finished.',
+  cancelRequested: 'Cancelling this operation was already requested.',
+  notCancellable: "This operation can't be cancelled.",
+  stillRunning: "This operation is still running, so it can't be retried yet.",
+  notRetryable: "This operation can't be retried.",
+};
+
+/** A step as the adapter sees it right now: refused, or allowed under a class with a way to run it. */
+type Plan =
+  | { readonly available: false; readonly message?: string }
+  | {
+    readonly available: true;
+    readonly permission: AgentPermissionShape;
+    readonly names?: AgentStepNamesShape;
+    readonly perform: (context: AgentRunContextShape) => AgentRunOutcomeShape | Promise<AgentRunOutcomeShape>;
+  };
+
+const NOT_AVAILABLE: Plan = freeze({ available: false });
+const refuse = (message: string): Plan => freeze({ available: false, message });
+const allowed = (perform: () => AgentRunOutcomeShape): Plan => freeze({ available: true, permission: 'allow', perform });
+type PortResult = { readonly status: string; readonly reason?: string };
+/** A port refusal after the plan said yes: the state changed in between, so the step is unavailable. */
+const outcome = (result: PortResult, done: AgentRunOutcomeShape, words: Readonly<Record<string, string>> = {}): AgentRunOutcomeShape => {
+  if (result.status !== 'rejected') return done;
+  const message = result.reason === undefined ? undefined : words[result.reason];
+  return message === undefined ? UNAVAILABLE : freeze({ status: 'unavailable', message });
+};
 
 /**
- * Lets an agent read a controller through the kit's agent bridge:
- * `agent.connect(toasterAgent(controller))`. It touches no DOM, starts no timers and never takes
- * the host from a `Toaster`. Form values never reach the snapshot.
+ * Lets an agent read and drive a controller through the kit's agent bridge:
+ * `agent.connect(toasterAgent(controller))`. It touches no DOM, starts no timers, never takes the
+ * host from a `Toaster` and never moves focus. Form values never reach the snapshot.
+ *
+ * Steps: `open`, `close`, `clear` and `acknowledge` on the Toaster record; `show`, `dismiss`,
+ * `press`, `cancel` and `retry` on a notification. `open` and `show` need a mounted `Toaster`.
+ * `press` follows the action's `agent` marker; every other step is allowed unless the bridge's
+ * `allow` says no.
  *
  * @throws TypeError for a controller that this copy of `@cloudlet/toast` did not create.
  * @experimental The protocol may change before the bridge reaches 1.0.
@@ -249,7 +303,7 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
   options?: ToasterAgentOptions,
 ): ToasterAgent {
   const name = options?.name ?? 'toaster';
-  const port = createToasterReadPort<Slot>(controller);
+  const port = createToasterPort<Slot>(controller);
   // A number per handle, so a closed notification's ref is never handed to another one.
   const refs = new WeakMap<NotificationHandle, string>();
   let issued = 0;
@@ -258,21 +312,29 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     if (ref === undefined) refs.set(handle, ref = `${name}:${++issued}`);
     return ref;
   };
-  let source: ReturnType<typeof port.read> | undefined;
+  let source: ToasterReading<Slot> | undefined;
   let entries: readonly ToasterAgentEntry[] = EMPTY;
+  // The notifications of the current snapshot by ref, for steps.
+  let targets: ReadonlyMap<string, { readonly item: NotificationSnapshot<Slot>; readonly entry: NotificationEntry }> = new Map();
 
   const snapshot = (): readonly ToasterAgentEntry[] => {
     const reading = port.read();
     if (reading === source) return entries;
     source = reading;
     const state = reading.controller;
-    if (state.disposed) return entries = EMPTY;
+    if (state.disposed) { targets = new Map(); return entries = EMPTY; }
     const byHandle = new Map(state.notifications.map((item) => [item.handle, item] as const));
     const island = state.island;
     const count = state.stack.length;
+    const found = new Map<string, { readonly item: NotificationSnapshot<Slot>; readonly entry: NotificationEntry }>();
     // Refs are issued in presentation order, so the top notification gets the lower number.
-    const notifications = state.stack.map((handle) => notification(byHandle.get(handle)!, refOf(handle),
-      island.open && island.current === handle, reading.forms.get(handle)));
+    const notifications = state.stack.map((handle) => {
+      const item = byHandle.get(handle)!;
+      const entry = notification(item, refOf(handle), island.open && island.current === handle, reading.mounted, reading.forms.get(handle));
+      found.set(entry.ref, { item, entry });
+      return entry;
+    });
+    targets = found;
     const toaster: ToasterEntry = freeze({
       ref: name, component: 'toaster' as const,
       actions: freeze([
@@ -289,10 +351,115 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     return entries = freeze([toaster, ...notifications]);
   };
 
-  return freeze({ protocol: 1 as const, name, snapshot, subscribe: port.subscribe });
+  /** Reads the step against the controller as it is now; `check` and `run` both start here. */
+  const plan = (step: AgentStepCallShape): Plan => {
+    const current = snapshot();
+    const mounted = source?.mounted ?? false;
+    const { action } = step;
+    if (step.ref === name && current.length) {
+      if (!TOASTER_VERBS.has(action)) return NOT_AVAILABLE;
+      if (step.args.length) return refuse(texts.noArguments(step));
+      if (action === 'open' && !mounted) return refuse(texts.noScreen(action));
+      if (!current[0]!.actions.includes(action)) return NOT_AVAILABLE;
+      switch (action) {
+        case 'open': return allowed(() => outcome(port.open(), DONE, { 'no-host': texts.noScreen(action) }));
+        case 'close': return allowed(() => outcome(port.close(), DONE));
+        case 'clear': return allowed(() => outcome(port.clear(), DONE));
+        default: return allowed(() => outcome(port.acknowledge(), DONE));
+      }
+    }
+    const target = targets.get(step.ref);
+    if (!target || !NOTIFICATION_VERBS.has(action)) return NOT_AVAILABLE;
+    // Forms take agent steps in a later release; until then fill and submit only read.
+    if (action === 'fill' || action === 'submit') return NOT_AVAILABLE;
+    if (step.args.length) return refuse(texts.noArguments(step));
+    const { item, entry } = target;
+    const { handle } = item;
+    switch (action) {
+      case 'show':
+        if (!mounted) return refuse(texts.noScreen(action));
+        break;
+      case 'press': return pressPlan(item);
+      case 'cancel': {
+        const operation = item.operation;
+        if (!operation) return NOT_AVAILABLE;
+        if (operation.status !== 'pending') return refuse(texts.finished);
+        if (operation.cancelRequested) return refuse(texts.cancelRequested);
+        if (!operation.canCancel) return refuse(texts.notCancellable);
+        break;
+      }
+      case 'retry': {
+        const operation = item.operation;
+        if (!operation) return NOT_AVAILABLE;
+        if (operation.status === 'pending') return refuse(texts.stillRunning);
+        if (!operation.canRetry) return refuse(texts.notRetryable);
+        break;
+      }
+    }
+    if (!entry.actions.includes(action)) return NOT_AVAILABLE;
+    switch (action) {
+      case 'show': return allowed(() => outcome(port.show(handle), DONE, { 'no-host': texts.noScreen(action) }));
+      case 'dismiss': return allowed(() => outcome(port.dismiss(handle), GONE));
+      case 'cancel': return allowed(() => {
+        const result = port.cancel(handle);
+        return result.status === 'requested' ? freeze({ status: 'done', result: 'requested' })
+          : outcome(result.status === 'unchanged' ? { status: 'rejected', reason: result.reason } : result, DONE, {
+            settled: texts.finished, 'already-requested': texts.cancelRequested, 'not-cancellable': texts.notCancellable,
+          });
+      });
+      default: return allowed(() => outcome(port.retry(handle), freeze({ status: 'done', result: 'started' }), {
+        'already-pending': texts.stillRunning, 'not-retryable': texts.notRetryable,
+      }));
+    }
+  };
+
+  const pressPlan = (item: NotificationSnapshot<Slot>): Plan => {
+    const action = item.content.action;
+    if (action?.kind !== 'command') return NOT_AVAILABLE;
+    const { label } = action;
+    const permission = action.agent ?? 'confirm';
+    const names = freeze({ target: label, within: item.content.title });
+    // A denied press never runs, so it is reported before its state.
+    if (permission !== 'deny' && item.action.status === 'pending') return refuse(texts.running(label));
+    return freeze({
+      available: true, permission, names,
+      async perform({ signal, approved }: AgentRunContextShape): Promise<AgentRunOutcomeShape> {
+        const started = port.press(item.handle, approved, signal);
+        if (!(started instanceof Promise)) {
+          return started.reason === 'stale' ? STALE : outcome(started, DONE, { 'already-pending': texts.running(label) });
+        }
+        const ended = await started;
+        if (ended.status === 'done') return GONE;
+        if (ended.status === 'failed') return freeze({ status: 'failed', message: texts.failed(label, ended.message) });
+        return freeze({ status: 'done', result: 'pending', ...(ended.gone ? { gone: true } : {}) });
+      },
+    });
+  };
+
+  const check = (step: AgentStepCallShape): AgentStepCheckShape => {
+    const verdict = plan(step);
+    if (!verdict.available) return verdict;
+    return freeze({ available: true, permission: verdict.permission, ...(verdict.names ? { names: verdict.names } : {}) });
+  };
+
+  // The bridge approved the step under `approved`; the controller is read again before anything runs.
+  const run = (step: AgentStepCallShape, context: AgentRunContextShape): AgentRunOutcomeShape | Promise<AgentRunOutcomeShape> => {
+    const verdict = plan(step);
+    if (!verdict.available) return verdict.message === undefined ? UNAVAILABLE : freeze({ status: 'unavailable', message: verdict.message });
+    if (STRICTNESS[verdict.permission] > STRICTNESS[context.approved]) return STALE;
+    return verdict.perform(context);
+  };
+
+  // Until the Island opens for a person, a summoned step is in front of them only if a Toaster is.
+  const summon = (step: AgentStepCallShape): boolean => {
+    snapshot();
+    return (source?.mounted ?? false) && targets.has(step.ref);
+  };
+
+  return freeze({ protocol: 1 as const, name, snapshot, subscribe: port.subscribe, check, run, summon });
 }
 
-function notification<Slot>(item: NotificationSnapshot<Slot>, ref: string, shown: boolean, form: FormReading | undefined): NotificationEntry {
+function notification<Slot>(item: NotificationSnapshot<Slot>, ref: string, shown: boolean, mounted: boolean, form: FormReading | undefined): NotificationEntry {
   const { content } = item;
   const description = content.description;
   const progress = content.progress;
@@ -305,7 +472,7 @@ function notification<Slot>(item: NotificationSnapshot<Slot>, ref: string, shown
     ref, component: 'notification' as const,
     actions: freeze([
       'dismiss',
-      ...(!shown ? ['show'] : []),
+      ...(!shown && mounted ? ['show'] : []),
       ...(action?.kind === 'command' && may ? ['press'] : []),
       ...(action?.kind === 'form' && ready ? ['fill'] : []),
       ...(action?.kind === 'form' && may ? ['submit'] : []),

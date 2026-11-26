@@ -71,8 +71,9 @@ Full documentation: **https://cloudlet.dev/docs/components/toaster**
 - Guides: Notifications & time, Operations & cancellation, Forms, Positioning & offsets, Styling,
   SSR & Next.js, Content Security Policy, Accessibility (including what is and is not tested).
 - Reference: `createCloudlet`, the controller, Toaster props, labels & announcements, types.
-- Experimental: `@cloudlet/toast/agent` exports `toasterAgent(controller)`, a read-only view of the
-  controller for the kit's agent bridge, `@cloudlet/agent`. It may change in any minor release.
+- Experimental: `@cloudlet/toast/agent` exports `toasterAgent(controller)`, which lets the kit's agent
+  bridge, `@cloudlet/agent`, read the controller and run steps on it under the app's permission. It
+  may change in any minor release.
 - The [changelog](CHANGELOG.md) lists every change, including migration from `1.0.0-rc.0`.
 
 ## Contributing and security

@@ -230,7 +230,7 @@ async function moduleGraph(packageRoot, entry, { staticOnly = false } = {}) {
 
 const TOAST_RUNTIME = ['CloudletProvider', 'Toaster', 'createCloudlet', 'useCloudlet', 'useOptionalCloudlet'];
 const REACT_PEERS = ['react', 'react/jsx-runtime', 'react-dom', 'react-dom/server'];
-// The adapter and its read port: whoever imports only the package root must not load them.
+// The adapter and its port: whoever imports only the package root must not load them.
 const AGENT_MODULES = ['dist/agent.js', 'dist/core/agent-port.js'];
 
 async function checkToast(directory, archive) {
@@ -267,7 +267,12 @@ async function checkToast(directory, archive) {
   assert.ok(rootGraph.has('dist/core/actions.js'), 'The renderer must reach the shared action functions');
   assert.ok(!rootStart.has('dist/core/actions.js'), 'The root entry statically reaches dist/core/actions.js');
   const agentGraph = await moduleGraph(packageRoot, 'dist/agent.js');
-  assert.ok(AGENT_MODULES.every((module) => agentGraph.has(module)), 'The agent entry must reach its read port');
+  assert.ok(AGENT_MODULES.every((module) => agentGraph.has(module)), 'The agent entry must reach its port');
+  // Agent steps run through the shared action functions, never through the renderer's bridge.
+  assert.ok(agentGraph.has('dist/core/actions.js'), 'The agent entry must reach the shared action functions');
+  for (const module of ['dist/core/bridge.js', 'dist/react.js', 'dist/react/renderer.js']) {
+    assert.ok(!agentGraph.has(module), `The agent entry reaches ${module}`);
+  }
   for (const path of files.filter((path) => path.startsWith('dist/'))) {
     assert.ok(!(await readFile(join(packageRoot, path), 'utf8')).includes('@cloudlet/agent'), `${path} names @cloudlet/agent`);
   }
@@ -480,10 +485,13 @@ async function checkTogether(directory) {
     assert.deepEqual(agent.snapshot().map((entry) => entry.ref), ['toaster', 'toaster:1', 'secondary']);
     disconnect();
     assert.deepEqual(agent.snapshot().map((entry) => entry.ref), ['toaster', 'toaster:1']);
+    const dismissed = await agent.act({ steps: [{ ref: 'toaster:1', action: 'dismiss' }] });
+    assert.deepEqual(dismissed, { ok: true, steps: [{ step: 0, ref: 'toaster:1', gone: true }] }, 'An agent step changes the Toaster');
+    assert.equal(controller.getSnapshot().notifications.length, 0);
     controller.dispose();
     secondary.dispose();
     assert.deepEqual(agent.snapshot(), []);
-    assert.deepEqual(resourceCalls, [], 'Reading Toaster through the bridge must not touch the DOM or allocate timers/listeners');
+    assert.deepEqual(resourceCalls, [], 'Reading and driving Toaster through the bridge must not touch the DOM or allocate timers/listeners');
   `;
   run(directory, 'module', probe);
   await typecheckConsumer(directory, 'agent-toaster-contracts.ts', ['ES2022', 'DOM']);
