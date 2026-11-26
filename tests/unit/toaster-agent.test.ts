@@ -100,6 +100,34 @@ describe('notification records', () => {
       actions: ['dismiss', 'show'], action: { kind: 'link', label: 'Open', href: '/reports/7', status: 'idle', message: null },
     });
     expect(byLabel(component.snapshot(), 'Deleted').action).not.toHaveProperty('href');
+    expect(byLabel(component.snapshot(), 'Report ready').action).not.toHaveProperty('agent');
+  });
+
+  it('reads the agent marker of a command, confirm by default, and drops press under deny', () => {
+    const { controller } = harness();
+    const command = (agent?: 'allow' | 'confirm' | 'deny') => ({
+      kind: 'command' as const, label: 'Run', run: vi.fn(), ...(agent ? { agent } : {}),
+    });
+    admit(controller, quiet('none', { title: 'None', action: command() }));
+    admit(controller, quiet('allow', { title: 'Allow', action: command('allow') }));
+    admit(controller, quiet('confirm', { title: 'Confirm', action: command('confirm') }));
+    admit(controller, quiet('deny', { title: 'Deny', action: command('deny') }));
+    const entries = toasterAgent(controller).snapshot();
+    expect(byLabel(entries, 'None')).toMatchObject({ actions: ['dismiss', 'show', 'press'], action: { agent: 'confirm' } });
+    expect(byLabel(entries, 'Allow')).toMatchObject({ actions: ['dismiss', 'show', 'press'], action: { agent: 'allow' } });
+    expect(byLabel(entries, 'Confirm')).toMatchObject({ actions: ['dismiss', 'show', 'press'], action: { agent: 'confirm' } });
+    expect(byLabel(entries, 'Deny')).toMatchObject({ actions: ['dismiss', 'show'], action: { agent: 'deny' } });
+  });
+
+  it('keeps the person able to press a command the agent may not', async () => {
+    const { controller, bridge } = harness();
+    const lease = attach(bridge);
+    const run = vi.fn();
+    const handle = admit(controller, quiet('deny', { title: 'Delete', action: { kind: 'command', label: 'Delete', run, agent: 'deny' } }));
+    bridge.openIsland(lease, 'user', handle);
+    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'started' });
+    await flush();
+    expect(run).toHaveBeenCalledOnce();
   });
 
   it('describes a pending and a failed command without its attempt token', async () => {
@@ -118,7 +146,7 @@ describe('notification records', () => {
     run.reject(new Error('Network'));
     await flush();
     const failed = byLabel(component.snapshot(), 'Deleted');
-    expect(failed.action).toEqual({ kind: 'command', label: 'Undo', status: 'failed', message: 'Could not undo' });
+    expect(failed.action).toEqual({ kind: 'command', label: 'Undo', status: 'failed', message: 'Could not undo', agent: 'confirm' });
     expect(failed.actions).toContain('press');
     expect(JSON.stringify(component.snapshot())).not.toContain('token');
   });
@@ -135,7 +163,7 @@ describe('form records', () => {
     const before = byLabel(component.snapshot(), 'Anna: are you coming?');
     expect(before.actions).toEqual(['dismiss', 'fill', 'submit']);
     expect(before.action).toEqual({
-      kind: 'form', label: 'Send', status: 'idle', message: null, error: null,
+      kind: 'form', label: 'Send', status: 'idle', message: null, error: null, agent: 'confirm',
       fields: [
         { name: 'reply', label: 'Reply', required: true, filled: false, error: null },
         { name: 'note', label: 'Note', required: false, filled: true, error: null },
@@ -159,6 +187,29 @@ describe('form records', () => {
       expect(json).not.toContain(hidden);
     }
     expect(structuredClone(after)).toEqual(after);
+  });
+
+  it('reads the agent marker of a form and keeps fill but not submit under deny', () => {
+    const { controller } = harness();
+    admit(controller, quiet('none', { title: 'None', action: form() }));
+    admit(controller, quiet('allow', { title: 'Allow', action: form({ agent: 'allow' }) }));
+    admit(controller, quiet('deny', { title: 'Deny', action: form({ agent: 'deny' }) }));
+    const entries = toasterAgent(controller).snapshot();
+    expect(byLabel(entries, 'None')).toMatchObject({ actions: ['dismiss', 'show', 'fill', 'submit'], action: { agent: 'confirm' } });
+    expect(byLabel(entries, 'Allow')).toMatchObject({ actions: ['dismiss', 'show', 'fill', 'submit'], action: { agent: 'allow' } });
+    expect(byLabel(entries, 'Deny')).toMatchObject({ actions: ['dismiss', 'show', 'fill'], action: { agent: 'deny' } });
+  });
+
+  it('keeps the person able to submit a form the agent may not', async () => {
+    const { controller, bridge } = harness();
+    const lease = attach(bridge);
+    const run = vi.fn();
+    const handle = admit(controller, quiet('deny', { title: 'Reply', action: form({ run, agent: 'deny' }) }));
+    bridge.openIsland(lease, 'user', handle);
+    expect(bridge.setFormValue(lease, handle, 'reply', 'Yes')).toEqual({ status: 'applied' });
+    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'started' });
+    await flush();
+    expect(run).toHaveBeenCalledOnce();
   });
 
   it('reads only own error keys, so a field named like an Object method stays a plain record', () => {

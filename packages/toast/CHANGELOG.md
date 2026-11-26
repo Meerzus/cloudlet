@@ -10,6 +10,11 @@
   presentation order: title, text, kind, time left, operation state and the action, with the verbs
   that apply. Form fields say whether they hold text; their values never leave Cloudlet. The subpath
   reads the controller without the host lease, DOM or timers, and the root entry does not load it.
+- Experimental: a command or a form action takes `agent: 'allow' | 'confirm' | 'deny'`, which says
+  what an agent may do with it through `@cloudlet/toast/agent`; omitted means `confirm`. The agent
+  snapshot shows it as `action.agent`, and under `deny` it lists no `press` or `submit` (an agent can
+  still fill a form's fields). A link rejects the field with `invalid-input`. A person presses and
+  submits as before, whatever the marker.
 
 ### Fixes
 

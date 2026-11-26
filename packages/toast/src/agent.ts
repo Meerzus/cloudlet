@@ -80,6 +80,11 @@ export type ActionEntry = {
   readonly status: 'idle' | 'pending' | 'failed';
   /** Why the last attempt failed; null unless `status` is `failed`. */
   readonly message: string | null;
+  /**
+   * What the app lets an agent do with a command or a form: `allow`, `confirm` (a person approves)
+   * or `deny`. `confirm` when the app set nothing; absent for a link.
+   */
+  readonly agent?: 'allow' | 'confirm' | 'deny';
   /** Only for a link. */
   readonly href?: string;
   /** Only for a form. */
@@ -211,14 +216,17 @@ function notification<Slot>(item: NotificationSnapshot<Slot>, ref: string, shown
   const progress = content.progress;
   const operation = item.operation;
   const action = actionEntry(item, form);
+  // `deny` stops pressing and submitting only: a person can still submit what an agent filled.
   const ready = item.action.status !== 'pending';
+  const may = ready && action?.agent !== 'deny';
   return freeze({
     ref, component: 'notification' as const,
     actions: freeze([
       'dismiss',
       ...(!shown ? ['show'] : []),
-      ...(action?.kind === 'command' && ready ? ['press'] : []),
-      ...(action?.kind === 'form' && ready ? ['fill', 'submit'] : []),
+      ...(action?.kind === 'command' && may ? ['press'] : []),
+      ...(action?.kind === 'form' && ready ? ['fill'] : []),
+      ...(action?.kind === 'form' && may ? ['submit'] : []),
       ...(operation?.canCancel ? ['cancel'] : []),
       ...(operation?.canRetry ? ['retry'] : []),
     ]),
@@ -253,10 +261,11 @@ function actionEntry<Slot>(item: NotificationSnapshot<Slot>, form: FormReading |
     message: state.status === 'failed' ? state.message : null,
   };
   if (action.kind === 'link') return freeze({ ...common, href: action.href });
-  if (action.kind === 'command') return freeze(common);
+  if (action.kind === 'command') return freeze({ ...common, agent: action.agent ?? 'confirm' });
   const errors = form?.errors;
   return freeze({
     ...common,
+    agent: action.agent ?? 'confirm',
     fields: freeze(action.fields.map((field) => freeze({
       name: field.name, label: field.label, required: field.required ?? false,
       filled: form?.filled.has(field.name) ?? false,

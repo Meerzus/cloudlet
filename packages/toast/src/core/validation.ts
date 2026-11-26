@@ -17,6 +17,7 @@ const messageKeys = [
 ] as const;
 const fieldKeys = ['name', 'kind', 'label', 'placeholder', 'defaultValue', 'required', 'maxLength', 'autoComplete', 'inputMode'];
 const inputModes = ['text', 'email', 'numeric', 'decimal', 'tel', 'url', 'search'];
+const agentPermissions = ['allow', 'confirm', 'deny'] as const;
 const noIssues: readonly InputIssue[] = Object.freeze([]);
 const owns = Object.hasOwn;
 const at = (path: string, key: PropertyKey): string => path ? `${path}.${String(key)}` : String(key);
@@ -138,9 +139,11 @@ function formFields(value: unknown, issues: InputIssue[]): void {
 }
 
 function action(value: unknown, issues: InputIssue[]): void {
-  const data = record(value, 'action', ['kind', 'label', 'run', 'errorMessage', 'href', 'target', 'rel', 'fields', 'validate'], issues);
+  const data = record(value, 'action', ['kind', 'label', 'run', 'errorMessage', 'href', 'target', 'rel', 'fields', 'validate', 'agent'], issues);
   if (!data) return;
   fields(data, issues, 'action', [['label', 'nonempty string', true]]);
+  if (data.kind === 'link') forbidden(data, issues, 'action', ['agent'], 'a link action');
+  else if (data.kind === 'command' || data.kind === 'form') fields(data, issues, 'action', [['agent', agentPermissions]]);
   if (data.kind === 'form') {
     forbidden(data, issues, 'action', ['href', 'target', 'rel'], 'a form action');
     fields(data, issues, 'action', [['run', 'function', true], ['errorMessage', 'function'], ['validate', 'function']]);
@@ -282,11 +285,11 @@ const copiedActions = new WeakSet<PrimaryAction>();
 
 function copyAction(value: PrimaryAction): PrimaryAction {
   if (copiedActions.has(value)) return value;
-  const copy = value.kind === 'command' ? copyFields(value, ['kind', 'label', 'run'], ['errorMessage'])
+  const copy = value.kind === 'command' ? copyFields(value, ['kind', 'label', 'run'], ['errorMessage', 'agent'])
     : value.kind === 'link' ? copyFields(value, ['kind', 'label', 'href'], ['target', 'rel'])
     : copyFields({ ...value, fields: Object.freeze(value.fields.map((field) => copyFields(field, ['name', 'kind', 'label'],
       ['placeholder', 'defaultValue', 'required', 'maxLength', 'autoComplete', 'inputMode']))) },
-    ['kind', 'fields', 'label', 'run'], ['errorMessage', 'validate']);
+    ['kind', 'fields', 'label', 'run'], ['errorMessage', 'validate', 'agent']);
   copiedActions.add(copy);
   return copy;
 }
