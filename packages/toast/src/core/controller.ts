@@ -91,8 +91,9 @@ export const reject = <Reason extends string>(reason: Reason) => ({ status: 'rej
 type Rejected<Reason extends string> = { status: 'rejected'; reason: Reason };
 
 /**
- * Controller state and transactions the renderer bridge needs (core/bridge.ts). The bridge travels
- * in the lazily loaded renderer chunk, so the start bundle carries only this accessor object.
+ * Controller state and transactions the renderer bridge (core/bridge.ts) and the shared action
+ * functions (core/actions.ts) need. Both travel outside the start bundle, which carries only this
+ * accessor object.
  */
 export interface ControllerKernel<Slot> {
   readonly options: ReturnType<typeof validateOptions>;

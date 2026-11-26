@@ -1,16 +1,17 @@
 import type { Diagnostic } from '../contracts/events.js';
-import type { ActionAttemptToken, NotificationHandle, OperationAttemptToken } from '../contracts/identity.js';
+import type { NotificationHandle, OperationAttemptToken } from '../contracts/identity.js';
 import type {
-  AnnouncementAcknowledgement, BridgeRejection, BridgeResult, FocusRequestToken, FormErrors, HostLease, HostOptions, PauseChange,
+  AnnouncementAcknowledgement, BridgeRejection, BridgeResult, FocusRequestToken, HostLease, HostOptions, PauseChange,
   PresentationToken, RendererBridge,
 } from '../contracts/internal.js';
 import type { CancellationSignal } from '../contracts/operations.js';
 import type { CloudletController } from '../contracts/controller.js';
 import type { IslandReason, PauseReason } from '../contracts/snapshots.js';
 import {
-  APPLIED, ATTENTION_DELAY, NO_FORM_ERRORS, RENDERER_SERVER, UNCHANGED, getControllerKernel, reject,
-  type ControllerKernel, type FormState, type OperationBinding, type RecordState,
+  APPLIED, ATTENTION_DELAY, RENDERER_SERVER, UNCHANGED, getControllerKernel, reject,
+  type ControllerKernel, type OperationBinding, type RecordState,
 } from './controller.js';
+import { invokeAction, setFormValue } from './actions.js';
 import { validDelay } from './validation.js';
 
 // The renderer's side of a controller. It is imported only by react/renderer.tsx, so it travels
@@ -53,37 +54,6 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
       const error = leaseError(value);
       return error ? reject(error) : action(...args);
     };
-  }
-  /** `required` and `maxLength` first, then the form's own `validate`; null lets the submit run. */
-  function checkForm(form: FormState, handle: NotificationHandle): FormErrors | null {
-    const messages = k.options.messages;
-    // Own keys only, read and written: a field named `constructor` must not meet `Object.prototype`,
-    // and one named `__proto__` must keep its message (an assignment would set the prototype).
-    const entries: [string, string][] = [];
-    for (const field of form.action.fields) {
-      const value = Object.hasOwn(form.values, field.name) ? form.values[field.name]! : '';
-      if (field.required && !value.trim()) entries.push([field.name, messages?.fieldRequired ?? 'This field is required']);
-      else if (field.maxLength !== undefined && value.length > field.maxLength) entries.push([field.name, messages?.fieldTooLong ?? 'This text is too long']);
-    }
-    if (entries.length) return freeze({ form: null, fields: freeze(Object.fromEntries(entries)) });
-    if (!form.action.validate) return null;
-    let result: unknown;
-    try {
-      result = form.action.validate(form.values);
-    } catch (error) {
-      k.failure('callback-error', 'action.validate', error, handle);
-      return freeze({ form: messages?.actionError ?? 'Action failed', fields: freeze({}) });
-    }
-    if (result === true) return null;
-    if (typeof result === 'string' && result.trim()) return freeze({ form: result, fields: freeze({}) });
-    const names = form.action.fields.map((field) => field.name);
-    if (result !== null && typeof result === 'object' && Object.getPrototypeOf(result) === Object.prototype &&
-        Object.entries(result).every(([name, message]) => names.includes(name) && typeof message === 'string' && message.trim())) {
-      return Object.keys(result).length ? freeze({ form: null, fields: freeze({ ...result as Record<string, string> }) }) : null;
-    }
-    k.diagnostic({ code: 'callback-error', source: 'action.validate', handle,
-      message: 'validate must return true, a message, or messages keyed by field name' });
-    return freeze({ form: messages?.actionError ?? 'Action failed', fields: freeze({}) });
   }
   const bridge = freeze<RendererBridge<Slot>>({
     renderError: k.options.messages?.renderError ?? 'Content unavailable',
@@ -218,71 +188,8 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
     }),
     // The button lives only in the open Island.
     clearAll: withLease(() => k.island ? k.clear('clear-button') : reject('island-closed')),
-    invokeAction: withLease(k.withRecord((record) => {
-      const handle = record.handle;
-      const action = record.content.action;
-      if (!action || action.kind === 'link') return reject('no-command');
-      if (record.action.status === 'pending') return reject('already-pending');
-      const form = k.formOf(record);
-      if (form) {
-        const errors = checkForm(form, handle);
-        if (errors) {
-          k.mutate(() => { form.errors = errors; });
-          return { status: 'invalid' as const, errors };
-        }
-      }
-      const actionToken = k.token() as ActionAttemptToken;
-      const live = () => !k.disposed && k.records.get(handle.id) === record &&
-        record.action.status === 'pending' && record.action.token === actionToken;
-      const now = k.settle();
-      record.action = freeze({ status: 'pending', token: actionToken });
-      if (form) form.errors = NO_FORM_ERRORS;
-      k.commit([{ type: 'action-started', handle, token: actionToken }], now);
-      function failed(reason: unknown): void {
-        if (!live()) return;
-        let message = k.options.messages?.actionError ?? 'Action failed';
-        if (action && action.kind !== 'link' && action.errorMessage) {
-          try {
-            const mapped = action.errorMessage(reason);
-            if (typeof mapped !== 'string' || !mapped.trim()) throw new TypeError('Invalid action error message');
-            message = mapped;
-          } catch (error) {
-            if (!k.disposed) k.failure('mapper-error', 'action.errorMessage', error, handle);
-          }
-        }
-        if (!live()) return;
-        const now = k.settle();
-        record.action = freeze({ status: 'failed', token: actionToken, message });
-        k.commit([{ type: 'action-failed', handle, token: actionToken, message }], now);
-      }
-      let result: Promise<unknown>;
-      try {
-        result = Promise.resolve(form ? form.action.run(freeze({ handle, token: actionToken, values: form.values }))
-          : action.kind === 'command' ? action.run(freeze({ handle, token: actionToken })) : undefined);
-      }
-      catch (error) { result = Promise.reject(error); }
-      void result.then(() => {
-        if (live()) k.dismiss(handle, 'action-success');
-      }, failed).catch((error: unknown) => {
-        if (!k.disposed) k.failure('callback-error', 'action-settlement', error, handle);
-      });
-      return { status: 'started' as const };
-    })),
-    setFormValue: withLease(k.withRecord((record, name: string, value: string) => {
-      const form = k.formOf(record);
-      if (!form) return reject('no-form');
-      if (typeof value !== 'string' || !form.action.fields.some((field) => field.name === name)) return reject('invalid-input');
-      if (record.action.status === 'pending') return reject('already-pending');
-      if (Object.hasOwn(form.values, name) && form.values[name] === value) return UNCHANGED;
-      return k.mutate(() => {
-        form.values = freeze({ ...form.values, [name]: value });
-        // Editing a field clears its own message; the rest wait for the next submit.
-        if (Object.hasOwn(form.errors.fields, name)) {
-          const { [name]: _, ...fields } = form.errors.fields;
-          form.errors = freeze({ form: form.errors.form, fields: freeze(fields) });
-        }
-      });
-    })),
+    invokeAction: withLease(k.withRecord((record) => invokeAction(k, record))),
+    setFormValue: withLease(k.withRecord((record, name: string, value: string) => setFormValue(k, record, name, value))),
     retryOperation: withLease(withOperation((operation) => {
       const result = operation.retry();
       return result.status === 'started' ? { status: 'started' as const, token: result.attempt.token } : result;

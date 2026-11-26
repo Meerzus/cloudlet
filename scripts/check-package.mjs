@@ -209,7 +209,8 @@ async function checkArchive(directory, { packageDir, packageRoot, manifest, pack
 }
 
 /** Relative static and dynamic imports of `entry`, followed through the packed files. */
-async function moduleGraph(packageRoot, entry) {
+/** Modules reachable from `entry`; `{ staticOnly: true }` leaves out what `import()` loads later. */
+async function moduleGraph(packageRoot, entry, { staticOnly = false } = {}) {
   const seen = new Set();
   const queue = [entry];
   while (queue.length > 0) {
@@ -219,7 +220,8 @@ async function moduleGraph(packageRoot, entry) {
     const code = await readFile(join(packageRoot, path), 'utf8');
     // Every `import(` must name a literal, or the walk could miss a module.
     assert.doesNotMatch(code, /\bimport\s*\(\s*(?!["'])/u, `Dynamic import with a computed specifier in ${path}`);
-    for (const [, specifier] of code.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/gu)) {
+    for (const [, dynamic, specifier] of code.matchAll(/(?:\bfrom\s*|\bimport\s*(\()?\s*)["']([^"']+)["']/gu)) {
+      if (staticOnly && dynamic) continue;
       if (specifier.startsWith('.')) queue.push(posix.join(posix.dirname(path), specifier));
     }
   }
@@ -259,6 +261,11 @@ async function checkToast(directory, archive) {
   const rootGraph = await moduleGraph(packageRoot, 'dist/index.js');
   assert.ok(rootGraph.has('dist/react.js') && rootGraph.has('dist/react/renderer.js'), 'The graph walk must follow static and dynamic imports');
   for (const module of AGENT_MODULES) assert.ok(!rootGraph.has(module), `The root entry reaches ${module}`);
+  // Running actions and editing forms load with the renderer, never with the root itself.
+  const rootStart = await moduleGraph(packageRoot, 'dist/index.js', { staticOnly: true });
+  assert.ok(rootStart.has('dist/core/controller.js') && !rootStart.has('dist/react/renderer.js'), 'The static walk must stop at dynamic imports');
+  assert.ok(rootGraph.has('dist/core/actions.js'), 'The renderer must reach the shared action functions');
+  assert.ok(!rootStart.has('dist/core/actions.js'), 'The root entry statically reaches dist/core/actions.js');
   const agentGraph = await moduleGraph(packageRoot, 'dist/agent.js');
   assert.ok(AGENT_MODULES.every((module) => agentGraph.has(module)), 'The agent entry must reach its read port');
   for (const path of files.filter((path) => path.startsWith('dist/'))) {
