@@ -214,8 +214,9 @@ export type AgentSummonOutcome = boolean | { readonly reached: boolean; readonly
  * they changed. A component's adapter builds this object; the agent never reaches into the
  * component itself.
  *
- * A component that takes steps adds `check` and `run` together, and `summon` if any of its steps
- * can need a person. A read-only component leaves all three out.
+ * A component that takes steps adds `check` and `run` together. `summon` is optional on top of them:
+ * a component whose steps can need a person adds it to bring such a step in front of them, and
+ * without it the agent is told the step is not on screen. A read-only component leaves all three out.
  *
  * @experimental The protocol may change in any 0.x release.
  */
