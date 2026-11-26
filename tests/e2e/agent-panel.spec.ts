@@ -5,7 +5,17 @@ import type { Page } from '@playwright/test';
 
 type Entry = { ref: string; component: string; actions: string[]; [key: string]: unknown };
 type ToasterEntry = Entry & { island: { open: boolean; current: string | null }; count: number; overflow: { count: number; pending: boolean }; mounted: boolean };
-type FieldEntry = { name: string; label: string; required: boolean; filled: boolean; error: string | null };
+type FieldEntry = {
+  name: string;
+  label: string;
+  kind: string;
+  required: boolean;
+  maxLength: number | null;
+  inputMode: string | null;
+  filled: boolean;
+  filledBy: 'app' | 'user' | 'agent' | null;
+  error: string | null;
+};
 type NotificationEntry = Entry & { label: string; action: { kind: string; fields?: FieldEntry[] } | null; draft: boolean };
 
 const button = (page: Page, name: string) => page.getByRole('button', { name, exact: true });
