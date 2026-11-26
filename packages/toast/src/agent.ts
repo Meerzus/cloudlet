@@ -21,7 +21,86 @@ export type AgentEntryShape = {
 };
 
 /**
- * What a component hands to the bridge's `connect`.
+ * A cancellation signal as the bridge hands it out; an `AbortSignal` at runtime.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export interface AgentSignalShape {
+  readonly aborted: boolean;
+  readonly reason: unknown;
+  readonly throwIfAborted: () => void;
+  readonly addEventListener: (type: 'abort', listener: () => void, options?: { readonly once?: boolean }) => void;
+  readonly removeEventListener: (type: 'abort', listener: () => void) => void;
+}
+
+/**
+ * A value a step may return to the agent.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export type AgentValueShape = string | number | boolean | null | readonly AgentValueShape[] | { readonly [key: string]: AgentValueShape };
+
+/**
+ * What a step may do: on its own, with approval, or never.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export type AgentPermissionShape = 'allow' | 'confirm' | 'deny';
+
+/**
+ * A step as the bridge hands it to a component.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export interface AgentStepCallShape {
+  readonly ref: string;
+  readonly action: string;
+  readonly args: readonly unknown[];
+}
+
+/**
+ * How a person names what a step acts on, for the bridge's messages.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export interface AgentStepNamesShape {
+  readonly target: string;
+  readonly within?: string;
+}
+
+/**
+ * A component's answer to the bridge's `check`.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export type AgentStepCheckShape =
+  | { readonly available: true; readonly permission: AgentPermissionShape; readonly names?: AgentStepNamesShape }
+  | { readonly available: false; readonly message?: string };
+
+/**
+ * What the bridge's `run` receives besides the step.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export interface AgentRunContextShape {
+  readonly signal: AgentSignalShape;
+  readonly approved: 'allow' | 'confirm';
+}
+
+/**
+ * A component's answer to the bridge's `run`.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export type AgentRunOutcomeShape =
+  | { readonly status: 'done'; readonly result?: AgentValueShape; readonly gone?: boolean }
+  | { readonly status: 'failed'; readonly message: string }
+  | { readonly status: 'unavailable'; readonly message?: string }
+  | { readonly status: 'stale' };
+
+/**
+ * What a component hands to the bridge's `connect`. `check` and `run` come together, `summon` is
+ * optional, and a read-only component leaves all three out.
  *
  * @experimental The protocol may change before the bridge reaches 1.0.
  */
@@ -30,6 +109,9 @@ export interface AgentComponentShape<Entry extends AgentEntryShape = AgentEntryS
   readonly name: string;
   snapshot(): readonly Entry[];
   subscribe(listener: () => void): () => void;
+  readonly check?: (step: AgentStepCallShape) => AgentStepCheckShape;
+  readonly run?: (step: AgentStepCallShape, context: AgentRunContextShape) => AgentRunOutcomeShape | PromiseLike<AgentRunOutcomeShape>;
+  readonly summon?: (step: AgentStepCallShape) => boolean;
 }
 
 /**

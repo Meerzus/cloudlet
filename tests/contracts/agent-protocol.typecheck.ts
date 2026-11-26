@@ -1,11 +1,34 @@
 /**
  * Compile-only: the Toaster adapter and the agent bridge declare the same protocol on their own,
- * because @cloudlet/toast may not import @cloudlet/agent. These assignments fail the typecheck
- * as soon as the two copies drift apart.
+ * because @cloudlet/toast may not import @cloudlet/agent. These checks fail the typecheck as soon
+ * as the two copies drift apart.
  */
-import { createAgent, type AgentComponent, type AgentEntry } from '@cloudlet/agent';
+import {
+  createAgent, type ActResult, type AgentComponent, type AgentEntry, type AgentPermission, type AgentRunContext,
+  type AgentRunOutcome, type AgentSignal, type AgentStepCall, type AgentStepCheck, type AgentStepNames, type AgentValue,
+} from '@cloudlet/agent';
 import { createCloudlet } from '../../packages/toast/src/index.js';
-import { toasterAgent, type AgentComponentShape, type AgentEntryShape, type ToasterAgent } from '../../packages/toast/src/agent.js';
+import {
+  toasterAgent, type AgentComponentShape, type AgentEntryShape, type AgentPermissionShape, type AgentRunContextShape,
+  type AgentRunOutcomeShape, type AgentSignalShape, type AgentStepCallShape, type AgentStepCheckShape,
+  type AgentStepNamesShape, type AgentValueShape, type ToasterAgent,
+} from '../../packages/toast/src/agent.js';
+
+/** True only when A and B are the same type, including readonly and optional modifiers. */
+type Same<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+const same = <A, B>(proof: Same<A, B>): void => { void proof; };
+
+// Every protocol type, one by one: assignability alone would let a narrower copy slip through.
+same<AgentEntry, AgentEntryShape>(true);
+same<AgentSignal, AgentSignalShape>(true);
+same<AgentValue, AgentValueShape>(true);
+same<AgentPermission, AgentPermissionShape>(true);
+same<AgentStepCall, AgentStepCallShape>(true);
+same<AgentStepNames, AgentStepNamesShape>(true);
+same<AgentStepCheck, AgentStepCheckShape>(true);
+same<AgentRunContext, AgentRunContextShape>(true);
+same<AgentRunOutcome, AgentRunOutcomeShape>(true);
+same<AgentComponent, AgentComponentShape>(true);
 
 export function verifyAgentProtocol(bridgeComponent: AgentComponent, bridgeEntry: AgentEntry, toasterEntry: AgentEntryShape) {
   const agent = createAgent();
@@ -18,4 +41,17 @@ export function verifyAgentProtocol(bridgeComponent: AgentComponent, bridgeEntry
   const entry: AgentEntryShape = bridgeEntry;
   const entryBack: AgentEntry = toasterEntry;
   void [disconnect, forward, backward, entry, entryBack];
+}
+
+export async function verifyAct(): Promise<string | undefined> {
+  // The platform's AbortSignal is what act takes.
+  const controller = new AbortController();
+  const agent = createAgent({
+    timeout: 1_000,
+    allow: async (step, { signal }) => !step.needsPerson && !signal.aborted,
+  });
+  const result: ActResult = await agent.act({ steps: [{ ref: 'toaster', action: 'clear' }] }, { signal: controller.signal });
+  // @ts-expect-error A step names its record by ref.
+  void agent.act({ steps: [{ action: 'clear' }] });
+  return result.ok ? result.steps[0]?.ref : result.error.message;
 }

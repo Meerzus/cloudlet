@@ -1,4 +1,4 @@
-import { createAgent, type Agent, type AgentComponent, type AgentEntry } from '@cloudlet/agent';
+import { createAgent, type ActResult, type Agent, type AgentComponent, type AgentEntry, type Allow } from '@cloudlet/agent';
 
 // Compile the bridge against its packed declarations alone: no DOM, no Node, no React.
 const agent: Agent = createAgent();
@@ -23,5 +23,24 @@ void future;
 // @ts-expect-error The snapshot is read-only.
 agent.snapshot().push(entry);
 
-// @ts-expect-error The bridge exposes no mutating verbs yet.
+// A component that takes steps adds check and run, and summon when a step can need a person.
+const stepper: AgentComponent = {
+  ...component,
+  name: 'stepper',
+  check: (step) => (step.action === 'open' ? { available: true, permission: 'confirm', names: { target: 'Open' } } : { available: false }),
+  run: async (_step, { signal, approved }) => (signal.aborted ? { status: 'stale' } : { status: 'done', result: approved, gone: false }),
+  summon: () => false,
+};
+const allow: Allow = async (step, { signal }) => !step.needsPerson && !signal.aborted;
+const acting: Agent = createAgent({ allow, timeout: 60_000 });
+acting.connect(stepper);
+export async function act(): Promise<string> {
+  const result: ActResult = await acting.act({ steps: [{ ref: 'demo', action: 'open', args: [] }] });
+  return result.ok ? String(result.steps[0]?.result) : result.error.message;
+}
+
+// @ts-expect-error A step without a ref does not compile.
+void acting.act({ steps: [{ action: 'open' }] });
+
+// @ts-expect-error act is the only verb: the bridge has no run of its own.
 agent.run;

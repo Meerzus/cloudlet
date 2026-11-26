@@ -2,7 +2,7 @@
 
 ## 0.1.0 — unreleased
 
-Experimental first version: the agent reads.
+Experimental first version: the agent reads and acts under the app's permission.
 
 ### Features
 
@@ -14,4 +14,18 @@ Experimental first version: the agent reads.
   frozen array that stays the same until something changes.
 - `agent.subscribe(listener)` calls the listener on any change, connection or disconnection. One
   listener's error does not stop the others.
-- Types: `Agent`, `AgentComponent`, `AgentEntry`.
+- `createAgent({ allow?, timeout? })`: `allow(step, { signal })` is asked before every step a
+  component did not deny and approves only with `true`; `timeout` (default 300 000 ms) bounds the
+  wait for `allow` and then for the component. Anything else throws a `TypeError`.
+- `agent.act({ steps }, { signal }?)` runs `{ ref, action, args? }` steps in order. The whole call
+  is checked first; calls of one agent run one at a time; the first error stops the call and the
+  steps before it stay done. A `confirm` step runs only when `allow` returns `true`; otherwise the
+  component brings it in front of a person and the agent is told to ask them. A `deny` step never
+  runs. Cancelling through `signal` stops the wait. The promise never rejects and resolves to a
+  frozen `{ ok, error?: { step, message }, steps: [{ step, ref, result?, gone? }] }`.
+- The component protocol gains optional `check`, `run` and `summon`; a component without them stays
+  read-only. `protocol` stays `1`.
+- Types: `Agent`, `AgentComponent`, `AgentEntry`, `AgentOptions`, `Allow`, `AllowStep`, `AgentStep`,
+  `ActInput`, `ActOptions`, `ActResult`, `ActStepResult`, `AgentPermission`, `AgentStepCall`,
+  `AgentStepCheck`, `AgentStepNames`, `AgentRunContext`, `AgentRunOutcome`, `AgentSignal`,
+  `AgentValue`.

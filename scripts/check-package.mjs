@@ -435,6 +435,9 @@ async function checkAgent(directory, archive) {
     notify();
     assert.equal(calls, 2, 'A component change reaches subscribers');
     assert.equal(agent.snapshot()[0].state, 2);
+    const refused = await agent.act({ steps: [{ ref: 'fake', action: 'poke' }] });
+    assert.equal(refused.ok, false, 'A read-only component takes no steps');
+    assert.match(refused.error.message, /takes no steps/);
     assert.throws(() => agent.connect(component), TypeError, 'A name connects once');
     disconnect();
     assert.equal(notify, undefined, 'disconnect unsubscribes from the component');
@@ -451,7 +454,7 @@ async function checkAgent(directory, archive) {
   `;
   run(directory, 'commonjs', commonJsProbe);
   await typecheckConsumer(directory, 'agent-contracts.ts', ['ES2022']);
-  console.log(`${manifest.name}: ${common.files.length} packed files, ESM export, no dependencies or peers, navigable declaration maps, cold no-DOM import, CommonJS require() through the default condition, connect/snapshot/subscribe without DOM or timers, ${common.rejectedDeepImports} rejected deep imports, strict tarball consumer typecheck without DOM.`);
+  console.log(`${manifest.name}: ${common.files.length} packed files, ESM export, no dependencies or peers, navigable declaration maps, cold no-DOM import, CommonJS require() through the default condition, connect/snapshot/subscribe/act without DOM or timers, ${common.rejectedDeepImports} rejected deep imports, strict tarball consumer typecheck without DOM.`);
 }
 
 /** Both archives in one node_modules: the bridge reads a Toaster controller, typed from the archives. */
