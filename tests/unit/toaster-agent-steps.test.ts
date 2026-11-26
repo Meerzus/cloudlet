@@ -254,10 +254,10 @@ describe('press and the agent marker', () => {
     const action = command('Undo');
     admit(t.controller, quiet('file', { title: 'File deleted', action }));
     expect(error(await t.act(t.entry('File deleted').ref, 'press')))
-      .toBe('Needs a person: "Undo" on "File deleted". It is not on screen, so tell them what it does.');
+      .toBe('Needs a person: "Undo" on "File deleted". No Toaster is on screen, so tell them what it does.');
     attach(t.bridge);
     expect(error(await t.act(t.entry('File deleted').ref, 'press')))
-      .toBe('Needs a person: "Undo" on "File deleted". It is on screen in front of them now. Ask them to press "Undo" themselves.');
+      .toBe('Needs a person: "Undo" on "File deleted". The Island is open on it. Ask them to press "Undo" themselves.');
     await Promise.resolve();
     expect(action.run).not.toHaveBeenCalled();
     expect(t.controller.getSnapshot().notifications).toHaveLength(1);

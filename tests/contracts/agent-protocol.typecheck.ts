@@ -5,13 +5,14 @@
  */
 import {
   createAgent, type ActResult, type AgentComponent, type AgentEntry, type AgentPermission, type AgentRunContext,
-  type AgentRunOutcome, type AgentSignal, type AgentStepCall, type AgentStepCheck, type AgentStepNames, type AgentValue,
+  type AgentRunOutcome, type AgentSignal, type AgentStepCall, type AgentStepCheck, type AgentStepNames, type AgentSummonOutcome,
+  type AgentValue,
 } from '@cloudlet/agent';
 import { createCloudlet } from '../../packages/toast/src/index.js';
 import {
   toasterAgent, type AgentComponentShape, type AgentEntryShape, type AgentPermissionShape, type AgentRunContextShape,
   type AgentRunOutcomeShape, type AgentSignalShape, type AgentStepCallShape, type AgentStepCheckShape,
-  type AgentStepNamesShape, type AgentValueShape, type ToasterAgent,
+  type AgentStepNamesShape, type AgentSummonOutcomeShape, type AgentValueShape, type ToasterAgent,
 } from '../../packages/toast/src/agent.js';
 
 /** True only when A and B are the same type, including readonly and optional modifiers. */
@@ -28,6 +29,7 @@ same<AgentStepNames, AgentStepNamesShape>(true);
 same<AgentStepCheck, AgentStepCheckShape>(true);
 same<AgentRunContext, AgentRunContextShape>(true);
 same<AgentRunOutcome, AgentRunOutcomeShape>(true);
+same<AgentSummonOutcome, AgentSummonOutcomeShape>(true);
 same<AgentComponent, AgentComponentShape>(true);
 
 export function verifyAgentProtocol(bridgeComponent: AgentComponent, bridgeEntry: AgentEntry, toasterEntry: AgentEntryShape) {

@@ -99,6 +99,13 @@ export type AgentRunOutcomeShape =
   | { readonly status: 'stale' };
 
 /**
+ * A component's answer to the bridge's `summon`.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export type AgentSummonOutcomeShape = boolean | { readonly reached: boolean; readonly note: string };
+
+/**
  * What a component hands to the bridge's `connect`. `check` and `run` come together, `summon` is
  * optional, and a read-only component leaves all three out.
  *
@@ -111,7 +118,7 @@ export interface AgentComponentShape<Entry extends AgentEntryShape = AgentEntryS
   subscribe(listener: () => void): () => void;
   readonly check?: (step: AgentStepCallShape) => AgentStepCheckShape;
   readonly run?: (step: AgentStepCallShape, context: AgentRunContextShape) => AgentRunOutcomeShape | PromiseLike<AgentRunOutcomeShape>;
-  readonly summon?: (step: AgentStepCallShape) => boolean;
+  readonly summon?: (step: AgentStepCallShape) => AgentSummonOutcomeShape;
 }
 
 /**
@@ -229,8 +236,11 @@ export interface ToasterAgent extends AgentComponentShape<ToasterAgentEntry> {
   readonly check: (step: AgentStepCallShape) => AgentStepCheckShape;
   /** Reads the controller again and runs the step, unless it changed since it was approved. */
   readonly run: (step: AgentStepCallShape, context: AgentRunContextShape) => AgentRunOutcomeShape | PromiseLike<AgentRunOutcomeShape>;
-  /** Whether the step's record is in front of a person: a `Toaster` is mounted. */
-  readonly summon: (step: AgentStepCallShape) => boolean;
+  /**
+   * Opens the Island on the step's notification for a person, at once or once they stop using the
+   * Toaster, without moving focus, and says which in `note`.
+   */
+  readonly summon: (step: AgentStepCallShape) => AgentSummonOutcomeShape;
 }
 
 /** @experimental The protocol may change before the bridge reaches 1.0. */
@@ -262,6 +272,10 @@ const texts = {
   notCancellable: "This operation can't be cancelled.",
   stillRunning: "This operation is still running, so it can't be retried yet.",
   notRetryable: "This operation can't be retried.",
+  busy: 'The person is using the Island. Try again later.',
+  islandOpen: 'The Island is open on it.',
+  islandLater: 'The Island will open on it once they stop using it.',
+  noToaster: 'No Toaster is on screen, so tell them what it does.',
 };
 
 /** A step as the adapter sees it right now: refused, or allowed under a class with a way to run it. */
@@ -293,7 +307,10 @@ const outcome = (result: PortResult, done: AgentRunOutcomeShape, words: Readonly
  * Steps: `open`, `close`, `clear` and `acknowledge` on the Toaster record; `show`, `dismiss`,
  * `press`, `cancel` and `retry` on a notification. `open` and `show` need a mounted `Toaster`.
  * `press` follows the action's `agent` marker; every other step is allowed unless the bridge's
- * `allow` says no.
+ * `allow` says no. A press that needs a person opens the Island on its notification for them: at
+ * once, or after the attention delay once they stop using the Toaster. While they use it (hover,
+ * focus, a gesture, a draft in the open Island), `open` and `show` are refused, and so is `close`
+ * over a draft.
  *
  * @throws TypeError for a controller that this copy of `@cloudlet/toast` did not create.
  * @experimental The protocol may change before the bridge reaches 1.0.
@@ -361,9 +378,12 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
       if (step.args.length) return refuse(texts.noArguments(step));
       if (action === 'open' && !mounted) return refuse(texts.noScreen(action));
       if (!current[0]!.actions.includes(action)) return NOT_AVAILABLE;
+      // A busy person is not interrupted; only a draft stops `close`, which a person's Escape would collapse.
+      if (action === 'open' && source!.busy) return refuse(texts.busy);
+      if (action === 'close' && holdsDraft()) return refuse(texts.busy);
       switch (action) {
-        case 'open': return allowed(() => outcome(port.open(), DONE, { 'no-host': texts.noScreen(action) }));
-        case 'close': return allowed(() => outcome(port.close(), DONE));
+        case 'open': return allowed(() => outcome(port.open(), DONE, { 'no-host': texts.noScreen(action), busy: texts.busy }));
+        case 'close': return allowed(() => outcome(port.close(), DONE, { busy: texts.busy }));
         case 'clear': return allowed(() => outcome(port.clear(), DONE));
         default: return allowed(() => outcome(port.acknowledge(), DONE));
       }
@@ -397,8 +417,9 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
       }
     }
     if (!entry.actions.includes(action)) return NOT_AVAILABLE;
+    if (action === 'show' && source!.busy) return refuse(texts.busy);
     switch (action) {
-      case 'show': return allowed(() => outcome(port.show(handle), DONE, { 'no-host': texts.noScreen(action) }));
+      case 'show': return allowed(() => outcome(port.show(handle), DONE, { 'no-host': texts.noScreen(action), busy: texts.busy }));
       case 'dismiss': return allowed(() => outcome(port.dismiss(handle), GONE));
       case 'cancel': return allowed(() => {
         const result = port.cancel(handle);
@@ -411,6 +432,13 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
         'already-pending': texts.stillRunning, 'not-retryable': texts.notRetryable,
       }));
     }
+  };
+
+  /** The open Island shows a notification whose form holds a draft. */
+  const holdsDraft = (): boolean => {
+    const state = source!.controller;
+    const current = state.island.current;
+    return current !== null && state.notifications.some((item) => item.handle === current && item.draft);
   };
 
   const pressPlan = (item: NotificationSnapshot<Slot>): Plan => {
@@ -450,10 +478,15 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     return verdict.perform(context);
   };
 
-  // Until the Island opens for a person, a summoned step is in front of them only if a Toaster is.
-  const summon = (step: AgentStepCallShape): boolean => {
+  // A step only a person may take: the Island opens on its notification for them, through the
+  // attention queue, so a person busy with the Toaster is not interrupted.
+  const summon = (step: AgentStepCallShape): AgentSummonOutcomeShape => {
     snapshot();
-    return (source?.mounted ?? false) && targets.has(step.ref);
+    const target = targets.get(step.ref);
+    if (!target) return false;
+    const result = port.summon(target.item.handle);
+    if (result.status === 'rejected') return result.reason === 'no-host' ? freeze({ reached: false, note: texts.noToaster }) : false;
+    return freeze({ reached: true, note: result.status === 'waiting' ? texts.islandLater : texts.islandOpen });
   };
 
   return freeze({ protocol: 1 as const, name, snapshot, subscribe: port.subscribe, check, run, summon });

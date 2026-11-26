@@ -197,6 +197,17 @@ export type AgentRunOutcome =
   | { readonly status: 'stale' };
 
 /**
+ * A component's answer to {@link AgentComponent.summon}. `true` or `false`: the step is or is not
+ * in front of the person now, and the bridge says so in its own words. An object lets the component
+ * say where the person finds it: `note` is one sentence that replaces the bridge's, and `reached`
+ * says whether the person sees the step now or will without anyone's help, in which case the agent
+ * is told to ask them to take it.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export type AgentSummonOutcome = boolean | { readonly reached: boolean; readonly note: string };
+
+/**
  * What a component hands to {@link Agent.connect}: its name, its records and a way to hear that
  * they changed. A component's adapter builds this object; the agent never reaches into the
  * component itself.
@@ -226,10 +237,10 @@ export interface AgentComponent {
    */
   readonly run?: (step: AgentStepCall, context: AgentRunContext) => AgentRunOutcome | PromiseLike<AgentRunOutcome>;
   /**
-   * Brings a `confirm` step that nobody approved in front of a person, without moving focus.
-   * Returns whether it is on screen for them now.
+   * Brings a `confirm` step that nobody approved in front of a person, without moving focus, and
+   * says where they find it.
    */
-  readonly summon?: (step: AgentStepCall) => boolean;
+  readonly summon?: (step: AgentStepCall) => AgentSummonOutcome;
 }
 
 /**

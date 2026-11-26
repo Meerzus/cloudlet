@@ -24,6 +24,14 @@
   the command and, when it fails, returns the message the person sees. `cancel` and `retry` return at
   once (`requested`, `started`). `open` and `show` need a mounted `Toaster` and are listed only while
   one is. No step moves focus or takes the host from a `Toaster`.
+- Experimental: when a `press` needs a person (no `allow`, or `allow` said no or did not answer),
+  `toasterAgent` opens the Island on that notification for them, for attention and without moving
+  focus, even if the notification asks for no auto-open. If the person is using the Toaster at that
+  moment (hover, focus, a gesture, or a draft in the open Island), the Island waits until they stop
+  and then opens after the attention delay, and the agent is told so; a notification closed in the
+  meantime is not shown. The app's own auto-open keeps working alongside. While the person uses the
+  Toaster, `open` and `show` answer "The person is using the Island. Try again later." and change
+  nothing; `close` does the same over a draft in the open Island.
 
 ### Fixes
 

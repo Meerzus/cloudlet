@@ -24,8 +24,9 @@ Experimental first version: the agent reads and acts under the app's permission.
   runs. Cancelling through `signal` stops the wait. The promise never rejects and resolves to a
   frozen `{ ok, error?: { step, message }, steps: [{ step, ref, result?, gone? }] }`.
 - The component protocol gains optional `check`, `run` and `summon`; a component without them stays
-  read-only. `protocol` stays `1`.
+  read-only. `protocol` stays `1`. `summon` answers `true` or `false` (in front of the person now or
+  not), or `{ reached, note }`, whose sentence the agent reads in place of the bridge's own.
 - Types: `Agent`, `AgentComponent`, `AgentEntry`, `AgentOptions`, `Allow`, `AllowStep`, `AgentStep`,
   `ActInput`, `ActOptions`, `ActResult`, `ActStepResult`, `AgentPermission`, `AgentStepCall`,
-  `AgentStepCheck`, `AgentStepNames`, `AgentRunContext`, `AgentRunOutcome`, `AgentSignal`,
-  `AgentValue`.
+  `AgentStepCheck`, `AgentStepNames`, `AgentRunContext`, `AgentRunOutcome`, `AgentSummonOutcome`,
+  `AgentSignal`, `AgentValue`.

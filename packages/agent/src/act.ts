@@ -141,11 +141,11 @@ const texts = {
     `Not allowed: the app does not let an agent ${names ? `${step.action} ${quote(names.target)}${names.within === undefined ? '' : ` on ${quote(names.within)}`}` : `run ${on(step)}`}. Look for no other way.`,
   saidNo: (step: AgentStepCall) => `The app said no to ${on(step)}.`,
   noAnswer: (step: AgentStepCall) => `The app did not answer about ${on(step)} in time, so it did not run.`,
-  needsPerson: (step: AgentStepCall, names: AgentStepNames | undefined, shown: boolean) => {
+  needsPerson: (step: AgentStepCall, names: AgentStepNames | undefined, reached: boolean, note: string | undefined) => {
     const what = names ? `${quote(names.target)}${names.within === undefined ? '' : ` on ${quote(names.within)}`}` : on(step);
-    return shown
-      ? `Needs a person: ${what}. It is on screen in front of them now. Ask them to ${step.action} ${names ? quote(names.target) : 'it'} themselves.`
-      : `Needs a person: ${what}. It is not on screen, so tell them what it does.`;
+    return reached
+      ? `Needs a person: ${what}. ${note ?? 'It is on screen in front of them now.'} Ask them to ${step.action} ${names ? quote(names.target) : 'it'} themselves.`
+      : `Needs a person: ${what}. ${note ?? 'It is not on screen, so tell them what it does.'}`;
   },
   cancelledBefore: (step: AgentStepCall) => `Cancelled before ${on(step)} ran.`,
   cancelledDuring: (step: AgentStepCall) => `Cancelled while ${on(step)} was running. It may still finish.`,
@@ -207,11 +207,19 @@ async function runStep(step: AgentStepCall, signal: AgentSignal | undefined, env
   }
   if (!approved) {
     if (!needsPerson) return timedOut ? texts.noAnswer(step) : texts.saidNo(step);
-    let shown = false;
+    let reached = false;
+    let note: string | undefined;
     if (summon) {
-      try { shown = summon(step) === true; } catch (error) { env.report(error); }
+      try {
+        const summoned: unknown = summon(step);
+        if (!isObject(summoned)) reached = summoned === true;
+        else if (typeof summoned.reached === 'boolean' && typeof summoned.note === 'string') {
+          reached = summoned.reached;
+          note = summoned.note;
+        } else env.report(new TypeError('summon() must return a boolean or { reached, note }'));
+      } catch (error) { env.report(error); }
     }
-    return texts.needsPerson(step, names, shown);
+    return texts.needsPerson(step, names, reached, note);
   }
 
   const outcome = await wait<AgentRunOutcome>((own) => run(step, freeze({ signal: own, approved: permission })), signal, env.timeout);

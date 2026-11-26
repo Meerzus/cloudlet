@@ -112,6 +112,17 @@ export interface ControllerKernel<Slot> {
   hostAutoDismiss: boolean | undefined;
   island: IslandState<Slot> | null;
   attention: AttentionCandidate<Slot> | null;
+  /** A person is on the Toaster: hover, focus, a gesture, or a draft in the open Island. */
+  readonly interacting: () => boolean;
+  /** The record's form holds values other than its defaults. */
+  readonly dirty: (record: RecordState<Slot>) => boolean;
+  /** Opens the Island on the record or moves the open one to it, as navigation does. */
+  readonly reach: (record: RecordState<Slot>) => void;
+  /**
+   * Brings the record in front of the person without moving focus: at once, or after the attention
+   * delay once they stop interacting. Callers check that a host is attached.
+   */
+  readonly summon: (record: RecordState<Slot>) => 'shown' | 'waiting' | 'unchanged';
   focusRequest: FocusRequest | null;
   focused: NotificationHandle | null;
   overflowAnnounced: number;
@@ -177,6 +188,11 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
   let attention: AttentionCandidate<Slot> | null = null;
   let cancelAttention: Unsubscribe | null = null;
   let attentionEpoch = 0;
+  // A record an agent asked the person to look at while they were busy. It is kept apart from the
+  // auto-open candidate, so neither replaces the other, and it goes first.
+  let summoned: AttentionCandidate<Slot> | null = null;
+  let cancelSummon: Unsubscribe | null = null;
+  let summonEpoch = 0;
   let overflow = 0;
   let overflowAnnounced = 0;
   let disposed = false;
@@ -369,6 +385,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
   function commit(deliveries: readonly Delivery[] = [], now = clock.now(), final = false): void {
     present();
     schedule(now);
+    armSummon(now);
     armAttention(now);
     ++revision;
     publish();
@@ -428,8 +445,9 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       const at = clock.now();
       if (at < candidate.due) { armAttention(at); return; }
       cancelAttention = null;
-      // Expiry during hover/focus/gesture waits; the next release restarts the delay.
-      if (interacting()) { candidate.waiting = true; return; }
+      // Expiry during hover/focus/gesture waits; the next release restarts the delay. An agent's
+      // pending request goes first: reaching its record restarts the delay as well.
+      if (interacting() || summoned) { candidate.waiting = true; return; }
       attention = null;
       const record = candidate.record;
       if (!wantsAttention(record) || island?.current === record) return;
@@ -437,6 +455,61 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
         if (island) island.current = record;
         else island = { reason: 'attention', current: record };
       });
+    });
+  }
+  const delay = () => hostDelay ?? options.attentionDelay ?? ATTENTION_DELAY;
+  /** Navigation: reaching the pending auto-open's record fulfils it, any other restarts its delay. */
+  function reach(record: RecordState<Slot>): void {
+    if (island) island.current = record;
+    else island = { reason: 'attention', current: record };
+    if (attention?.record === record) attention = null;
+    else if (attention) { attention.waiting = false; attention.due = clock.now() + delay(); }
+  }
+  function stopSummon(): void {
+    ++summonEpoch;
+    cancelSummon?.();
+    cancelSummon = null;
+  }
+  function summon(record: RecordState<Slot>): 'shown' | 'waiting' | 'unchanged' {
+    // The newest request wins, as among auto-open candidates.
+    const replaced = summoned !== null;
+    summoned = null;
+    stopSummon();
+    if (island?.current === record) {
+      // An auto-open held back for the replaced request may go ahead.
+      if (replaced) armAttention(clock.now());
+      return 'unchanged';
+    }
+    // A busy person is never interrupted: the request waits for the end of the interaction.
+    if (interacting()) {
+      summoned = { record, due: 0, waiting: true };
+      return 'waiting';
+    }
+    mutate(() => reach(record));
+    return 'shown';
+  }
+  /** The attention automaton's waiting rule, for an agent's request. */
+  function armSummon(now: number): void {
+    stopSummon();
+    const request = summoned;
+    if (!request) return;
+    // Without a host nobody can see the record any more: the request is dropped.
+    if (disposed || lease === null) { summoned = null; return; }
+    if (request.waiting) {
+      if (interacting()) return;
+      request.waiting = false;
+      request.due = now + delay();
+    }
+    const epoch = summonEpoch;
+    cancelSummon = clock.schedule(request.due, () => {
+      if (disposed || epoch !== summonEpoch || summoned !== request) return;
+      const at = clock.now();
+      if (at < request.due) { armSummon(at); return; }
+      cancelSummon = null;
+      if (interacting()) { request.waiting = true; return; }
+      summoned = null;
+      if (island?.current === request.record) armAttention(at);
+      else mutate(() => reach(request.record));
     });
   }
   const autoDismissing = (host: boolean | undefined) => (host ?? options.autoDismiss) !== false;
@@ -461,6 +534,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       if (next) island.current = next; else island = null;
     }
     if (attention?.record === record) attention = null;
+    if (summoned?.record === record) summoned = null;
     records.delete(record.handle.id);
     if (record.operation) deliveries.push(record.operation.detach());
     deliveries.push({ type: 'closed', handle: record.handle, reason });
@@ -861,6 +935,8 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
         island = null;
         attention = null;
         stopAttention();
+        summoned = null;
+        stopSummon();
         focusRequest = null;
         globalPauses.clear();
         overflow = overflowAnnounced = 0;
@@ -884,6 +960,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     get focusRequest() { return focusRequest; }, set focusRequest(value) { focusRequest = value; },
     get focused() { return focused; }, set focused(value) { focused = value; },
     get overflowAnnounced() { return overflowAnnounced; }, set overflowAnnounced(value) { overflowAnnounced = value; },
+    interacting, dirty, reach, summon,
     token, diagnostic, failure, mutate, commit, settle, assign, newest, formOf, handleError, withRecord,
     autoDismissing, setHostAutoDismiss, dismiss, acknowledgeOverflow, clear,
     reportRendererLoadError(error) {

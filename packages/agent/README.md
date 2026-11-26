@@ -96,8 +96,8 @@ is still running when the timeout elapses counts as done, with `result: 'pending
 
 A component's adapter takes steps through three optional methods of `AgentComponent`: `check`
 (is the step available, and what does it need), `run` (do it, checking again first) and `summon`
-(bring it in front of a person). A component without them stays read-only, and its steps are
-refused.
+(bring it in front of a person, and say where they find it). A component without them stays
+read-only, and its steps are refused.
 
 The Toaster's adapter will ship as `@cloudlet/toast/agent` together with this package.
 

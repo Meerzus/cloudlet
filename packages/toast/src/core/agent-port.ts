@@ -3,7 +3,7 @@ import type { FormErrors, RendererSnapshot } from '../contracts/internal.js';
 import type { CancellationSignal, CancelResult } from '../contracts/operations.js';
 import type { ControllerSnapshot } from '../contracts/snapshots.js';
 import { invokeAction } from './actions.js';
-import { ATTENTION_DELAY, UNCHANGED, getControllerKernel, reject, type ControllerKernel, type RecordState } from './controller.js';
+import { UNCHANGED, getControllerKernel, reject, type ControllerKernel, type RecordState } from './controller.js';
 
 // The agent adapter's way into a controller. Only the `agent` entry imports it, so the root entry
 // and the renderer chunk never carry it. It hands out no lease: a step that needs a screen only
@@ -24,6 +24,8 @@ export interface ToasterReading<Slot> {
   readonly controller: ControllerSnapshot<Slot>;
   /** A `Toaster` holds the controller's host lease. */
   readonly mounted: boolean;
+  /** A person is on the Toaster: hover, focus, a gesture, or a draft in the open Island. */
+  readonly busy: boolean;
   /** One entry per record with a form action. */
   readonly forms: ReadonlyMap<NotificationHandle, FormReading>;
 }
@@ -48,11 +50,17 @@ export interface ToasterPort<Slot> {
   /** The same object until the controller publishes again. */
   readonly read: () => ToasterReading<Slot>;
   readonly subscribe: (listener: () => void) => () => void;
-  /** Opens the Island on the top notification. */
-  readonly open: () => Changed | Rejection<'disposed' | 'no-host' | 'empty'>;
-  readonly close: () => Changed | Rejection<'disposed'>;
-  /** Opens the Island on the notification or moves the open one to it. */
-  readonly show: (handle: NotificationHandle) => Changed | Rejection<HandleReason | 'no-host'>;
+  /** Opens the Island on the top notification, unless a person is busy with the Toaster. */
+  readonly open: () => Changed | Rejection<'disposed' | 'no-host' | 'empty' | 'busy'>;
+  /** Collapses the Island, unless it holds a draft. */
+  readonly close: () => Changed | Rejection<'disposed' | 'busy'>;
+  /** Opens the Island on the notification or moves the open one to it, unless a person is busy. */
+  readonly show: (handle: NotificationHandle) => Changed | Rejection<HandleReason | 'no-host' | 'busy'>;
+  /**
+   * Brings the notification in front of the person for a step only they may take: opens the Island
+   * on it now, or once they stop interacting (`waiting`). Never moves focus.
+   */
+  readonly summon: (handle: NotificationHandle) => { readonly status: 'shown' | 'waiting' | 'unchanged' } | Rejection<HandleReason | 'no-host'>;
   readonly dismiss: (handle: NotificationHandle) => Changed | Rejection<HandleReason>;
   readonly clear: () => { readonly status: 'cleared'; readonly count: number } | Rejection<'disposed'>;
   readonly acknowledge: () => Changed | Rejection<'disposed'>;
@@ -73,6 +81,7 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
   let reading: ToasterReading<Slot> | undefined;
 
   const read = (): ToasterReading<Slot> => {
+    // Every change of the lease or of what `interacting` reads publishes a new renderer snapshot.
     const next = k.rendererSnapshot;
     const lease = k.lease !== null;
     if (reading && next === source && lease === mounted) return reading;
@@ -83,7 +92,7 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
       const filled = new Set(Object.keys(form.values).filter((name) => form.values[name]!.trim() !== ''));
       forms.set(form.handle, freeze({ filled, errors: form.errors }));
     }
-    reading = freeze({ controller: next, mounted, forms });
+    reading = freeze({ controller: next, mounted, busy: k.interacting(), forms });
     return reading;
   };
 
@@ -98,10 +107,25 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
       const record = k.newest();
       if (!record) return reject('empty');
       if (k.island) return UNCHANGED;
+      if (k.interacting()) return reject('busy');
       return k.mutate(() => { k.island = { reason: 'attention', current: record }; });
     },
-    close: () => k.disposed ? reject('disposed') : k.island ? k.mutate(() => { k.island = null; }) : UNCHANGED,
-    show: withRecord((record) => k.lease === null ? reject('no-host') : show(k, record)),
+    close() {
+      if (k.disposed) return reject('disposed');
+      if (!k.island) return UNCHANGED;
+      // A person's Escape collapses an Island with a draft; an agent is not that person.
+      if (k.dirty(k.island.current)) return reject('busy');
+      return k.mutate(() => { k.island = null; });
+    },
+    show: withRecord((record) => {
+      if (k.lease === null) return reject('no-host');
+      if (k.island?.current === record) return UNCHANGED;
+      if (k.interacting()) return reject('busy');
+      // Showing is navigation, as in the renderer: reaching the pending auto-open's record fulfils
+      // it, and any other pending auto-open restarts its delay.
+      return k.mutate(() => k.reach(record));
+    }),
+    summon: withRecord((record) => k.lease === null ? reject('no-host') : freeze({ status: k.summon(record) })),
     dismiss: (handle) => k.dismiss(handle, 'programmatic'),
     clear: () => k.clear('clear'),
     acknowledge: () => k.acknowledgeOverflow(),
@@ -113,18 +137,6 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
       return result.status === 'started' ? freeze({ status: 'started' as const }) : reject(result.reason);
     }),
     press: withRecord((record, grant: StepGrant, signal: CancellationSignal) => press(k, record, grant, signal)),
-  });
-}
-
-function show<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>) {
-  if (k.island?.current === record) return UNCHANGED;
-  return k.mutate(() => {
-    if (k.island) k.island.current = record;
-    else k.island = { reason: 'attention', current: record };
-    // Showing is navigation, as in the renderer: reaching the pending auto-open's record fulfils
-    // it, and any other pending auto-open restarts its delay.
-    if (k.attention?.record === record) k.attention = null;
-    else if (k.attention) { k.attention.waiting = false; k.attention.due = k.clock.now() + (k.hostDelay ?? k.options.attentionDelay ?? ATTENTION_DELAY); }
   });
 }
 

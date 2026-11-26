@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createAgent, type ActResult, type AgentComponent, type AgentEntry, type AgentRunContext, type AgentRunOutcome,
-  type AgentStepCall, type AgentStepCheck, type Allow,
+  type AgentStepCall, type AgentStepCheck, type AgentSummonOutcome, type Allow,
 } from '@cloudlet/agent';
 
 type Check = (step: AgentStepCall) => AgentStepCheck;
@@ -11,7 +11,7 @@ interface Spec {
   readonly entries?: AgentEntry[];
   readonly check?: Check;
   readonly run?: Run;
-  readonly summon?: (step: AgentStepCall) => boolean;
+  readonly summon?: (step: AgentStepCall) => AgentSummonOutcome;
 }
 
 /** A stand-in for an adapter that takes steps: every method is a spy with a default answer. */
@@ -23,7 +23,7 @@ function stepper(name = 'box', spec: Spec = {}) {
   const listeners = new Set<() => void>();
   const check = vi.fn<Check>(spec.check ?? (() => ({ available: true, permission: 'allow' })));
   const run = vi.fn<Run>(spec.run ?? (() => ({ status: 'done' })));
-  const summon = vi.fn<(step: AgentStepCall) => boolean>(spec.summon ?? (() => true));
+  const summon = vi.fn<(step: AgentStepCall) => AgentSummonOutcome>(spec.summon ?? (() => true));
   const component: AgentComponent = {
     protocol: 1,
     name,
@@ -343,6 +343,31 @@ describe('act: allow', () => {
     const result = await agent.act(press);
     expect(errorOf(result).message).toBe('Needs a person: "Undo" on "File deleted". It is not on screen, so tell them what it does.');
     expect(box.summon).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts the component\'s note in place of its own sentence', async () => {
+    const notes: AgentSummonOutcome[] = [
+      { reached: true, note: 'The panel is open on it.' },
+      { reached: false, note: 'Nothing is on screen, so tell them what it does.' },
+    ];
+    const box = stepper('box', { check: confirm, summon: () => notes.shift()! });
+    const agent = createAgent();
+    agent.connect(box.component);
+    expect(errorOf(await agent.act(press)).message)
+      .toBe('Needs a person: "Undo" on "File deleted". The panel is open on it. Ask them to press "Undo" themselves.');
+    expect(errorOf(await agent.act(press)).message)
+      .toBe('Needs a person: "Undo" on "File deleted". Nothing is on screen, so tell them what it does.');
+  });
+
+  it('reports a summon answer that is neither a boolean nor a note, and says nothing is on screen', async () => {
+    const reported = captureReports();
+    const box = stepper('box', { check: confirm, summon: () => ({ reached: true }) as never });
+    const agent = createAgent();
+    agent.connect(box.component);
+    expect(errorOf(await agent.act(press)).message)
+      .toBe('Needs a person: "Undo" on "File deleted". It is not on screen, so tell them what it does.');
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toBeInstanceOf(TypeError);
   });
 
   it('needs a person even when the component cannot summon one', async () => {
