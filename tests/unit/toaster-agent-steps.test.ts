@@ -310,17 +310,35 @@ describe('press and the agent marker', () => {
     }
   });
 
-  it('runs when the marker becomes looser while the step waits', async () => {
+  it('does not run an action the app put in place while the step waited, even under a looser marker', async () => {
+    for (const marker of ['confirm', 'allow'] as const) {
+      const answer = createDeferred<boolean>();
+      const t = setup({ allow: () => answer.promise });
+      const approved = command('Undo');
+      const handle = admit(t.controller, quiet('file', { title: 'File deleted', action: approved }));
+      const ref = t.entry('File deleted').ref;
+      const pending = t.act(ref, 'press');
+      await Promise.resolve();
+      const replacement = command('Delete everything', { agent: marker });
+      expect(t.controller.update(handle, { action: replacement }).status).toBe('applied');
+      answer.resolve(true);
+      expect(error(await pending)).toBe(`"press" on "${ref}" changed while it waited, so it did not run. Read the snapshot and try again.`);
+      expect(approved.run).not.toHaveBeenCalled();
+      expect(replacement.run).not.toHaveBeenCalled();
+    }
+  });
+
+  it('runs the approved action when the app changes something else while the step waits', async () => {
     const answer = createDeferred<boolean>();
     const t = setup({ allow: () => answer.promise });
-    const handle = admit(t.controller, quiet('bill', { title: 'Bill', action: command('Pay') }));
-    const pending = t.act(t.entry('Bill').ref, 'press');
+    const action = command('Undo');
+    const handle = admit(t.controller, quiet('file', { title: 'File deleted', action }));
+    const pending = t.act(t.entry('File deleted').ref, 'press');
     await Promise.resolve();
-    const looser = command('Pay', { agent: 'allow' });
-    t.controller.update(handle, { action: looser });
+    expect(t.controller.update(handle, { title: 'File deleted · 2' }).status).toBe('applied');
     answer.resolve(true);
     done(await pending);
-    expect(looser.run).toHaveBeenCalledOnce();
+    expect(action.run).toHaveBeenCalledOnce();
   });
 
   it('run itself refuses a press approved under a looser class than the marker now asks', async () => {

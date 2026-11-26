@@ -303,6 +303,8 @@ type Plan =
     readonly available: true;
     readonly permission: AgentPermissionShape;
     readonly names?: AgentStepNamesShape;
+    /** The action object a press or a submit would run. */
+    readonly subject?: object;
     readonly perform: (context: AgentRunContextShape) => AgentRunOutcomeShape | Promise<AgentRunOutcomeShape>;
   };
 
@@ -496,7 +498,7 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     // A denied press never runs, so it is reported before its state.
     if (permission !== 'deny' && item.action.status === 'pending') return refuse(texts.running(label));
     return freeze({
-      available: true, permission, names,
+      available: true, permission, names, subject: action,
       async perform({ signal, approved }: AgentRunContextShape): Promise<AgentRunOutcomeShape> {
         const started = port.press(item.handle, approved, signal);
         if (!(started instanceof Promise)) {
@@ -511,9 +513,14 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     });
   };
 
+  // What a checked press or submit would have run, by step object: the bridge approves a step by
+  // its ref and verb, so the action it named to the app or the person is held here until it runs.
+  const checked = new WeakMap<AgentStepCallShape, object>();
+
   const check = (step: AgentStepCallShape): AgentStepCheckShape => {
     const verdict = plan(step);
     if (!verdict.available) return verdict;
+    if (verdict.subject) checked.set(step, verdict.subject);
     return freeze({ available: true, permission: verdict.permission, ...(verdict.names ? { names: verdict.names } : {}) });
   };
 
@@ -522,6 +529,9 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     const verdict = plan(step);
     if (!verdict.available) return verdict.message === undefined ? UNAVAILABLE : freeze({ status: 'unavailable', message: verdict.message });
     if (STRICTNESS[verdict.permission] > STRICTNESS[context.approved]) return STALE;
+    // The app replaced the action while the step waited: the approval was for the other one.
+    const subject = checked.get(step);
+    if (subject !== undefined && subject !== verdict.subject) return STALE;
     return verdict.perform(context);
   };
 

@@ -318,6 +318,21 @@ describe('submit', () => {
     sending.resolve();
   });
 
+  it('a submit approved for one form does not send the form the app put in its place meanwhile', async () => {
+    const answer = createDeferred<boolean>();
+    const t = setup({ allow: (step) => step.action !== 'submit' || answer.promise });
+    const approved = form();
+    const handle = admit(t.controller, quiet('anna', { title: TITLE, action: approved }));
+    const pending = t.act(['submit']);
+    await Promise.resolve();
+    const replacement = form({ label: 'Delete account', agent: 'allow', fields: [{ name: 'reply', kind: 'text', label: 'Reply' }] });
+    expect(t.controller.update(handle, { action: replacement }).status).toBe('applied');
+    answer.resolve(true);
+    expect(error(await pending)).toMatch(/changed while it waited, so it did not run/);
+    expect(approved.run).not.toHaveBeenCalled();
+    expect(replacement.run).not.toHaveBeenCalled();
+  });
+
   it('a successful submit closes the notification and its draft with it', async () => {
     const t = setup({ allow: () => true });
     const run = vi.fn<(context: FormContext) => void>();
