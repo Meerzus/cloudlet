@@ -157,15 +157,6 @@ describe('notification steps', () => {
     expect(closedReasons(t.events)).toEqual(['programmatic']);
     expect(error(await t.act(ref, 'dismiss'))).toBe(`No entry "${ref}". Current refs: toaster.`);
   });
-
-  it('fill and submit are not available yet', async () => {
-    const t = setup();
-    admit(t.controller, quiet('form', { action: { kind: 'form', label: 'Send', run: vi.fn(), agent: 'allow',
-      fields: [{ name: 'reply', kind: 'text', label: 'Reply' }] } }));
-    const ref = t.entry('form').ref;
-    expect(error(await t.act(ref, 'fill', ['reply', 'Yes']))).toBe(`"fill" is not available on "${ref}" now. Available: dismiss, fill, submit.`);
-    expect(error(await t.act(ref, 'submit'))).toBe(`"submit" is not available on "${ref}" now. Available: dismiss, fill, submit.`);
-  });
 });
 
 describe('operation steps', () => {

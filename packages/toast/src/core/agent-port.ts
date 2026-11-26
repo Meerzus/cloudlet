@@ -2,21 +2,23 @@ import type { NotificationHandle } from '../contracts/identity.js';
 import type { FormErrors, RendererSnapshot } from '../contracts/internal.js';
 import type { CancellationSignal, CancelResult } from '../contracts/operations.js';
 import type { ControllerSnapshot } from '../contracts/snapshots.js';
-import { invokeAction } from './actions.js';
-import { UNCHANGED, getControllerKernel, reject, type ControllerKernel, type RecordState } from './controller.js';
+import { fillFormValue, invokeAction } from './actions.js';
+import { UNCHANGED, getControllerKernel, reject, type ControllerKernel, type FieldAuthor, type RecordState } from './controller.js';
 
 // The agent adapter's way into a controller. Only the `agent` entry imports it, so the root entry
 // and the renderer chunk never carry it. It hands out no lease: a step that needs a screen only
 // checks that a `Toaster` holds one, and no step asks for focus. Form values reach the adapter only
-// as "holds text": `forms` is reduced here, and `controller` is typed as the public snapshot,
-// although at runtime it is the renderer's object with its form drafts.
+// as "holds text" and who wrote them: `forms` is reduced here, and `controller` is typed as the
+// public snapshot, although at runtime it is the renderer's object with its form drafts.
 
 const freeze = Object.freeze;
 
-/** What a reader may know about a form: which fields hold text and the last submit's messages. */
+/** What a reader may know about a form: which fields hold text, who wrote them, the last submit's messages. */
 export interface FormReading {
   /** Names of the fields whose value has non-blank text, the same test `required` uses. */
   readonly filled: ReadonlySet<string>;
+  /** Who wrote each field last; a field nobody wrote and without a default is missing. */
+  readonly authors: ReadonlyMap<string, FieldAuthor>;
   readonly errors: FormErrors;
 }
 
@@ -37,12 +39,14 @@ type Rejection<Reason extends string> = { readonly status: 'rejected'; readonly 
 type HandleReason = 'disposed' | 'invalid-handle' | 'foreign-controller' | 'stale-handle';
 type Changed = { readonly status: 'applied' | 'unchanged' };
 
-/** How a pressed action ended, as far as the step waited for it. */
+/** How a pressed command or a submitted form ended, as far as the step waited for it. */
 export type PressOutcome =
   /** The action succeeded and closed its notification. */
   | { readonly status: 'done' }
   /** The action failed; `message` is what the person sees. */
   | { readonly status: 'failed'; readonly message: string }
+  /** The form did not pass its checks and was not sent; the person sees the same messages. */
+  | { readonly status: 'invalid'; readonly errors: FormErrors }
   /** The step stopped waiting: the notification closed otherwise, the action was replaced, or the signal ended the wait. */
   | { readonly status: 'pending'; readonly gone: boolean };
 
@@ -66,7 +70,13 @@ export interface ToasterPort<Slot> {
   readonly acknowledge: () => Changed | Rejection<'disposed'>;
   readonly cancel: (handle: NotificationHandle) => CancelResult | Rejection<HandleReason | 'no-operation'>;
   readonly retry: (handle: NotificationHandle) => { readonly status: 'started' } | Rejection<HandleReason | 'no-operation' | 'not-retryable' | 'already-pending'>;
-  /** Starts the command and waits for it until it settles, its notification closes or `signal` aborts. */
+  /** Writes a form field as an agent, never over what the person typed. */
+  readonly fill: (handle: NotificationHandle, name: string, value: string)
+    => Changed | Rejection<HandleReason | 'no-form' | 'invalid-input' | 'already-pending' | 'too-long' | 'person-typed'>;
+  /**
+   * Starts the command or submits the form, and waits until it settles, its notification closes or
+   * `signal` aborts.
+   */
   readonly press: (handle: NotificationHandle, grant: StepGrant, signal: CancellationSignal)
     => Promise<PressOutcome> | Rejection<HandleReason | 'no-command' | 'already-pending' | 'stale'>;
 }
@@ -90,7 +100,7 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
     const forms = new Map<NotificationHandle, FormReading>();
     for (const form of next.forms) {
       const filled = new Set(Object.keys(form.values).filter((name) => form.values[name]!.trim() !== ''));
-      forms.set(form.handle, freeze({ filled, errors: form.errors }));
+      forms.set(form.handle, freeze({ filled, authors: new Map(Object.entries(form.authors)), errors: form.errors }));
     }
     reading = freeze({ controller: next, mounted, busy: k.interacting(), forms });
     return reading;
@@ -136,13 +146,14 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
       const result = record.operation.retry();
       return result.status === 'started' ? freeze({ status: 'started' as const }) : reject(result.reason);
     }),
+    fill: withRecord((record, name: string, value: string) => fillFormValue(k, record, name, value)),
     press: withRecord((record, grant: StepGrant, signal: CancellationSignal) => press(k, record, grant, signal)),
   });
 }
 
 function press<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>, grant: StepGrant, signal: CancellationSignal) {
   const action = record.content.action;
-  if (action?.kind !== 'command') return reject('no-command');
+  if (!action || action.kind === 'link') return reject('no-command');
   // The marker is read from the record's content right before the action runs: one the app made
   // stricter after the step was approved stops it.
   if (STRICTNESS[action.agent ?? 'confirm'] > STRICTNESS[grant]) return reject('stale');
@@ -177,6 +188,7 @@ function press<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>, grant
     signal.addEventListener('abort', abort, { once: true });
     // Listeners first: the command may close or replace its notification synchronously.
     const started = invokeAction(k, record);
+    if (started.status === 'invalid') { finish({ status: 'invalid', errors: started.errors }); return; }
     if (started.status !== 'started') { finish({ status: 'pending', gone: k.records.get(handle.id) !== record }); return; }
     const state = record.action;
     if (settled) return;

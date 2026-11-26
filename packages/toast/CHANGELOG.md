@@ -32,6 +32,17 @@
   meantime is not shown. The app's own auto-open keeps working alongside. While the person uses the
   Toaster, `open` and `show` answer "The person is using the Island. Try again later." and change
   nothing; `close` does the same over a draft in the open Island.
+- Experimental: `toasterAgent` fills and submits forms. `fill` with `args: [name, value]` writes a
+  field as the agent: it refuses an unknown field (and lists the field names), a value that is not a
+  string or longer than the field's `maxLength`, a running submit, and any field the person typed in,
+  even one they cleared again, naming the field but never a value. An agent's value makes a draft as
+  typing does (the `draft` pause, the open Island stays open), and a person who submits sends it.
+  `submit` follows the form's `agent` marker like `press`, and a submit that needs a person opens the
+  Island on the form for them; a form that fails its checks is not sent, the person sees the
+  messages, and the agent gets them by field label (`"Send" was not sent. "Reply": This field is
+  required.`). Each field in the agent snapshot now has `kind`, `maxLength`, `inputMode` and
+  `filledBy` (`app` for the default, `user`, `agent` or null); values, defaults and placeholders
+  still never leave Cloudlet.
 
 ### Fixes
 

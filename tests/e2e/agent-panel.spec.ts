@@ -83,10 +83,11 @@ test('a form notification shows its fields and whether they are filled, never th
   await button(page, 'With form').click();
   await expect(host(page)).toHaveAttribute('data-state', 'island');
   const form = async () => (await notifications(page)).find(entry => entry.action?.kind === 'form');
-  await expect.poll(async () => (await form())?.action?.fields).toEqual([{ name: 'reply', label: 'Reply', required: true, filled: false, error: null }]);
+  await expect.poll(async () => (await form())?.action?.fields).toEqual([{ name: 'reply', label: 'Reply', kind: 'text', required: true, maxLength: 120, inputMode: null, filled: false, filledBy: null, error: null }]);
   const typed = 'Secret reply 7f3a';
   await page.getByRole('textbox', { name: 'Reply', exact: true }).fill(typed);
   await expect.poll(async () => (await form())?.action?.fields?.[0]?.filled).toBe(true);
+  expect((await form())?.action?.fields?.[0]?.filledBy).toBe('user');
   expect((await form())?.draft).toBe(true);
   await expect(page.getByTestId('agent-snapshot')).not.toContainText(typed);
 });

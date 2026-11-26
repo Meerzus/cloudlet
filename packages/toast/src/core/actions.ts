@@ -1,6 +1,6 @@
 import type { ActionAttemptToken, NotificationHandle } from '../contracts/identity.js';
 import type { FormErrors } from '../contracts/internal.js';
-import { NO_FORM_ERRORS, UNCHANGED, reject, type ControllerKernel, type FormState, type RecordState } from './controller.js';
+import { NO_FORM_ERRORS, UNCHANGED, reject, type ControllerKernel, type FieldAuthor, type FormState, type RecordState } from './controller.js';
 
 // Running a notification's action and editing its form, shared by every caller that may act on a
 // record. Callers check their own capability (a host lease, say) and resolve the record first;
@@ -92,14 +92,41 @@ export function invokeAction<Slot>(k: ControllerKernel<Slot>, record: RecordStat
   return { status: 'started' as const };
 }
 
-/** Writes one field of the record's form; editing a field clears its own message. */
+/** Writes one field of the record's form as the person; editing a field clears its own message. */
 export function setFormValue<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>, name: string, value: string) {
+  const target = fieldOf(k, record, name, value);
+  return 'status' in target ? target : write(k, target.form, name, value, 'user');
+}
+
+/**
+ * Writes one field as an agent. Its value must fit `maxLength`, and it never replaces what the
+ * person typed, not even text they have since deleted.
+ */
+export function fillFormValue<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>, name: string, value: string) {
+  const target = fieldOf(k, record, name, value);
+  if ('status' in target) return target;
+  const { form, field } = target;
+  if (field.maxLength !== undefined && value.length > field.maxLength) return reject('too-long');
+  // Own keys only: a field named `constructor` must not read `Object.prototype`.
+  if (Object.hasOwn(form.authors, name) && form.authors[name] === 'user') return reject('person-typed');
+  return write(k, form, name, value, 'agent');
+}
+
+function fieldOf<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>, name: string, value: string) {
   const form = k.formOf(record);
   if (!form) return reject('no-form');
-  if (typeof value !== 'string' || !form.action.fields.some((field) => field.name === name)) return reject('invalid-input');
+  const field = form.action.fields.find((item) => item.name === name);
+  if (typeof value !== 'string' || !field) return reject('invalid-input');
   if (record.action.status === 'pending') return reject('already-pending');
+  return { form, field };
+}
+
+function write<Slot>(k: ControllerKernel<Slot>, form: FormState, name: string, value: string, author: FieldAuthor) {
+  // The same text again changes nothing, its author included.
   if (Object.hasOwn(form.values, name) && form.values[name] === value) return UNCHANGED;
   return k.mutate(() => {
+    // Spreads and computed keys define own properties, so `__proto__` stays a field here too.
+    form.authors = freeze({ ...form.authors, [name]: author });
     form.values = freeze({ ...form.values, [name]: value });
     // Editing a field clears its own message; the rest wait for the next submit.
     if (Object.hasOwn(form.errors.fields, name)) {

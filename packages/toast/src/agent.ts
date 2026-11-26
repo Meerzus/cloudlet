@@ -1,6 +1,7 @@
 import type { CloudletController } from './contracts/controller.js';
 import type { NotificationHandle } from './contracts/identity.js';
-import type { NotificationKind, Priority } from './contracts/notifications.js';
+import type { FormErrors } from './contracts/internal.js';
+import type { CommandAction, FormAction, FormFieldKind, FormInputMode, NotificationKind, Priority } from './contracts/notifications.js';
 import type { CancellationSignal, OperationStatus } from './contracts/operations.js';
 import type { NotificationLocation, NotificationSnapshot, PauseReason } from './contracts/snapshots.js';
 import { createToasterPort, type FormReading, type ToasterReading } from './core/agent-port.js';
@@ -150,9 +151,19 @@ export type ToasterEntry = {
 export type FormFieldEntry = {
   readonly name: string;
   readonly label: string;
+  readonly kind: FormFieldKind;
   readonly required: boolean;
+  /** null when the field sets no limit. */
+  readonly maxLength: number | null;
+  /** null when the field sets no input mode. */
+  readonly inputMode: FormInputMode | null;
   /** The field holds non-blank text. */
   readonly filled: boolean;
+  /**
+   * Who wrote the value last: `app` (the field's default), `user` (the person) or `agent`; null
+   * while nobody has and there is no default. An agent can't `fill` a field the person wrote.
+   */
+  readonly filledBy: 'app' | 'user' | 'agent' | null;
   /** The message from the last submit, if any. */
   readonly error: string | null;
 };
@@ -265,6 +276,13 @@ const UNAVAILABLE: AgentRunOutcomeShape = freeze({ status: 'unavailable' });
 const texts = {
   noScreen: (action: string) => `No Toaster is on screen: ${quote(action)} needs one.`,
   noArguments: (step: AgentStepCallShape) => `${quote(step.action)} on ${quote(step.ref)} takes no arguments.`,
+  fillArguments: (step: AgentStepCallShape) => `${quote(step.action)} on ${quote(step.ref)} takes a field name and a value.`,
+  noField: (step: AgentStepCallShape, name: string, names: readonly string[]) =>
+    `No field ${quote(name)} on ${quote(step.ref)}. Fields: ${names.map((item) => quote(item)).join(', ')}.`,
+  notText: (field: string) => `The value for ${quote(field)} must be a string.`,
+  tooLong: (field: string, limit: number) => `${quote(field)} takes at most ${limit} characters.`,
+  personTyped: (field: string) => `The person typed in ${quote(field)}. An agent can't overwrite it.`,
+  notSent: (label: string, messages: string) => `${quote(label)} was not sent. ${messages}`,
   running: (label: string) => `${quote(label)} is already running.`,
   failed: (label: string, message: string) => `${quote(label)} failed: ${message}`,
   finished: 'This operation has already finished.',
@@ -305,12 +323,14 @@ const outcome = (result: PortResult, done: AgentRunOutcomeShape, words: Readonly
  * host from a `Toaster` and never moves focus. Form values never reach the snapshot.
  *
  * Steps: `open`, `close`, `clear` and `acknowledge` on the Toaster record; `show`, `dismiss`,
- * `press`, `cancel` and `retry` on a notification. `open` and `show` need a mounted `Toaster`.
- * `press` follows the action's `agent` marker; every other step is allowed unless the bridge's
- * `allow` says no. A press that needs a person opens the Island on its notification for them: at
- * once, or after the attention delay once they stop using the Toaster. While they use it (hover,
- * focus, a gesture, a draft in the open Island), `open` and `show` are refused, and so is `close`
- * over a draft.
+ * `press`, `fill`, `submit`, `cancel` and `retry` on a notification. `open` and `show` need a
+ * mounted `Toaster`. `press` and `submit` follow the action's `agent` marker; every other step is
+ * allowed unless the bridge's `allow` says no. `fill` (`args: [name, value]`) writes a form field
+ * as the agent, never over what the person typed, and makes a draft as typing does; the snapshot
+ * says who wrote each field (`filledBy`), never what. A press or submit that needs a person opens
+ * the Island on its notification for them: at once, or after the attention delay once they stop
+ * using the Toaster. While they use it (hover, focus, a gesture, a draft in the open Island, the
+ * agent's own included), `open` and `show` are refused, and so is `close` over a draft.
  *
  * @throws TypeError for a controller that this copy of `@cloudlet/toast` did not create.
  * @experimental The protocol may change before the bridge reaches 1.0.
@@ -390,16 +410,22 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     }
     const target = targets.get(step.ref);
     if (!target || !NOTIFICATION_VERBS.has(action)) return NOT_AVAILABLE;
-    // Forms take agent steps in a later release; until then fill and submit only read.
-    if (action === 'fill' || action === 'submit') return NOT_AVAILABLE;
-    if (step.args.length) return refuse(texts.noArguments(step));
     const { item, entry } = target;
+    if (action === 'fill') return fillPlan(step, item);
+    if (step.args.length) return refuse(texts.noArguments(step));
     const { handle } = item;
     switch (action) {
       case 'show':
         if (!mounted) return refuse(texts.noScreen(action));
         break;
-      case 'press': return pressPlan(item);
+      case 'press': {
+        const command = item.content.action;
+        return command?.kind === 'command' ? pressPlan(item, command) : NOT_AVAILABLE;
+      }
+      case 'submit': {
+        const form = item.content.action;
+        return form?.kind === 'form' ? pressPlan(item, form) : NOT_AVAILABLE;
+      }
       case 'cancel': {
         const operation = item.operation;
         if (!operation) return NOT_AVAILABLE;
@@ -441,9 +467,29 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     return current !== null && state.notifications.some((item) => item.handle === current && item.draft);
   };
 
-  const pressPlan = (item: NotificationSnapshot<Slot>): Plan => {
-    const action = item.content.action;
-    if (action?.kind !== 'command') return NOT_AVAILABLE;
+  // An agent's value goes in like a person's keystrokes, except over what the person typed. The
+  // step's text names the field, never a value.
+  const fillPlan = (step: AgentStepCallShape, item: NotificationSnapshot<Slot>): Plan => {
+    const form = item.content.action;
+    if (form?.kind !== 'form') return NOT_AVAILABLE;
+    const [name, value] = step.args;
+    if (step.args.length !== 2 || typeof name !== 'string') return refuse(texts.fillArguments(step));
+    const field = form.fields.find((candidate) => candidate.name === name);
+    if (!field) return refuse(texts.noField(step, name, form.fields.map((candidate) => candidate.name)));
+    if (typeof value !== 'string') return refuse(texts.notText(field.label));
+    const words = {
+      'already-pending': texts.running(form.label),
+      'too-long': texts.tooLong(field.label, field.maxLength ?? 0),
+      'person-typed': texts.personTyped(field.label),
+    };
+    if (item.action.status === 'pending') return refuse(words['already-pending']);
+    if (field.maxLength !== undefined && value.length > field.maxLength) return refuse(words['too-long']);
+    if (source!.forms.get(item.handle)?.authors.get(name) === 'user') return refuse(words['person-typed']);
+    return allowed(() => outcome(port.fill(item.handle, name, value), DONE, words));
+  };
+
+  /** A command's press or a form's submit: both follow the action's marker and wait for its run. */
+  const pressPlan = (item: NotificationSnapshot<Slot>, action: CommandAction | FormAction): Plan => {
     const { label } = action;
     const permission = action.agent ?? 'confirm';
     const names = freeze({ target: label, within: item.content.title });
@@ -459,6 +505,7 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
         const ended = await started;
         if (ended.status === 'done') return GONE;
         if (ended.status === 'failed') return freeze({ status: 'failed', message: texts.failed(label, ended.message) });
+        if (ended.status === 'invalid') return freeze({ status: 'failed', message: texts.notSent(label, describe(action as FormAction, ended.errors)) });
         return freeze({ status: 'done', result: 'pending', ...(ended.gone ? { gone: true } : {}) });
       },
     });
@@ -490,6 +537,16 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
   };
 
   return freeze({ protocol: 1 as const, name, snapshot, subscribe: port.subscribe, check, run, summon });
+}
+
+/** The messages a failed form check shows the person, by field label: never a value. */
+function describe(form: FormAction, errors: FormErrors): string {
+  const sentence = (message: string) => /[.!?]$/.test(message.trim()) ? message.trim() : `${message.trim()}.`;
+  return [
+    // Own keys only: a field named `constructor` must not read `Object.prototype`.
+    ...form.fields.flatMap((field) => Object.hasOwn(errors.fields, field.name) ? [`${quote(field.label)}: ${sentence(errors.fields[field.name]!)}`] : []),
+    ...(errors.form ? [sentence(errors.form)] : []),
+  ].join(' ');
 }
 
 function notification<Slot>(item: NotificationSnapshot<Slot>, ref: string, shown: boolean, mounted: boolean, form: FormReading | undefined): NotificationEntry {
@@ -549,8 +606,10 @@ function actionEntry<Slot>(item: NotificationSnapshot<Slot>, form: FormReading |
     ...common,
     agent: action.agent ?? 'confirm',
     fields: freeze(action.fields.map((field) => freeze({
-      name: field.name, label: field.label, required: field.required ?? false,
+      name: field.name, label: field.label, kind: field.kind, required: field.required ?? false,
+      maxLength: field.maxLength ?? null, inputMode: field.inputMode ?? null,
       filled: form?.filled.has(field.name) ?? false,
+      filledBy: form?.authors.get(field.name) ?? null,
       // Own keys only: a field named `constructor` must not read `Object.prototype`.
       error: errors && Object.hasOwn(errors.fields, field.name) ? errors.fields[field.name]! : null,
     }))),

@@ -91,6 +91,8 @@ export interface FormDraft {
   readonly handle: NotificationHandle;
   readonly values: Readonly<Record<string, string>>;
   readonly errors: FormErrors;
+  /** Who wrote each field last (own keys only); a field nobody wrote and without a default has none. */
+  readonly authors: Readonly<Record<string, 'app' | 'user' | 'agent'>>;
 }
 
 export interface RendererSnapshot<Slot = never> extends ControllerSnapshot<Slot> {

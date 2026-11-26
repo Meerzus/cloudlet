@@ -45,10 +45,15 @@ export interface RecordState<Slot> {
   form: FormState | null;
 }
 
+/** Who wrote a field's value last: its default, the person or an agent. */
+export type FieldAuthor = 'app' | 'user' | 'agent';
+
 export interface FormState {
   readonly action: FormAction;
   values: Readonly<Record<string, string>>;
   errors: FormErrors;
+  /** Own keys only; a field nobody wrote and without a default has none. */
+  authors: Readonly<Record<string, FieldAuthor>>;
 }
 
 /** Open Island state; `null` is the collapsed stack. */
@@ -222,8 +227,10 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     const action = record.content.action;
     if (action?.kind !== 'form') return record.form = null;
     if (record.form?.action !== action) {
+      // `Object.fromEntries` defines own keys, so a field named `__proto__` stays a field.
       record.form = { action, errors: NO_FORM_ERRORS,
-        values: freeze(Object.fromEntries(action.fields.map((field) => [field.name, field.defaultValue ?? '']))) };
+        values: freeze(Object.fromEntries(action.fields.map((field) => [field.name, field.defaultValue ?? '']))),
+        authors: freeze(Object.fromEntries(action.fields.flatMap((field): [string, FieldAuthor][] => field.defaultValue ? [[field.name, 'app']] : []))) };
     }
     return record.form;
   };
@@ -370,7 +377,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       focusRequest,
       forms: freeze(current.flatMap((record) => {
         const form = formOf(record);
-        return form ? [freeze({ handle: record.handle, values: form.values, errors: form.errors })] : [];
+        return form ? [freeze({ handle: record.handle, values: form.values, errors: form.errors, authors: form.authors })] : [];
       })),
       announcements: freeze({ overflowCount: overflowAnnounced,
         notifications: freeze(current.map((record) => freeze({

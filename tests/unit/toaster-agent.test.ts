@@ -168,8 +168,8 @@ describe('form records', () => {
     expect(before.action).toEqual({
       kind: 'form', label: 'Send', status: 'idle', message: null, error: null, agent: 'confirm',
       fields: [
-        { name: 'reply', label: 'Reply', required: true, filled: false, error: null },
-        { name: 'note', label: 'Note', required: false, filled: true, error: null },
+        { name: 'reply', label: 'Reply', kind: 'text', required: true, maxLength: 40, inputMode: null, filled: false, filledBy: null, error: null },
+        { name: 'note', label: 'Note', kind: 'textarea', required: false, maxLength: null, inputMode: null, filled: true, filledBy: 'app', error: null },
       ],
     });
 
@@ -184,6 +184,7 @@ describe('form records', () => {
     const entry = byLabel(after, 'Anna: are you coming?');
     expect(entry.draft).toBe(true);
     expect(entry.action?.fields?.map((field) => field.filled)).toEqual([true, false]);
+    expect(entry.action?.fields?.map((field) => field.filledBy)).toEqual(['user', 'user']);
 
     const json = JSON.stringify(after);
     for (const hidden of [secret, 'Default note text', 'Type a reply', '"value"', 'defaultValue', 'placeholder']) {
