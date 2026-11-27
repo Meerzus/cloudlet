@@ -59,6 +59,8 @@ const TYPES = new Set(['object', 'array', 'string']);
 function expectSchema(schema: unknown, at = 'schema'): void {
   expect(schema, at).toBeTypeOf('object');
   const node = schema as Record<string, unknown>;
+  // The empty schema: any value, as a verb's arguments are.
+  if (Object.keys(node).length === 0) return;
   for (const key of Object.keys(node)) expect(KEYWORDS.has(key), `${at} has ${key}`).toBe(true);
   expect(TYPES.has(node.type as string), `${at}.type`).toBe(true);
   if (node.type === 'object') {
@@ -100,7 +102,7 @@ describe('agent.tools', () => {
             type: 'object',
             required: ['ref', 'action'],
             additionalProperties: false,
-            properties: { ref: { type: 'string' }, action: { type: 'string' }, args: { type: 'array' } },
+            properties: { ref: { type: 'string' }, action: { type: 'string' }, args: { type: 'array', items: {} } },
           },
         },
       },

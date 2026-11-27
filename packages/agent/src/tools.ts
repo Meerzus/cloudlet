@@ -31,7 +31,8 @@ const actSchema: { readonly [key: string]: AgentValue } = {
         properties: {
           ref: { type: 'string', description: 'The ref of a record from cloudlet_snapshot.' },
           action: { type: 'string', description: "A verb from that record's actions." },
-          args: { type: 'array', description: "The verb's arguments, in order, when it takes any." },
+          // Any value: what a verb takes is in the snapshot's verbs. Some model APIs refuse an array without `items`.
+          args: { type: 'array', items: {}, description: "The verb's arguments, in order, when it takes any." },
         },
         required: ['ref', 'action'],
         additionalProperties: false,

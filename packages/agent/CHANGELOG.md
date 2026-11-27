@@ -58,7 +58,8 @@ Experimental first version: the agent reads and acts under the app's permission.
   `cloudlet_act` takes what `act` takes, waits in the same queue and answers its result with
   `changes`: what `agent.subscribe` heard from the moment the call started running until it
   answered, whoever made it. An unknown name or input `cloudlet_snapshot` does not take answers
-  `{ ok: false, error: { message } }`.
+  `{ ok: false, error: { message } }`. A step's `args` in the schema is an array of any values
+  (`items: {}`), for the model APIs that refuse an array without `items`.
 - An invalid call says what to change: a step sent without `steps`, a bare list, `value` in a step
   (arguments go in `args` as a list), `args` that are not a list, a step without `ref` or `action`.
   A call takes at most 20 steps; more is an invalid call that asks for smaller calls.
