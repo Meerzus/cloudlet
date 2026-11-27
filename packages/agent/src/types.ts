@@ -241,6 +241,17 @@ export type AgentRunOutcome =
 export type AgentSummonOutcome = boolean | { readonly reached: boolean; readonly note: string };
 
 /**
+ * What a component's verbs do, for an agent that has never seen its code: by kind of record (the
+ * `component` of its snapshot records), each verb with a line or two on its arguments in order,
+ * what it does and when it needs a person.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentVerbs {
+  readonly [component: string]: { readonly [verb: string]: string };
+}
+
+/**
  * What a component hands to {@link Agent.connect}: its name, its records and a way to hear that
  * they changed. A component's adapter builds this object; the agent never reaches into the
  * component itself.
@@ -280,6 +291,11 @@ export interface AgentComponent {
    * agent is told the step is not on screen and should tell the person what it does.
    */
   readonly summon?: (step: AgentStepCall) => AgentSummonOutcome;
+  /**
+   * What the verbs of this component's records do, by kind of record. The agent copies it when the
+   * component connects; a later change to the object is not seen.
+   */
+  readonly verbs?: AgentVerbs;
 }
 
 /**
@@ -295,7 +311,8 @@ export interface Agent {
    * Calling that function again does nothing.
    *
    * @throws TypeError for an unknown `protocol`, a name outside `[a-z][a-z0-9-]*`, a name that is
-   * already connected, or step methods that are not functions or come without each other.
+   * already connected, step methods that are not functions or come without each other, or `verbs`
+   * that is not an object of objects of strings.
    */
   readonly connect: (component: AgentComponent) => () => void;
   /**

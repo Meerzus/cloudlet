@@ -14,6 +14,10 @@ cloudlet.dev. The history of the npm package `@cloudlet/toast` is in the
   `useColorPickerAgent` and `useColorPaletteAgent` connect the component to the Cloudlet agent bridge
   from the outside; the components never import them, nothing runs until you do, and neither item adds
   a dependency.
+- `useColorPickerAgent` and `useColorPaletteAgent` tell the agent bridge what their steps take:
+  `set [color]` on the picker; `set [index, color]`, `add [color]` and `remove [index]` on the palette,
+  numbers counted from 0, colors in hex, `rgb()`, `hsl()` or `oklch()`. The bridge hands these lines
+  to a model next to the snapshot.
 
 ## 2026-11-25
 

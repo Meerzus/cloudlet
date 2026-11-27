@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import {
   colorTexts, commitNow, useAgentPort, useChangeAuthor, writeColor, type AgentChangeShape, type AgentConnectorShape, type AgentPortMethods,
-  type AgentRunOutcomeShape, type AgentStepCallShape, type AgentStepCheckShape,
+  type AgentRunOutcomeShape, type AgentStepCallShape, type AgentStepCheckShape, type AgentVerbsShape,
 } from '@/components/ui/color-picker/color-picker-agent';
 import { COLOR_FORMATS, detectFormat, formatColor, parseColor, type ColorFormat } from '@/components/ui/color-picker/color';
 import type { ColorPaletteProps } from './color-palette';
@@ -53,6 +53,15 @@ const UNAVAILABLE: AgentRunOutcomeShape = freeze({ status: 'unavailable' });
 /** The palette's one color for an empty array. */
 const DEFAULT_COLOR = '#ffffff';
 const DEFAULT_MAX = 4;
+const COLOR = 'a CSS color string in hex, rgb(), hsl() or oklch() (names like "red" are not read), written in the palette\'s format, without opacity unless alpha is true';
+/** The palette's verbs for an agent; exported for the tests. */
+export const COLOR_PALETTE_VERBS: AgentVerbsShape = freeze({
+  'color-palette': freeze({
+    set: `args [index, color]: the color's number in colors, counted from 0, and ${COLOR}. Replaces that color; the result is the colors after it.`,
+    add: `args [color]: ${COLOR}. Appends it after the last color, while there are fewer than max; the result is the colors after it.`,
+    remove: 'args [index]: the color\'s number in colors, counted from 0. Removes that color, while more than one is left; the result is the colors after it.',
+  }),
+});
 
 /** Messages of the palette's own refusals; the shared ones come from `colorTexts`. */
 const texts = freeze({
@@ -182,6 +191,7 @@ export function useColorPaletteAgent<Props extends ColorPaletteProps>(
     };
     return freeze({
       snapshot: () => committed.current?.entries ?? EMPTY,
+      verbs: COLOR_PALETTE_VERBS,
       check(step: AgentStepCallShape): AgentStepCheckShape {
         const verdict = plan(step);
         if (!verdict.ok) return freeze(verdict.message === undefined ? { available: false as const } : { available: false as const, message: verdict.message });

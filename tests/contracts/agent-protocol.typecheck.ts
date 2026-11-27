@@ -6,7 +6,7 @@
 import {
   createAgent, type ActResult, type Agent, type AgentChange, type AgentComponent, type AgentEntry, type AgentPermission, type AgentRunContext,
   type AgentRunOutcome, type AgentSignal, type AgentStepCall, type AgentStepCheck, type AgentStepNames, type AgentSummonOutcome,
-  type AgentValue,
+  type AgentValue, type AgentVerbs,
 } from '@cloudlet/agent';
 import * as palette from '@/components/ui/color-palette/color-palette-agent';
 import * as picker from '@/components/ui/color-picker/color-picker-agent';
@@ -14,7 +14,7 @@ import { createCloudlet } from '../../packages/toast/src/index.js';
 import {
   toasterAgent, type AgentChangeShape, type AgentComponentShape, type AgentEntryShape, type AgentPermissionShape, type AgentRunContextShape,
   type AgentRunOutcomeShape, type AgentSignalShape, type AgentStepCallShape, type AgentStepCheckShape,
-  type AgentStepNamesShape, type AgentSummonOutcomeShape, type AgentValueShape, type ToasterAgent,
+  type AgentStepNamesShape, type AgentSummonOutcomeShape, type AgentValueShape, type AgentVerbsShape, type ToasterAgent,
 } from '../../packages/toast/src/agent.js';
 
 /** True only when A and B are the same type, including readonly and optional modifiers. */
@@ -33,6 +33,7 @@ same<AgentRunContext, AgentRunContextShape>(true);
 same<AgentRunOutcome, AgentRunOutcomeShape>(true);
 same<AgentSummonOutcome, AgentSummonOutcomeShape>(true);
 same<AgentChange, AgentChangeShape>(true);
+same<AgentVerbs, AgentVerbsShape>(true);
 same<AgentComponent, AgentComponentShape>(true);
 
 // The Color picker's copy, which the palette's adapter shares.
@@ -47,6 +48,7 @@ same<AgentRunContext, picker.AgentRunContextShape>(true);
 same<AgentRunOutcome, picker.AgentRunOutcomeShape>(true);
 same<AgentSummonOutcome, picker.AgentSummonOutcomeShape>(true);
 same<AgentChange, picker.AgentChangeShape>(true);
+same<AgentVerbs, picker.AgentVerbsShape>(true);
 same<AgentComponent, picker.AgentComponentShape>(true);
 same<Agent['connect'], picker.AgentConnectorShape['connect']>(true);
 

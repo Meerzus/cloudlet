@@ -62,6 +62,11 @@
   text. A notification's `ref` is now issued when it appears, so one that is shown and closed
   between two reads still has its number in both records; an adapter that nobody subscribed to
   numbers on reading, as before.
+- Experimental: `toasterAgent` tells the bridge what its verbs do. The component it returns carries
+  `verbs`: for the `toaster` and `notification` records, one or two English lines per verb on its
+  arguments in order (`fill [field name, text]` takes the field's name, not its label), what it does
+  and when `press` or `submit` may need a person; a link action has no verb, and its address is
+  `action.href`. The bridge passes these to a model next to the snapshot.
 - Every event, `onClose` and the Island snapshot say who caused the change. `event.source`,
   `CloseNotice.source` and `getSnapshot().island.source` are a `ChangeSource`: `user` (a person,
   through the `Toaster`), `agent` (a step taken through `@cloudlet/toast/agent`), `app` (your code,

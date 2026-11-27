@@ -44,7 +44,13 @@ Experimental first version: the agent reads and acts under the app's permission.
 - The component protocol gains optional `check`, `run` and `summon`; a component without them stays
   read-only. `protocol` stays `1`. `summon` answers `true` or `false` (in front of the person now or
   not), or `{ reached, note }`, whose sentence the agent reads in place of the bridge's own.
+- The component protocol gains optional `verbs`: by kind of record (the `component` of its records),
+  each verb with a short text on its arguments, what it does and when it needs a person, for a model
+  that has never seen the component's code. `protocol` stays `1`. `connect` copies and freezes it,
+  so a later change of the object is not seen, and throws a `TypeError` for anything but an object of
+  objects of non-empty strings. When two components describe the same kind, the one connected first
+  is used.
 - Types: `Agent`, `AgentComponent`, `AgentEntry`, `AgentOptions`, `Allow`, `AllowStep`, `AgentStep`,
   `ActInput`, `ActOptions`, `ActResult`, `ActStepResult`, `AgentPermission`, `AgentStepCall`,
   `AgentStepCheck`, `AgentStepNames`, `AgentRunContext`, `AgentRunOutcome`, `AgentSummonOutcome`,
-  `AgentSignal`, `AgentValue`.
+  `AgentSignal`, `AgentValue`, `AgentVerbs`.

@@ -1,5 +1,6 @@
 import { cancelledBefore, cloneValue, failed, parseCall, runSteps, type ActEnvironment, type Located } from './act.js';
-import type { ActResult, Agent, AgentChange, AgentComponent, AgentEntry, AgentOptions } from './types.js';
+import type { ActResult, Agent, AgentChange, AgentComponent, AgentEntry, AgentOptions, AgentVerbs } from './types.js';
+import { collectVerbs, readVerbs, registerVerbs } from './verbs.js';
 
 const NAME = /^[a-z][a-z0-9-]*$/;
 const DEFAULT_TIMEOUT = 300_000;
@@ -79,6 +80,8 @@ function readChanges(name: string, input: unknown): readonly AgentChange[] {
 interface Connection {
   readonly component: AgentComponent;
   readonly unsubscribe: () => void;
+  /** The component's `verbs` as it was when it connected. */
+  readonly verbs: AgentVerbs | undefined;
 }
 
 function validate(component: AgentComponent, connections: ReadonlyMap<string, Connection>): void {
@@ -138,12 +141,13 @@ export function createAgent(options?: AgentOptions): Agent {
   const connect: Agent['connect'] = (component) => {
     validate(component, connections);
     const { name } = component;
+    const verbs = readVerbs(name, component.verbs);
     let connection: Connection | undefined;
     const unsubscribe = component.subscribe((changes) => {
       // A late call from a component that was already disconnected changes nothing.
       if (connection && connections.get(name) === connection) changed(readChanges(name, changes));
     });
-    connection = { component, unsubscribe };
+    connection = { component, unsubscribe, verbs };
     connections.set(name, connection);
     let connected = true;
     changed();
@@ -225,5 +229,10 @@ export function createAgent(options?: AgentOptions): Agent {
     });
   };
 
-  return Object.freeze({ connect, snapshot, subscribe, act });
+  /** The verbs of the kinds of record in the snapshot now, for the tools. */
+  const verbs = (): AgentVerbs => collectVerbs(snapshot(), [...connections.values()].map((connection) => connection.verbs));
+
+  const agent: Agent = Object.freeze({ connect, snapshot, subscribe, act });
+  registerVerbs(agent, verbs);
+  return agent;
 }
