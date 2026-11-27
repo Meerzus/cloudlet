@@ -7,7 +7,7 @@ import { COLOR_PALETTE_COMMAND, COLOR_PICKER_COMMAND } from './site';
  */
 export const PICKER_GET_STARTED = {
   command: COLOR_PICKER_COMMAND,
-  commandNote: 'The shadcn CLI copies five files into your project: the picker, its CSS, the color math, the morph and a small spring helper. No package is added.',
+  commandNote: 'The shadcn CLI copies six files into your project: the picker, its CSS, the color math, the morph, a hook for the agent bridge and a small spring helper. No package is added.',
   file: 'accent-field.tsx',
   codeNote: 'Controlled like an input: give it any CSS color and take back a string in the format the switch shows, oklch to begin with.',
   code: `"use client";

@@ -4,12 +4,12 @@ body:has(.lab), body:has(.lab-unmounted) { margin: 0; background: #f5f6f8; color
 .lab[data-theme="dark"] { --lab-ink: #e5eaf4; --lab-muted: #adb8cb; --lab-line: #3e495b; --lab-paper: #202a3b; --lab-accent: #b7ceff; --lab-soft: #303e55; background: #18202e; }
 .lab *, .lab-owner-controls *, .lab-unmounted { box-sizing: border-box; }
 .lab a { color: var(--lab-accent); text-underline-offset: 4px; }
-.lab button, .lab select, .lab-owner-controls button { min-height: 44px; border: 1px solid var(--lab-line, #b9c3d4); border-radius: 9px; padding: 10px 14px; font: inherit; color: var(--lab-ink, #222b3b); background: var(--lab-paper, #fff); line-height: 1.3; cursor: pointer; }
-.lab button:hover:not(:disabled), .lab-owner-controls button:hover { background: var(--lab-soft, #edf1f8); border-color: #9ca9bf; }
-.lab button:disabled { opacity: .52; cursor: default; }
+.lab button:where(:not(.lab-colors-stage *)), .lab select, .lab-owner-controls button { min-height: 44px; border: 1px solid var(--lab-line, #b9c3d4); border-radius: 9px; padding: 10px 14px; font: inherit; color: var(--lab-ink, #222b3b); background: var(--lab-paper, #fff); line-height: 1.3; cursor: pointer; }
+.lab button:hover:not(:disabled):where(:not(.lab-colors-stage *)), .lab-owner-controls button:hover { background: var(--lab-soft, #edf1f8); border-color: #9ca9bf; }
+.lab button:disabled:where(:not(.lab-colors-stage *)) { opacity: .52; cursor: default; }
 .lab button.lab-primary { background: #3155a5; color: #fff; border-color: #3155a5; }
 .lab button.lab-primary:hover { background: #23448d; }
-.lab :focus-visible, .lab-owner-controls :focus-visible { outline: 3px solid #5d83da; outline-offset: 3px; }
+.lab :focus-visible:where(:not(.lab-colors-stage *)), .lab-owner-controls :focus-visible { outline: 3px solid #5d83da; outline-offset: 3px; }
 .lab-header { max-width: 1344px; margin: auto; min-height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 40px; border-bottom: 1px solid var(--lab-line); }
 .lab-brand { display: flex; align-items: baseline; gap: 14px; font-size: 25px; font-weight: 650; letter-spacing: -.05em; text-decoration: none; color: var(--lab-ink) !important; }
 .lab-brand span { letter-spacing: 0; font-weight: 400; color: var(--lab-muted); font-size: 13px; }
@@ -150,6 +150,20 @@ body:has(.lab), body:has(.lab-unmounted) { margin: 0; background: #f5f6f8; color
 @media (prefers-color-scheme: dark) {
   .lab[data-theme="system"] { --lab-ink: #e5eaf4; --lab-muted: #adb8cb; --lab-line: #3e495b; --lab-paper: #202a3b; --lab-accent: #b7ceff; --lab-soft: #303e55; background: #18202e; }
 }
+/* The colors block: the picker and palette read shadcn tokens; the page's button and focus rules skip their stage. */
+.lab-colors { --background: #ffffff; --foreground: #0a0a0a; --border: #e4e4e7; --ring: #a1a1aa; --muted: #f4f4f5;
+  margin-top: 32px; padding: 24px; border: 1px solid var(--lab-line); border-radius: 16px; background: var(--lab-paper); color-scheme: light; }
+.lab[data-theme="dark"] .lab-colors { --background: #0a0a0a; --foreground: #fafafa; --border: #27272a; --ring: #d4d4d8; --muted: #27272a; color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  .lab[data-theme="system"] .lab-colors { --background: #0a0a0a; --foreground: #fafafa; --border: #27272a; --ring: #d4d4d8; --muted: #27272a; color-scheme: dark; }
+}
+.lab-colors > p { color: var(--lab-muted); max-width: 80ch; font-size: 14px; }
+.lab-colors-row { display: flex; flex-wrap: wrap; gap: 24px 48px; align-items: flex-start; }
+.lab-colors-stage { display: grid; gap: 10px; justify-items: start; }
+.lab-colors-name { font-size: 13px; color: var(--lab-muted); }
+.lab-colors-readout { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 20px 0 8px; font-size: 13px; }
+.lab-colors-readout dt { color: var(--lab-muted); }
+.lab-colors-readout dd { margin: 0; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .lab-agent { margin-top: 32px; padding: 24px; border: 1px solid var(--lab-line); border-radius: 16px; background: var(--lab-paper); }
 .lab-agent > p { color: var(--lab-muted); max-width: 80ch; font-size: 14px; }
 .lab .lab-agent-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 30px; margin-block: 20px 12px; color: var(--lab-muted); font-variant-numeric: tabular-nums; }
