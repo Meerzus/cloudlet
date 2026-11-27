@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { ActResult, Agent, AgentEntry } from '@cloudlet/agent';
+import type { ActResult, Agent, AgentChange, AgentEntry } from '@cloudlet/agent';
 import { toasterAgent } from '@cloudlet/toast/agent';
 import type { NotificationEntry, ToasterEntry } from '@cloudlet/toast/agent';
 import type { LabSession } from './lab-session.js';
@@ -50,6 +50,22 @@ function preset(verb: Verb, entries: readonly AgentEntry[]): string {
 }
 
 type LogEntry = { id: number; call: unknown; result: ActResult | null };
+
+const CHANGE_LIMIT = 80;
+type ChangeEntry = { id: number; change: AgentChange };
+
+/** The change records the bridge hands to `agent.subscribe`, as they came, newest first. */
+function useAgentChanges(agent: Agent) {
+  const [changes, setChanges] = useState<readonly ChangeEntry[]>([]);
+  const serial = useRef(0);
+  useEffect(() => agent.subscribe(records => {
+    if (!records.length) return;
+    // Reversed here, not in the updater: React may run an updater twice.
+    const entries = records.map(change => ({ id: ++serial.current, change })).reverse();
+    setChanges(previous => [...entries, ...previous].slice(0, CHANGE_LIMIT));
+  }), [agent]);
+  return changes;
+}
 
 const ALLOW_OPTIONS: readonly (readonly [AllowMode, string])[] = [['none', 'No callback'], ['true', 'Always true'], ['false', 'Always false'], ['ask', 'Ask']];
 
@@ -131,6 +147,7 @@ function AgentSteps({ agent, gate, entries }: { agent: Agent; gate: AllowGate; e
 /** What an agent sees and does: the bridge's live snapshot of both controllers, and `act` on them, used the way an app would. */
 export function AgentPanel({ agent, gate }: { agent: Agent; gate: AllowGate }) {
   const entries = useSyncExternalStore(agent.subscribe, agent.snapshot, agent.snapshot);
+  const changes = useAgentChanges(agent);
   const toaster = entries.find(isMainToaster);
   const island = !toaster ? 'not connected' : toaster.island.open ? `Island open · ${toaster.island.current ?? '—'}` : 'Island closed';
   return <section id="agent" className="lab-agent" aria-labelledby="agent-title" data-lab-keep-island="">
@@ -138,6 +155,12 @@ export function AgentPanel({ agent, gate }: { agent: Agent; gate: AllowGate }) {
     <p>One <code>createAgent()</code> reads both controllers: the main one as <code>toaster</code>, the second as <code>secondary</code>. This is the snapshot an agent gets: no React nodes, no functions, no form values.</p>
     <p>Presets put one step for the main controller into the call, with a ref from the current snapshot. Pressing an action or submitting a form needs a person unless the action says <code>agent: 'allow'</code>; <code>agent: 'deny'</code> never runs. Steps never move focus.</p>
     <AgentSteps agent={agent} gate={gate} entries={entries} />
+    <details open className="lab-agent-changes"><summary>Changes · newest first · last {CHANGE_LIMIT}</summary>
+      <p className="lab-hint">What <code>agent.subscribe</code> receives: what changed and who changed it (<code>user</code>, <code>agent</code>, <code>app</code>, <code>system</code>). A form field reports its author, never its text.</p>
+      <ol className="lab-log" data-testid="agent-changes" tabIndex={0} aria-label="Agent change records">
+        {changes.length === 0 ? <li className="lab-empty">No changes yet.</li> : changes.map(entry => <li key={entry.id}>{JSON.stringify(entry.change)}</li>)}
+      </ol>
+    </details>
     <p className="lab-agent-summary" data-testid="agent-summary" data-entries={entries.length} data-island={toaster?.island.open ?? false} data-overflow={toaster?.overflow.count ?? 0}>
       <span><b>{entries.length}</b> entries</span><span>{island}</span><span><b>{toaster?.overflow.count ?? 0}</b> not accepted</span>
     </p>

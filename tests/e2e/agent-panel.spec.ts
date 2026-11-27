@@ -324,3 +324,52 @@ test('invalid JSON is reported next to the field and nothing is sent', async ({ 
   await button(page, 'Run steps').click();
   expect((await latest(page)).error?.message).toBe('Invalid call: steps[0].action must be a string. No step ran.');
 });
+
+test('the event log and the Changes list say who closed a notification: the agent, the app, the person and the timer', async ({ page }) => {
+  const log = page.getByTestId('logical-log');
+  const changes = page.getByTestId('agent-changes');
+  await expect(changes).toContainText('No changes yet.');
+  await button(page, '3 notifications').click();
+  await expect.poll(() => toaster(page).then(item => item?.count)).toBe(3);
+  await expect(log).toContainText(/admitted comment · \S+ · app/u);
+
+  // A step from the panel: the top notification.
+  const dismissed = await run(page, 'dismiss');
+  expect(dismissed.result.ok).toBe(true);
+  await expect(log).toContainText(/closed comment · \S+ programmatic · agent/u);
+  await expect(changes.locator('li').first()).toHaveText(JSON.stringify({
+    ref: dismissed.ref, component: 'notification', label: 'New comment', key: 'present', value: false, previous: true, reason: 'programmatic', source: 'agent',
+  }));
+
+  // The page's own button calls controller.dismiss.
+  await button(page, 'Dismiss draft').click();
+  await expect(log).toContainText(/closed draft · \S+ programmatic · app/u);
+
+  // The close button of the card in the Island.
+  await button(page, 'Open Island').click();
+  await expect(host(page)).toHaveAttribute('data-state', 'island');
+  await expect(changes).toContainText('"key":"island","value":"toaster:2","previous":null,"source":"user"');
+  await host(page).getByRole('button', { name: 'Close notification', exact: true }).click();
+  await expect(log).toContainText(/closed upload · \S+ close-button · user/u);
+  await expect(changes).toContainText('"reason":"close-button","source":"user"');
+  // Newest first inside one notification too: the Island closed because its last notification did.
+  await expect(changes.locator('li').first()).toHaveText('{"ref":"toaster","component":"toaster","key":"island","value":null,"previous":"toaster:2","source":"user"}');
+  await expect.poll(() => toaster(page).then(item => item?.count)).toBe(0);
+
+  // The default time of a plain success runs out.
+  await button(page, 'Show notification').click();
+  await expect(log).toContainText(/closed \S+ · \S+ timeout · system/u, { timeout: 15_000 });
+  await expect(changes).toContainText('"reason":"timeout","source":"system"');
+  // Nothing typed or shown reaches a record but titles; every record names one of the four sources.
+  for (const line of await changes.locator('li').allTextContents()) expect(line).toMatch(/"source":"(user|agent|app|system)"\}$/u);
+});
+
+test('a press that needs a person shows in Changes as the Island opened by the agent', async ({ page }) => {
+  await attention(page, 'stack');
+  await button(page, 'With action').click();
+  await expect.poll(() => toaster(page).then(item => item?.count)).toBe(1);
+  const pressed = await run(page, 'press');
+  expect(pressed.result.ok).toBe(false);
+  await expect(host(page)).toHaveAttribute('data-state', 'island');
+  await expect(page.getByTestId('agent-changes')).toContainText(`"key":"island","value":"${pressed.ref}","previous":null,"source":"agent"`);
+});
