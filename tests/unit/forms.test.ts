@@ -165,7 +165,7 @@ describe('form submits', () => {
     expect(Object.keys(draftOf(bridge, 'anna')!.errors.fields)).toEqual(['__proto__']);
     bridge.setFormValue(lease, handle, '__proto__', 'p');
     expect(draftOf(bridge, 'anna')?.errors.fields).toEqual({});
-    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'invalid', errors: { form: null, fields: { constructor: 'Pick another word' } } });
+    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'invalid', errors: { form: null, fields: { constructor: 'Pick another word' }, authored: true } });
     expect(bridge.setFormValue(lease, handle, 'constructor', 'class')).toEqual({ status: 'unchanged' });
     bridge.setFormValue(lease, handle, 'constructor', 'kind');
     expect(draftOf(bridge, 'anna')?.errors.fields).toEqual({});
@@ -175,11 +175,11 @@ describe('form submits', () => {
       values: Object.fromEntries([['constructor', 'kind'], ['toString', 'text'], ['__proto__', 'p']]) }));
   });
 
-  it.each<[string, unknown, { form: string | null; fields: Record<string, string> } | null]>([
+  it.each<[string, unknown, { form: string | null; fields: Record<string, string>; authored: true } | null]>([
     ['true', true, null],
     ['an empty object', {}, null],
-    ['a message', 'Pick a time first', { form: 'Pick a time first', fields: {} }],
-    ['field messages', { reply: 'Say more' }, { form: null, fields: { reply: 'Say more' } }],
+    ['a message', 'Pick a time first', { form: 'Pick a time first', fields: {}, authored: true }],
+    ['field messages', { reply: 'Say more' }, { form: null, fields: { reply: 'Say more' }, authored: true }],
   ])('treats validate returning %s', (_label, returned, errors) => {
     const run = vi.fn();
     const validate = vi.fn(() => returned as never);
@@ -209,7 +209,7 @@ describe('form submits', () => {
     const lease = attach(bridge);
     const handle = admit(controller, spec({ action: reply({ run, validate: validate as never }) }));
     bridge.setFormValue(lease, handle, 'reply', 'Yes');
-    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'invalid', errors: { form: 'Not sent', fields: {} } });
+    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'invalid', errors: { form: 'Not sent', fields: {}, broken: true } });
     expect(run).not.toHaveBeenCalled();
     return Promise.resolve().then(() => {
       expect(diagnostics.map((diagnostic) => [diagnostic.code, diagnostic.source])).toEqual([['callback-error', 'action.validate']]);

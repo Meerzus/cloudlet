@@ -209,7 +209,8 @@ async function checkArchive(directory, { packageDir, packageRoot, manifest, pack
 }
 
 /** Relative static and dynamic imports of `entry`, followed through the packed files. */
-async function moduleGraph(packageRoot, entry) {
+/** Modules reachable from `entry`; `{ staticOnly: true }` leaves out what `import()` loads later. */
+async function moduleGraph(packageRoot, entry, { staticOnly = false } = {}) {
   const seen = new Set();
   const queue = [entry];
   while (queue.length > 0) {
@@ -219,7 +220,8 @@ async function moduleGraph(packageRoot, entry) {
     const code = await readFile(join(packageRoot, path), 'utf8');
     // Every `import(` must name a literal, or the walk could miss a module.
     assert.doesNotMatch(code, /\bimport\s*\(\s*(?!["'])/u, `Dynamic import with a computed specifier in ${path}`);
-    for (const [, specifier] of code.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/gu)) {
+    for (const [, dynamic, specifier] of code.matchAll(/(?:\bfrom\s*|\bimport\s*(\()?\s*)["']([^"']+)["']/gu)) {
+      if (staticOnly && dynamic) continue;
       if (specifier.startsWith('.')) queue.push(posix.join(posix.dirname(path), specifier));
     }
   }
@@ -228,7 +230,7 @@ async function moduleGraph(packageRoot, entry) {
 
 const TOAST_RUNTIME = ['CloudletProvider', 'Toaster', 'createCloudlet', 'useCloudlet', 'useOptionalCloudlet'];
 const REACT_PEERS = ['react', 'react/jsx-runtime', 'react-dom', 'react-dom/server'];
-// The adapter and its read port: whoever imports only the package root must not load them.
+// The adapter and its port: whoever imports only the package root must not load them.
 const AGENT_MODULES = ['dist/agent.js', 'dist/core/agent-port.js'];
 
 async function checkToast(directory, archive) {
@@ -259,8 +261,18 @@ async function checkToast(directory, archive) {
   const rootGraph = await moduleGraph(packageRoot, 'dist/index.js');
   assert.ok(rootGraph.has('dist/react.js') && rootGraph.has('dist/react/renderer.js'), 'The graph walk must follow static and dynamic imports');
   for (const module of AGENT_MODULES) assert.ok(!rootGraph.has(module), `The root entry reaches ${module}`);
+  // Running actions and editing forms load with the renderer, never with the root itself.
+  const rootStart = await moduleGraph(packageRoot, 'dist/index.js', { staticOnly: true });
+  assert.ok(rootStart.has('dist/core/controller.js') && !rootStart.has('dist/react/renderer.js'), 'The static walk must stop at dynamic imports');
+  assert.ok(rootGraph.has('dist/core/actions.js'), 'The renderer must reach the shared action functions');
+  assert.ok(!rootStart.has('dist/core/actions.js'), 'The root entry statically reaches dist/core/actions.js');
   const agentGraph = await moduleGraph(packageRoot, 'dist/agent.js');
-  assert.ok(AGENT_MODULES.every((module) => agentGraph.has(module)), 'The agent entry must reach its read port');
+  assert.ok(AGENT_MODULES.every((module) => agentGraph.has(module)), 'The agent entry must reach its port');
+  // Agent steps run through the shared action functions, never through the renderer's bridge.
+  assert.ok(agentGraph.has('dist/core/actions.js'), 'The agent entry must reach the shared action functions');
+  for (const module of ['dist/core/bridge.js', 'dist/react.js', 'dist/react/renderer.js']) {
+    assert.ok(!agentGraph.has(module), `The agent entry reaches ${module}`);
+  }
   for (const path of files.filter((path) => path.startsWith('dist/'))) {
     assert.ok(!(await readFile(join(packageRoot, path), 'utf8')).includes('@cloudlet/agent'), `${path} names @cloudlet/agent`);
   }
@@ -428,6 +440,9 @@ async function checkAgent(directory, archive) {
     notify();
     assert.equal(calls, 2, 'A component change reaches subscribers');
     assert.equal(agent.snapshot()[0].state, 2);
+    const refused = await agent.act({ steps: [{ ref: 'fake', action: 'poke' }] });
+    assert.equal(refused.ok, false, 'A read-only component takes no steps');
+    assert.match(refused.error.message, /takes no steps/);
     assert.throws(() => agent.connect(component), TypeError, 'A name connects once');
     disconnect();
     assert.equal(notify, undefined, 'disconnect unsubscribes from the component');
@@ -444,7 +459,7 @@ async function checkAgent(directory, archive) {
   `;
   run(directory, 'commonjs', commonJsProbe);
   await typecheckConsumer(directory, 'agent-contracts.ts', ['ES2022']);
-  console.log(`${manifest.name}: ${common.files.length} packed files, ESM export, no dependencies or peers, navigable declaration maps, cold no-DOM import, CommonJS require() through the default condition, connect/snapshot/subscribe without DOM or timers, ${common.rejectedDeepImports} rejected deep imports, strict tarball consumer typecheck without DOM.`);
+  console.log(`${manifest.name}: ${common.files.length} packed files, ESM export, no dependencies or peers, navigable declaration maps, cold no-DOM import, CommonJS require() through the default condition, connect/snapshot/subscribe/act without DOM or timers, ${common.rejectedDeepImports} rejected deep imports, strict tarball consumer typecheck without DOM.`);
 }
 
 /** Both archives in one node_modules: the bridge reads a Toaster controller, typed from the archives. */
@@ -470,10 +485,13 @@ async function checkTogether(directory) {
     assert.deepEqual(agent.snapshot().map((entry) => entry.ref), ['toaster', 'toaster:1', 'secondary']);
     disconnect();
     assert.deepEqual(agent.snapshot().map((entry) => entry.ref), ['toaster', 'toaster:1']);
+    const dismissed = await agent.act({ steps: [{ ref: 'toaster:1', action: 'dismiss' }] });
+    assert.deepEqual(dismissed, { ok: true, steps: [{ step: 0, ref: 'toaster:1', gone: true }] }, 'An agent step changes the Toaster');
+    assert.equal(controller.getSnapshot().notifications.length, 0);
     controller.dispose();
     secondary.dispose();
     assert.deepEqual(agent.snapshot(), []);
-    assert.deepEqual(resourceCalls, [], 'Reading Toaster through the bridge must not touch the DOM or allocate timers/listeners');
+    assert.deepEqual(resourceCalls, [], 'Reading and driving Toaster through the bridge must not touch the DOM or allocate timers/listeners');
   `;
   run(directory, 'module', probe);
   await typecheckConsumer(directory, 'agent-toaster-contracts.ts', ['ES2022', 'DOM']);

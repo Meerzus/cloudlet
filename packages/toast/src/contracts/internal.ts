@@ -84,6 +84,16 @@ export type AnnouncementAcknowledgement =
 export interface FormErrors {
   readonly form: string | null;
   readonly fields: Readonly<Record<string, string>>;
+  /**
+   * The messages are what the app's `validate` returned, so they may quote what the person typed;
+   * absent for the built-in messages, which never hold a value.
+   */
+  readonly authored?: true;
+  /**
+   * `validate` threw or answered nonsense: `form` is the app's configured failure message, which
+   * stays with the person.
+   */
+  readonly broken?: true;
 }
 
 /** The values a form action holds for one record; only the renderer sees them. */
@@ -91,6 +101,8 @@ export interface FormDraft {
   readonly handle: NotificationHandle;
   readonly values: Readonly<Record<string, string>>;
   readonly errors: FormErrors;
+  /** Who wrote each field last (own keys only); a field nobody wrote and without a default has none. */
+  readonly authors: Readonly<Record<string, 'app' | 'user' | 'agent'>>;
 }
 
 export interface RendererSnapshot<Slot = never> extends ControllerSnapshot<Slot> {
@@ -122,7 +134,8 @@ export type ActionResult =
   | { readonly status: 'started' }
   /** A form failed `required`, `maxLength` or `validate`; the messages are in the record's draft. */
   | { readonly status: 'invalid'; readonly errors: FormErrors }
-  | { readonly status: 'rejected'; readonly reason: BridgeRejection | 'no-command' | 'already-pending' };
+  /** `action-replaced`: the form's own `validate` put another action on the record; neither runs. */
+  | { readonly status: 'rejected'; readonly reason: BridgeRejection | 'no-command' | 'already-pending' | 'action-replaced' };
 
 export type RetryOperationResult =
   | { readonly status: 'started'; readonly token: OperationAttemptToken }

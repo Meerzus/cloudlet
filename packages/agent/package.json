@@ -1,7 +1,7 @@
 {
   "name": "@cloudlet/agent",
   "version": "0.1.0",
-  "description": "Experimental bridge that lets an agent read the state of Cloudlet components",
+  "description": "Experimental bridge that lets an agent read and act on Cloudlet components under the app's permission",
   "license": "MIT",
   "homepage": "https://cloudlet.dev",
   "repository": { "type": "git", "url": "git+https://github.com/Meerzus/cloudlet.git", "directory": "packages/agent" },

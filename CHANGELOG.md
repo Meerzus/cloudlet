@@ -10,9 +10,50 @@
   presentation order: title, text, kind, time left, operation state and the action, with the verbs
   that apply. Form fields say whether they hold text; their values never leave Cloudlet. The subpath
   reads the controller without the host lease, DOM or timers, and the root entry does not load it.
+- Experimental: a command or a form action takes `agent: 'allow' | 'confirm' | 'deny'`, which says
+  what an agent may do with it through `@cloudlet/toast/agent`; omitted means `confirm`. The agent
+  snapshot shows it as `action.agent`, and under `deny` it lists no `press` or `submit` (an agent can
+  still fill a form's fields). A link rejects the field with `invalid-input`. A person presses and
+  submits as before, whatever the marker.
+- Experimental: `toasterAgent` runs steps sent through `agent.act` of `@cloudlet/agent`: `open`,
+  `close`, `clear` and `acknowledge` on the Toaster record; `show`, `dismiss`, `press`, `cancel` and
+  `retry` on a notification. A step changes the controller the way the matching call does
+  (`dismiss` closes as `programmatic`, `clear` as `clear`, `open` and `show` open the Island for
+  attention). `press` follows the action's `agent` marker and reads it again right before the
+  command runs, so a marker made stricter while the step waited for approval stops it, and so does an
+  action the app replaced in the meantime: an approval covers the action it was asked about, and a form whose own `validate` replaces
+  its action is not sent, by an agent or by a person; it waits for
+  the command and, when it fails, returns the message the person sees. `cancel` and `retry` return at
+  once (`requested`, `started`). `open` and `show` need a mounted `Toaster` and are listed only while
+  one is. No step moves focus or takes the host from a `Toaster`.
+- Experimental: when a `press` needs a person (no `allow`, or `allow` said no or did not answer),
+  `toasterAgent` opens the Island on that notification for them, for attention and without moving
+  focus, even if the notification asks for no auto-open. If the person is using the Toaster at that
+  moment (hover, focus, a gesture, or a draft in the open Island), the Island waits until they stop
+  and then opens after the attention delay, and the agent is told so; a notification closed in the
+  meantime is not shown. The app's own auto-open keeps working alongside. While the person uses the
+  Toaster, `open` and `show` answer "The person is using the Island. Try again later." and change
+  nothing; `close` does the same over a draft in the open Island.
+- Experimental: `toasterAgent` fills and submits forms. `fill` with `args: [name, value]` writes a
+  field as the agent: it refuses an unknown field (and lists the field names), a value that is not a
+  string or longer than the field's `maxLength`, a running submit, and any field the person typed in,
+  even one they cleared again, naming the field but never a value. An agent's value makes a draft as
+  typing does (the `draft` pause, the open Island stays open), and a person who submits sends it.
+  `submit` follows the form's `agent` marker like `press`, and a submit that needs a person opens the
+  Island on the form for them; a form that fails its checks is not sent, the person sees the
+  messages, and the agent gets the built-in ones by field label (`"Send" was not sent. "Reply": This
+  field is required.`). What the form's own `validate` and `errorMessage` say may quote what the
+  person typed, so the agent never gets that text, in a result or in the snapshot: it reads which
+  fields were not accepted (`The form's own check did not accept "Reply".`) or `"Send" failed:
+  Action failed`; a `validate` that throws answers `Action failed` too. Each field in the agent snapshot now has `kind`, `maxLength`, `inputMode` and
+  `filledBy` (`app` for the default, `user`, `agent` or null); values, defaults and placeholders
+  still never leave Cloudlet.
 
 ### Fixes
 
+- A command or a form is not run when a listener of its `action-started` event dismissed or
+  replaced the notification: the attempt ended before it began. An app that closes a notification
+  from that event and still wants the action to run closes it from `run` instead.
 - A form field named like an `Object` method (`constructor`, `toString`, …) no longer opens as
   invalid. The form used to read such a name from `Object.prototype`, so the field was marked
   `aria-invalid` and showed a function as its message before any submit. Messages and values are now

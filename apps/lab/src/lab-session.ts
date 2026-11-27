@@ -159,6 +159,17 @@ export class LabSession {
     else this.controller.show({ title: `Link copied · ${n}`, attention });
   }
   /**
+   * Actions with the agent marker: `allow` lets an agent press without a person; `deny` never
+   * lets it press (the plain “With action” has no marker, so a person must approve).
+   */
+  generateAgentAction(agent: 'allow' | 'deny', attention: Attention) {
+    const n = ++this.generated;
+    if (agent === 'allow') this.controller.show({ title: `Filter applied · ${n}`, kind: 'info', attention,
+      action: { kind: 'command', label: 'Reset filter', agent, run: () => this.note(`Filter ${n} reset.`) } });
+    else this.controller.show({ title: `Backup ready · ${n}`, kind: 'info', attention,
+      action: { kind: 'command', label: 'Delete backup', agent, run: () => this.note(`Backup ${n} deleted.`) } });
+  }
+  /**
    * A quick reply, or a note with a name and several lines. The send takes 700 ms; text containing
    * "fail" makes it fail, so the error under the form and a second try can be checked.
    */

@@ -207,3 +207,48 @@ describe('immutable presentation content', () => {
     expect(operation.admission).toMatchObject({ status: 'rejected', reason: 'invalid-input', issues: [{ path: 'pending.attention' }] });
   });
 });
+
+describe('agent marker on an action', () => {
+  const run = () => undefined;
+  const command = (agent: unknown) => ({ kind: 'command', label: 'Run', run, agent });
+  const form = (agent: unknown) => ({ kind: 'form', label: 'Send', run, fields: [{ name: 'reply', kind: 'text', label: 'Reply' }], agent });
+
+  it('accepts allow, confirm and deny on a command and a form, in a spec and a patch', () => {
+    for (const agent of ['allow', 'confirm', 'deny']) {
+      expect(validateSpec({ title: 'Valid', action: command(agent) })).toEqual([]);
+      expect(validateSpec({ title: 'Valid', action: form(agent) })).toEqual([]);
+      expect(validatePatch({ action: command(agent) })).toEqual([]);
+    }
+  });
+
+  it('rejects another value and the field on a link', () => {
+    for (const agent of ['always', true, null, 'Allow']) {
+      expect(validateSpec({ title: 'Valid', action: command(agent) }))
+        .toContainEqual({ path: 'action.agent', message: 'Expected one of: allow, confirm, deny' });
+      expect(validateSpec({ title: 'Valid', action: form(agent) }).some(({ path }) => path === 'action.agent')).toBe(true);
+    }
+    expect(validateSpec({ title: 'Valid', action: command(undefined) }).some(({ path }) => path === 'action.agent')).toBe(true);
+    expect(validateSpec({ title: 'Valid', action: { kind: 'link', label: 'Open', href: '/', agent: 'deny' } }))
+      .toContainEqual({ path: 'action.agent', message: 'Field is not allowed for a link action' });
+    const { controller } = harness();
+    expect(controller.show({ title: 'Link', action: { kind: 'link', label: 'Open', href: '/', agent: 'deny' } as never }))
+      .toMatchObject({ status: 'rejected', reason: 'invalid-input', issues: [{ path: 'action.agent' }] });
+  });
+
+  it('keeps the marker through show, an update of another field and an update with a new action', () => {
+    const { controller } = harness();
+    const handle = admit(controller, { title: 'Delete', action: { kind: 'command', label: 'Delete', run, agent: 'deny' } });
+    expect(record(controller, handle).content.action).toMatchObject({ agent: 'deny' });
+    expect(controller.update(handle, { title: 'Delete file' })).toEqual({ status: 'applied' });
+    expect(record(controller, handle).content.action).toMatchObject({ agent: 'deny' });
+    expect(controller.update(handle, { action: { kind: 'command', label: 'Delete', run, agent: 'deny' } })).toEqual({ status: 'unchanged' });
+    expect(controller.update(handle, { action: { kind: 'command', label: 'Delete', run, agent: 'allow' } })).toEqual({ status: 'applied' });
+    expect(record(controller, handle).content.action).toMatchObject({ agent: 'allow' });
+    expect(controller.update(handle, { action: { kind: 'command', label: 'Delete', run } })).toEqual({ status: 'applied' });
+    expect(record(controller, handle).content.action).not.toHaveProperty('agent');
+    const sent = admit(controller, { title: 'Reply', action: form('deny') as never });
+    expect(record(controller, sent).content.action).toMatchObject({ kind: 'form', agent: 'deny' });
+    expect(controller.update(sent, { title: 'Reply now' })).toEqual({ status: 'applied' });
+    expect(record(controller, sent).content.action).toMatchObject({ kind: 'form', agent: 'deny' });
+  });
+});

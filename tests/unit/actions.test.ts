@@ -363,3 +363,18 @@ describe('action lifetime, navigation descriptors and scheduler ownership', () =
     }
   });
 });
+
+it('does not run an action whose notification a listener dismissed as the attempt started', () => {
+  const { controller, bridge } = harness();
+  const lease = attach(bridge);
+  const run = vi.fn();
+  const gone = admit(controller, { title: 'Dismissed', action: { kind: 'command', label: 'Run', run } });
+  const off = controller.onEvent((event) => { if (event.type === 'action-started') controller.dismiss(event.handle); });
+  expect(bridge.invokeAction(lease, gone)).toEqual({ status: 'started' });
+  expect(run).not.toHaveBeenCalled();
+  expect(controller.getHandle(gone.id)).toBeUndefined();
+  off();
+  const kept = admit(controller, { title: 'Kept', action: { kind: 'command', label: 'Run', run } });
+  expect(bridge.invokeAction(lease, kept)).toEqual({ status: 'started' });
+  expect(run).toHaveBeenCalledTimes(1);
+});

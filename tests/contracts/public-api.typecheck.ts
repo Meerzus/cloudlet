@@ -8,6 +8,7 @@ import type {
   CloudletPart,
   CloudletProviderProps,
   CloudletProviderComponent,
+  CommandAction,
   CreateCloudlet,
   ToasterMotion,
   NotificationController,
@@ -83,6 +84,15 @@ export function verifyPublicContracts(factory: CreateCloudlet, slot: ReactNode) 
   controller.show({ title: 'Missing speech', description: { kind: 'rich', content: slot } });
   // @ts-expect-error Arbitrary React content is not a command or navigation action.
   controller.show({ title: 'Invalid action', action: slot });
+  controller.show({ title: 'Deleted', action: { kind: 'command', label: 'Undo', run: () => undefined, agent: 'deny' } });
+  controller.show({ title: 'Reply', action: { kind: 'form', label: 'Send', run: () => undefined, agent: 'allow',
+    fields: [{ name: 'reply', kind: 'text', label: 'Reply' }] } });
+  const marker: NonNullable<CommandAction['agent']> = 'confirm';
+  // @ts-expect-error An agent marker is allow, confirm or deny.
+  controller.show({ title: 'Deleted', action: { kind: 'command', label: 'Undo', run: () => undefined, agent: 'always' } });
+  // @ts-expect-error A link takes no agent marker: the bridge never follows it.
+  controller.show({ title: 'Report', action: { kind: 'link', label: 'Open', href: '/', agent: 'deny' } });
+  void marker;
   // @ts-expect-error Track does not deduplicate independent operations.
   controller.track(Promise.resolve(1), { pending: { title: 'Loading' }, success: { title: 'Done' }, error: { title: 'Failed' }, dedupeKey: 'same' });
   // @ts-expect-error Pending operation has no TTL.

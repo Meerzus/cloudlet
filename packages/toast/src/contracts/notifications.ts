@@ -26,6 +26,12 @@ export interface CommandAction {
   readonly label: string;
   readonly run: (context: ActionContext) => unknown;
   readonly errorMessage?: (error: unknown) => string;
+  /**
+   * What an agent may do with this command through `@cloudlet/toast/agent`: `allow` lets it press;
+   * `confirm` needs a person to approve each press; `deny` never lets an agent press, whatever the
+   * app approves. A person can always press it. Omitted = `confirm`.
+   */
+  readonly agent?: 'allow' | 'confirm' | 'deny';
 }
 
 export interface NavigationAction {
@@ -73,6 +79,13 @@ export interface FormAction<Name extends string = string> {
   errorMessage?(error: unknown): string;
   /** Runs on submit after `required` and `maxLength`. */
   validate?(values: FormValues<Name>): FormValidation<Name>;
+  /**
+   * What an agent may do with this form through `@cloudlet/toast/agent`: `allow` lets it submit;
+   * `confirm` needs a person to approve each submit; `deny` never lets an agent submit, whatever the
+   * app approves. None of them stops an agent from filling the fields, and a person can always
+   * submit. Omitted = `confirm`.
+   */
+  readonly agent?: 'allow' | 'confirm' | 'deny';
 }
 
 export type PrimaryAction<Name extends string = string> = CommandAction | NavigationAction | FormAction<Name>;
