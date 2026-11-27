@@ -95,6 +95,8 @@ describe('useColorPaletteAgent', () => {
     const first = fields()[0];
     expect((await step(agent, 'set', [0, '#123456'])).ok).toBe(true);
     expect(fields()[0]).not.toBe(first);
+    // #123456 written in the palette's format.
+    expect(fields()[0]).toBe('oklch(31.9% 0.072 251.2)');
     expect(colorsOf(agent)).toEqual(fields());
     expect((await step(agent, 'remove', [2])).ok).toBe(true);
     expect(fields()).not.toContain('banana');
