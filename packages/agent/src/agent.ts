@@ -14,6 +14,22 @@ function report(error: unknown): void {
   queueMicrotask(() => { throw error; });
 }
 
+declare const document: object | undefined;
+declare const reportError: ((error: unknown) => void) | undefined;
+declare const console: { error(...data: unknown[]): void } | undefined;
+
+/**
+ * Surfaces an error from `allow` or a component during `act` without ending the process: the call
+ * already answers with a refusal, and an uncaught error outside a page stops the runtime before
+ * the caller reads it. A page gets it as an `error` event, any other runtime in its console.
+ */
+function note(error: unknown): void {
+  try {
+    if (typeof document === 'object' && typeof reportError === 'function') reportError(error);
+    else if (typeof console === 'object') console.error(error);
+  } catch { /* A broken error channel must not break the call. */ }
+}
+
 interface Connection {
   readonly component: AgentComponent;
   readonly unsubscribe: () => void;
@@ -123,7 +139,7 @@ export function createAgent(options?: AgentOptions): Agent {
     refs: () => [...connections.values()].flatMap(({ component }) => component.snapshot().map((record) => record.ref)),
     allow,
     timeout,
-    report,
+    report: note,
   };
 
   const act: Agent['act'] = (input, actOptions) => {
@@ -155,7 +171,7 @@ export function createAgent(options?: AgentOptions): Agent {
         return runSteps(steps, signal, own);
       }).catch((error: unknown) => {
         // Unreachable unless the bridge itself is broken; the call still settles.
-        report(error);
+        note(error);
         return failed(0, 'The agent bridge failed. No further step ran.');
       });
       queue = turn;

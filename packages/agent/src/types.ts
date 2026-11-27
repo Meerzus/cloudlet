@@ -278,7 +278,9 @@ export interface Agent {
    * Runs steps in order and stops at the first error; steps already done stay done. Calls of one
    * agent run one at a time, so a call made while a step waits for `allow` waits too. The whole
    * input is checked before the first step. The promise never rejects: every failure is an
-   * `error` in the result, with a message written for the agent.
+   * `error` in the result, with a message written for the agent. What `allow` or a component
+   * threw is not thrown again: a page gets it through `reportError`, any other runtime in
+   * `console.error`.
    */
   readonly act: (input: ActInput, options?: ActOptions) => Promise<ActResult>;
 }

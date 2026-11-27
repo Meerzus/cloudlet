@@ -80,7 +80,8 @@ if (!result.ok) console.log(result.error.message);
   timeout, the component brings it in front of the person and the agent is told to ask them), or
   `deny` (it never runs, and `allow` is not asked).
 - Only `true` approves. A throw, a rejection, any other value and no answer within the timeout
-  refuse.
+  refuse. The error of a throwing `allow` or component is not thrown again: a page gets it through
+  `reportError`, any other runtime in `console.error`.
 - `act(input, { signal })` can be cancelled: a step that waits for `allow` or for the component
   stops waiting, and nothing further runs.
 - The promise never rejects. The result is frozen plain data, ready for JSON and `structuredClone`:

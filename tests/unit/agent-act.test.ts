@@ -58,12 +58,10 @@ function errorOf(result: ActResult): { step: number; message: string } {
   return result.error;
 }
 
-/** Collects what the bridge reports through queueMicrotask. */
+/** Collects what the bridge reports during a call: outside a page that is the console. */
 function captureReports(): unknown[] {
   const reported: unknown[] = [];
-  vi.stubGlobal('queueMicrotask', (callback: () => void) => {
-    try { callback(); } catch (error) { reported.push(error); }
-  });
+  vi.stubGlobal('console', { ...console, error: (error: unknown) => { reported.push(error); } });
   return reported;
 }
 
@@ -805,5 +803,45 @@ describe('act: what the review of the bridge found', () => {
     expect(errorOf(await queued).message).toBe('No entry "box:1". Current refs: box, box:1.');
     expect(second.run).not.toHaveBeenCalled();
     expect((await agent.act({ steps: [{ ref: 'box:1', action: 'dismiss' }] })).ok).toBe(true);
+  });
+});
+
+describe('act: an error from allow or a component is reported without being thrown', () => {
+  const breaking = (): { agent: ReturnType<typeof createAgent>; failures: Error[] } => {
+    const failures = [new Error('check broke'), new Error('allow broke'), new Error('run broke')];
+    const agent = createAgent({ allow: (step) => { if (step.needsPerson) throw failures[1]!; return true; } });
+    agent.connect(stepper('one', { check: () => { throw failures[0]!; } }).component);
+    agent.connect(stepper('two', { check: confirm }).component);
+    agent.connect(stepper('three', { run: () => { throw failures[2]!; } }).component);
+    return { agent, failures };
+  };
+  const call = async (agent: ReturnType<typeof createAgent>): Promise<void> => {
+    for (const name of ['one', 'two', 'three']) expect((await agent.act({ steps: [{ ref: `${name}:1`, action: 'press' }] })).ok).toBe(false);
+  };
+
+  it('writes it to the console outside a page and queues no throwing microtask', async () => {
+    const queued: unknown[] = [];
+    vi.stubGlobal('queueMicrotask', (callback: () => void) => { queued.push(callback); });
+    const reported = captureReports();
+    const { agent, failures } = breaking();
+    await call(agent);
+    expect(reported).toEqual(failures);
+    expect(queued).toEqual([]);
+  });
+
+  it('hands it to reportError in a page', async () => {
+    const reported = captureReports();
+    const events: unknown[] = [];
+    vi.stubGlobal('document', {});
+    vi.stubGlobal('reportError', (error: unknown) => { events.push(error); });
+    const { agent, failures } = breaking();
+    await call(agent);
+    expect(events).toEqual(failures);
+    expect(reported).toEqual([]);
+  });
+
+  it('still answers when the error channel itself throws', async () => {
+    vi.stubGlobal('console', { ...console, error: () => { throw new Error('console broke'); } });
+    await call(breaking().agent);
   });
 });
