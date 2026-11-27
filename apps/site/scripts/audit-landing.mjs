@@ -15,12 +15,13 @@
  * page or cycles; every stop must show a focus ring and be scrolled into view) and, with reduced
  * motion, the still layout of `/` and `/toaster` (no Lenis, no pin spacers, sky and scenes untransformed).
  * The kit's `/` is checked at every section, then with each of its live places open (KIT_LIVE). On
- * the phone, every page is also loaded 320 px wide and must not scroll sideways.
+ * the phone, every page is also loaded 320 px wide and must not scroll sideways. Without reduced motion, the
+ * switch on `/` must calm the Toaster of the page and the one on the scene's phone (SWITCH_CHECK).
  *
  * WebKit on Linux runs without WebGL 2 (its software WebGL runs out of memory on the paint): the pages show
  * their fallback there; Safari on a Mac draws the paint. It also leaves out /color-picker (see PAGES).
  *
- * Writes axe-<browser>.json; exits 1 on any violation, keyboard or reduced-motion failure, or console error.
+ * Writes axe-<browser>.json; exits 1 on any violation, keyboard, reduced-motion or switch failure, or console error.
  */
 import AxeBuilder from '@axe-core/playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -262,6 +263,50 @@ const stillLayout = (page) =>
     }).length,
   }));
 
+/**
+ * The page's reduce-motion switch on `/` reaches both Toasters: the page's own (the attribute on `<html>`) and the
+ * one in the scene's frame (a protocol message). Each host's `data-reduced-motion` reports its result. Returns the
+ * value both hosts show with the switch on and off; a host that never settles reads as what it last showed.
+ */
+const SWITCH_CHECK = 'Reduce motion on this page';
+const FRAME_URL = /\/toaster\/frame/u;
+async function switchCheck(page) {
+  const hostValue = (target) => target.evaluate(() => document.querySelector('.cloudlet-host')?.getAttribute('data-reduced-motion') ?? null);
+  const settle = async (target, wanted) => {
+    try {
+      await target.waitForFunction((value) => document.querySelector('.cloudlet-host')?.getAttribute('data-reduced-motion') === value, wanted, { timeout: 5000 });
+    } catch (error) {
+      if (error?.name !== 'TimeoutError') throw error;
+    }
+    return hostValue(target);
+  };
+  // The frame loads as the scene comes near and reports in once its Toaster is there.
+  const top = await page.evaluate(() => {
+    const frame = document.querySelector('iframe.kt-frame') ?? document.querySelector('.kt-phones');
+    return frame ? frame.getBoundingClientRect().top + window.scrollY - 100 : null;
+  });
+  if (top === null) return { error: 'no scene phones on the page' };
+  await scrollTo(page, top);
+  const iframe = page.locator('iframe.kt-frame');
+  await iframe.waitFor({ state: 'attached', timeout: 15_000 });
+  const frame = await (await iframe.elementHandle()).contentFrame();
+  if (!frame || !FRAME_URL.test(frame.url())) return { error: 'the scene frame did not load' };
+  await frame.waitForSelector('.cloudlet-host[data-reduced-motion]', { state: 'attached', timeout: 15_000 });
+  const before = { page: await hostValue(page), frame: await hostValue(frame) };
+  const toggle = page.getByRole('switch', { name: SWITCH_CHECK });
+  await toggle.click();
+  const on = { page: await settle(page, 'true'), frame: await settle(frame, 'true') };
+  await toggle.click();
+  const off = { page: await settle(page, 'false'), frame: await settle(frame, 'false') };
+  return { before, on, off };
+}
+const switchPasses = (result) =>
+  !result.error &&
+  result.on.page === 'true' &&
+  result.on.frame === 'true' &&
+  result.off.page === 'false' &&
+  result.off.frame === 'false';
+
 const browser = await engine.launch();
 const report = {};
 let failed = false;
@@ -376,6 +421,17 @@ try {
       }
       await page.setViewportSize(options.viewport);
     }
+    if (options.reducedMotion !== 'reduce') {
+      trace(`${name} /: reduce-motion switch`);
+      await renew(options.viewport);
+      await visit(page, '/');
+      try {
+        entry.switch = await switchCheck(page);
+      } catch (error) {
+        entry.switch = { error: String(error?.message ?? error).split('\n')[0] };
+      }
+      if (!switchPasses(entry.switch)) failed = true;
+    }
     if (options.reducedMotion === 'reduce') {
       entry.still = {};
       for (const path of ['/', '/toaster']) {
@@ -397,6 +453,7 @@ try {
     console.log(
       `${name}: ${entry.checks.length} checks, ${bad.length} with violations (mid-fade text skipped in: ${fading.join(', ') || 'none'}); ${keys.join('; ')}; ${errors.length} console errors` +
         (entry.still ? `; still layout ${JSON.stringify(entry.still)}` : '') +
+        (entry.switch ? `; switch ${switchPasses(entry.switch) ? 'calms both Toasters' : 'FAILED'} ${JSON.stringify(entry.switch)}` : '') +
         (entry.narrow ? `; scrollWidth at 320 px ${JSON.stringify(entry.narrow)}` : ''),
     );
     for (const [path, pass] of Object.entries(entry.keyboard)) for (const stop of pass.failures) console.log(`  keyboard ${path}: ${JSON.stringify(stop)}`);

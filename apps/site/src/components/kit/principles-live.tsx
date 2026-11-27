@@ -110,7 +110,7 @@ export function AccessProof() {
         <p id={note} className="kp-note">
           {system
             ? 'Your system already asks for reduced motion, and the whole page follows it.'
-            : 'Stops smooth scrolling, the sky’s parallax, the scenes, the paint’s spread and flow, and every entrance here. The Color picker and the Color palette follow it too; the Toaster, in the Island and on the phones, follows your system setting.'}
+            : 'Stops smooth scrolling, the sky’s parallax, the scenes, the paint’s spread and flow, and every entrance here. The Color picker, the Color palette and the Toaster, in the Island and on the phones, follow it too.'}
         </p>
         <span className="sr-only" role="status">
           {said}
