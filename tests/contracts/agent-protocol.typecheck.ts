@@ -1,16 +1,17 @@
 /**
- * Compile-only: the Toaster adapter and the agent bridge declare the same protocol on their own,
- * because @cloudlet/toast may not import @cloudlet/agent. These checks fail the typecheck as soon
- * as the two copies drift apart.
+ * Compile-only: the Toaster adapter, the Color picker adapter and the agent bridge declare the same
+ * protocol on their own, because @cloudlet/toast and the registry components may not import
+ * @cloudlet/agent. These checks fail the typecheck as soon as a copy drifts apart.
  */
 import {
-  createAgent, type ActResult, type AgentComponent, type AgentEntry, type AgentPermission, type AgentRunContext,
+  createAgent, type ActResult, type Agent, type AgentChange, type AgentComponent, type AgentEntry, type AgentPermission, type AgentRunContext,
   type AgentRunOutcome, type AgentSignal, type AgentStepCall, type AgentStepCheck, type AgentStepNames, type AgentSummonOutcome,
   type AgentValue,
 } from '@cloudlet/agent';
+import * as picker from '@/components/ui/color-picker/color-picker-agent';
 import { createCloudlet } from '../../packages/toast/src/index.js';
 import {
-  toasterAgent, type AgentComponentShape, type AgentEntryShape, type AgentPermissionShape, type AgentRunContextShape,
+  toasterAgent, type AgentChangeShape, type AgentComponentShape, type AgentEntryShape, type AgentPermissionShape, type AgentRunContextShape,
   type AgentRunOutcomeShape, type AgentSignalShape, type AgentStepCallShape, type AgentStepCheckShape,
   type AgentStepNamesShape, type AgentSummonOutcomeShape, type AgentValueShape, type ToasterAgent,
 } from '../../packages/toast/src/agent.js';
@@ -30,7 +31,23 @@ same<AgentStepCheck, AgentStepCheckShape>(true);
 same<AgentRunContext, AgentRunContextShape>(true);
 same<AgentRunOutcome, AgentRunOutcomeShape>(true);
 same<AgentSummonOutcome, AgentSummonOutcomeShape>(true);
+same<AgentChange, AgentChangeShape>(true);
 same<AgentComponent, AgentComponentShape>(true);
+
+// The Color picker's copy, which the palette's adapter shares.
+same<AgentEntry, picker.AgentEntryShape>(true);
+same<AgentSignal, picker.AgentSignalShape>(true);
+same<AgentValue, picker.AgentValueShape>(true);
+same<AgentPermission, picker.AgentPermissionShape>(true);
+same<AgentStepCall, picker.AgentStepCallShape>(true);
+same<AgentStepNames, picker.AgentStepNamesShape>(true);
+same<AgentStepCheck, picker.AgentStepCheckShape>(true);
+same<AgentRunContext, picker.AgentRunContextShape>(true);
+same<AgentRunOutcome, picker.AgentRunOutcomeShape>(true);
+same<AgentSummonOutcome, picker.AgentSummonOutcomeShape>(true);
+same<AgentChange, picker.AgentChangeShape>(true);
+same<AgentComponent, picker.AgentComponentShape>(true);
+same<Agent['connect'], picker.AgentConnectorShape['connect']>(true);
 
 export function verifyAgentProtocol(bridgeComponent: AgentComponent, bridgeEntry: AgentEntry, toasterEntry: AgentEntryShape) {
   const agent = createAgent();
@@ -43,6 +60,15 @@ export function verifyAgentProtocol(bridgeComponent: AgentComponent, bridgeEntry
   const entry: AgentEntryShape = bridgeEntry;
   const entryBack: AgentEntry = toasterEntry;
   void [disconnect, forward, backward, entry, entryBack];
+}
+
+export function verifyPickerAgent(bridgeEntry: AgentEntry, pickerRecord: picker.ColorPickerEntry) {
+  // An agent is what the hook takes, with no cast, and the picker's record is a bridge record.
+  const connector: picker.AgentConnectorShape = createAgent();
+  const pickerEntry: AgentEntry = pickerRecord;
+  // @ts-expect-error A bridge record is not necessarily the picker's.
+  const narrowed: picker.ColorPickerEntry = bridgeEntry;
+  void [connector, pickerEntry, narrowed];
 }
 
 export async function verifyAct(): Promise<string | undefined> {
