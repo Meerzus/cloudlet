@@ -92,8 +92,12 @@ describe('useColorPaletteAgent', () => {
     const fields = () => [...container.querySelectorAll<HTMLInputElement>('input[type="hidden"][name="brand"]')].map((input) => input.value);
     expect(colorsOf(agent)).toEqual(fields());
     expect(fields()).toContain('banana');
-    await step(agent, 'set', [0, '#123456']);
-    await step(agent, 'remove', [2]);
+    const first = fields()[0];
+    expect((await step(agent, 'set', [0, '#123456'])).ok).toBe(true);
+    expect(fields()[0]).not.toBe(first);
+    expect(colorsOf(agent)).toEqual(fields());
+    expect((await step(agent, 'remove', [2])).ok).toBe(true);
+    expect(fields()).not.toContain('banana');
     expect(colorsOf(agent)).toEqual(fields());
   });
 

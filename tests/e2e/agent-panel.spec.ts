@@ -508,3 +508,16 @@ test('Changes says who changed a color: the person by hand, the agent by a step'
     ref: 'color-palette', component: 'color-palette', label: 'Brand palette', key: 'colors', value: ['#ff6a3d'], previous: ['#ff6a3d', '#2f8f9d'], source: 'user',
   }));
 });
+
+test('a press in the picker\'s area sets a color by hand: the lab lets it reach the picker', async ({ page }) => {
+  await accentSwatch(page).click();
+  const area = colorsBlock(page).getByRole('slider', { name: 'Saturation and brightness' });
+  await expect(area).toBeVisible();
+  // The panel grows out of the swatch: press once it stands still.
+  await area.evaluate(element => Promise.all(element.closest('.color-picker-panel')!.getAnimations({ subtree: true }).map(animation => animation.finished)));
+  const box = (await area.boundingBox())!;
+  await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.75);
+  await expect(area).toBeFocused();
+  await expect(appAccent(page)).not.toHaveText('#007aff');
+  await expect(page.getByTestId('agent-changes').locator('li').first()).toContainText('"source":"user"');
+});

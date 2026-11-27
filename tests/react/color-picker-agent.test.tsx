@@ -126,6 +126,25 @@ describe('useColorPickerAgent', () => {
     expect(field()).toHaveValue('#ffffff');
   });
 
+  it('keeps the swatch paint of a picker without a color, as without the hook', () => {
+    const agent = createAgent();
+    function Hooked() {
+      return <ColorPicker {...useColorPickerAgent(agent, {})} />;
+    }
+    const { container } = render(<><Hooked /><ColorPicker /></>);
+    const paints = [...container.querySelectorAll<HTMLElement>('.color-picker')].map((picker) => picker.style.getPropertyValue('--color-picker-swatch'));
+    expect(paints).toEqual(['#ffffff', '#ffffff']);
+  });
+
+  it.each(['hsl(1e309 100% 50%)', 'hsl(1e308turn 100% 50%)', 'oklch(60% 0.2 1e309)'])('refuses %s, a hue too large to read', async (input) => {
+    const agent = createAgent();
+    const onChange = vi.fn();
+    render(<Controlled agent={agent} onChange={onChange} />);
+    expect(await set(agent, input)).toMatchObject({ ok: false, error: { message: expect.stringContaining('is not a color') } });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(field()).toHaveValue('#007aff');
+  });
+
   it('refuses a string the picker cannot read and leaves the color alone', async () => {
     const agent = createAgent();
     const onChange = vi.fn();

@@ -27,7 +27,7 @@ export function LabColors({ agent }: { agent: AgentConnectorShape }) {
     max: 4,
     labels: { group: 'Brand palette' },
   }, { label: 'Brand palette' });
-  return <section id="agent-colors" className="lab-colors" aria-labelledby="agent-colors-title" data-lab-keep-island="">
+  return <section id="agent-colors" className="lab-colors" aria-labelledby="agent-colors-title">
     <h2 id="agent-colors-title">Colors on the agent</h2>
     <p>A controlled color picker and palette, connected to the same agent as both Toasters. Change them by hand or by a step in the panel below; the readout is what the app holds.</p>
     <div className="lab-colors-row">
@@ -44,7 +44,9 @@ export function LabColors({ agent }: { agent: AgentConnectorShape }) {
       <dt>App holds · accent</dt><dd data-testid="colors-accent">{color}</dd>
       <dt>App holds · palette</dt><dd data-testid="colors-palette">{JSON.stringify(colors)}</dd>
     </dl>
-    <div className="lab-checks">
+    {/* Only the lab's own control keeps the Island: the lab stops every press inside a keeping element
+        before React sees it, which would leave the picker's area and sliders dead to a press. */}
+    <div className="lab-checks" data-lab-keep-island="">
       <label><input type="checkbox" checked={refuse} onChange={event => setRefuse(event.target.checked)} />The app takes no changes</label>
     </div>
   </section>;

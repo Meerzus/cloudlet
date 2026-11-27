@@ -183,7 +183,9 @@ const WHITE: Hsva = freeze({ h: 0, s: 0, v: 1, a: 1 });
  */
 export function writeColor(input: string, format: ColorFormat, alpha: boolean): string | null {
   const hsva = parseToHsva(input);
-  return hsva ? formatHsva(alpha ? hsva : { ...hsva, a: 1 }, format) : null;
+  // A hue too large to reduce (`hsl(1e309 …)`) reads as NaN channels: not a color the picker can show.
+  if (!hsva || ![hsva.h, hsva.s, hsva.v, hsva.a].every(Number.isFinite)) return null;
+  return formatHsva(alpha ? hsva : { ...hsva, a: 1 }, format);
 }
 
 /**
@@ -422,8 +424,9 @@ export function useColorPickerAgent<Props extends ColorPickerProps | ColorPicker
 ): Props {
   const { color, defaultColor, onChange, format, defaultFormat, onFormatChange, formats = COLOR_FORMATS, alpha = false, labels } = props;
   // The picker's own defaults, so an uncontrolled picker shows the same once the hook controls it.
-  const [ownColor, setOwnColor] = useState(() => defaultColor ?? '');
   const [ownFormat, setOwnFormat] = useState<ColorFormat>(() => defaultFormat ?? formats[0] ?? 'hex');
+  // Without a default, the picker's own fallback written out, so its swatch keeps that paint.
+  const [ownColor, setOwnColor] = useState(() => defaultColor ?? formatHsva(WHITE, format ?? ownFormat));
   const author = useChangeAuthor(agent);
   const mirror = useRef<Mirror | null>(null);
   const committed = useRef<Committed | null>(null);
