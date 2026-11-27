@@ -40,6 +40,37 @@ export interface AgentSignal {
 export type AgentValue = string | number | boolean | null | readonly AgentValue[] | { readonly [key: string]: AgentValue };
 
 /**
+ * One change a component reports to {@link Agent.subscribe}: what changed on which record and who
+ * changed it. Each component documents its own keys and what their values mean.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentChange {
+  /** The record that changed, as its `ref` in the snapshot. */
+  readonly ref: string;
+  /** What kind of thing the record describes, as in its snapshot record. */
+  readonly component: string;
+  /**
+   * How a person names the record (a notification's title). A record that was removed is no longer
+   * in the snapshot, so its `ref` alone would say nothing.
+   */
+  readonly label?: string;
+  /** What changed on the record (`present`, `action`, `island`). */
+  readonly key: string;
+  /** The value after the change. */
+  readonly value: AgentValue;
+  /** The value before it. */
+  readonly previous: AgentValue;
+  /** Why, when the component has a word for it (why a notification closed). */
+  readonly reason?: string;
+  /**
+   * Who made the change: a person through the component on screen, an agent through
+   * {@link Agent.act}, the app's own code, or the component itself (a timer, an outcome).
+   */
+  readonly source: 'user' | 'agent' | 'app' | 'system';
+}
+
+/**
  * What a step may do without anyone's say, with a person's (or the app's) approval, or never.
  *
  * @experimental The protocol may change in any 0.x release.
@@ -227,8 +258,12 @@ export interface AgentComponent {
   readonly name: string;
   /** The component's current records, in the order a reader should see them. */
   snapshot(): readonly AgentEntry[];
-  /** Calls `listener` whenever `snapshot()` may return something new; returns the unsubscribe. */
-  subscribe(listener: () => void): () => void;
+  /**
+   * Calls `listener` whenever `snapshot()` may return something new; returns the unsubscribe. A
+   * component that knows what changed and who changed it passes the records; calling the listener
+   * without an argument stays correct.
+   */
+  subscribe(listener: (changes?: readonly AgentChange[]) => void): () => void;
   /**
    * Says, synchronously and without side effects, whether `step` can run now and under which
    * permission. Called with a `ref` from this component's own snapshot.
@@ -270,10 +305,13 @@ export interface Agent {
   readonly snapshot: () => readonly AgentEntry[];
   /**
    * Calls `listener` when a connected component changes and when a component is connected or
-   * disconnected; returns the unsubscribe. Every listener runs even if one throws; the error is
-   * rethrown in a microtask, so it reaches the runtime's uncaught-error handling.
+   * disconnected; returns the unsubscribe. The listener receives what the component said about the
+   * change as a frozen array of {@link AgentChange} records: empty when it said nothing, or when
+   * the snapshot changed with no author (time passing, a connection). A listener that takes no
+   * argument fits as before. Every listener runs even if one throws; the error is rethrown in a
+   * microtask, so it reaches the runtime's uncaught-error handling.
    */
-  readonly subscribe: (listener: () => void) => () => void;
+  readonly subscribe: (listener: (changes: readonly AgentChange[]) => void) => () => void;
   /**
    * Runs steps in order and stops at the first error; steps already done stay done. Calls of one
    * agent run one at a time, so a call made while a step waits for `allow` waits too. The whole

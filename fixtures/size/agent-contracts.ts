@@ -1,4 +1,4 @@
-import { createAgent, type ActResult, type Agent, type AgentComponent, type AgentEntry, type Allow } from '@cloudlet/agent';
+import { createAgent, type ActResult, type Agent, type AgentChange, type AgentComponent, type AgentEntry, type Allow } from '@cloudlet/agent';
 
 // Compile the bridge against its packed declarations alone: no DOM, no Node, no React.
 const agent: Agent = createAgent();
@@ -15,6 +15,25 @@ const ref: string | undefined = records[0]?.ref;
 const unsubscribe: () => void = agent.subscribe(() => {});
 void [ref, unsubscribe];
 disconnect();
+
+// A subscriber may read what changed and who changed it; a component may say so.
+const stop: () => void = agent.subscribe((changes) => {
+  const first: AgentChange | undefined = changes[0];
+  const source: 'user' | 'agent' | 'app' | 'system' | undefined = first?.source;
+  // @ts-expect-error The records are read-only.
+  changes.push(first!);
+  void source;
+});
+const telling: AgentComponent = {
+  ...component,
+  name: 'telling',
+  subscribe: (listener) => {
+    listener([{ ref: 'demo', component: 'demo', key: 'open', value: true, previous: false, source: 'user' }]);
+    listener();
+    return () => {};
+  },
+};
+void [stop, telling];
 
 // @ts-expect-error Only protocol 1 exists.
 const future: AgentComponent = { ...component, protocol: 2 };

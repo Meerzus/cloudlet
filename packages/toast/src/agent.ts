@@ -107,6 +107,23 @@ export type AgentRunOutcomeShape =
 export type AgentSummonOutcomeShape = boolean | { readonly reached: boolean; readonly note: string };
 
 /**
+ * One change a component reports to the bridge's subscribers: what changed on which record and who
+ * changed it.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export interface AgentChangeShape {
+  readonly ref: string;
+  readonly component: string;
+  readonly label?: string;
+  readonly key: string;
+  readonly value: AgentValueShape;
+  readonly previous: AgentValueShape;
+  readonly reason?: string;
+  readonly source: 'user' | 'agent' | 'app' | 'system';
+}
+
+/**
  * What a component hands to the bridge's `connect`. `check` and `run` come together, `summon` is
  * optional, and a read-only component leaves all three out.
  *
@@ -116,7 +133,7 @@ export interface AgentComponentShape<Entry extends AgentEntryShape = AgentEntryS
   readonly protocol: 1;
   readonly name: string;
   snapshot(): readonly Entry[];
-  subscribe(listener: () => void): () => void;
+  subscribe(listener: (changes?: readonly AgentChangeShape[]) => void): () => void;
   readonly check?: (step: AgentStepCallShape) => AgentStepCheckShape;
   readonly run?: (step: AgentStepCallShape, context: AgentRunContextShape) => AgentRunOutcomeShape | PromiseLike<AgentRunOutcomeShape>;
   readonly summon?: (step: AgentStepCallShape) => AgentSummonOutcomeShape;

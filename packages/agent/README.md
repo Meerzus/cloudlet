@@ -46,6 +46,19 @@ disconnect();
 `snapshot()` returns the same frozen array until something changes, so it plugs straight into
 React: `useSyncExternalStore(agent.subscribe, agent.snapshot)`.
 
+The listener also receives what changed and who changed it, when the component says so:
+
+```ts
+agent.subscribe((changes) => {
+  for (const change of changes) console.log(change.ref, change.key, change.previous, change.value, change.source);
+});
+```
+
+Each `AgentChange` is `{ ref, component, label?, key, value, previous, reason?, source }`, frozen
+plain data; `source` is `user`, `agent`, `app` or `system`. The array is empty when the snapshot
+changed with no author: time passing, a component connected or disconnected. A component's own
+documentation lists its keys.
+
 ## Acting
 
 `act({ steps })` runs verbs from the records' `actions`, addressed by `ref`:

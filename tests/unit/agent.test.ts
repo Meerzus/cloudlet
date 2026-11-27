@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createAgent, type AgentComponent, type AgentEntry } from '@cloudlet/agent';
+import { createAgent, type AgentChange, type AgentComponent, type AgentEntry } from '@cloudlet/agent';
 
 /** A stand-in for a component adapter: its records are set by hand and `emit` reports a change. */
 function fake(name: string, entries: AgentEntry[] = [{ ref: name, component: name, actions: [] }]) {
-  const listeners = new Set<() => void>();
+  const listeners = new Set<(changes?: readonly AgentChange[]) => void>();
   let records: readonly AgentEntry[] = entries;
   const component: AgentComponent = {
     protocol: 1,
@@ -18,7 +18,7 @@ function fake(name: string, entries: AgentEntry[] = [{ ref: name, component: nam
     component,
     listeners,
     set(next: AgentEntry[]) { records = next; },
-    emit() { for (const listener of [...listeners]) listener(); },
+    emit(changes?: readonly AgentChange[]) { for (const listener of [...listeners]) if (changes) listener(changes); else listener(); },
   };
 }
 
@@ -75,7 +75,7 @@ describe('createAgent', () => {
     const component = fake('one');
     const disconnect = agent.connect(component.component);
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenLastCalledWith();
+    expect(listener).toHaveBeenLastCalledWith([]);
     component.emit();
     expect(listener).toHaveBeenCalledTimes(2);
     disconnect();
@@ -84,6 +84,105 @@ describe('createAgent', () => {
     unsubscribe();
     agent.connect(fake('two').component);
     expect(listener).toHaveBeenCalledTimes(3);
+  });
+
+  it('hands a subscriber what the component said about the change, copied and frozen', () => {
+    const agent = createAgent();
+    const component = fake('one');
+    agent.connect(component.component);
+    const seen: (readonly AgentChange[])[] = [];
+    agent.subscribe((changes) => { seen.push(changes); });
+    const nested = { open: true };
+    const reported: AgentChange[] = [
+      { ref: 'one:1', component: 'item', label: 'Saved', key: 'present', value: false, previous: true, reason: 'programmatic', source: 'agent' },
+      { ref: 'one', component: 'one', key: 'state', value: nested, previous: null, source: 'user' },
+    ];
+    component.emit(reported);
+    expect(seen).toEqual([reported]);
+    const [changes] = seen;
+    expect(changes).not.toBe(reported);
+    expect(changes![0]).not.toBe(reported[0]);
+    expect(Object.isFrozen(changes)).toBe(true);
+    expect(changes!.every((change) => Object.isFrozen(change))).toBe(true);
+    expect(changes![1]!.value).not.toBe(nested);
+    expect(Object.isFrozen(changes![1]!.value)).toBe(true);
+    // What the component does to its own objects later does not reach the listener's copy.
+    (reported[0] as { source: string }).source = 'user';
+    nested.open = false;
+    expect(changes![0]!.source).toBe('agent');
+    expect(changes![1]!.value).toEqual({ open: true });
+    // A record keeps only the protocol's keys, and no key it did not have.
+    expect(Object.keys(changes![1]!)).toEqual(['ref', 'component', 'key', 'value', 'previous', 'source']);
+  });
+
+  it('hands an empty frozen array when the component says nothing, connects or disconnects', () => {
+    const agent = createAgent();
+    const seen: (readonly AgentChange[])[] = [];
+    agent.subscribe((changes) => { seen.push(changes); });
+    const component = fake('one');
+    const disconnect = agent.connect(component.component);
+    component.emit();
+    component.emit([]);
+    disconnect();
+    expect(seen).toEqual([[], [], [], []]);
+    expect(seen.every((changes) => Object.isFrozen(changes))).toBe(true);
+  });
+
+  it('leaves out a change of an unknown shape, reports it, and still delivers the rest', () => {
+    const reported: unknown[] = [];
+    vi.stubGlobal('console', { ...console, error: (error: unknown) => { reported.push(error); } });
+    const agent = createAgent();
+    const component = fake('one');
+    agent.connect(component.component);
+    const listener = vi.fn();
+    agent.subscribe(listener);
+    const good: AgentChange = { ref: 'one', component: 'one', key: 'open', value: true, previous: false, source: 'app' };
+    const sparse: unknown[] = [good];
+    sparse[2] = good;
+    const bad: unknown[] = [
+      null, 'text', { ...good, ref: 1 }, { ...good, source: 'timer' }, { ...good, label: 2 }, { ...good, reason: null },
+      { ...good, value: undefined }, { ...good, previous: () => {} }, { ...good, value: Number.NaN },
+      { get ref(): string { throw new Error('getter'); } },
+    ];
+    component.emit([...bad, good] as never);
+    expect(listener).toHaveBeenLastCalledWith([good]);
+    expect(reported).toHaveLength(bad.length);
+    expect(String(reported[2])).toBe('TypeError: Component "one" reported a change of an unknown shape at index 2: a field is missing or of another type');
+
+    component.emit(sparse as never);
+    expect(listener).toHaveBeenLastCalledWith([good, good]);
+    // Not an array at all: the listeners still hear that something changed.
+    component.emit({ length: 1, 0: good } as never);
+    expect(listener).toHaveBeenLastCalledWith([]);
+    expect(listener).toHaveBeenCalledTimes(3);
+    expect(reported).toHaveLength(bad.length + 2);
+  });
+
+  it('delivers the changes of two components separately, each with its own records', () => {
+    const agent = createAgent();
+    const one = fake('one');
+    const two = fake('two');
+    agent.connect(one.component);
+    agent.connect(two.component);
+    const seen: string[][] = [];
+    agent.subscribe((changes) => { seen.push(changes.map((change) => `${change.ref} ${change.source}`)); });
+    one.emit([{ ref: 'one', component: 'one', key: 'open', value: true, previous: false, source: 'user' }]);
+    two.emit([{ ref: 'two', component: 'two', key: 'open', value: true, previous: false, source: 'system' }]);
+    expect(seen).toEqual([['one user'], ['two system']]);
+  });
+
+  it('keeps working as a store: a listener without parameters and an unchanged snapshot identity', () => {
+    const agent = createAgent();
+    const component = fake('one');
+    agent.connect(component.component);
+    const plain: () => void = vi.fn();
+    const unsubscribe: () => void = agent.subscribe(plain);
+    const before = agent.snapshot();
+    expect(agent.snapshot()).toBe(before);
+    component.emit([{ ref: 'one', component: 'one', key: 'open', value: true, previous: false, source: 'user' }]);
+    expect(plain).toHaveBeenCalledTimes(1);
+    expect(agent.snapshot()).not.toBe(before);
+    unsubscribe();
   });
 
   it('lets a listener read the fresh snapshot', () => {
