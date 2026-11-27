@@ -46,8 +46,10 @@ function readChanges(name: string, input: unknown): readonly AgentChange[] {
   const changes: AgentChange[] = [];
   try {
     if (!Array.isArray(input)) throw new TypeError(`Component "${name}" reported changes that are not an array`);
-    if (input.length > MOST_CHANGES) throw new TypeError(`Component "${name}" reported more than ${MOST_CHANGES} changes at once`);
-    for (let index = 0; index < input.length; index += 1) {
+    // Read once: a getter of a record could grow the array while it is being walked.
+    const count = input.length;
+    if (count > MOST_CHANGES) throw new TypeError(`Component "${name}" reported more than ${MOST_CHANGES} changes at once`);
+    for (let index = 0; index < count; index += 1) {
       try {
         // A hole would read whatever the prototype holds at that index.
         const item: unknown = Object.hasOwn(input, index) ? input[index] : undefined;

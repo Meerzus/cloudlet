@@ -160,12 +160,19 @@ describe('createAgent', () => {
     expect(reported).toHaveLength(2);
     reported.length = bad.length;
 
+    // A record that grows the list while it is read does not extend the walk.
+    const growing: unknown[] = [];
+    growing.push({ ...good, get key(): string { growing.push(good); return 'open'; } }, good);
+    component.emit(growing as never);
+    expect(listener).toHaveBeenLastCalledWith([good, good]);
+    expect(growing).toHaveLength(3);
+
     component.emit(sparse as never);
     expect(listener).toHaveBeenLastCalledWith([good, good]);
     // Not an array at all: the listeners still hear that something changed.
     component.emit({ length: 1, 0: good } as never);
     expect(listener).toHaveBeenLastCalledWith([]);
-    expect(listener).toHaveBeenCalledTimes(5);
+    expect(listener).toHaveBeenCalledTimes(6);
     expect(reported).toHaveLength(bad.length + 2);
   });
 
