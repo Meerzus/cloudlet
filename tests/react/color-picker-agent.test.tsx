@@ -460,6 +460,38 @@ describe('useColorPickerAgent on a color the app shares between pickers', () => 
     expect(sources(changes)).toEqual([['second', '#336699', 'app']]);
   });
 
+  it('marks nothing for a color a picker hears after it unmounted: the app\'s later change elsewhere is the app\'s', async () => {
+    let answer: (result: { sRGBHex: string }) => void = () => {};
+    vi.stubGlobal('EyeDropper', class { open() { return new Promise((resolve) => { answer = resolve; }); } });
+    try {
+      const agent = createAgent();
+      function Owner() {
+        const [shown, setShown] = useState(true);
+        const [color, setColor] = useState('#007aff');
+        // The app keeps the picked color where no picker shows it.
+        const picked = useRef(color);
+        return (
+          <>
+            {shown ? <Picker agent={agent} name="first" color="#007aff" onChange={(value) => { picked.current = value; }} /> : null}
+            <Picker agent={agent} name="second" color={color} onChange={setColor} />
+            <button type="button" onClick={() => setShown(false)}>Hide</button>
+            <button type="button" onClick={() => setColor('#336699')}>App sets blue</button>
+          </>
+        );
+      }
+      render(<Owner />);
+      const changes = recorder(agent);
+      fireEvent.click(within(screen.getByTestId('first')).getByRole('button', { name: 'Pick from screen' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Hide' }));
+      // The eyedropper answers once the picker is gone.
+      await act(async () => { answer({ sRGBHex: '#ff0000' }); });
+      fireEvent.click(screen.getByRole('button', { name: 'App sets blue' }));
+      expect(sources(changes)).toEqual([['second', '#336699', 'app']]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('keeps a mark a person sets after a commit and before its passive effects for the commit it belongs to', async () => {
     // Without act, so React schedules on its own: the app's transition commits, a person types from a
     // layout effect of that commit, and React runs the transition's passive effects only before it
@@ -470,6 +502,13 @@ describe('useColorPickerAgent on a color the app shares between pickers', () => 
     const host = document.body.appendChild(document.createElement('div'));
     const root = createRoot(host);
     const wait = () => new Promise((resolve) => { setTimeout(resolve, 5); });
+    // React commits on its own clock, slower under a loaded machine: wait for what it shows, within bounds.
+    const until = async (done: () => boolean) => {
+      for (let tries = 0; !done(); tries += 1) {
+        if (tries === 400) throw new Error('React did not commit in time');
+        await wait();
+      }
+    };
     try {
       const agent = createAgent();
       let appSets: (value: string) => void = () => {};
@@ -487,10 +526,10 @@ describe('useColorPickerAgent on a color the app shares between pickers', () => 
         return <><Picker agent={agent} name="first" color={color} onChange={setColor} /><Picker agent={agent} name="second" color={color} onChange={setColor} /></>;
       }
       root.render(<Owner />);
-      await wait();
+      await until(() => agent.snapshot().length === 2);
       const changes = recorder(agent);
       startTransition(() => { appSets('#222222'); });
-      await wait();
+      await until(() => changes.length >= 4);
       await wait();
       expect(sources(changes)).toEqual([
         ['first', '#222222', 'app'], ['second', '#222222', 'app'],

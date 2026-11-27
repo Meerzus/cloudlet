@@ -247,8 +247,12 @@ export function useChangeAuthor(agent: AgentConnectorShape | null | undefined): 
   const committed = useRef(slot);
   const [state] = useState(() => {
     let last: Mark | null = null;
+    // An adapter that is not mounted renders no commit to read its mark, so it marks nothing: a
+    // change it hears after unmounting (an eyedropper that answers late) would name a neighbor's.
+    let mounted = false;
     const author: ChangeAuthor = freeze({
       mark(source: 'user' | 'agent') {
+        if (!mounted) return;
         last = { source, read: false };
         committed.current.current = last;
         rerender();
@@ -262,9 +266,13 @@ export function useChangeAuthor(agent: AgentConnectorShape | null | undefined): 
     });
     return {
       author,
-      // Unmounted in the commit that carries its own mark: that commit was the mark's, read or not.
-      leave() {
-        if (last && committed.current.current === last) last.read = true;
+      enter() {
+        mounted = true;
+        return () => {
+          mounted = false;
+          // Unmounted in the commit that carries its own mark: that commit was the mark's, read or not.
+          if (last && committed.current.current === last) last.read = true;
+        };
       },
       forget() {
         const held = committed.current;
@@ -274,7 +282,7 @@ export function useChangeAuthor(agent: AgentConnectorShape | null | undefined): 
   });
   // Declared before the adapter's port, so `settle` reads this commit's slot.
   useLayoutEffect(() => { committed.current = slot; });
-  useLayoutEffect(() => state.leave, [state]);
+  useLayoutEffect(state.enter, [state]);
   useEffect(() => {
     state.forget();
     return state.forget;
