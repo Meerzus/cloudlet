@@ -134,7 +134,8 @@ function write<Slot>(k: ControllerKernel<Slot>, form: FormState, name: string, v
     // Editing a field clears its own message; the rest wait for the next submit.
     if (Object.hasOwn(form.errors.fields, name)) {
       const { [name]: _, ...fields } = form.errors.fields;
-      form.errors = freeze({ form: form.errors.form, fields: freeze(fields) });
+      // `authored` stays: the messages left are still the app's own.
+      form.errors = freeze({ form: form.errors.form, fields: freeze(fields), ...(form.errors.authored ? { authored: true as const } : {}) });
     }
   });
 }

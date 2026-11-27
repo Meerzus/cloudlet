@@ -300,6 +300,30 @@ describe('submit', () => {
     expect(t.entry().action).toMatchObject({ error: null });
   });
 
+  it("keeps the other field's message from validate out of the snapshot after the person edits one", async () => {
+    const t = setup({ allow: () => true });
+    const TYPED = 'PERSON-TYPED-9K';
+    const handle = admit(t.controller, quiet('anna', { title: TITLE, action: form({
+      validate: (values) => ({ reply: 'Say more', note: `"${values.note}" is too vague` }),
+    }) }));
+    t.type(handle, 'reply', 'Yes');
+    t.type(handle, 'note', TYPED);
+    expect((await t.act(['submit'])).ok).toBe(false);
+    t.type(handle, 'reply', 'Yes, at five');
+    expect(t.fields().map((field) => field.error)).toEqual([null, "Not accepted by the form's own check"]);
+    expect(JSON.stringify(t.agent.snapshot())).not.toContain(TYPED);
+  });
+
+  it('keeps a built-in message as it is after the person edits another field', async () => {
+    const t = setup({ allow: () => true });
+    const handle = admit(t.controller, quiet('anna', { title: TITLE, action: form({
+      fields: [{ name: 'reply', kind: 'text', label: 'Reply', required: true }, { name: 'note', kind: 'text', label: 'Note', required: true }],
+    }) }));
+    expect((await t.act(['submit'])).ok).toBe(false);
+    t.type(handle, 'reply', 'Yes');
+    expect(t.fields().map((field) => field.error)).toEqual([null, 'This field is required']);
+  });
+
   it('keeps what the person typed out of the result and the snapshot when the app quotes it', async () => {
     const t = setup({ allow: () => true });
     const TYPED = 'PERSON-TYPED-7Q';
