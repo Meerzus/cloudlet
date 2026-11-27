@@ -119,7 +119,7 @@ Following the link closes the notification with the reason `navigation`; modifie
 
 ### CloseReason
 
-`CloseNotice` is what [`onClose`](/docs/components/toaster/api/controller#show) receives: `handle` and `reason`, a `CloseReason`:
+`CloseNotice` is what [`onClose`](/docs/components/toaster/api/controller#show) receives: `handle`, `reason` (a `CloseReason`) and `source`, a [`ChangeSource`](#changesource) that says who closed it:
 
 | Reason | Closed by |
 |---|---|
@@ -162,7 +162,7 @@ Following the link closes the notification with the reason `navigation`; modifie
 | Type | Definition | Used on |
 |---|---|---|
 | `ControllerSnapshot` | the whole state | [`getSnapshot`](/docs/components/toaster/api/controller#getsnapshot-and-getserversnapshot) |
-| `IslandSnapshot` | `{ open, reason, current }` | [`ControllerSnapshot.island`](/docs/components/toaster/api/controller#getsnapshot-and-getserversnapshot); `reason` and `current` are `null` exactly when closed. |
+| `IslandSnapshot` | `{ open, reason, current, source }` | [`ControllerSnapshot.island`](/docs/components/toaster/api/controller#getsnapshot-and-getserversnapshot); `reason`, `current` and `source` are `null` exactly when closed. `source` is the [`ChangeSource`](#changesource) that opened the Island or moved it to its current notification last. |
 | `IslandReason` | `'user' \| 'attention'` | `IslandSnapshot.reason`: whether the user opened the Island or a notification needing [attention](/docs/components/toaster/notifications#attention) did. |
 | `NotificationLocation` | `'stack' \| 'current'` | [`NotificationSnapshot.location`](#notificationsnapshot): `current` is the one presented notification, the pill or the Island's slide. |
 
@@ -214,9 +214,19 @@ One notification in `ControllerSnapshot.notifications`, also passed to the [anno
 | Type | Definition | Used on |
 |---|---|---|
 | `SemanticEvent` | `EventBase` and one variant per `type` | [`onEvent`](/docs/components/toaster/api/controller#subscribe-and-onevent) |
-| `EventBase` | `{ controller, sequence, at }` | [`onEvent`](/docs/components/toaster/api/controller#subscribe-and-onevent): the fields every event has. |
+| `EventBase` | `{ controller, source, sequence, at }` | [`onEvent`](/docs/components/toaster/api/controller#subscribe-and-onevent): the fields every event has. |
+| `ChangeSource` | `'user' \| 'agent' \| 'app' \| 'system'` | `EventBase.source`, `CloseNotice.source`, `IslandSnapshot.source`: who caused the change, [below](#changesource). |
 | `Diagnostic` | `{ code, source, message, handle?, error? }` | [`onDiagnostic`](/docs/components/toaster/api/create-cloudlet#ondiagnostic), the `diagnostic` event |
 | `DiagnosticCode` | `'invalid-input' \| 'second-host' \| …` | [`onDiagnostic`](/docs/components/toaster/api/create-cloudlet#ondiagnostic) |
+
+### ChangeSource
+
+| Source | Who |
+|---|---|
+| `'user'` | A person, through the `Toaster` on screen. |
+| `'agent'` | An agent, through a step of `@cloudlet/toast/agent`. |
+| `'app'` | Your code, through the controller or an operation handle. |
+| `'system'` | Cloudlet itself: a timer, the outcome of an operation, `dispose()`. |
 
 ## Controller
 

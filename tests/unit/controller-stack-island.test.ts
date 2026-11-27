@@ -15,7 +15,7 @@ describe('stack order and the presented record', () => {
     const snapshot = controller.getSnapshot();
     expect(snapshot.stack).toEqual([c, b, a]);
     expect(snapshot.notifications.map((item) => item.handle)).toEqual([a, b, c]);
-    expect(snapshot.island).toEqual({ open: false, reason: null, current: null });
+    expect(snapshot.island).toEqual({ open: false, reason: null, current: null, source: null });
     expect(snapshot.notifications.map((item) => item.location)).toEqual(['stack', 'stack', 'current']);
     expect(current(controller)).toEqual([c]);
   });
@@ -72,13 +72,13 @@ describe('Island state', () => {
   it('opens on the top record by default, or on an explicit record, with the requested reason', () => {
     const { controller, bridge, lease, a, c } = threeRecords();
     expect(bridge.openIsland(lease, 'user')).toEqual({ status: 'applied' });
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: c });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: c, source: 'user' });
     expect(bridge.openIsland(lease, 'user')).toEqual({ status: 'unchanged' });
     expect(bridge.collapseIsland(lease)).toEqual({ status: 'applied' });
     expect(bridge.collapseIsland(lease)).toEqual({ status: 'unchanged' });
-    expect(controller.getSnapshot().island).toEqual({ open: false, reason: null, current: null });
+    expect(controller.getSnapshot().island).toEqual({ open: false, reason: null, current: null, source: null });
     expect(bridge.openIsland(lease, 'attention', a)).toEqual({ status: 'applied' });
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: a });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: a, source: 'user' });
     expect(current(controller)).toEqual([a]);
   });
 
@@ -86,7 +86,7 @@ describe('Island state', () => {
     const { controller, bridge, lease, a, b } = threeRecords();
     bridge.openIsland(lease, 'user');
     expect(bridge.openIsland(lease, 'attention', a)).toEqual({ status: 'applied' });
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: a });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: a, source: 'user' });
     expect(bridge.navigate(lease, b)).toEqual({ status: 'applied' });
     expect(bridge.navigate(lease, b)).toEqual({ status: 'unchanged' });
     expect(controller.getSnapshot().island.current).toBe(b);
@@ -111,11 +111,11 @@ describe('Island state', () => {
     const { controller, bridge, lease, a, b, c } = threeRecords();
     bridge.openIsland(lease, 'user', b);
     controller.dismiss(b);
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: a });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: a, source: 'app' });
     controller.dismiss(a);
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: c });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: c, source: 'app' });
     controller.dismiss(c);
-    expect(controller.getSnapshot().island).toEqual({ open: false, reason: null, current: null });
+    expect(controller.getSnapshot().island).toEqual({ open: false, reason: null, current: null, source: null });
   });
 
   it('keeps current when another record is dismissed or a new one arrives', () => {
@@ -134,7 +134,7 @@ describe('Island state', () => {
     const { controller, bridge, lease, b } = threeRecords();
     bridge.openIsland(lease, 'user', b);
     bridge.detach(lease);
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: b });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: b, source: 'user' });
     attach(bridge);
     controller.clear();
     expect(controller.getSnapshot().island.open).toBe(false);
@@ -142,7 +142,7 @@ describe('Island state', () => {
     const next = bridge.getSnapshot();
     expect(next.island.open).toBe(false);
     controller.dispose();
-    expect(controller.getSnapshot()).toMatchObject({ island: { open: false, reason: null, current: null }, stack: [] });
+    expect(controller.getSnapshot()).toMatchObject({ island: { open: false, reason: null, current: null, source: null }, stack: [] });
   });
 });
 
@@ -233,7 +233,7 @@ describe('visible time in the stack and the Island', () => {
     bridge.setPause(lease, { scope: 'host', reason: 'hover', active: false });
     clock.advanceBy(2_000);
     expect(controller.getHandle('slide')).toBeUndefined();
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: older });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: older, source: 'system' });
     expect(record(controller, older).remainingMs).toBe(5_000);
   });
 });

@@ -48,6 +48,25 @@
   Action failed`; a `validate` that throws answers `Action failed` too. Each field in the agent snapshot now has `kind`, `maxLength`, `inputMode` and
   `filledBy` (`app` for the default, `user`, `agent` or null); values, defaults and placeholders
   still never leave Cloudlet.
+- Every event, `onClose` and the Island snapshot say who caused the change. `event.source`,
+  `CloseNotice.source` and `getSnapshot().island.source` are a `ChangeSource`: `user` (a person,
+  through the `Toaster`), `agent` (a step taken through `@cloudlet/toast/agent`), `app` (your code,
+  through the controller or an operation handle) or `system` (a timer, the outcome of an operation,
+  `dispose()`). A notification closed by the close button, by `dismiss(handle)`, by an agent's
+  `dismiss` step and by its timer reports `user`, `app`, `agent` and `system`; the close reasons are
+  unchanged, so an agent's `dismiss` is `programmatic` with `source: 'agent'`. An action remembers
+  who pressed it: `action-started`, `action-failed` and the `action-success` close carry that source
+  however long the action runs. A retry and a cancellation name who asked; `operation-settled` is
+  always `system`. `island.source` is who opened the Island or changed its slide last (`system` when
+  it opened for attention on its own, `agent` for an agent's step or its request for a person) and
+  `null` while it is closed. No event type, `CloseReason` or `IslandReason` was added.
+
+### API
+
+- `ChangeSource` is exported. `EventBase.source`, `CloseNotice.source` and `IslandSnapshot.source`
+  are required fields that Cloudlet always sets, so reading code needs no change.
+- Code that builds a `SemanticEvent`, a `CloseNotice` or an `IslandSnapshot` by hand, in a test or
+  a mock, now adds `source`; TypeScript points the places out.
 
 ### Fixes
 

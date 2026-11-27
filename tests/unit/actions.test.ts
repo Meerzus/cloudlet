@@ -37,7 +37,7 @@ describe('command action attempts', () => {
     source.resolve();
     await flushActions();
     expect(controller.getHandle(handle.id)).toBeUndefined();
-    expect(closed).toEqual([{ handle, reason: 'action-success' }]);
+    expect(closed).toEqual([{ handle, reason: 'action-success', source: 'user' }]);
   });
 
   it('releases a failed attempt, keeps the message available, and permits a fresh successful action token', async () => {

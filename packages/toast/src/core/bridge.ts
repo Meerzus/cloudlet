@@ -108,8 +108,8 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
       if (k.island?.current === target) return UNCHANGED;
       // An open Island only moves its slider; the opening reason is kept.
       return k.mutate(() => {
-        if (k.island) k.island.current = target;
-        else k.island = { reason, current: target };
+        if (k.island) { k.island.current = target; k.island.source = 'user'; }
+        else k.island = { reason, current: target, source: 'user' };
       });
     }),
     collapseIsland: withLease(() => k.island ? k.mutate(() => { k.island = null; }) : UNCHANGED),
@@ -123,6 +123,7 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
       if (k.island.current === record) return UNCHANGED;
       return k.mutate(() => {
         k.island!.current = record;
+        k.island!.source = 'user';
         // Navigation is interaction: a pending auto-open restarts its delay,
         // and reaching the initiator by hand fulfils it.
         if (k.attention?.record === record) k.attention = null;
@@ -164,7 +165,7 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
       if (record.presentation !== presentation) return reject('stale-presentation');
       if (record.readable) return UNCHANGED;
       return k.mutate((deliveries) => {
-        deliveries.push({ type: 'presented', handle: record.handle, firstPresentation: !record.everPresented });
+        deliveries.push({ type: 'presented', source: 'system', handle: record.handle, firstPresentation: !record.everPresented });
         record.readable = record.everPresented = true;
       });
     })),
@@ -174,7 +175,7 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
       return k.mutate(() => { k.focusRequest = null; });
     }),
     acknowledgeOverflow: withLease(() => {
-      return k.acknowledgeOverflow();
+      return k.acknowledgeOverflow('user');
     }),
     acknowledgeAnnouncements: withLease((acknowledgements: readonly AnnouncementAcknowledgement[]) => {
       return acknowledgeAnnouncements(acknowledgements);
@@ -184,21 +185,21 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
       if (error) return reject(error);
       // Renderer close reasons are a closed protocol, never an exit callback.
       if (!['close-button', 'swipe', 'navigation'].includes(reason)) return reject('invalid-input');
-      return k.dismiss(handle, reason);
+      return k.dismiss(handle, reason, 'user');
     }),
     // The button lives only in the open Island.
-    clearAll: withLease(() => k.island ? k.clear('clear-button') : reject('island-closed')),
+    clearAll: withLease(() => k.island ? k.clear('clear-button', 'user') : reject('island-closed')),
     invokeAction: withLease(k.withRecord((record) => {
-      const result = invokeAction(k, record);
+      const result = invokeAction(k, record, 'user');
       // The attempt's token is for callers without a snapshot; the renderer reads it there.
       return result.status === 'started' ? { status: 'started' as const } : result;
     })),
     setFormValue: withLease(k.withRecord((record, name: string, value: string) => setFormValue(k, record, name, value))),
     retryOperation: withLease(withOperation((operation) => {
-      const result = operation.retry();
+      const result = operation.retry('user');
       return result.status === 'started' ? { status: 'started' as const, token: result.attempt.token } : result;
     })),
-    cancelOperation: withLease(withOperation((operation, reason?: unknown) => operation.cancel(reason))),
+    cancelOperation: withLease(withOperation((operation, reason?: unknown) => operation.cancel(reason, 'user'))),
     reportDiagnostic: withLease((report: Diagnostic) => {
       if (!report || typeof report.source !== 'string' || typeof report.message !== 'string'
         || !['invalid-input', 'second-host', 'stale-host', 'mapper-error', 'callback-error', 'listener-error', 'cancellation-error', 'slot-error', 'formatter-error', 'invalid-container'].includes(report.code)) return reject('invalid-input');

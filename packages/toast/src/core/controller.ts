@@ -1,5 +1,5 @@
 import type { ClearResult, CloudletController, ControllerOptions, FocusTarget } from '../contracts/controller.js';
-import type { Diagnostic, EventBase, SemanticEvent } from '../contracts/events.js';
+import type { ChangeSource, Diagnostic, SemanticEvent } from '../contracts/events.js';
 import type { ActionAttemptToken, ControllerIdentity, Generation, HandleRejection, NotificationHandle, OperationAttemptToken, Unsubscribe } from '../contracts/identity.js';
 import type {
   FocusRequest, FocusRequestToken, ControllerDependencies, FormErrors, HostLease, OperationAnnouncementPhase, PresentationToken,
@@ -12,12 +12,14 @@ import { copyContent, patchContent, validateContent, validateOptions, validatePa
 
 export interface OperationBinding {
   readonly getSnapshot: () => OperationSnapshot;
-  readonly retry: () => AttemptStartResult<unknown>;
-  readonly cancel: (reason?: unknown) => CancelResult;
+  /** `source` is who asked: the renderer for a person, the agent port for an agent. */
+  readonly retry: (source: ChangeSource) => AttemptStartResult<unknown>;
+  readonly cancel: (reason: unknown, source: ChangeSource) => CancelResult;
   readonly detach: () => Delivery;
 }
 
-type EventPayload = SemanticEvent extends infer E ? E extends SemanticEvent ? Omit<E, keyof EventBase> : never : never;
+// The controller stamps identity, order and time; whoever queues an event names its source.
+type EventPayload = SemanticEvent extends infer E ? E extends SemanticEvent ? Omit<E, 'controller' | 'sequence' | 'at'> : never : never;
 export type Delivery = EventPayload | { readonly callback: () => void; readonly source: string; readonly handle?: NotificationHandle };
 
 export interface RecordState<Slot> {
@@ -60,6 +62,8 @@ export interface FormState {
 export interface IslandState<Slot> {
   readonly reason: IslandReason;
   current: RecordState<Slot>;
+  /** Who opened the Island or changed its slide last. */
+  source: ChangeSource;
 }
 
 export interface AttentionCandidate<Slot> {
@@ -78,7 +82,7 @@ const handles = new WeakSet<object>();
 const kernels = new WeakMap<object, ControllerKernel<unknown>>();
 let nextController = 0;
 const EMPTY: readonly never[] = freeze([]);
-const COLLAPSED: IslandSnapshot = freeze({ open: false, reason: null, current: null });
+const COLLAPSED: IslandSnapshot = freeze({ open: false, reason: null, current: null, source: null });
 const SERVER: ControllerSnapshot<never> = freeze({
   controller: null, revision: 0, disposed: false, notifications: EMPTY, stack: EMPTY,
   island: COLLAPSED, overflow: freeze({ count: 0, pending: false }),
@@ -122,7 +126,7 @@ export interface ControllerKernel<Slot> {
   /** The record's form holds values other than its defaults. */
   readonly dirty: (record: RecordState<Slot>) => boolean;
   /** Opens the Island on the record or moves the open one to it, as navigation does. */
-  readonly reach: (record: RecordState<Slot>) => void;
+  readonly reach: (record: RecordState<Slot>, source: ChangeSource) => void;
   /**
    * Brings the record in front of the person without moving focus: at once, or after the attention
    * delay once they stop interacting. Callers check that a host is attached.
@@ -145,9 +149,11 @@ export interface ControllerKernel<Slot> {
     => (handle: NotificationHandle, ...args: Args) => Result | Rejected<HandleRejection | 'disposed'>;
   readonly autoDismissing: (host: boolean | undefined) => boolean;
   readonly setHostAutoDismiss: (value: boolean | undefined) => void;
-  readonly dismiss: (handle: NotificationHandle, reason: CloseReason) => typeof APPLIED | Rejected<HandleRejection | 'disposed'>;
-  readonly acknowledgeOverflow: () => typeof APPLIED | typeof UNCHANGED | Rejected<'disposed'>;
-  readonly clear: (reason: 'clear' | 'clear-button') => ClearResult;
+  // Every entry names who acts. There is no "current source" to inherit: a listener that calls
+  // back in passes its own.
+  readonly dismiss: (handle: NotificationHandle, reason: CloseReason, source: ChangeSource) => typeof APPLIED | Rejected<HandleRejection | 'disposed'>;
+  readonly acknowledgeOverflow: (source: ChangeSource) => typeof APPLIED | typeof UNCHANGED | Rejected<'disposed'>;
+  readonly clear: (reason: 'clear' | 'clear-button', source: ChangeSource) => ClearResult;
   readonly reportRendererLoadError: (error: unknown) => void;
 }
 
@@ -273,7 +279,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
 
   function diagnostic(diagnosticValue: Diagnostic): void {
     const value = freeze({ ...diagnosticValue });
-    enqueue([{ type: 'diagnostic', diagnostic: value }]);
+    enqueue([{ type: 'diagnostic', source: 'system', diagnostic: value }]);
   }
   function failure(code: Diagnostic['code'], source: string, error: unknown, handle?: NotificationHandle): void {
     diagnostic({ code, source, message: `${source} failed`, error, ...(handle ? { handle } : {}) });
@@ -309,7 +315,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
         }
       }
       // Close-callback diagnostics are queued before disposal releases observers.
-      if (final) enqueue([{ type: 'disposed' }], false, at, false, true);
+      if (final) enqueue([{ type: 'disposed', source: 'system' }], false, at, false, true);
       if (release) {
         listeners.clear(); eventListeners.clear();
         for (const set of operationSubscriptions.keys()) set.clear();
@@ -353,7 +359,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       const at = settle();
       const due = [...records.values()].filter((record) => record.activeSince !== null && record.remaining === 0);
       const deliveries: Delivery[] = [];
-      for (const record of due) remove(record, 'timeout', deliveries);
+      for (const record of due) remove(record, 'timeout', deliveries, 'system');
       // An early delivery only rearms; a late delivery closes exactly the due generations.
       if (due.length) commit(deliveries, at);
       else schedule(at);
@@ -369,7 +375,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     })));
     snapshot = freeze({ controller: identity, revision, disposed, notifications,
       stack: freeze(stackOrder().map((record) => record.handle)),
-      island: island ? freeze({ open: true, reason: island.reason, current: island.current.handle }) : COLLAPSED,
+      island: island ? freeze({ open: true, reason: island.reason, current: island.current.handle, source: island.source }) : COLLAPSED,
       overflow: freeze({ count: overflow, pending: overflow > 0 }),
     });
     rendererSnapshot = freeze({ ...snapshot,
@@ -459,16 +465,16 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       const record = candidate.record;
       if (!wantsAttention(record) || island?.current === record) return;
       mutate(() => {
-        if (island) island.current = record;
-        else island = { reason: 'attention', current: record };
+        if (island) { island.current = record; island.source = 'system'; }
+        else island = { reason: 'attention', current: record, source: 'system' };
       });
     });
   }
   const delay = () => hostDelay ?? options.attentionDelay ?? ATTENTION_DELAY;
   /** Navigation: reaching the pending auto-open's record fulfils it, any other restarts its delay. */
-  function reach(record: RecordState<Slot>): void {
-    if (island) island.current = record;
-    else island = { reason: 'attention', current: record };
+  function reach(record: RecordState<Slot>, source: ChangeSource): void {
+    if (island) { island.current = record; island.source = source; }
+    else island = { reason: 'attention', current: record, source };
     if (attention?.record === record) attention = null;
     else if (attention) { attention.waiting = false; attention.due = clock.now() + delay(); }
   }
@@ -492,7 +498,8 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       summoned = { record, due: 0, waiting: true };
       return 'waiting';
     }
-    mutate(() => reach(record));
+    // Only an agent asks for a person; without its step the Island would not have opened.
+    mutate(() => reach(record, 'agent'));
     return 'shown';
   }
   /** The attention automaton's waiting rule, for an agent's request. */
@@ -516,7 +523,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       if (interacting()) { request.waiting = true; return; }
       summoned = null;
       if (island?.current === request.record) armAttention(at);
-      else mutate(() => reach(request.record));
+      else mutate(() => reach(request.record, 'agent'));
     });
   }
   const autoDismissing = (host: boolean | undefined) => (host ?? options.autoDismiss) !== false;
@@ -532,46 +539,47 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     if (record.content.duration !== undefined) return record.content.duration;
     return (record.kind === 'info' || record.kind === 'success') && !record.content.action ? 6000 : null;
   }
-  function remove(record: RecordState<Slot>, reason: CloseReason, deliveries: Delivery[]): void {
+  function remove(record: RecordState<Slot>, reason: CloseReason, deliveries: Delivery[], source: ChangeSource): void {
     if (island?.current === record) {
       // The next older slide, else the next newer one, else the Island closes.
       const order = stackOrder();
       const index = order.indexOf(record);
       const next = order[index + 1] ?? order[index - 1];
-      if (next) island.current = next; else island = null;
+      // The Island moved on because this record closed: whoever closed it moved it.
+      if (next) { island.current = next; island.source = source; } else island = null;
     }
     if (attention?.record === record) attention = null;
     if (summoned?.record === record) summoned = null;
     records.delete(record.handle.id);
     if (record.operation) deliveries.push(record.operation.detach());
-    deliveries.push({ type: 'closed', handle: record.handle, reason });
+    deliveries.push({ type: 'closed', source, handle: record.handle, reason });
     if (record.onClose) {
       const onClose = record.onClose;
-      const notice = freeze({ handle: record.handle, reason });
+      const notice = freeze({ handle: record.handle, reason, source });
       deliveries.push({ callback: () => onClose(notice), source: 'onClose', handle: record.handle });
     }
   }
-  const dismiss = withRecord((record, reason: CloseReason) =>
-    mutate((deliveries) => remove(record, reason, deliveries)));
-  function forgetOverflow(deliveries: Delivery[]) {
-    deliveries.push({ type: 'overflow-acknowledged', count: overflow });
+  const dismiss = withRecord((record, reason: CloseReason, source: ChangeSource) =>
+    mutate((deliveries) => remove(record, reason, deliveries, source)));
+  function forgetOverflow(deliveries: Delivery[], source: ChangeSource) {
+    deliveries.push({ type: 'overflow-acknowledged', source, count: overflow });
     overflow = overflowAnnounced = 0;
     if (focusRequest?.target.kind === 'overflow') focusRequest = null;
   }
-  function acknowledgeOverflow() {
+  function acknowledgeOverflow(source: ChangeSource) {
     if (disposed) return reject('disposed');
     if (!overflow) return UNCHANGED;
-    return mutate(forgetOverflow);
+    return mutate((deliveries) => forgetOverflow(deliveries, source));
   }
   /** `clear()`, or the Island's clear button, which also acknowledges the missed count: nothing is left. */
-  function clear(reason: 'clear' | 'clear-button'): ClearResult {
+  function clear(reason: 'clear' | 'clear-button', source: ChangeSource): ClearResult {
     if (disposed) return reject('disposed');
     const count = records.size;
     const acknowledge = reason === 'clear-button' && overflow > 0;
     if (count || acknowledge) {
       mutate((deliveries) => {
-        for (const record of records.values()) remove(record, reason, deliveries);
-        if (acknowledge) forgetOverflow(deliveries);
+        for (const record of records.values()) remove(record, reason, deliveries, source);
+        if (acknowledge) forgetOverflow(deliveries, source);
       });
     }
     return { status: 'cleared', count };
@@ -598,7 +606,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       let occurrences = existing.occurrences;
       mutate((deliveries) => {
         occurrences = existing.occurrences = Math.min(Number.MAX_SAFE_INTEGER, occurrences + 1);
-        deliveries.push({ type: 'deduplicated', handle: existing.handle, occurrences });
+        deliveries.push({ type: 'deduplicated', source: 'app', handle: existing.handle, occurrences });
       });
       return { status: 'deduplicated', handle: existing.handle, occurrences };
     }
@@ -606,7 +614,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       mutate((deliveries) => {
         overflow = Math.min(Number.MAX_SAFE_INTEGER, overflow + 1);
         const overflowValue = freeze({ count: overflow, pending: true });
-        deliveries.push({ type: 'overflow', count: overflow });
+        deliveries.push({ type: 'overflow', source: 'app', count: overflow });
         if (options.onOverflow) deliveries.push({ callback: () => options.onOverflow!(overflowValue), source: 'onOverflow' });
       });
       return reject('capacity');
@@ -642,10 +650,10 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     records.set(id, record);
     initialize?.(record);
     nominate(record, now);
-    const deliveries: Delivery[] = [{ type: 'admitted', handle }];
+    const deliveries: Delivery[] = [{ type: 'admitted', source: 'app', handle }];
     if (record.operation) {
       const operation = record.operation.getSnapshot();
-      deliveries.push({ type: 'operation-started', handle, token: operation.token, attempt: operation.attempt });
+      deliveries.push({ type: 'operation-started', source: 'app', handle, token: operation.token, attempt: operation.attempt });
     }
     commit(deliveries, now);
     return { status: 'created', handle };
@@ -786,15 +794,16 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       const uiApplied = !!record && !!content;
       const deliveries: Delivery[] = [
         ...(current === attempt ? [notify] : []),
-        { type: 'operation-settled', handle: notification, token: attempt.context.token, status: attempt.status, uiApplied },
+        // The outcome belongs to nobody, whoever started or retried the attempt.
+        { type: 'operation-settled', source: 'system', handle: notification, token: attempt.context.token, status: attempt.status, uiApplied },
       ];
       deliver(deliveries, record && content ? () => replaceContent(record, content,
         attempt.status === 'fulfilled' ? 'success' : attempt.status === 'cancelled' ? 'warning' : 'error') : undefined);
     }
-    function requestCancellation(attempt: Attempt, reason: unknown): void {
+    function requestCancellation(attempt: Attempt, reason: unknown, by: ChangeSource): void {
       attempt.cancelRequested = true;
       const record = live(attempt);
-      const deliveries: Delivery[] = [notify, { type: 'cancellation-requested', handle: notification, token: attempt.context.token }];
+      const deliveries: Delivery[] = [notify, { type: 'cancellation-requested', source: by, handle: notification, token: attempt.context.token }];
       deliver(deliveries, record ? () => {
         record.content = patchContent(record.content, { title: options.messages?.cancellationRequested ?? 'Cancellation requested' });
       } : undefined);
@@ -810,15 +819,15 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       error.name = 'AbortError';
       return error;
     }
-    function cancel(reason: unknown = cancellationReason()): CancelResult {
+    function cancel(reason: unknown = cancellationReason(), by: ChangeSource): CancelResult {
       if (disposed) return reject('disposed');
       if (current.status !== 'pending') return { status: 'unchanged', reason: 'settled' };
       if (!factory && !cancelCallback) return reject('not-cancellable');
       if (current.cancelRequested) return { status: 'unchanged', reason: 'already-requested' };
-      requestCancellation(current, reason);
+      requestCancellation(current, reason, by);
       return { status: 'requested' };
     }
-    function start(restart: boolean): AttemptStartResult<T> {
+    function start(restart: boolean, by: ChangeSource): AttemptStartResult<T> {
       if (disposed) return reject('disposed');
       if (!factory) return reject('not-retryable');
       if (current.status === 'pending' && !restart) return reject('already-pending');
@@ -826,17 +835,18 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       const next = createAttempt();
       current = next; // Invalidate old ownership before any observer or abort callback.
       const record = live(next);
-      const deliveries: Delivery[] = [notify, { type: 'operation-started', handle: notification, token: next.context.token, attempt: next.context.attempt }];
+      const deliveries: Delivery[] = [notify, { type: 'operation-started', source: by, handle: notification, token: next.context.token, attempt: next.context.attempt }];
       deliver(deliveries, record && config ? () => {
         record.operationAnnounced.clear();
         replaceContent(record, config.pending, 'loading');
       } : undefined);
-      if (previous.status === 'pending' && !previous.cancelRequested) requestCancellation(previous, cancellationReason());
+      // Only `restart()` finds the previous attempt pending, and only the app holds the handle.
+      if (previous.status === 'pending' && !previous.cancelRequested) requestCancellation(previous, cancellationReason(), by);
       run(next);
       return { status: 'started', attempt: next.public };
     }
     const binding: OperationBinding = {
-      getSnapshot, retry: () => start(false), cancel,
+      getSnapshot, retry: (by) => start(false, by), cancel,
       detach: () => { attached = false; return notify; },
     };
     let admission: OperationAdmissionResult;
@@ -854,7 +864,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       if (admitted.status === 'deduplicated') throw new Error('Tracked operation cannot be deduplicated');
       admission = admitted;
     }
-    if (admission.status === 'rejected') emit([{ type: 'operation-started', handle: null, token: first.context.token, attempt: 1 }]);
+    if (admission.status === 'rejected') emit([{ type: 'operation-started', source: 'app', handle: null, token: first.context.token, attempt: 1 }]);
     run(first);
     return freeze({ ...first.public, admission: freeze(admission), getSnapshot,
       subscribe(listener: () => void) {
@@ -862,7 +872,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
         if (subscribers.size) operationSubscriptions.set(subscribers, notify);
         return () => { unsubscribe(); if (!subscribers.size) operationSubscriptions.delete(subscribers); };
       },
-      cancel, retry: () => start(false), restart: () => start(true),
+      cancel: (reason?: unknown) => cancel(reason, 'app'), retry: () => start(false, 'app'), restart: () => start(true, 'app'),
     });
   }
 
@@ -895,12 +905,12 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
         if (durationChanged || previousBudget !== nextBudget) record.remaining = nextBudget;
         if (focusRequest?.target.kind === 'notification' && focusRequest.target.handle === handle && focusRequest.target.control === 'action' && !content.action) focusRequest = null;
         if (attention?.record === record && !wantsAttention(record)) attention = null;
-        deliveries.push({ type: 'updated', handle });
+        deliveries.push({ type: 'updated', source: 'app', handle });
       });
     }),
     getHandle: (id) => !disposed && typeof id === 'string' ? records.get(id)?.handle : undefined,
-    dismiss: (handle) => dismiss(handle, 'programmatic'),
-    clear: () => clear('clear'),
+    dismiss: (handle) => dismiss(handle, 'programmatic', 'app'),
+    clear: () => clear('clear', 'app'),
     requestFocus(target: FocusTarget = { kind: 'anchor' }) {
       if (disposed) return reject('disposed');
       if (target?.kind === 'notification') {
@@ -926,7 +936,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       });
       return { status: 'requested' };
     },
-    acknowledgeOverflow,
+    acknowledgeOverflow: () => acknowledgeOverflow('app'),
     getSnapshot: () => snapshot,
     getServerSnapshot: () => SERVER,
     subscribe: (listener) => subscribe(listeners, listener),
@@ -935,7 +945,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       if (disposed) return;
       mutate((deliveries) => {
         disposed = true;
-        for (const record of records.values()) remove(record, 'dispose', deliveries);
+        for (const record of records.values()) remove(record, 'dispose', deliveries, 'system');
         // Detached/admission-rejected handles also lose their capabilities.
         for (const notify of operationSubscriptions.values()) if (!deliveries.includes(notify)) deliveries.push(notify);
         lease = lastLease = null;

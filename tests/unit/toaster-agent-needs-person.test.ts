@@ -12,7 +12,7 @@ import { admit, attach, harness, record, type Bridge } from '../support/controll
 const quiet = (id: string, extra: object = {}) => ({ id, title: id, duration: null, attention: 'stack' as const, ...extra });
 const command = (label: string, extra: Partial<CommandAction> = {}): CommandAction => ({ kind: 'command', label, run: vi.fn(), ...extra });
 const form = (): FormAction => ({ kind: 'form', label: 'Send', fields: [{ name: 'reply', kind: 'text', label: 'Reply' }], run: vi.fn() });
-const CLOSED = { open: false, reason: null, current: null };
+const CLOSED = { open: false, reason: null, current: null, source: null };
 
 const OPEN = (title: string) => `Needs a person: "Undo" on "${title}". The Island is open on it. Ask them to press "Undo" themselves.`;
 const LATER = (title: string) => `Needs a person: "Undo" on "${title}". The Island will open on it once they stop using it. Ask them to press "Undo" themselves.`;
@@ -72,7 +72,7 @@ describe('needs a person: the Island opens on the notification', () => {
     const file = admit(t.controller, quiet('file', { title: 'File deleted', action: command('Undo') }));
     admit(t.controller, quiet('newer'));
     expect(error(await t.press('File deleted'))).toBe(OPEN('File deleted'));
-    expect(t.island()).toEqual({ open: true, reason: 'attention', current: file });
+    expect(t.island()).toEqual({ open: true, reason: 'attention', current: file, source: 'agent' });
     expect(t.toaster().island).toEqual({ open: true, current: t.entry('File deleted').ref });
     expect(t.clock.now()).toBe(0);
     expect(t.focusRequests).toEqual([]);
@@ -85,7 +85,7 @@ describe('needs a person: the Island opens on the notification', () => {
     const other = admit(t.controller, quiet('other'));
     t.bridge.openIsland(lease, 'user', other);
     expect(error(await t.press('File deleted'))).toBe(OPEN('File deleted'));
-    expect(t.island()).toEqual({ open: true, reason: 'user', current: file });
+    expect(t.island()).toEqual({ open: true, reason: 'user', current: file, source: 'agent' });
     expect(t.focusRequests).toEqual([]);
   });
 
@@ -97,7 +97,7 @@ describe('needs a person: the Island opens on the notification', () => {
     const revision = t.controller.getSnapshot().revision;
     expect(error(await t.press('File deleted'))).toBe(OPEN('File deleted'));
     expect(t.controller.getSnapshot().revision).toBe(revision);
-    expect(t.island()).toEqual({ open: true, reason: 'user', current: file });
+    expect(t.island()).toEqual({ open: true, reason: 'user', current: file, source: 'user' });
   });
 
   it('opens nothing without a Toaster on screen and tells the agent to explain', async () => {
@@ -127,7 +127,7 @@ describe('needs a person: the Island opens on the notification', () => {
     const pending = t.press('File deleted');
     await vi.advanceTimersByTimeAsync(1_000);
     expect(error(await pending)).toBe(OPEN('File deleted'));
-    expect(t.island()).toEqual({ open: true, reason: 'attention', current: file });
+    expect(t.island()).toEqual({ open: true, reason: 'attention', current: file, source: 'agent' });
   });
 
   it('keeps the time of a notification with an action, as any Island opened for attention does', async () => {
@@ -156,7 +156,7 @@ describe('needs a person: a busy person is not interrupted', () => {
       t.clock.advanceBy(599);
       expect(t.island()).toEqual(CLOSED);
       t.clock.advanceBy(1);
-      expect(t.island()).toEqual({ open: true, reason: 'attention', current: file });
+      expect(t.island()).toEqual({ open: true, reason: 'attention', current: file, source: 'agent' });
       expect(t.focusRequests).toEqual([]);
       expect(t.clock.pendingCount).toBe(0);
     });
@@ -171,10 +171,10 @@ describe('needs a person: a busy person is not interrupted', () => {
     t.bridge.setFormValue(lease, reply, 'reply', 'Almost done');
     expect(error(await t.press('File deleted'))).toBe(LATER('File deleted'));
     t.clock.advanceBy(10_000);
-    expect(t.island()).toEqual({ open: true, reason: 'user', current: reply });
+    expect(t.island()).toEqual({ open: true, reason: 'user', current: reply, source: 'user' });
     t.bridge.setFormValue(lease, reply, 'reply', '');
     t.clock.advanceBy(600);
-    expect(t.island()).toEqual({ open: true, reason: 'user', current: file });
+    expect(t.island()).toEqual({ open: true, reason: 'user', current: file, source: 'agent' });
     expect(t.focusRequests).toEqual([]);
   });
 
@@ -241,7 +241,7 @@ describe('needs a person: a busy person is not interrupted', () => {
     expect(error(await t.press('Second'))).toBe(LATER('Second'));
     t.bridge.setPause(lease, { scope: 'host', reason: 'hover', active: false });
     t.clock.advanceBy(600);
-    expect(t.island()).toEqual({ open: true, reason: 'attention', current: second });
+    expect(t.island()).toEqual({ open: true, reason: 'attention', current: second, source: 'agent' });
     t.clock.advanceBy(10_000);
     expect(t.island().current).toBe(second);
   });
@@ -283,9 +283,9 @@ describe('needs a person and the app\'s own auto-open', () => {
     expect(t.island()).toEqual(CLOSED);
     t.bridge.setPause(lease, { scope: 'host', reason: 'hover', active: false });
     t.clock.advanceBy(600);
-    expect(t.island()).toEqual({ open: true, reason: 'attention', current: file });
+    expect(t.island()).toEqual({ open: true, reason: 'attention', current: file, source: 'agent' });
     t.clock.advanceBy(600);
-    expect(t.island()).toEqual({ open: true, reason: 'attention', current: alert });
+    expect(t.island()).toEqual({ open: true, reason: 'attention', current: alert, source: 'system' });
     expect(t.clock.pendingCount).toBe(0);
   });
 
@@ -318,7 +318,7 @@ describe('needs a person and the app\'s own auto-open', () => {
     t.clock.advanceBy(599);
     expect(t.island().current).toBe(file);
     t.clock.advanceBy(1);
-    expect(t.island()).toEqual({ open: true, reason: 'attention', current: alert });
+    expect(t.island()).toEqual({ open: true, reason: 'attention', current: alert, source: 'system' });
   });
 
   it('a request still waits and opens after an auto-open already shown', async () => {
@@ -332,7 +332,7 @@ describe('needs a person and the app\'s own auto-open', () => {
     expect(error(await t.press('File deleted'))).toBe(LATER('File deleted'));
     t.bridge.setPause(lease, { scope: 'host', reason: 'focus', active: false });
     t.clock.advanceBy(600);
-    expect(t.island()).toEqual({ open: true, reason: 'attention', current: file });
+    expect(t.island()).toEqual({ open: true, reason: 'attention', current: file, source: 'agent' });
   });
 });
 
@@ -377,7 +377,7 @@ describe('open, show and close while the person is busy', () => {
     t.bridge.setFormValue(lease, reply, 'reply', 'Almost done');
     expect(error(await t.act('toaster', 'close'))).toBe(BUSY);
     expect(error(await t.act(t.entry('other').ref, 'show'))).toBe(BUSY);
-    expect(t.island()).toEqual({ open: true, reason: 'user', current: reply });
+    expect(t.island()).toEqual({ open: true, reason: 'user', current: reply, source: 'user' });
     t.bridge.setFormValue(lease, reply, 'reply', '');
     done(await t.act('toaster', 'close'));
     expect(t.island()).toEqual(CLOSED);
@@ -393,7 +393,7 @@ describe('open, show and close while the person is busy', () => {
     t.bridge.navigate(lease, other);
     done(await t.act('toaster', 'close'));
     done(await t.act('toaster', 'open'));
-    expect(t.island()).toEqual({ open: true, reason: 'attention', current: other });
+    expect(t.island()).toEqual({ open: true, reason: 'attention', current: other, source: 'agent' });
   });
 
   it('a step that started before the person got busy is refused when it runs', async () => {

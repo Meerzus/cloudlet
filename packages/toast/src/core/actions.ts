@@ -1,3 +1,4 @@
+import type { ChangeSource } from '../contracts/events.js';
 import type { ActionAttemptToken, NotificationHandle } from '../contracts/identity.js';
 import type { FormErrors } from '../contracts/internal.js';
 import { NO_FORM_ERRORS, UNCHANGED, reject, type ControllerKernel, type FieldAuthor, type FormState, type RecordState } from './controller.js';
@@ -40,8 +41,12 @@ export function checkForm<Slot>(k: ControllerKernel<Slot>, form: FormState, hand
   return freeze({ form: messages?.actionError ?? 'Action failed', fields: freeze({}), broken: true as const });
 }
 
-/** Starts a command action or submits a form; an invalid form records its errors and does not run. */
-export function invokeAction<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>) {
+/**
+ * Starts a command action or submits a form; an invalid form records its errors and does not run.
+ * The attempt remembers `source`, who pressed: its start and both its outcomes carry it, however
+ * long the action runs and whoever acts in between.
+ */
+export function invokeAction<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>, source: ChangeSource) {
   const handle = record.handle;
   const action = record.content.action;
   if (!action || action.kind === 'link') return reject('no-command');
@@ -63,7 +68,7 @@ export function invokeAction<Slot>(k: ControllerKernel<Slot>, record: RecordStat
   const now = k.settle();
   record.action = freeze({ status: 'pending', token: actionToken });
   if (form) form.errors = NO_FORM_ERRORS;
-  k.commit([{ type: 'action-started', handle, token: actionToken }], now);
+  k.commit([{ type: 'action-started', source, handle, token: actionToken }], now);
   // A listener of `action-started` may have dismissed or replaced the record: the attempt is over
   // before it began, and running the action now would act for a notification that is gone.
   if (!live()) return { status: 'started' as const, token: actionToken };
@@ -82,7 +87,7 @@ export function invokeAction<Slot>(k: ControllerKernel<Slot>, record: RecordStat
     if (!live()) return;
     const now = k.settle();
     record.action = freeze({ status: 'failed', token: actionToken, message });
-    k.commit([{ type: 'action-failed', handle, token: actionToken, message }], now);
+    k.commit([{ type: 'action-failed', source, handle, token: actionToken, message }], now);
   }
   let result: Promise<unknown>;
   try {
@@ -91,7 +96,7 @@ export function invokeAction<Slot>(k: ControllerKernel<Slot>, record: RecordStat
   }
   catch (error) { result = Promise.reject(error); }
   void result.then(() => {
-    if (live()) k.dismiss(handle, 'action-success');
+    if (live()) k.dismiss(handle, 'action-success', source);
   }, failed).catch((error: unknown) => {
     if (!k.disposed) k.failure('callback-error', 'action-settlement', error, handle);
   });

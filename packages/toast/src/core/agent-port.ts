@@ -120,7 +120,7 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
       if (!record) return reject('empty');
       if (k.island) return UNCHANGED;
       if (k.interacting()) return reject('busy');
-      return k.mutate(() => { k.island = { reason: 'attention', current: record }; });
+      return k.mutate(() => { k.island = { reason: 'attention', current: record, source: 'agent' }; });
     },
     close() {
       if (k.disposed) return reject('disposed');
@@ -135,17 +135,17 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
       if (k.interacting()) return reject('busy');
       // Showing is navigation, as in the renderer: reaching the pending auto-open's record fulfils
       // it, and any other pending auto-open restarts its delay.
-      return k.mutate(() => k.reach(record));
+      return k.mutate(() => k.reach(record, 'agent'));
     }),
     summon: withRecord((record) => k.lease === null ? reject('no-host') : freeze({ status: k.summon(record) })),
-    dismiss: (handle) => k.dismiss(handle, 'programmatic'),
-    clear: () => k.clear('clear'),
-    acknowledge: () => k.acknowledgeOverflow(),
+    dismiss: (handle) => k.dismiss(handle, 'programmatic', 'agent'),
+    clear: () => k.clear('clear', 'agent'),
+    acknowledge: () => k.acknowledgeOverflow('agent'),
     // The current attempt's own capability: no token leaves the port.
-    cancel: withRecord((record) => record.operation ? record.operation.cancel() : reject('no-operation')),
+    cancel: withRecord((record) => record.operation ? record.operation.cancel(undefined, 'agent') : reject('no-operation')),
     retry: withRecord((record) => {
       if (!record.operation) return reject('no-operation');
-      const result = record.operation.retry();
+      const result = record.operation.retry('agent');
       return result.status === 'started' ? freeze({ status: 'started' as const }) : reject(result.reason);
     }),
     fill: withRecord((record, name: string, value: string) => fillFormValue(k, record, name, value)),
@@ -189,7 +189,7 @@ function press<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>, grant
     });
     signal.addEventListener('abort', abort, { once: true });
     // Listeners first: the command may close or replace its notification synchronously.
-    const started = invokeAction(k, record);
+    const started = invokeAction(k, record, 'agent');
     if (started.status === 'invalid') { finish({ status: 'invalid', errors: started.errors }); return; }
     if (started.status !== 'started') {
       finish(started.reason === 'action-replaced' ? { status: 'replaced' } : { status: 'pending', gone: k.records.get(handle.id) !== record });

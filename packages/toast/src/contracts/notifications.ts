@@ -1,3 +1,4 @@
+import type { ChangeSource } from './events.js';
 import type { ActionAttemptToken, InputIssue, NotificationHandle } from './identity.js';
 
 export type NotificationKind = 'info' | 'success' | 'loading' | 'warning' | 'error';
@@ -117,6 +118,8 @@ export type CloseReason =
 export interface CloseNotice {
   readonly handle: NotificationHandle;
   readonly reason: CloseReason;
+  /** Who closed the notification; the same value the `closed` event carries. */
+  readonly source: ChangeSource;
 }
 
 export interface NotificationSpec<Slot = never, Name extends string = string> extends NotificationContent<Slot, Name> {
