@@ -277,7 +277,11 @@ export function createAgent(options?: AgentOptions): Agent {
   /** `cloudlet_snapshot`: the records as plain data, and the verbs of their kinds. */
   const snapshotTool = (input: unknown): AgentSnapshotToolResult | AgentToolError => {
     if (input !== undefined) {
-      const keys = isObject(input) ? Object.keys(input) : undefined;
+      let keys: string[] | undefined;
+      // A proxy may throw on its keys: that is an input it cannot take, not a broken bridge.
+      try { keys = isObject(input) ? Object.keys(input) : undefined; } catch {
+        return toolError(`${SNAPSHOT} takes no input: send {}. Its input could not be read.`);
+      }
       if (keys?.length !== 0) {
         const got = keys ? `the key ${JSON.stringify(keys[0])}` : describe(input);
         return toolError(`${SNAPSHOT} takes no input: send {}. It got ${got}.`);

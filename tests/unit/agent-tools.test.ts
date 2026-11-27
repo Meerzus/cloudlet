@@ -158,6 +158,14 @@ describe('agent.callTool: cloudlet_snapshot', () => {
     expectPlain(result);
   });
 
+  it('refuses an input whose keys cannot be read, and reports nothing', async () => {
+    const reported = captureReports();
+    const input = new Proxy({}, { ownKeys(): never { throw new Error('no'); } });
+    const result = await createAgent().callTool('cloudlet_snapshot', input);
+    expect(result).toEqual({ ok: false, error: { message: 'cloudlet_snapshot takes no input: send {}. Its input could not be read.' } });
+    expect(reported).toHaveLength(0);
+  });
+
   it('leaves out a key of a record that is not plain data, and reports it', async () => {
     const reported = captureReports();
     const agent = createAgent();
