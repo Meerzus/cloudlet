@@ -206,6 +206,11 @@ export function verifyAgentSubpath() {
     }
   }
   const unsubscribe: () => void = component.subscribe(() => undefined);
+  const stop: () => void = component.subscribe((changes) => {
+    const source: 'user' | 'agent' | 'app' | 'system' | undefined = changes?.[0]?.source;
+    void source;
+  });
+  void stop;
   void [projected, unsubscribe];
 }
 

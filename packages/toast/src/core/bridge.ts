@@ -112,7 +112,7 @@ function createRendererBridge<Slot>(k: ControllerKernel<Slot>): RendererBridge<S
         else k.island = { reason, current: target, source: 'user' };
       });
     }),
-    collapseIsland: withLease(() => k.island ? k.mutate(() => { k.island = null; }) : UNCHANGED),
+    collapseIsland: withLease(() => k.island ? k.mutate(() => { k.collapse('user'); }) : UNCHANGED),
     setAutoDismiss: withLease((value?: boolean) => {
       if (value !== undefined && typeof value !== 'boolean') return reject('invalid-input');
       if (k.autoDismissing(value) === k.autoDismissing(k.hostAutoDismiss)) { k.hostAutoDismiss = value; return UNCHANGED; }

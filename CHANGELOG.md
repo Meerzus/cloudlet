@@ -48,6 +48,20 @@
   Action failed`; a `validate` that throws answers `Action failed` too. Each field in the agent snapshot now has `kind`, `maxLength`, `inputMode` and
   `filledBy` (`app` for the default, `user`, `agent` or null); values, defaults and placeholders
   still never leave Cloudlet.
+- Experimental: `toasterAgent` tells the bridge what changed and who changed it. A listener of
+  `agent.subscribe` receives records `{ ref, component, label?, key, value, previous, reason?,
+  source }` together with the new snapshot. On a notification: `present` (`true` when it appears,
+  `false` when it closes, with the close reason in `reason`), `content` (the app updated it),
+  `action` (`idle`, `pending`, `failed`), `operation` (`pending`, `cancel-requested`, `fulfilled`,
+  `rejected`, `cancelled`) and `field:<name>` (who wrote a form field last: `app`, `user`, `agent`
+  or null). On the Toaster record: `island` (the `ref` of the notification it shows, or null) and
+  `overflow` (after the missed count was acknowledged). `source` is who did it, so an agent's
+  `dismiss` step arrives as `present: false`, `reason: 'programmatic'`, `source: 'agent'`, and the
+  close button as `user`. `label` is the notification's title, since a closed one is no longer in
+  the snapshot. A field reports only a change of author, once however much is typed, and never its
+  text. A notification's `ref` is now issued when it appears, so one that is shown and closed
+  between two reads still has its number in both records; an adapter that nobody subscribed to
+  numbers on reading, as before.
 - Every event, `onClose` and the Island snapshot say who caused the change. `event.source`,
   `CloseNotice.source` and `getSnapshot().island.source` are a `ChangeSource`: `user` (a person,
   through the `Toaster`), `agent` (a step taken through `@cloudlet/toast/agent`), `app` (your code,

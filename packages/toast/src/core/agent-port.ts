@@ -1,9 +1,10 @@
+import type { ChangeSource } from '../contracts/events.js';
 import type { NotificationHandle } from '../contracts/identity.js';
 import type { FormErrors, RendererSnapshot } from '../contracts/internal.js';
 import type { CancellationSignal, CancelResult } from '../contracts/operations.js';
 import type { ControllerSnapshot } from '../contracts/snapshots.js';
 import { fillFormValue, invokeAction } from './actions.js';
-import { UNCHANGED, getControllerKernel, reject, type ControllerKernel, type FieldAuthor, type RecordState } from './controller.js';
+import { UNCHANGED, getControllerKernel, reject, type ControllerKernel, type EventPayload, type FieldAuthor, type RecordState } from './controller.js';
 
 // The agent adapter's way into a controller. Only the `agent` entry imports it, so the root entry
 // and the renderer chunk never carry it. It hands out no lease: a step that needs a screen only
@@ -30,7 +31,12 @@ export interface ToasterReading<Slot> {
   readonly busy: boolean;
   /** One entry per record with a form action. */
   readonly forms: ReadonlyMap<NotificationHandle, FormReading>;
+  /** Who closed the Island last; null before the first close. */
+  readonly closedBy: ChangeSource | null;
 }
+
+/** An event as the commit queued it: its type, source and fields, before it is stamped and delivered. */
+export type PortEvent = EventPayload;
 
 /** The grant a step was approved under; a marker stricter than it stops the step. */
 export type StepGrant = 'allow' | 'confirm';
@@ -55,7 +61,12 @@ export type PressOutcome =
 export interface ToasterPort<Slot> {
   /** The same object until the controller publishes again. */
   readonly read: () => ToasterReading<Slot>;
-  readonly subscribe: (listener: () => void) => () => void;
+  /**
+   * Calls `listener` after every committed change with the events that commit queued, so a reader
+   * learns what happened and who did it together with the new state. The controller delivers the
+   * events themselves only after its state listeners.
+   */
+  readonly subscribe: (listener: (events: readonly PortEvent[]) => void) => () => void;
   /** Opens the Island on the top notification, unless a person is busy with the Toaster. */
   readonly open: () => Changed | Rejection<'disposed' | 'no-host' | 'empty' | 'busy'>;
   /** Collapses the Island, unless it holds a draft. */
@@ -104,7 +115,7 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
       const filled = new Set(Object.keys(form.values).filter((name) => form.values[name]!.trim() !== ''));
       forms.set(form.handle, freeze({ filled, authors: new Map(Object.entries(form.authors)), errors: form.errors }));
     }
-    reading = freeze({ controller: next, mounted, busy: k.interacting(), forms });
+    reading = freeze({ controller: next, mounted, busy: k.interacting(), forms, closedBy: k.islandClosedBy });
     return reading;
   };
 
@@ -112,7 +123,9 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
 
   return freeze<ToasterPort<Slot>>({
     read,
-    subscribe: k.subscribe,
+    subscribe: (listener) => k.subscribe(() => {
+      listener(k.announced.filter((delivery): delivery is PortEvent => !('callback' in delivery)));
+    }),
     open() {
       if (k.disposed) return reject('disposed');
       if (k.lease === null) return reject('no-host');
@@ -127,7 +140,7 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
       if (!k.island) return UNCHANGED;
       // A person's Escape collapses an Island with a draft; an agent is not that person.
       if (k.dirty(k.island.current)) return reject('busy');
-      return k.mutate(() => { k.island = null; });
+      return k.mutate(() => { k.collapse('agent'); });
     },
     show: withRecord((record) => {
       if (k.lease === null) return reject('no-host');

@@ -19,7 +19,7 @@ export interface OperationBinding {
 }
 
 // The controller stamps identity, order and time; whoever queues an event names its source.
-type EventPayload = SemanticEvent extends infer E ? E extends SemanticEvent ? Omit<E, 'controller' | 'sequence' | 'at'> : never : never;
+export type EventPayload = SemanticEvent extends infer E ? E extends SemanticEvent ? Omit<E, 'controller' | 'sequence' | 'at'> : never : never;
 export type Delivery = EventPayload | { readonly callback: () => void; readonly source: string; readonly handle?: NotificationHandle };
 
 export interface RecordState<Slot> {
@@ -120,6 +120,15 @@ export interface ControllerKernel<Slot> {
   hostDelay: number | undefined;
   hostAutoDismiss: boolean | undefined;
   island: IslandState<Slot> | null;
+  /** Closes the Island and remembers who closed it. */
+  readonly collapse: (source: ChangeSource) => void;
+  /** Who closed the Island last; null before the first close. */
+  readonly islandClosedBy: ChangeSource | null;
+  /**
+   * What the commit being announced to `subscribe` listeners queued, events and callbacks alike;
+   * empty outside such a call. The events themselves are delivered after the listeners.
+   */
+  readonly announced: readonly Delivery[];
   attention: AttentionCandidate<Slot> | null;
   /** A person is on the Toaster: hover, focus, a gesture, or a draft in the open Island. */
   readonly interacting: () => boolean;
@@ -191,6 +200,8 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
   let revision = 0;
   let eventSequence = 0;
   let island: IslandState<Slot> | null = null;
+  let islandClosedBy: ChangeSource | null = null;
+  let announced: readonly Delivery[] = EMPTY;
   // The presented record: Island current when open, otherwise the newest record.
   let presented: RecordState<Slot> | null = null;
   let hostDelay: number | undefined;
@@ -294,7 +305,11 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
   }
   function enqueue(deliveries: readonly Delivery[], notify = false, at = clock.now(), final = false, release = false): void {
     batches.push(() => {
-      if (notify) notifyListeners(listeners, 'subscribe');
+      if (notify) {
+        announced = deliveries;
+        notifyListeners(listeners, 'subscribe');
+        announced = EMPTY;
+      }
       for (const delivery of deliveries) {
         if ('callback' in delivery) {
           try { delivery.callback(); } catch (error) {
@@ -546,7 +561,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       const index = order.indexOf(record);
       const next = order[index + 1] ?? order[index - 1];
       // The Island moved on because this record closed: whoever closed it moved it.
-      if (next) { island.current = next; island.source = source; } else island = null;
+      if (next) { island.current = next; island.source = source; } else collapse(source);
     }
     if (attention?.record === record) attention = null;
     if (summoned?.record === record) summoned = null;
@@ -558,6 +573,10 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
       const notice = freeze({ handle: record.handle, reason, source });
       deliveries.push({ callback: () => onClose(notice), source: 'onClose', handle: record.handle });
     }
+  }
+  function collapse(source: ChangeSource): void {
+    island = null;
+    islandClosedBy = source;
   }
   const dismiss = withRecord((record, reason: CloseReason, source: ChangeSource) =>
     mutate((deliveries) => remove(record, reason, deliveries, source)));
@@ -949,7 +968,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
         // Detached/admission-rejected handles also lose their capabilities.
         for (const notify of operationSubscriptions.values()) if (!deliveries.includes(notify)) deliveries.push(notify);
         lease = lastLease = null;
-        island = null;
+        if (island) collapse('system');
         attention = null;
         stopAttention();
         summoned = null;
@@ -973,6 +992,9 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     get hostDelay() { return hostDelay; }, set hostDelay(value) { hostDelay = value; },
     get hostAutoDismiss() { return hostAutoDismiss; }, set hostAutoDismiss(value) { hostAutoDismiss = value; },
     get island() { return island; }, set island(value) { island = value; },
+    get islandClosedBy() { return islandClosedBy; },
+    get announced() { return announced; },
+    collapse,
     get attention() { return attention; }, set attention(value) { attention = value; },
     get focusRequest() { return focusRequest; }, set focusRequest(value) { focusRequest = value; },
     get focused() { return focused; }, set focused(value) { focused = value; },
