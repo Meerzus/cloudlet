@@ -1,5 +1,5 @@
 /**
- * Compile-only: the Toaster adapter, the Color picker adapter and the agent bridge declare the same
+ * Compile-only: the Toaster adapter, the Color picker adapter (shared by the palette's) and the agent bridge declare the same
  * protocol on their own, because @cloudlet/toast and the registry components may not import
  * @cloudlet/agent. These checks fail the typecheck as soon as a copy drifts apart.
  */
@@ -8,6 +8,7 @@ import {
   type AgentRunOutcome, type AgentSignal, type AgentStepCall, type AgentStepCheck, type AgentStepNames, type AgentSummonOutcome,
   type AgentValue,
 } from '@cloudlet/agent';
+import * as palette from '@/components/ui/color-palette/color-palette-agent';
 import * as picker from '@/components/ui/color-picker/color-picker-agent';
 import { createCloudlet } from '../../packages/toast/src/index.js';
 import {
@@ -69,6 +70,15 @@ export function verifyPickerAgent(bridgeEntry: AgentEntry, pickerRecord: picker.
   // @ts-expect-error A bridge record is not necessarily the picker's.
   const narrowed: picker.ColorPickerEntry = bridgeEntry;
   void [connector, pickerEntry, narrowed];
+}
+
+export function verifyPaletteAgent(bridgeEntry: AgentEntry, paletteRecord: palette.ColorPaletteEntry) {
+  // The palette's record is a bridge record; its hook takes what the picker's does.
+  const connector: Parameters<typeof palette.useColorPaletteAgent>[0] = createAgent();
+  const paletteEntry: AgentEntry = paletteRecord;
+  // @ts-expect-error A bridge record is not necessarily the palette's.
+  const narrowed: palette.ColorPaletteEntry = bridgeEntry;
+  void [connector, paletteEntry, narrowed];
 }
 
 export async function verifyAct(): Promise<string | undefined> {
