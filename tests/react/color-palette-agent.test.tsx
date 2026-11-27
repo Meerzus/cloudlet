@@ -1,8 +1,10 @@
 import { createAgent, type Agent, type AgentChange } from '@cloudlet/agent';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { StrictMode, useState } from 'react';
+import { StrictMode, useEffect, useLayoutEffect, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ColorPalette, type ColorPaletteProps } from '@/components/ui/color-palette/color-palette';
+import { ColorPickerPanel } from '@/components/ui/color-picker/color-picker';
+import { useColorPickerAgent } from '@/components/ui/color-picker/color-picker-agent';
 import { useColorPaletteAgent, type ColorPaletteAgentOptions } from '@/components/ui/color-palette/color-palette-agent';
 
 /** A controlled owner: `accept` decides what the app does with the colors the palette hands it. */
@@ -364,5 +366,110 @@ describe('useColorPaletteAgent', () => {
     expect(changes.map(({ source }) => source)).toEqual(['agent', 'user']);
     unmount();
     expect(agent.snapshot()).toEqual([]);
+  });
+});
+
+describe('useColorPaletteAgent on a state the app shares with a color picker', () => {
+  function Accent({ agent, color, onChange }: { agent: Agent; color: string; onChange: (value: string) => void }) {
+    const picker = useColorPickerAgent(agent, { color, onChange }, { name: 'accent' });
+    return <ColorPickerPanel {...picker} />;
+  }
+  function Brand({ agent, colors, onChange }: { agent: Agent; colors: string[]; onChange: (colors: string[]) => void }) {
+    const palette = useColorPaletteAgent(agent, { colors, onChange });
+    return <ColorPalette {...palette} />;
+  }
+  /** A picker for the accent and a palette that shows the accent first; `accept` decides what the app takes. */
+  function Shared({ picker, palette = picker, accept = true }: { picker: Agent; palette?: Agent; accept?: boolean }) {
+    const [accent, setAccent] = useState('#ff0000');
+    const [rest, setRest] = useState(['#00ff00']);
+    return (
+      <>
+        <Accent agent={picker} color={accent} onChange={(value) => { if (accept) setAccent(value); }} />
+        <Brand
+          agent={palette}
+          colors={[accent, ...rest]}
+          onChange={(next) => {
+            if (!accept) return;
+            setAccent(next[0] ?? '#ffffff');
+            setRest(next.slice(1));
+          }}
+        />
+        <button type="button" onClick={() => setAccent('#336699')}>App sets the accent</button>
+      </>
+    );
+  }
+  const sources = (changes: AgentChange[]) => changes.map(({ ref, value, source }) => [ref, value, source]);
+  const removeFirst = () => fireEvent.keyDown(within(group()).getByRole('button', { name: /^Color 1 of 2/ }), { key: 'Delete' });
+
+  it('names who started the change on the palette and the picker: an agent, a person, the app', async () => {
+    const agent = createAgent();
+    render(<Shared picker={agent} />);
+    const changes = recorder(agent);
+    await act(() => agent.act({ steps: [{ ref: 'accent', action: 'set', args: ['#123456'] }] }));
+    removeFirst();
+    fireEvent.click(within(group()).getByRole('button', { name: 'Add color' }));
+    const added = colorsOf(agent, 1) as string[];
+    await step(agent, 'set', [0, '#0000ff']);
+    fireEvent.click(screen.getByRole('button', { name: 'App sets the accent' }));
+    expect(sources(changes)).toEqual([
+      ['accent', '#123456', 'agent'], ['color-palette', ['#123456', '#00ff00'], 'agent'],
+      ['accent', '#00ff00', 'user'], ['color-palette', ['#00ff00'], 'user'],
+      ['color-palette', added, 'user'],
+      ['accent', '#0000ff', 'agent'], ['color-palette', ['#0000ff', added[1]], 'agent'],
+      ['accent', '#336699', 'app'], ['color-palette', ['#336699', added[1]], 'app'],
+    ]);
+  });
+
+  it('hands a mark the app did not take to neither component: the app\'s own change after it is the app\'s', async () => {
+    const agent = createAgent();
+    render(<Shared picker={agent} accept={false} />);
+    const changes = recorder(agent);
+    expect((await step(agent, 'set', [0, '#0000ff'])).ok).toBe(false);
+    removeFirst();
+    fireEvent.click(screen.getByRole('button', { name: 'App sets the accent' }));
+    expect(sources(changes)).toEqual([['accent', '#336699', 'app'], ['color-palette', ['#336699', '#00ff00'], 'app']]);
+  });
+
+  it.each([
+    ['an effect', useEffect],
+    ['a layout effect', useLayoutEffect],
+  ])('names the app for a color the app passes on to the palette in %s, a commit later', async (_, useRelay) => {
+    const agent = createAgent();
+    function Relayed() {
+      const [accent, setAccent] = useState('#ff0000');
+      const [colors, setColors] = useState(['#ff0000', '#00ff00']);
+      useRelay(() => { setColors((list) => [accent, ...list.slice(1)]); }, [accent]);
+      return <><Accent agent={agent} color={accent} onChange={setAccent} /><Brand agent={agent} colors={colors} onChange={setColors} /></>;
+    }
+    render(<Relayed />);
+    const changes = recorder(agent);
+    await act(() => agent.act({ steps: [{ ref: 'accent', action: 'set', args: ['#123456'] }] }));
+    expect(sources(changes)).toEqual([['accent', '#123456', 'agent'], ['color-palette', ['#123456', '#00ff00'], 'app']]);
+  });
+
+  it('does not share a mark with a picker on another agent', async () => {
+    const picker = createAgent();
+    const palette = createAgent();
+    render(<Shared picker={picker} palette={palette} />);
+    const accent = recorder(picker);
+    const brand = recorder(palette);
+    await step(palette, 'set', [0, '#0000ff']);
+    removeFirst();
+    expect(sources(accent)).toEqual([['accent', '#0000ff', 'app'], ['accent', '#00ff00', 'app']]);
+    expect(sources(brand)).toEqual([['color-palette', ['#0000ff', '#00ff00'], 'agent'], ['color-palette', ['#00ff00'], 'user']]);
+  });
+
+  it('keeps the rule under StrictMode', async () => {
+    const agent = createAgent();
+    render(<StrictMode><Shared picker={agent} /></StrictMode>);
+    const changes = recorder(agent);
+    await step(agent, 'set', [0, '#0000ff']);
+    removeFirst();
+    fireEvent.click(screen.getByRole('button', { name: 'App sets the accent' }));
+    expect(sources(changes)).toEqual([
+      ['accent', '#0000ff', 'agent'], ['color-palette', ['#0000ff', '#00ff00'], 'agent'],
+      ['accent', '#00ff00', 'user'], ['color-palette', ['#00ff00'], 'user'],
+      ['accent', '#336699', 'app'], ['color-palette', ['#336699'], 'app'],
+    ]);
   });
 });

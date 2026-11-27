@@ -100,9 +100,14 @@ interface Committed {
  * The palette appears in `agent.snapshot()` as one record (`ColorPaletteEntry`) and takes the steps
  * `set [number, color]`, `add [color]` and `remove [number]`, numbers counted from 0; each answers
  * with the colors after it. Each change of the colors reaches `agent.subscribe` under the key
- * `colors` with who made it: `user` through the palette, `agent` through a step, `app` when the app
- * changed the prop itself. A palette without `colors` (or `format`) is uncontrolled: the hook holds
- * the colors (or the format) and hands the palette controlled props. With `agent` null or undefined
+ * `colors` with who started the change: `user` through the palette, `agent` through a step, `app`
+ * when the app changed the prop itself. The author is shared by the color adapters on the same
+ * agent: a palette or picker whose value changes in the same commit as the one a person or a step
+ * changed names the same author, so components on one state of the app report one source. A value
+ * the app passes on in a later commit (from an effect, after a server answers) is named by that
+ * commit: the app's, unless a person or a step changed something in it too. A palette without
+ * `colors` (or `format`) is uncontrolled: the hook holds the colors (or the format) and hands the
+ * palette controlled props. With `agent` null or undefined
  * the props come back as they are and nothing connects; keep the same agent for the component's life.
  *
  * A step answers by what the palette shows once React has committed the app's update: the colors
@@ -119,7 +124,7 @@ export function useColorPaletteAgent<Props extends ColorPaletteProps>(
   // The palette's own defaults, so an uncontrolled palette shows the same once the hook controls it.
   const [ownColors, setOwnColors] = useState<readonly string[]>(() => defaultColors ?? []);
   const [ownFormat, setOwnFormat] = useState<ColorFormat>(() => defaultFormat ?? formats[0] ?? 'hex');
-  const author = useChangeAuthor();
+  const author = useChangeAuthor(agent);
   const committed = useRef<Committed | null>(null);
 
   const givenColors = colors ?? ownColors;

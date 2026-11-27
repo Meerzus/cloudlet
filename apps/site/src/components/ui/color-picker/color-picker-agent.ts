@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useReducer, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { COLOR_FORMATS, detectFormat, formatHsva, parseToHsva, type ColorFormat, type Hsva } from './color';
 import type { ColorPickerPanelProps, ColorPickerProps } from './color-picker';
@@ -197,34 +197,89 @@ export function commitNow(write: () => void): void {
 }
 
 /**
- * Who starts the change the next commit shows. `mark` is called right where the change starts and
- * schedules a render of the adapter's component in the same batch, so the commit that carries the
- * change is the one that reads the mark; `settle` is called once per commit and forgets the mark
- * whether or not the value changed, so a mark the app ignored never reaches a later change.
+ * Who starts the change the next commit shows, for every color adapter on the same agent: a
+ * component whose value changed in the commit that carries a person's or an agent's change names
+ * the same author, even when the app hands the value to it through shared state. `mark` is called
+ * right where the change starts and schedules a render of the adapter's component in the same
+ * batch, so the commit that carries the change is the one that reads the mark. `settle` reads it
+ * in that commit's layout effects; the mark is forgotten after the commit, whether or not a value
+ * changed, so neither a mark the app ignored nor a value the app passes on in a later commit is
+ * named after it. Adapters on different agents, or without one, never share a mark.
  */
 export interface ChangeAuthor {
   readonly mark: (source: 'user' | 'agent') => void;
-  /** The marked author, or `app` when nobody marked this commit; the mark is gone afterwards. */
+  /** The marked author of this commit, or `app` when nobody marked it. */
   readonly settle: () => ChangeSourceShape;
 }
 
-export function useChangeAuthor(): ChangeAuthor {
+/** A mark and whether a commit has read it yet: only a read mark is forgotten. */
+interface Mark {
+  readonly source: 'user' | 'agent';
+  read: boolean;
+}
+
+/** Where the adapters on one agent keep their mark. */
+interface MarkSlot {
+  current: Mark | null;
+}
+
+const marks = new WeakMap<AgentConnectorShape, MarkSlot>();
+
+function slotOf(agent: AgentConnectorShape): MarkSlot {
+  let slot = marks.get(agent);
+  if (!slot) {
+    slot = { current: null };
+    marks.set(agent, slot);
+  }
+  return slot;
+}
+
+// Each adapter reads the mark in its own layout effect, in whatever order React runs them, so no
+// read may forget it. It is forgotten in the passive effects of the commit that read it: the
+// adapter that marked always renders in that commit, and React runs a commit's passive effects
+// before it commits again, whichever microtasks come first. A mark set after the commit and before
+// its passive effects has not been read yet, so it stays for the commit it belongs to.
+export function useChangeAuthor(agent: AgentConnectorShape | null | undefined): ChangeAuthor {
   const [, rerender] = useReducer((count: number) => count + 1, 0);
-  const [author] = useState((): ChangeAuthor => {
-    let pending: 'user' | 'agent' | null = null;
-    return freeze({
+  const [own] = useState((): MarkSlot => ({ current: null }));
+  const slot = agent ? slotOf(agent) : own;
+  // The slot of the committed render: steps and handlers mark there.
+  const committed = useRef(slot);
+  const [state] = useState(() => {
+    let last: Mark | null = null;
+    const author: ChangeAuthor = freeze({
       mark(source: 'user' | 'agent') {
-        pending = source;
+        last = { source, read: false };
+        committed.current.current = last;
         rerender();
       },
       settle() {
-        const source = pending ?? 'app';
-        pending = null;
-        return source;
+        const mark = committed.current.current;
+        if (!mark) return 'app';
+        mark.read = true;
+        return mark.source;
       },
     });
+    return {
+      author,
+      // Unmounted in the commit that carries its own mark: that commit was the mark's, read or not.
+      leave() {
+        if (last && committed.current.current === last) last.read = true;
+      },
+      forget() {
+        const held = committed.current;
+        if (held.current?.read) held.current = null;
+      },
+    };
   });
-  return author;
+  // Declared before the adapter's port, so `settle` reads this commit's slot.
+  useLayoutEffect(() => { committed.current = slot; });
+  useLayoutEffect(() => state.leave, [state]);
+  useEffect(() => {
+    state.forget();
+    return state.forget;
+  });
+  return state.author;
 }
 
 /** What an adapter answers the bridge with: stable functions that read its committed state. */
@@ -337,9 +392,14 @@ const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.
  *
  * The picker appears in `agent.snapshot()` as one record (`ColorPickerEntry`), takes the step
  * `set [color]`, and reports each change of its value to `agent.subscribe` under the key `color`
- * with who made it: `user` through the picker, `agent` through a step, `app` when the app changed
- * the prop itself. A picker without `color` (or `format`) is uncontrolled: the hook holds the value
- * (or the format) and hands the picker controlled props. With `agent` null or undefined the props
+ * with who started the change: `user` through the picker, `agent` through a step, `app` when the
+ * app changed the prop itself. The author is shared by the color adapters on the same agent: a
+ * picker or palette whose value changes in the same commit as the one a person or a step changed
+ * names the same author, so two components on one state of the app report one source. A value the
+ * app passes on in a later commit (from an effect, after a server answers) is named by that commit:
+ * the app's, unless a person or a step changed something in it too. A picker without `color` (or
+ * `format`) is uncontrolled: the hook holds the value (or the format) and hands the picker
+ * controlled props. With `agent` null or undefined the props
  * come back as they are and nothing connects; keep the same agent for the component's life.
  *
  * A step answers by what the picker shows once React has committed the app's update: the value
@@ -356,7 +416,7 @@ export function useColorPickerAgent<Props extends ColorPickerProps | ColorPicker
   // The picker's own defaults, so an uncontrolled picker shows the same once the hook controls it.
   const [ownColor, setOwnColor] = useState(() => defaultColor ?? '');
   const [ownFormat, setOwnFormat] = useState<ColorFormat>(() => defaultFormat ?? formats[0] ?? 'hex');
-  const author = useChangeAuthor();
+  const author = useChangeAuthor(agent);
   const mirror = useRef<Mirror | null>(null);
   const committed = useRef<Committed | null>(null);
   // The picker emits once more right after switching the format: the same color in the new format.

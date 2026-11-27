@@ -1,6 +1,7 @@
 import { createAgent, type Agent, type AgentChange } from '@cloudlet/agent';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { StrictMode, useEffect, useState, type ReactNode } from 'react';
+import { StrictMode, startTransition, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createRoot } from 'react-dom/client';
 import { describe, expect, it, vi } from 'vitest';
 import { ColorPicker, ColorPickerPanel, type ColorFormat } from '@/components/ui/color-picker/color-picker';
 import { useColorPickerAgent, type ColorPickerAgentOptions } from '@/components/ui/color-picker/color-picker-agent';
@@ -270,24 +271,6 @@ describe('useColorPickerAgent', () => {
     expect(changes).toMatchObject([{ value: '#123456', previous: '#007aff', source: 'user' }]);
   });
 
-  it('marks only the picker that started the change when two share the app\'s color', async () => {
-    const agent = createAgent();
-    function Shared() {
-      const [color, setColor] = useState('#007aff');
-      const first = useColorPickerAgent(agent, { color, onChange: setColor }, { name: 'first' });
-      const second = useColorPickerAgent(agent, { color, onChange: setColor }, { name: 'second' });
-      return <><div data-testid="first"><ColorPickerPanel {...first} /></div><ColorPickerPanel {...second} /></>;
-    }
-    render(<Shared />);
-    const changes = recorder(agent);
-    fireEvent.change(within(screen.getByTestId('first')).getByRole('textbox', { name: 'Color value' }), { target: { value: '#123456' } });
-    await set(agent, '#ff0000', 'second');
-    expect(changes.map(({ ref, value, source }) => [ref, value, source])).toEqual([
-      ['first', '#123456', 'user'], ['second', '#123456', 'app'],
-      ['first', '#ff0000', 'app'], ['second', '#ff0000', 'agent'],
-    ]);
-  });
-
   it('answers done and gone when the app unmounts the picker in answer to a step', async () => {
     const agent = createAgent();
     function Owner() {
@@ -379,5 +362,170 @@ describe('useColorPickerAgent', () => {
     await expect(pending).resolves.toMatchObject({ ok: true, steps: [{ result: '#ff0000' }] });
     expect(field()).toHaveValue('#ff0000');
     expect(error).not.toHaveBeenCalled();
+  });
+});
+
+describe('useColorPickerAgent on a color the app shares between pickers', () => {
+  /** One picker of a shared color, in its own component, so React runs its effects on their own. */
+  function Picker({ agent, name, color, onChange }: { agent: Agent; name: string; color: string; onChange: (value: string) => void }) {
+    const picker = useColorPickerAgent(agent, { color, onChange }, { name });
+    return <div data-testid={name}><ColorPickerPanel {...picker} /></div>;
+  }
+  /** Two pickers on one color; `accept` decides what the app does with a value either hands it. */
+  function Shared({ first, second = first, accept = (value) => value }: { first: Agent; second?: Agent; accept?: (value: string) => string | null }) {
+    const [color, setColor] = useState('#007aff');
+    const take = (value: string) => {
+      const taken = accept(value);
+      if (taken !== null) setColor(taken);
+    };
+    return (
+      <>
+        <Picker agent={first} name="first" color={color} onChange={take} />
+        <Picker agent={second} name="second" color={color} onChange={take} />
+        <button type="button" onClick={() => setColor('#336699')}>App sets blue</button>
+        <button type="button" onClick={() => setColor('#00aa00')}>App sets green</button>
+      </>
+    );
+  }
+  const type = (name: string, value: string) => fireEvent.change(within(screen.getByTestId(name)).getByRole('textbox', { name: 'Color value' }), { target: { value } });
+  const sources = (changes: AgentChange[]) => changes.map(({ ref, value, source }) => [ref, value, source]);
+
+  it('names who started the change on both pickers: a person, an agent, the app', async () => {
+    const agent = createAgent();
+    render(<Shared first={agent} />);
+    const changes = recorder(agent);
+    type('first', '#123456');
+    type('second', '#654321');
+    await set(agent, '#ff0000', 'second');
+    await set(agent, '#00ff00', 'first');
+    fireEvent.click(screen.getByRole('button', { name: 'App sets blue' }));
+    expect(sources(changes)).toEqual([
+      ['first', '#123456', 'user'], ['second', '#123456', 'user'],
+      ['first', '#654321', 'user'], ['second', '#654321', 'user'],
+      ['first', '#ff0000', 'agent'], ['second', '#ff0000', 'agent'],
+      ['first', '#00ff00', 'agent'], ['second', '#00ff00', 'agent'],
+      ['first', '#336699', 'app'], ['second', '#336699', 'app'],
+    ]);
+  });
+
+  it('hands a mark the app did not take to neither picker: the app\'s own change after it is the app\'s', async () => {
+    const agent = createAgent();
+    render(<Shared first={agent} accept={() => null} />);
+    const changes = recorder(agent);
+    expect((await set(agent, '#ff0000', 'second')).ok).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'App sets blue' }));
+    type('first', '#123456');
+    fireEvent.click(screen.getByRole('button', { name: 'App sets green' }));
+    expect(sources(changes)).toEqual([
+      ['first', '#336699', 'app'], ['second', '#336699', 'app'],
+      ['first', '#00aa00', 'app'], ['second', '#00aa00', 'app'],
+    ]);
+  });
+
+  it.each([
+    ['an effect', useEffect],
+    ['a layout effect', useLayoutEffect],
+  ])('names the app for a value the app passes on to the other picker in %s, a commit later', async (_, useRelay) => {
+    const agent = createAgent();
+    function Relayed() {
+      const [color, setColor] = useState('#007aff');
+      const [copy, setCopy] = useState('#007aff');
+      useRelay(() => { setCopy(color); }, [color]);
+      return <><Picker agent={agent} name="first" color={color} onChange={setColor} /><Picker agent={agent} name="second" color={copy} onChange={setCopy} /></>;
+    }
+    render(<Relayed />);
+    const changes = recorder(agent);
+    type('first', '#123456');
+    await set(agent, '#ff0000', 'first');
+    expect(sources(changes)).toEqual([
+      ['first', '#123456', 'user'], ['second', '#123456', 'app'],
+      ['first', '#ff0000', 'agent'], ['second', '#ff0000', 'app'],
+    ]);
+  });
+
+  it('forgets the mark of a picker the app unmounts in answer to its step: the app\'s later change elsewhere is the app\'s', async () => {
+    const agent = createAgent();
+    function Gone() {
+      const [shown, setShown] = useState(true);
+      return shown ? <Picker agent={agent} name="first" color="#007aff" onChange={() => setShown(false)} /> : null;
+    }
+    function Other() {
+      const [color, setColor] = useState('#007aff');
+      return <><Picker agent={agent} name="second" color={color} onChange={setColor} /><button type="button" onClick={() => setColor('#336699')}>App sets blue</button></>;
+    }
+    render(<><Gone /><Other /></>);
+    const changes = recorder(agent);
+    expect(await set(agent, '#ff0000', 'first')).toMatchObject({ ok: true, steps: [{ gone: true }] });
+    fireEvent.click(screen.getByRole('button', { name: 'App sets blue' }));
+    expect(sources(changes)).toEqual([['second', '#336699', 'app']]);
+  });
+
+  it('keeps a mark a person sets after a commit and before its passive effects for the commit it belongs to', async () => {
+    // Without act, so React schedules on its own: the app's transition commits, a person types from a
+    // layout effect of that commit, and React runs the transition's passive effects only before it
+    // commits the person's change.
+    const actEnvironment = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean | undefined };
+    const before = actEnvironment.IS_REACT_ACT_ENVIRONMENT;
+    actEnvironment.IS_REACT_ACT_ENVIRONMENT = false;
+    const host = document.body.appendChild(document.createElement('div'));
+    const root = createRoot(host);
+    const wait = () => new Promise((resolve) => { setTimeout(resolve, 5); });
+    try {
+      const agent = createAgent();
+      let appSets: (value: string) => void = () => {};
+      function Owner() {
+        const [color, setColor] = useState('#007aff');
+        const typed = useRef(false);
+        appSets = setColor;
+        useLayoutEffect(() => {
+          if (color !== '#222222' || typed.current) return;
+          typed.current = true;
+          const value = host.querySelector<HTMLInputElement>('[data-testid="first"] input[aria-label="Color value"]')!;
+          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(value, '#555555');
+          value.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        return <><Picker agent={agent} name="first" color={color} onChange={setColor} /><Picker agent={agent} name="second" color={color} onChange={setColor} /></>;
+      }
+      root.render(<Owner />);
+      await wait();
+      const changes = recorder(agent);
+      startTransition(() => { appSets('#222222'); });
+      await wait();
+      await wait();
+      expect(sources(changes)).toEqual([
+        ['first', '#222222', 'app'], ['second', '#222222', 'app'],
+        ['first', '#555555', 'user'], ['second', '#555555', 'user'],
+      ]);
+    } finally {
+      root.unmount();
+      host.remove();
+      actEnvironment.IS_REACT_ACT_ENVIRONMENT = before;
+    }
+  });
+
+  it('does not share a mark between pickers on different agents', async () => {
+    const first = createAgent();
+    const second = createAgent();
+    render(<Shared first={first} second={second} />);
+    const changes = recorder(first);
+    const others = recorder(second);
+    type('second', '#123456');
+    await set(first, '#ff0000', 'first');
+    expect(sources(changes)).toEqual([['first', '#123456', 'app'], ['first', '#ff0000', 'agent']]);
+    expect(sources(others)).toEqual([['second', '#123456', 'user'], ['second', '#ff0000', 'app']]);
+  });
+
+  it('keeps the rule under StrictMode', async () => {
+    const agent = createAgent();
+    render(<StrictMode><Shared first={agent} /></StrictMode>);
+    const changes = recorder(agent);
+    type('second', '#123456');
+    await set(agent, '#ff0000', 'first');
+    fireEvent.click(screen.getByRole('button', { name: 'App sets blue' }));
+    expect(sources(changes)).toEqual([
+      ['first', '#123456', 'user'], ['second', '#123456', 'user'],
+      ['first', '#ff0000', 'agent'], ['second', '#ff0000', 'agent'],
+      ['first', '#336699', 'app'], ['second', '#336699', 'app'],
+    ]);
   });
 });
