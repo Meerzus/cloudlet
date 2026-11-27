@@ -230,7 +230,9 @@ test('an unmarked action without a callback needs a person: the Island opens on 
   await expect(page.getByRole('group', { name: 'allow', exact: true }).getByRole('radio', { name: 'No callback', exact: true })).toBeChecked();
   await button(page, 'With action').click();
   const ref = await presetStep(page, 'press');
-  await button(page, 'Run steps').click();
+  // From the keyboard: WebKit does not focus a clicked button, and the test checks that focus stays.
+  await button(page, 'Run steps').focus();
+  await page.keyboard.press('Enter');
   const result = await latest(page);
   expect(result.ok).toBe(false);
   expect(result.error?.message).toMatch(/^Needs a person: "Undo" on "Email archived · \d+"\. The Island is open on it\. Ask them to press "Undo" themselves\.$/u);
@@ -324,7 +326,7 @@ test('invalid JSON is reported next to the field and nothing is sent', async ({ 
   await expect(page.getByTestId('agent-log')).toContainText('No calls yet.');
   await callField(page).fill('{ "steps": [{ "ref": "toaster", "action": 7 }] }');
   await button(page, 'Run steps').click();
-  expect((await latest(page)).error?.message).toBe('Invalid call: steps[0].action must be a string. No step ran.');
+  expect((await latest(page)).error?.message).toBe('Invalid call: steps[0].action must be a string: a verb from the record\'s actions. No step ran.');
 });
 
 test('the event log and the Changes list say who closed a notification: the agent, the app, the person and the timer', async ({ page }) => {

@@ -418,7 +418,7 @@ async function checkAgent(directory, archive) {
     ${removeBrowserGlobals}
     ${guardBrowserGlobals}
     const namespace = await import(${JSON.stringify(manifest.name)});
-    assert.deepEqual(Object.keys(namespace), ['createAgent'], 'The bridge exports exactly createAgent');
+    assert.deepEqual(Object.keys(namespace), ['createAgent', 'registerTools'], 'The bridge exports exactly createAgent and registerTools');
     const agent = namespace.createAgent();
     assert.deepEqual(agent.snapshot(), []);
     let state = 1;
@@ -449,17 +449,24 @@ async function checkAgent(directory, archive) {
     assert.deepEqual(agent.snapshot(), []);
     unsubscribe();
     assert.deepEqual(resourceCalls, [], 'The bridge must not read the DOM or allocate timers/listeners');
+    // Without a document there is no WebMCP: registerTools does nothing and returns a removal that does nothing.
+    for (const resource of ${browserGlobals}) delete globalThis[resource];
+    const unexpose = namespace.registerTools(agent, { allow: () => true });
+    assert.equal(typeof unexpose, 'function');
+    unexpose();
+    assert.throws(() => namespace.registerTools(agent, {}), TypeError, 'registerTools needs allow');
+    assert.deepEqual(resourceCalls, [], 'registerTools without WebMCP allocates no timers or listeners');
   `;
   run(directory, 'module', probe);
   const commonJsProbe = `
     const assert = require('node:assert/strict');
     assert.ok(require.resolve(${JSON.stringify(manifest.name)}).endsWith('/dist/index.js'));
     const namespace = require(${JSON.stringify(manifest.name)});
-    assert.deepEqual(Object.keys(namespace).filter((key) => key !== '__esModule'), ['createAgent']);
+    assert.deepEqual(Object.keys(namespace).filter((key) => key !== '__esModule'), ['createAgent', 'registerTools']);
   `;
   run(directory, 'commonjs', commonJsProbe);
   await typecheckConsumer(directory, 'agent-contracts.ts', ['ES2022']);
-  console.log(`${manifest.name}: ${common.files.length} packed files, ESM export, no dependencies or peers, navigable declaration maps, cold no-DOM import, CommonJS require() through the default condition, connect/snapshot/subscribe/act without DOM or timers, ${common.rejectedDeepImports} rejected deep imports, strict tarball consumer typecheck without DOM.`);
+  console.log(`${manifest.name}: ${common.files.length} packed files, ESM export, no dependencies or peers, navigable declaration maps, cold no-DOM import, CommonJS require() through the default condition, connect/snapshot/subscribe/act without DOM or timers, a silent registerTools without WebMCP, ${common.rejectedDeepImports} rejected deep imports, strict tarball consumer typecheck without DOM.`);
 }
 
 /** Both archives in one node_modules: the bridge reads a Toaster controller, typed from the archives. */

@@ -1,4 +1,7 @@
-import { createAgent, type ActResult, type Agent, type AgentChange, type AgentComponent, type AgentEntry, type Allow } from '@cloudlet/agent';
+import {
+  createAgent, registerTools, type ActResult, type Agent, type AgentChange, type AgentComponent, type AgentEntry, type Allow,
+  type RegisterToolsOptions,
+} from '@cloudlet/agent';
 
 // Compile the bridge against its packed declarations alone: no DOM, no Node, no React.
 const agent: Agent = createAgent();
@@ -63,3 +66,16 @@ void acting.act({ steps: [{ action: 'open' }] });
 
 // @ts-expect-error act is the only verb: the bridge has no run of its own.
 agent.run;
+
+// A call may carry its own allow, a second gate that only narrows the agent's.
+export async function narrowed(): Promise<boolean> {
+  const result: ActResult = await acting.act({ steps: [{ ref: 'demo', action: 'open' }] }, { allow: (step) => !step.needsPerson });
+  return result.ok;
+}
+
+// WebMCP: allow is required; the removal is a plain function. No DOM types are needed.
+const exposed: RegisterToolsOptions = { allow, onError: (error: unknown) => { void error; } };
+const unexpose: () => void = registerTools(acting, exposed);
+unexpose();
+// @ts-expect-error registerTools needs allow.
+registerTools(acting, {});

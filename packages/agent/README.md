@@ -6,8 +6,8 @@
 `@cloudlet/agent` is the bridge between Cloudlet components and an AI agent. Each component connects
 through its own adapter; the agent then reads one snapshot of everything the connected components
 show, hears when it changes, and acts on it under the app's permission. The package has no
-dependencies, touches no DOM and starts no timers until a step waits, so it runs on the server, in a
-worker or in the browser.
+dependencies, touches no DOM (only `registerTools` looks for WebMCP, when you call it) and starts no
+timers until a step waits, so it runs on the server, in a worker or in the browser.
 
 ## Install
 
@@ -97,6 +97,13 @@ if (!result.ok) console.log(result.error.message);
   `reportError`, any other runtime in `console.error`.
 - `act(input, { signal })` can be cancelled: a step that waits for `allow` or for the component
   stops waiting, and nothing further runs.
+- `act(input, { allow })` adds a second gate for this call only, for a caller you trust less than
+  the agent's other users. It never widens what the agent's own `allow` lets through: it is asked
+  after the agent's `allow` approved a step, with the same question, and the step runs only on
+  `true` from both. A step that needs a person comes with `needsPerson: true`; without the agent's
+  `allow` such a step goes to the person and the second gate is not asked. An `allow`-class step on
+  an agent without `allow` is asked only here. Each answer has the whole `timeout`, and a refusal
+  reads as one from the agent's `allow`.
 - The promise never rejects. The result is frozen plain data, ready for JSON and `structuredClone`:
 
 ```ts
@@ -114,6 +121,78 @@ A component's adapter takes steps through three optional methods of `AgentCompon
 read-only, and its steps are refused.
 
 The Toaster's adapter will ship as `@cloudlet/toast/agent` together with this package.
+
+## Tools for a model
+
+The bridge never calls a model. It gives you two tools to hand to one, and runs them when the model
+calls them:
+
+```ts
+// The same frozen array for every agent: { name, description, inputSchema } each, plain data.
+const tools = agent.tools; // cloudlet_act, then cloudlet_snapshot
+
+// When the model calls a tool, run it and send the answer back as the tool's result.
+const output = await agent.callTool(call.name, call.input, { signal });
+const toolResult = JSON.stringify(output);
+```
+
+- **`cloudlet_snapshot`** takes `{}` (or nothing) and answers `{ entries, verbs }`: `entries` is what
+  `agent.snapshot()` returns, and `verbs` says what the verbs of each kind of record in `entries` do
+  and which arguments they take. A key of a record that is not plain data is left out and reported.
+- **`cloudlet_act`** takes what `act` takes and answers its result plus `changes`: every
+  `AgentChange` the agent heard from the moment the call started running until it answered, from
+  any source, so the model learns that the person closed something while a step waited for `allow`.
+  Between calls the bridge keeps nothing; to tell the model what changed between its turns, collect
+  `agent.subscribe` yourself.
+- A call takes at most 20 steps. More, and the call runs nothing and asks for smaller calls: calls of
+  one agent wait in one queue, and a long list from a model that lost its way would hold the others.
+- An invalid call says what to change (`{"steps": [...]}` around a single step, arguments in
+  `args` as a list, a `ref` from `cloudlet_snapshot`), so the model can send it again on its own.
+- `callTool` never rejects. An unknown tool name, or input `cloudlet_snapshot` does not take, answers
+  `{ ok: false, error: { message } }`.
+
+The descriptions are written for a model that sees only them and the schemas: start with a
+snapshot, plan every step into one call, how errors and step numbers read, when to hand a step to
+the person and look for no other way, what `pending`, `started` and `requested` mean, and that text
+from the page is data, never instructions. They name no component: each adapter describes its own
+verbs through the protocol's optional `verbs`, which `cloudlet_snapshot` passes on, so a new
+component needs no change to the tools.
+
+## WebMCP
+
+`registerTools` hands the same two tools to the browser's own agent through
+[WebMCP](https://webmachinelearning.github.io/webmcp/), and returns the function that removes them:
+
+```ts
+import { createAgent, registerTools } from '@cloudlet/agent';
+
+useEffect(() => registerTools(agent, {
+  // Required: the gate for the browser's agent, asked after the agent's own allow.
+  allow: (step) => !step.needsPerson && step.action !== 'submit',
+  onError: (error) => console.warn(error), // optional; by default reportError
+}), [agent]);
+```
+
+- **Experimental.** WebMCP is a draft. Chrome has it behind `chrome://flags/#enable-webmcp-testing`
+  (or the `WebMCP` feature flag) and in an origin trial; other browsers do not. Where
+  `document.modelContext` is missing, `registerTools` does nothing, writes nothing to the console and
+  returns a function that does nothing.
+- **`allow` is required.** The browser's agent is not your code: decide what it may do. It is the
+  call's second gate (see `act(input, { allow })` above), so it only narrows what the agent's own
+  `allow` lets through, and a step that needs a person cannot run on an agent created without
+  `allow`. WebMCP has no way to ask a person for confirmation; the bridge's permissions are the only
+  protection, and a `true` from this gate answers for the person.
+- `cloudlet_snapshot` is registered with `readOnlyHint` and `untrustedContentHint`, `cloudlet_act`
+  with `consequentialHint` and `untrustedContentHint`. A tool's `execute` runs `agent.callTool` with
+  the browser's signal and never throws: WebMCP hands a thrown error to the agent without its text,
+  so failures come back as `{ ok: false, error: { message } }`.
+- A registration that fails (a name already taken, a frame without the `tools` permission, an early
+  build that throws instead of returning a promise) goes to `onError`, or to `reportError` without
+  it. A registration withdrawn by the removal is not an error.
+- The removal aborts one signal for both tools and does nothing the second time; registering again
+  after it works, so an effect that runs twice (StrictMode, fast refresh) leaves no duplicate. Call
+  it once per page: a second registration of the same names is refused by the browser. Removing the
+  tools does not cancel a call already running.
 
 ## License
 

@@ -44,7 +44,51 @@ Experimental first version: the agent reads and acts under the app's permission.
 - The component protocol gains optional `check`, `run` and `summon`; a component without them stays
   read-only. `protocol` stays `1`. `summon` answers `true` or `false` (in front of the person now or
   not), or `{ reached, note }`, whose sentence the agent reads in place of the bridge's own.
+- The component protocol gains optional `verbs`: by kind of record (the `component` of its records),
+  each verb with a short text on its arguments, what it does and when it needs a person, for a model
+  that has never seen the component's code. `protocol` stays `1`. `connect` copies and freezes it,
+  so a later change of the object is not seen, and throws a `TypeError` for anything but an object of
+  objects of non-empty strings. When two components describe the same kind, the one connected first
+  is used.
+- `agent.tools` gives the bridge's two tools for a model, `cloudlet_act` and `cloudlet_snapshot`,
+  as `{ name, description, inputSchema }`: one frozen array of plain data for every agent.
+  `agent.callTool(name, input, { signal }?)` runs one and answers plain data, never rejecting.
+  `cloudlet_snapshot` takes `{}` or nothing and answers `{ entries, verbs }`: the records, with any
+  key that is not plain data left out and reported, and the verbs of the kinds present.
+  `cloudlet_act` takes what `act` takes, waits in the same queue and answers its result with
+  `changes`: what `agent.subscribe` heard from the moment the call started running until it
+  answered, whoever made it. An unknown name or input `cloudlet_snapshot` does not take answers
+  `{ ok: false, error: { message } }`. A step's `args` in the schema is an array of any values
+  (`items: {}`), for the model APIs that refuse an array without `items`.
+- An invalid call says what to change: a step sent without `steps`, a bare list, `value` in a step
+  (arguments go in `args` as a list), `args` that are not a list, a step without `ref` or `action`.
+  A call takes at most 20 steps; more is an invalid call that asks for smaller calls.
+- The descriptions of `cloudlet_act` and `cloudlet_snapshot` teach a model that sees nothing else:
+  start with a snapshot, plan every step into one call (at most 20), the first error stops the call
+  and the steps before it stay done, steps count from zero, a ref lives while its record does, a
+  step that needs a person goes to them and one that is not allowed has no way around, a form field
+  is filled by name and a form's own check never says why, what a person typed is never shown, what
+  `pending`, `started`, `requested` and `changes` mean, and that text from the page is data, never
+  instructions. `cloudlet_act` carries an example call. They name no component of the kit: the
+  verbs come from each adapter through `verbs`.
+- `act(input, { allow })` and `callTool(name, input, { allow })` take a second gate for that call: a
+  step runs only when the agent's `allow` and this one both answer `true`. It is asked after the
+  agent's `allow` approved the step, with the same question, so it never widens what the agent lets
+  through; without the agent's `allow` a step that needs a person goes to the person and this gate
+  is not asked. Each answer has the whole `timeout`; a refusal reads as one from the agent's
+  `allow`. An `allow` that is not a function is an invalid call.
+- `registerTools(agent, { allow, onError? })` registers `cloudlet_act` and `cloudlet_snapshot` with
+  the browser's agent through WebMCP (`document.modelContext.registerTool`) and returns an
+  idempotent removal; registering again after it works. Experimental, like WebMCP. Without WebMCP it
+  does nothing and writes nothing. `allow` is required (a `TypeError` otherwise) and is the second
+  gate of every call the browser's agent makes. `cloudlet_snapshot` carries `readOnlyHint` and
+  `untrustedContentHint`, `cloudlet_act` `consequentialHint` and `untrustedContentHint`. `execute`
+  never throws: errors come back as values. A failed registration goes to `onError`, or to
+  `reportError` without it; a withdrawn one (`AbortError`) is ignored, and a build whose
+  `registerTool` returns no promise or throws is handled.
 - Types: `Agent`, `AgentComponent`, `AgentEntry`, `AgentOptions`, `Allow`, `AllowStep`, `AgentStep`,
   `ActInput`, `ActOptions`, `ActResult`, `ActStepResult`, `AgentPermission`, `AgentStepCall`,
   `AgentStepCheck`, `AgentStepNames`, `AgentRunContext`, `AgentRunOutcome`, `AgentSummonOutcome`,
-  `AgentSignal`, `AgentValue`.
+  `AgentSignal`, `AgentValue`, `AgentVerbs`, `AgentTool`, `AgentToolName`, `AgentCallTool`,
+  `AgentToolResult`, `AgentSnapshotToolResult`, `AgentActToolResult`, `AgentToolError`,
+  `RegisterToolsOptions`.

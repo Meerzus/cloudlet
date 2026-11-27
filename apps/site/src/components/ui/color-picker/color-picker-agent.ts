@@ -127,6 +127,15 @@ export interface AgentChangeShape {
 }
 
 /**
+ * What a component's verbs do, by kind of record: each verb with a line or two for an agent.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export interface AgentVerbsShape {
+  readonly [component: string]: { readonly [verb: string]: string };
+}
+
+/**
  * What a component hands to the bridge's `connect`. `check` and `run` come together, `summon` is
  * optional, and a read-only component leaves all three out.
  *
@@ -140,6 +149,7 @@ export interface AgentComponentShape<Entry extends AgentEntryShape = AgentEntryS
   readonly check?: (step: AgentStepCallShape) => AgentStepCheckShape;
   readonly run?: (step: AgentStepCallShape, context: AgentRunContextShape) => AgentRunOutcomeShape | PromiseLike<AgentRunOutcomeShape>;
   readonly summon?: (step: AgentStepCallShape) => AgentSummonOutcomeShape;
+  readonly verbs?: AgentVerbsShape;
 }
 
 /**
@@ -297,6 +307,8 @@ export interface AgentPortMethods {
   readonly snapshot: () => readonly AgentEntryShape[];
   readonly check: (step: AgentStepCallShape) => AgentStepCheckShape;
   readonly run: (step: AgentStepCallShape, context: AgentRunContextShape) => AgentRunOutcomeShape | PromiseLike<AgentRunOutcomeShape>;
+  /** What each verb of the adapter's records does, for an agent; the bridge copies it on connecting. */
+  readonly verbs: AgentVerbsShape;
 }
 
 /**
@@ -335,7 +347,7 @@ export function useAgentPort(
       listeners.add(own);
       return () => { listeners.delete(own); };
     };
-    return agent.connect(freeze({ protocol: 1 as const, name, snapshot: methods.snapshot, subscribe, check: methods.check, run: methods.run }));
+    return agent.connect(freeze({ protocol: 1 as const, name, snapshot: methods.snapshot, subscribe, check: methods.check, run: methods.run, verbs: methods.verbs }));
   }, [agent, name, methods, listeners]);
 }
 
@@ -390,6 +402,12 @@ interface Committed {
 }
 
 const ACTIONS: readonly ['set'] = freeze(['set'] as const);
+/** The picker's verbs for an agent; exported for the tests. */
+export const COLOR_PICKER_VERBS: AgentVerbsShape = freeze({
+  'color-picker': freeze({
+    set: 'args [color]: a CSS color string in hex, rgb(), hsl() or oklch(); names like "red" are not read. Sets the picker\'s color, written in its format, without opacity unless alpha is true; the result is the color it shows.',
+  }),
+});
 const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((item, index) => item === b[index]);
 
 /**
@@ -461,6 +479,7 @@ export function useColorPickerAgent<Props extends ColorPickerProps | ColorPicker
     };
     return freeze({
       snapshot: () => committed.current?.entries ?? EMPTY,
+      verbs: COLOR_PICKER_VERBS,
       check(step: AgentStepCallShape): AgentStepCheckShape {
         const verdict = plan(step);
         if (!verdict.ok) return freeze(verdict.message === undefined ? { available: false as const } : { available: false as const, message: verdict.message });

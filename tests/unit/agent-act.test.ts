@@ -94,17 +94,19 @@ describe('createAgent options', () => {
 });
 
 describe('act: the shape of the call', () => {
+  const shape = '{"steps": [{"ref": "<ref>", "action": "<verb>"}]}';
+  const args = 'arguments go in "args" as a list, like "args": ["<first>", "<second>"]';
   it.each([
-    [undefined, 0, 'Invalid call: expected an object with steps. No step ran.'],
-    [[], 0, 'Invalid call: expected an object with steps. No step ran.'],
-    [{ steps: [], extra: 1 }, 0, 'Invalid call: unknown key "extra". No step ran.'],
-    [{ steps: [] }, 0, 'Invalid call: steps must be a non-empty array. No step ran.'],
-    [{ steps: 'clear' }, 0, 'Invalid call: steps must be a non-empty array. No step ran.'],
-    [{ steps: [{ ref: 'box', action: 'clear' }, null] }, 1, 'Invalid call: steps[1] must be an object. No step ran.'],
-    [{ steps: [{ ref: 'box', action: 'clear' }, { ref: 'box', action: 7 }] }, 1, 'Invalid call: steps[1].action must be a string. No step ran.'],
-    [{ steps: [{ ref: 3, action: 'clear' }] }, 0, 'Invalid call: steps[0].ref must be a string. No step ran.'],
-    [{ steps: [{ ref: 'box', action: 'clear', args: 'x' }] }, 0, 'Invalid call: steps[0].args must be an array. No step ran.'],
-    [{ steps: [{ ref: 'box', action: 'clear', why: 'tidy' }] }, 0, 'Invalid call: steps[0] has an unknown key "why". No step ran.'],
+    [undefined, 0, `Invalid call: expected an object with steps: ${shape}. No step ran.`],
+    [[], 0, `Invalid call: expected an object with steps, not a bare list: ${shape}. No step ran.`],
+    [{ steps: [], extra: 1 }, 0, `Invalid call: unknown key "extra"; the call takes only "steps": ${shape}. No step ran.`],
+    [{ steps: [] }, 0, `Invalid call: steps must be a non-empty list: ${shape}. No step ran.`],
+    [{ steps: 'clear' }, 0, `Invalid call: steps must be a non-empty list: ${shape}. No step ran.`],
+    [{ steps: [{ ref: 'box', action: 'clear' }, null] }, 1, 'Invalid call: steps[1] must be an object like {"ref": "<ref>", "action": "<verb>"}. No step ran.'],
+    [{ steps: [{ ref: 'box', action: 'clear' }, { ref: 'box', action: 7 }] }, 1, 'Invalid call: steps[1].action must be a string: a verb from the record\'s actions. No step ran.'],
+    [{ steps: [{ ref: 3, action: 'clear' }] }, 0, 'Invalid call: steps[0].ref must be a string: a ref from cloudlet_snapshot. No step ran.'],
+    [{ steps: [{ ref: 'box', action: 'clear', args: 'x' }] }, 0, `Invalid call: steps[0].args is not a list: ${args}. No step ran.`],
+    [{ steps: [{ ref: 'box', action: 'clear', why: 'tidy' }] }, 0, 'Invalid call: steps[0] has an unknown key "why"; a step takes only "ref", "action" and "args". No step ran.'],
   ])('refuses %j before any step', async (input, step, message) => {
     const box = stepper();
     const agent = createAgent();
@@ -121,7 +123,7 @@ describe('act: the shape of the call', () => {
     const agent = createAgent();
     agent.connect(box.component);
     const result = await agent.act({ steps: [{ ref: 'box', action: 'clear' }, { ref: 'box' } as never] });
-    expect(errorOf(result).message).toBe('Invalid call: steps[1].action must be a string. No step ran.');
+    expect(errorOf(result).message).toBe('Invalid call: steps[1] has no "action"; give it a verb from the record\'s actions. No step ran.');
     expect(box.run).not.toHaveBeenCalled();
   });
 
@@ -685,7 +687,7 @@ describe('act: what the review of the bridge found', () => {
     agent.connect(box.component);
     for (const value of [new Date(0), () => 1, undefined, Number.NaN, Infinity]) {
       expect(errorOf(await agent.act({ steps: [{ ref: 'box:1', action: 'press', args: [value] }] })).message)
-        .toBe('Invalid call: steps[0].args must hold plain data. No step ran.');
+        .toBe('Invalid call: steps[0].args must hold plain data: strings, finite numbers, booleans, null, lists and plain objects. No step ran.');
     }
     expect(box.check).not.toHaveBeenCalled();
   });
@@ -873,7 +875,7 @@ describe('act: what the second review of the bridge found', () => {
     const dense = await agent.act(press);
     expect(dense.ok && dense.steps[0]!.result).toEqual([1, null, 3]);
     expect(errorOf(await agent.act({ steps: [{ ref: 'box:1', action: 'press', args: [[1, , 3]] as never }] })).message)
-      .toBe('Invalid call: steps[0].args must hold plain data. No step ran.');
+      .toBe('Invalid call: steps[0].args must hold plain data: strings, finite numbers, booleans, null, lists and plain objects. No step ran.');
   });
 
   it('does not call a person to a step that stopped needing one while allow was asked', async () => {

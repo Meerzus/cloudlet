@@ -125,6 +125,15 @@ export interface AgentChangeShape {
 }
 
 /**
+ * What a component's verbs do, by kind of record: each verb with a line or two for an agent.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export interface AgentVerbsShape {
+  readonly [component: string]: { readonly [verb: string]: string };
+}
+
+/**
  * What a component hands to the bridge's `connect`. `check` and `run` come together, `summon` is
  * optional, and a read-only component leaves all three out.
  *
@@ -138,6 +147,7 @@ export interface AgentComponentShape<Entry extends AgentEntryShape = AgentEntryS
   readonly check?: (step: AgentStepCallShape) => AgentStepCheckShape;
   readonly run?: (step: AgentStepCallShape, context: AgentRunContextShape) => AgentRunOutcomeShape | PromiseLike<AgentRunOutcomeShape>;
   readonly summon?: (step: AgentStepCallShape) => AgentSummonOutcomeShape;
+  readonly verbs?: AgentVerbsShape;
 }
 
 /**
@@ -292,6 +302,8 @@ export interface ToasterAgent extends AgentComponentShape<ToasterAgentEntry> {
    * Toaster, without moving focus, and says which in `note`.
    */
   readonly summon: (step: AgentStepCallShape) => AgentSummonOutcomeShape;
+  /** What each verb of the `toaster` and `notification` records does, for an agent. */
+  readonly verbs: AgentVerbsShape;
 }
 
 /** @experimental The protocol may change before the bridge reaches 1.0. */
@@ -305,6 +317,25 @@ const EMPTY: readonly never[] = freeze([]);
 const quote = JSON.stringify;
 const TOASTER_VERBS: ReadonlySet<string> = new Set(['open', 'close', 'clear', 'acknowledge']);
 const NOTIFICATION_VERBS: ReadonlySet<string> = new Set(['dismiss', 'show', 'press', 'fill', 'submit', 'cancel', 'retry']);
+// For an agent that has never seen this code: arguments in order, what the step does, when it
+// needs a person. One entry for every verb a record can list.
+const VERBS: AgentVerbsShape = freeze({
+  toaster: freeze({
+    open: 'No arguments. Opens the Island on the notification it shows first. Needs a mounted Toaster; refused while the person is using it.',
+    close: 'No arguments. Closes the open Island; refused while it holds a form the person or an agent started filling.',
+    clear: 'No arguments. Closes every notification at once.',
+    acknowledge: 'No arguments. Marks the notifications that did not fit as seen: overflow.pending turns false.',
+  }),
+  notification: freeze({
+    dismiss: 'No arguments. Closes this notification; its record leaves the snapshot.',
+    show: 'No arguments. Opens the Island on this notification. Needs a mounted Toaster; refused while the person is using it.',
+    press: 'No arguments. Runs the command action (action.kind "command") and waits for it: success closes the notification, result "pending" means it is still working. Under action.agent "confirm" it may need a person to approve. A link action has no verb: the bridge never opens it; its address is action.href.',
+    fill: 'args [field name, text]: the field\'s name from action.fields[].name, not its label, and a string. Writes the field as the agent; never over text the person typed.',
+    submit: 'No arguments. Sends the form action (action.kind "form") and waits for it: success closes the notification, result "pending" means it is still working. Under action.agent "confirm" it may need a person to approve. A refusal names the fields that were not accepted.',
+    cancel: 'No arguments. Asks the running operation to stop; result "requested".',
+    retry: 'No arguments. Starts the failed operation again; result "started".',
+  }),
+});
 const STRICTNESS = { allow: 0, confirm: 1, deny: 2 } as const;
 const DONE: AgentRunOutcomeShape = freeze({ status: 'done' });
 const GONE: AgentRunOutcomeShape = freeze({ status: 'done', gone: true });
@@ -757,7 +788,7 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     };
   };
 
-  return freeze({ protocol: 1 as const, name, snapshot, subscribe, check, run, summon });
+  return freeze({ protocol: 1 as const, name, snapshot, subscribe, check, run, summon, verbs: VERBS });
 }
 
 /**

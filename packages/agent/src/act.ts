@@ -1,7 +1,8 @@
 import type {
   ActResult, ActStepResult, AgentComponent, AgentEntry, AgentRunOutcome, AgentSignal, AgentStepCall,
-  AgentStepCheck, AgentStepNames, AgentValue, Allow,
+  AgentStepCheck, AgentStepNames, AgentValue, Allow, AllowStep,
 } from './types.js';
+import { MOST_STEPS } from './tools.js';
 
 // The runtimes the kit supports all have these; the package is typed without DOM or Node globals.
 declare function setTimeout(callback: () => void, ms: number): unknown;
@@ -36,40 +37,70 @@ export function failed(step: number, message: string, done: readonly ActStepResu
 
 const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 
-function isSignal(value: unknown): value is AgentSignal {
+export function isSignal(value: unknown): value is AgentSignal {
   return value !== null && typeof value === 'object' && typeof (value as AgentSignal).aborted === 'boolean'
     && typeof (value as AgentSignal).addEventListener === 'function'
     && typeof (value as AgentSignal).removeEventListener === 'function';
 }
 
-/** Checks the whole call before anything runs, and copies what it reads once. */
-export function parseCall(input: unknown, options: unknown): { readonly steps: readonly AgentStepCall[]; readonly signal: AgentSignal | undefined } | Failure {
+const SHAPE = '{"steps": [{"ref": "<ref>", "action": "<verb>"}]}';
+const ARGS = 'arguments go in "args" as a list, like "args": ["<first>", "<second>"]';
+
+/**
+ * Checks the whole call before anything runs, and copies what it reads once. Each message says what
+ * to change, for a model that sends the call again without a person's help.
+ */
+export function parseCall(input: unknown, options: unknown): {
+  readonly steps: readonly AgentStepCall[];
+  readonly signal: AgentSignal | undefined;
+  readonly allow: Allow | undefined;
+} | Failure {
   const invalid = (step: number, problem: string): Failure => ({ step, message: `Invalid call: ${problem}. No step ran.` });
-  if (!isObject(input)) return invalid(0, 'expected an object with steps');
-  for (const key of Object.keys(input)) if (key !== 'steps') return invalid(0, `unknown key ${JSON.stringify(key)}`);
+  if (Array.isArray(input)) return invalid(0, `expected an object with steps, not a bare list: ${SHAPE}`);
+  if (!isObject(input)) return invalid(0, `expected an object with steps: ${SHAPE}`);
+  if (!Object.hasOwn(input, 'steps') && (Object.hasOwn(input, 'ref') || Object.hasOwn(input, 'action'))) {
+    return invalid(0, `a step came on its own; steps go in a list under "steps", even a single one: ${SHAPE}`);
+  }
+  for (const key of Object.keys(input)) if (key !== 'steps') return invalid(0, `unknown key ${JSON.stringify(key)}; the call takes only "steps": ${SHAPE}`);
   const raw = input.steps;
-  if (!Array.isArray(raw) || raw.length === 0) return invalid(0, 'steps must be a non-empty array');
+  if (isObject(raw)) return invalid(0, `steps must be a list, even for a single step: ${SHAPE}`);
+  if (!Array.isArray(raw) || raw.length === 0) return invalid(0, `steps must be a non-empty list: ${SHAPE}`);
+  // Read once: a getter of a step could grow the list while it is being walked, past the limit.
+  const count = raw.length;
+  if (count > MOST_STEPS) {
+    return invalid(0, `${count} steps is more than ${MOST_STEPS} in one call; split them into calls of at most ${MOST_STEPS} steps`);
+  }
   const steps: AgentStepCall[] = [];
-  for (let index = 0; index < raw.length; index++) {
-    const step: unknown = raw[index];
+  for (let index = 0; index < count; index++) {
+    // A hole would read whatever the prototype holds at that index.
+    const step: unknown = Object.hasOwn(raw, index) ? raw[index] : undefined;
     const at = `steps[${index}]`;
-    if (!isObject(step)) return invalid(index, `${at} must be an object`);
-    for (const key of Object.keys(step)) if (!STEP_KEYS.has(key)) return invalid(index, `${at} has an unknown key ${JSON.stringify(key)}`);
+    if (!isObject(step)) return invalid(index, `${at} must be an object like {"ref": "<ref>", "action": "<verb>"}`);
+    for (const key of Object.keys(step)) {
+      if (key === 'value') return invalid(index, `${at} has "value", which a step doesn't take: ${ARGS}`);
+      if (!STEP_KEYS.has(key)) return invalid(index, `${at} has an unknown key ${JSON.stringify(key)}; a step takes only "ref", "action" and "args"`);
+    }
     const { ref, action, args } = step;
-    if (typeof ref !== 'string') return invalid(index, `${at}.ref must be a string`);
-    if (typeof action !== 'string') return invalid(index, `${at}.action must be a string`);
-    if (args !== undefined && !Array.isArray(args)) return invalid(index, `${at}.args must be an array`);
+    if (ref === undefined) return invalid(index, `${at} has no "ref"; give it a ref from cloudlet_snapshot`);
+    if (typeof ref !== 'string') return invalid(index, `${at}.ref must be a string: a ref from cloudlet_snapshot`);
+    if (action === undefined) return invalid(index, `${at} has no "action"; give it a verb from the record's actions`);
+    if (typeof action !== 'string') return invalid(index, `${at}.action must be a string: a verb from the record's actions`);
+    if (args !== undefined && !Array.isArray(args)) return invalid(index, `${at}.args is not a list: ${ARGS}`);
     // A deep frozen copy: what `allow` is asked about is what runs, whatever the caller does to its own objects meanwhile.
     let copied = NO_ARGS;
     if (args !== undefined) {
-      try { copied = cloneValue(args) as readonly unknown[]; } catch { return invalid(index, `${at}.args must hold plain data`); }
+      try { copied = cloneValue(args) as readonly unknown[]; } catch {
+        return invalid(index, `${at}.args must hold plain data: strings, finite numbers, booleans, null, lists and plain objects`);
+      }
     }
     steps.push(freeze({ ref, action, args: copied }));
   }
   if (options !== undefined && !isObject(options)) return invalid(0, 'options must be an object');
   const signal = options?.signal;
   if (signal !== undefined && !isSignal(signal)) return invalid(0, 'options.signal must be an AbortSignal');
-  return { steps: freeze(steps), signal };
+  const allow = options?.allow;
+  if (allow !== undefined && typeof allow !== 'function') return invalid(0, 'options.allow must be a function');
+  return { steps: freeze(steps), signal, allow: allow as Allow | undefined };
 }
 
 type Settled<T> =
@@ -175,14 +206,21 @@ export function cancelledBefore(step: AgentStepCall): string {
   return texts.cancelledBefore(step);
 }
 
+/** What one call brings besides its steps: its cancellation and its own gate. */
+export interface CallContext {
+  readonly signal: AgentSignal | undefined;
+  /** The call's `allow`, asked after the agent's: it can only narrow what the agent's gate lets through. */
+  readonly allow: Allow | undefined;
+}
+
 /** Runs one call's steps in order; the caller makes sure calls never overlap. Never rejects. */
-export async function runSteps(steps: readonly AgentStepCall[], signal: AgentSignal | undefined, env: ActEnvironment): Promise<ActResult> {
+export async function runSteps(steps: readonly AgentStepCall[], call: CallContext, env: ActEnvironment): Promise<ActResult> {
   const done: ActStepResult[] = [];
   for (let index = 0; index < steps.length; index++) {
     const step = steps[index]!;
     let message: string | undefined;
     try {
-      message = await runStep(step, signal, env, (result) => {
+      message = await runStep(step, call, env, (result) => {
         done.push(freeze({ step: index, ref: step.ref, ...result }));
       });
     } catch (error) {
@@ -197,8 +235,49 @@ export async function runSteps(steps: readonly AgentStepCall[], signal: AgentSig
 
 type Done = { result?: AgentValue; gone?: true };
 
+/**
+ * The gates a step passes, in order: the agent's `allow`, then the call's. A step runs only when
+ * every gate there is answered `true`; the first refusal ends the questions. Without the agent's
+ * gate a step that needs a person cannot be approved, so it goes to the person and the call's gate
+ * is not asked: a call's gate narrows what the agent lets through and never widens it.
+ */
+type Approval =
+  | { readonly kind: 'approved' }
+  | { readonly kind: 'refused'; readonly asked: boolean; readonly timedOut: boolean }
+  | { readonly kind: 'cancelled' }
+  | { readonly kind: 'gone' };
+
+const APPROVED: Approval = freeze({ kind: 'approved' });
+const NOBODY_ASKED: Approval = freeze({ kind: 'refused', asked: false, timedOut: false });
+
+/** Answers at once when no gate is asked, so `run` starts in the same tick as `check`. */
+function approve(
+  step: AgentStepCall, needsPerson: boolean, call: CallContext, env: ActEnvironment, live: () => boolean,
+): Approval | Promise<Approval> {
+  const gates: Allow[] = [];
+  if (env.allow) gates.push(env.allow);
+  else if (needsPerson) return NOBODY_ASKED;
+  if (call.allow) gates.push(call.allow);
+  if (gates.length === 0) return APPROVED;
+  return ask(gates, freeze({ ref: step.ref, action: step.action, args: step.args, needsPerson }), call, env, live);
+}
+
+// Both gates read the same frozen question: what the call's gate approves is what the agent's did.
+async function ask(gates: readonly Allow[], question: AllowStep, call: CallContext, env: ActEnvironment, live: () => boolean): Promise<Approval> {
+  for (const gate of gates) {
+    // Each answer has the whole timeout: a person may be the one answering the second question.
+    const answer = await wait((own) => gate(question, freeze({ signal: own })), call.signal, env.timeout);
+    if (answer.kind === 'cancelled' || call.signal?.aborted) return { kind: 'cancelled' };
+    if (answer.kind === 'error') env.report(answer.error);
+    if (!live()) return { kind: 'gone' };
+    if (answer.kind !== 'value' || answer.value !== true) return { kind: 'refused', asked: true, timedOut: answer.kind === 'timeout' };
+  }
+  return APPROVED;
+}
+
 /** Returns the error message, or undefined after reporting the step as done. */
-async function runStep(step: AgentStepCall, signal: AgentSignal | undefined, env: ActEnvironment, succeed: (result: Done) => void): Promise<string | undefined> {
+async function runStep(step: AgentStepCall, call: CallContext, env: ActEnvironment, succeed: (result: Done) => void): Promise<string | undefined> {
+  const { signal } = call;
   if (signal?.aborted) return texts.cancelledBefore(step);
   const located = env.locate(step.ref);
   if (!located.found) return texts.noEntry(step.ref, env.refs());
@@ -219,22 +298,15 @@ async function runStep(step: AgentStepCall, signal: AgentSignal | undefined, env
   }
   const needsPerson = permission === 'confirm';
 
-  let approved = !needsPerson;
-  let timedOut = false;
-  const { allow } = env;
-  if (allow) {
-    const question = freeze({ ref: step.ref, action: step.action, args: step.args, needsPerson });
-    const answer = await wait((own) => allow(question, freeze({ signal: own })), signal, env.timeout);
-    if (answer.kind === 'cancelled' || signal?.aborted) return texts.cancelledBefore(step);
-    if (answer.kind === 'error') env.report(answer.error);
-    timedOut = answer.kind === 'timeout';
-    approved = answer.kind === 'value' && answer.value === true;
-    if (!live()) return texts.noEntry(step.ref, env.refs());
-  }
-  if (!approved) {
+  const pending = approve(step, needsPerson, call, env, live);
+  const approval = pending instanceof Promise ? await pending : pending;
+  if (approval.kind === 'cancelled') return texts.cancelledBefore(step);
+  if (approval.kind === 'gone') return texts.noEntry(step.ref, env.refs());
+  if (approval.kind === 'refused') {
+    const { asked, timedOut } = approval;
     if (!needsPerson) return timedOut ? texts.noAnswer(step) : texts.saidNo(step);
     // The wait may have been long: the handoff names what the person will find now, not what was there.
-    if (allow) {
+    if (asked) {
       let fresh: AgentStepCheck;
       try { fresh = check.call(component, step); } catch (error) { env.report(error); return texts.broken(step); }
       if (!isObject(fresh)) { env.report(new TypeError('check() must return an object')); return texts.broken(step); }
@@ -264,6 +336,8 @@ async function runStep(step: AgentStepCall, signal: AgentSignal | undefined, env
     return texts.needsPerson(step, names, reached, note);
   }
 
+  // The approval may resume after the call was cancelled: a cancelled step never starts.
+  if (signal?.aborted) return texts.cancelledBefore(step);
   const outcome = await wait<AgentRunOutcome>((own) => run.call(component, step, freeze({ signal: own, approved: permission })), signal, env.timeout);
   switch (outcome.kind) {
     case 'cancelled': return texts.cancelledDuring(step);

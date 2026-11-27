@@ -103,6 +103,24 @@ export interface ActInput {
 export interface ActOptions {
   /** Cancels the call: a step that is waiting for `allow` or for the component stops waiting. */
   readonly signal?: AgentSignal;
+  /**
+   * A second gate for this call only, for a caller the app trusts less than the agent's other
+   * users (a browser's agent, one model of several). It never widens what the agent's own `allow`
+   * lets through: a step runs only when both gates answer `true`.
+   *
+   * - It is asked after the agent's `allow` approved the step, with the same question, and only
+   *   then: a step the agent's gate refused never reaches it.
+   * - A step that needs a person comes with `needsPerson: true`, and its `true` answers for the
+   *   person together with the agent's gate. Without the agent's `allow` such a step cannot be
+   *   approved, so it goes to the person and this gate is not asked.
+   * - A step of the `allow` class on an agent without `allow` is asked here only.
+   * - Each answer has the agent's whole `timeout`; cancelling the call withdraws a pending question.
+   * - A refusal reads as one from the agent's `allow`: "The app said no", "did not answer in time",
+   *   or, for a step that needs a person, "Needs a person" with the person summoned.
+   *
+   * @experimental The protocol may change in any 0.x release.
+   */
+  readonly allow?: Allow;
 }
 
 /**
@@ -241,6 +259,17 @@ export type AgentRunOutcome =
 export type AgentSummonOutcome = boolean | { readonly reached: boolean; readonly note: string };
 
 /**
+ * What a component's verbs do, for an agent that has never seen its code: by kind of record (the
+ * `component` of its snapshot records), each verb with a line or two on its arguments in order,
+ * what it does and when it needs a person.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentVerbs {
+  readonly [component: string]: { readonly [verb: string]: string };
+}
+
+/**
  * What a component hands to {@link Agent.connect}: its name, its records and a way to hear that
  * they changed. A component's adapter builds this object; the agent never reaches into the
  * component itself.
@@ -280,6 +309,80 @@ export interface AgentComponent {
    * agent is told the step is not on screen and should tell the person what it does.
    */
   readonly summon?: (step: AgentStepCall) => AgentSummonOutcome;
+  /**
+   * What the verbs of this component's records do, by kind of record. The agent copies it when the
+   * component connects; a later change to the object is not seen.
+   */
+  readonly verbs?: AgentVerbs;
+}
+
+/**
+ * The name of one of the bridge's tools.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export type AgentToolName = 'cloudlet_act' | 'cloudlet_snapshot';
+
+/**
+ * A tool as model SDKs and WebMCP describe one: its name, a text on when and how to call it, and the
+ * JSON Schema of its input. Plain data, frozen.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentTool {
+  readonly name: AgentToolName;
+  readonly description: string;
+  readonly inputSchema: { readonly [key: string]: AgentValue };
+}
+
+/**
+ * What `cloudlet_snapshot` answers: the records of {@link Agent.snapshot} and what the verbs of their
+ * kinds do, once per kind present.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentSnapshotToolResult {
+  readonly entries: readonly AgentEntry[];
+  readonly verbs: AgentVerbs;
+}
+
+/**
+ * What `cloudlet_act` answers: the call's {@link ActResult} and every change {@link Agent.subscribe}
+ * heard from the moment the call started running (after the calls queued before it) until it
+ * answered, whoever made it. An invalid call ran nothing and has no changes.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export type AgentActToolResult = ActResult & { readonly changes: readonly AgentChange[] };
+
+/**
+ * What a tool answers when it could not run: an unknown name, input `cloudlet_snapshot` does not
+ * take, or a snapshot a component failed to give.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentToolError {
+  readonly ok: false;
+  readonly error: { readonly message: string };
+}
+
+/**
+ * Anything {@link Agent.callTool} answers. Plain data: `JSON.stringify` and `structuredClone` keep
+ * the same values.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export type AgentToolResult = AgentSnapshotToolResult | AgentActToolResult | AgentToolError;
+
+/**
+ * Runs one of the bridge's tools by name, the way a model calls it.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentCallTool {
+  (name: 'cloudlet_snapshot', input?: unknown, options?: ActOptions): Promise<AgentSnapshotToolResult | AgentToolError>;
+  (name: 'cloudlet_act', input: unknown, options?: ActOptions): Promise<AgentActToolResult>;
+  (name: string, input?: unknown, options?: ActOptions): Promise<AgentToolResult>;
 }
 
 /**
@@ -295,7 +398,8 @@ export interface Agent {
    * Calling that function again does nothing.
    *
    * @throws TypeError for an unknown `protocol`, a name outside `[a-z][a-z0-9-]*`, a name that is
-   * already connected, or step methods that are not functions or come without each other.
+   * already connected, step methods that are not functions or come without each other, or `verbs`
+   * that is not an object of objects of strings.
    */
   readonly connect: (component: AgentComponent) => () => void;
   /**
@@ -321,4 +425,19 @@ export interface Agent {
    * `console.error`.
    */
   readonly act: (input: ActInput, options?: ActOptions) => Promise<ActResult>;
+  /**
+   * The bridge's tools for a model, `cloudlet_act` and `cloudlet_snapshot`, as
+   * `{ name, description, inputSchema }`: the same frozen array for every agent, whatever is
+   * connected. What each component's verbs do comes in the snapshot's `verbs`.
+   */
+  readonly tools: readonly AgentTool[];
+  /**
+   * Runs a tool by name with the input a model sent, and answers plain data. `cloudlet_snapshot`
+   * takes `{}` (or nothing) and answers `{ entries, verbs }`. `cloudlet_act` takes what
+   * {@link Agent.act} takes, waits in the same queue, and answers its result with the `changes`
+   * heard while the call ran; `signal` cancels it as it cancels `act`. An unknown name or input
+   * `cloudlet_snapshot` does not take answer `{ ok: false, error: { message } }`. The promise
+   * never rejects.
+   */
+  readonly callTool: AgentCallTool;
 }

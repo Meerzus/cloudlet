@@ -3,6 +3,7 @@ import type { ControllerSnapshot, NotificationHandle, OperationHandle, ReactClou
 import type { ReactNode } from 'react';
 
 import { logDebug } from './debug-log.js';
+import { SCENARIO } from './scenario-agent.js';
 
 export const LOG_LIMIT = 80;
 export type Attention = 'auto' | 'open' | 'stack';
@@ -235,7 +236,21 @@ export class LabSession {
     this.note('The stack is filled to 100; the missed ones are in the badge and in the Island indicator line.');
   }
 
-  start(name: string, mode: 'manual' | 'cooperative' | 'ignore' = 'manual') {
+  /**
+   * What the scenario agent needs before its first call, shown the way an app would: a clean stack
+   * with a notification whose “Undo” an agent may press, one to close, and an operation that can be
+   * cancelled. The picker and palette are already on the page.
+   */
+  prepareAgentScenario() {
+    this.controller.clear(); this.controller.acknowledgeOverflow();
+    this.controller.show({ title: SCENARIO.undoTitle, kind: 'info', duration: null, attention: 'stack',
+      action: { kind: 'command', label: SCENARIO.undoLabel, agent: 'allow', run: () => this.note(`“${SCENARIO.undoLabel}” for “${SCENARIO.undoTitle}” done.`) } });
+    this.controller.show({ title: SCENARIO.dismissTitle, duration: null, attention: 'stack' });
+    this.start('scenario', 'cooperative', SCENARIO.operationTitle);
+    this.note('The scenario agent has three notifications to work on.');
+  }
+
+  start(name: string, mode: 'manual' | 'cooperative' | 'ignore' = 'manual', title?: string) {
     const previous = this.tasks.get(name);
     if (previous) {
       previous.deferred?.reject(new Error('Fixture replaced'));
@@ -259,10 +274,11 @@ export class LabSession {
       }
       return item.promise;
     }, {
-      id: `task-${name}`, pending: { title: mode === 'manual' ? `Preparing ${name}` : mode === 'ignore' ? 'Exporting archive' : 'Syncing files', attention: 'stack' },
+      id: `task-${name}`, pending: { title: title ?? (mode === 'manual' ? `Preparing ${name}` : mode === 'ignore' ? 'Exporting archive' : 'Syncing files'), attention: 'stack' },
       success: value => ({ title: `${name}: done`, description: { kind: 'text', text: value }, attention: 'stack' }),
       error: { title: `${name}: error`, description: { kind: 'text', text: 'The data is saved. Retry when you are ready.' }, attention: 'stack' },
-      cancelled: { title: 'Sync cancelled' },
+      // A caller that named the operation sees that name cancelled, not the fixtures' sync.
+      cancelled: { title: title === undefined ? 'Sync cancelled' : `${title}: cancelled` },
     });
     this.observe(name, operation, item);
   }
