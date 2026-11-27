@@ -247,14 +247,20 @@ function ScenarioAgent({ agent, session }: { agent: Agent; session: LabSession |
     current.current = controller;
     setLines([]);
     setOutcome('running');
-    session.prepareAgentScenario();
     let serial = 0;
-    await wait(SCENARIO_PAUSE, controller.signal);
-    const result = await runScenario(agent.callTool, {
-      signal: controller.signal,
-      pause: () => wait(SCENARIO_PAUSE, controller.signal),
-      onCall: call => { const line = { id: ++serial, call }; setLines(previous => [...previous, line]); },
-    });
+    let result: ScenarioOutcome;
+    try {
+      session.prepareAgentScenario();
+      await wait(SCENARIO_PAUSE, controller.signal);
+      result = await runScenario(agent.callTool, {
+        signal: controller.signal,
+        pause: () => wait(SCENARIO_PAUSE, controller.signal),
+        onCall: call => { const line = { id: ++serial, call }; setLines(previous => [...previous, line]); },
+      });
+    } catch (error) {
+      // The script rethrows what it did not expect: say it here, and let Run start again.
+      result = { ok: false, summary: `The run broke: ${error instanceof Error ? error.message : String(error)}` };
+    }
     if (current.current !== controller) return;
     current.current = null;
     setOutcome(result);
