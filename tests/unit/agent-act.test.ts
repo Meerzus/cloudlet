@@ -845,3 +845,54 @@ describe('act: an error from allow or a component is reported without being thro
     await call(breaking().agent);
   });
 });
+
+
+describe('act: what the second review of the bridge found', () => {
+  it('copies an array result by index, not through its own map', async () => {
+    const child = { n: 1 };
+    const list: unknown[] = [child];
+    list.map = (() => [child]) as never;
+    const box = stepper('box', { run: () => ({ status: 'done', result: list as never }) });
+    const agent = createAgent();
+    agent.connect(box.component);
+    const result = await agent.act(press);
+    child.n = 2;
+    expect(result.ok && result.steps[0]!.result).toEqual([{ n: 1 }]);
+    expect(Object.isFrozen(((result.ok ? result.steps[0]!.result : null) as unknown[])[0])).toBe(true);
+  });
+
+  it('does not call a person to a step that stopped needing one while allow was asked', async () => {
+    let permission: 'confirm' | 'allow' = 'confirm';
+    const box = stepper('box', { check: () => ({ available: true, permission }) });
+    const agent = createAgent({ allow: () => { permission = 'allow'; return false; } });
+    agent.connect(box.component);
+    expect(errorOf(await agent.act(press)).message).toBe('The app said no to "press" on "box:1".');
+    expect(box.summon).not.toHaveBeenCalled();
+    expect(box.run).not.toHaveBeenCalled();
+  });
+
+  it('says a ref is missing even when a component connected after the call breaks in its snapshot', async () => {
+    let release!: (value: boolean) => void;
+    const box = stepper('box', { check: confirm });
+    const agent = createAgent({ allow: () => new Promise<boolean>((resolve) => { release = resolve; }) });
+    agent.connect(box.component);
+    const first = agent.act(press);
+    const second = agent.act({ steps: [{ ref: 'box:9', action: 'press' }] });
+    await vi.waitFor(() => { expect(release).toBeTypeOf('function'); });
+    let broken = false;
+    const late = stepper('late');
+    agent.connect({ ...late.component, snapshot: () => { if (broken) throw new Error('late broke'); return []; } });
+    broken = true;
+    release(true);
+    expect((await first).ok).toBe(true);
+    expect(errorOf(await second).message).toBe('No entry "box:9". Current refs: box, box:1.');
+  });
+
+  it('answers with an invalid call when the signal throws on listening', async () => {
+    const agent = createAgent();
+    agent.connect(stepper('box').component);
+    const base = { aborted: false, reason: undefined, removeEventListener: () => {} };
+    const deaf = { ...base, addEventListener: () => { throw new Error('no listeners'); } };
+    expect(errorOf(await agent.act(press, { signal: deaf as never })).message).toBe('Invalid call: options.signal could not be used. No step ran.');
+  });
+});

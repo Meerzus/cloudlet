@@ -28,7 +28,9 @@ Experimental first version: the agent reads and acts under the app's permission.
   hold anything else, or whose input cannot be read, is an invalid call. A step keeps its ref only
   within the components connected when the call was made: one connected later under the same name
   is not searched. When a later step breaks inside its component, the steps before it stay in the
-  result. A handoff to a person names the action that is there when `allow` answers. An error
+  result. A handoff to a person names the action that is there when `allow` answers, and a step
+  that stopped needing a person while `allow` was asked is refused without calling one. A signal
+  that throws when listened to is an invalid call. An error
   thrown by `allow` or by a component during a call is never thrown again: the call answers with a
   refusal, and the error goes to `reportError` in a page and to `console.error` anywhere else.
 - The component protocol gains optional `check`, `run` and `summon`; a component without them stays

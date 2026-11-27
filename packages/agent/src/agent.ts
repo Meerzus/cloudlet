@@ -124,10 +124,11 @@ export function createAgent(options?: AgentOptions): Agent {
     return () => { listeners.delete(own); };
   };
 
-  // Each component's own snapshot, read now: a step never trusts a cached list.
-  const environment: ActEnvironment = {
+  // Each component's own snapshot, read now: a step never trusts a cached list. `members` are the
+  // connections a call may find its records in.
+  const environmentOf = (members: () => readonly Connection[]): ActEnvironment => ({
     locate: (ref) => {
-      for (const connection of connections.values()) {
+      for (const connection of members()) {
         const entry = connection.component.snapshot().find((record) => record.ref === ref);
         if (entry) {
           const { name } = connection.component;
@@ -136,11 +137,14 @@ export function createAgent(options?: AgentOptions): Agent {
       }
       return { found: false };
     },
-    refs: () => [...connections.values()].flatMap(({ component }) => component.snapshot().map((record) => record.ref)),
+    // Only words for a message, from every component there is now: one that breaks is left out.
+    refs: () => [...connections.values()].flatMap(({ component }) => {
+      try { return component.snapshot().map((record) => record.ref); } catch { return []; }
+    }),
     allow,
     timeout,
     report: note,
-  };
+  });
 
   const act: Agent['act'] = (input, actOptions) => {
     let call: ReturnType<typeof parseCall>;
@@ -151,20 +155,16 @@ export function createAgent(options?: AgentOptions): Agent {
     // The components this call could have read its refs from. One connected later may hand out the
     // same ref for another record (a recreated adapter counts from one again), so the call does not see it.
     const known = new Set(connections.values());
-    const own: ActEnvironment = {
-      ...environment,
-      locate: (ref) => {
-        const located = environment.locate(ref);
-        return located.found && !known.has(connections.get(located.component.name)!) ? { found: false } : located;
-      },
-    };
+    const own = environmentOf(() => [...connections.values()].filter((connection) => known.has(connection)));
     const first = steps[0]!;
-    if (signal?.aborted) return Promise.resolve(failed(0, cancelledBefore(first)));
+    const unusable = failed(0, 'Invalid call: options.signal could not be used. No step ran.');
+    // A signal is checked by shape only, so reading it or listening to it may throw.
+    try { if (signal?.aborted) return Promise.resolve(failed(0, cancelledBefore(first))); } catch { return Promise.resolve(unusable); }
     return new Promise<ActResult>((resolve) => {
       let started = false;
       // Cancelled while it waits for its turn: answer now; its turn then finds the signal aborted.
       const cancel = (): void => { if (!started) resolve(failed(0, cancelledBefore(first))); };
-      signal?.addEventListener('abort', cancel, { once: true });
+      try { signal?.addEventListener('abort', cancel, { once: true }); } catch { resolve(unusable); return; }
       const turn = queue.then(() => {
         started = true;
         signal?.removeEventListener('abort', cancel);

@@ -127,7 +127,12 @@ function cloneValue(value: unknown): AgentValue {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
   // JSON turns NaN and the infinities into null, so they are not plain data here.
   if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (Array.isArray(value)) return freeze(value.map(cloneValue));
+  if (Array.isArray(value)) {
+    // A fresh array filled by index: the input's own `map` could hand back anything.
+    const copy: AgentValue[] = [];
+    for (let index = 0; index < value.length; index += 1) copy.push(cloneValue(value[index]));
+    return freeze(copy);
+  }
   if (typeof value === 'object') {
     const prototype: unknown = Object.getPrototypeOf(value);
     if (prototype === Object.prototype || prototype === null) {
@@ -235,6 +240,9 @@ async function runStep(step: AgentStepCall, signal: AgentSignal | undefined, env
         return now.found ? texts.unavailable(step, now.entry.actions) : texts.noEntry(step.ref, env.refs());
       }
       if (fresh.permission !== 'allow' && fresh.permission !== 'confirm') return texts.denied(step, fresh.names);
+      // No longer a step for a person: it was asked about as one and not approved, so it does not
+      // run, and nobody is called to it.
+      if (fresh.permission === 'allow') return timedOut ? texts.noAnswer(step) : texts.saidNo(step);
       names = fresh.names;
     }
     let reached = false;
