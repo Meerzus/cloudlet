@@ -228,6 +228,21 @@ describe('agent.callTool: the cloudlet_act input', () => {
     expect(run).not.toHaveBeenCalled();
   });
 
+  it('walks only the steps it counted: a step that grows the list while it is read cannot pass the limit', async () => {
+    const { component, run } = box();
+    const agent = createAgent();
+    agent.connect(component);
+    const list: unknown[] = [];
+    list.push({
+      ref: 'box',
+      action: 'press',
+      get args() { for (let index = 0; index < MOST_STEPS; index++) list.push({ ref: 'box', action: 'press' }); return undefined; },
+    });
+    const result = await agent.act({ steps: list as never });
+    expect(result.ok && result.steps).toHaveLength(1);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
   it('answers an invalid call for input it cannot read, without rejecting', async () => {
     const input = { get steps(): never { throw new Error('no'); } };
     const result = await createAgent().callTool('cloudlet_act', input);

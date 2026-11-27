@@ -65,11 +65,13 @@ export function parseCall(input: unknown, options: unknown): {
   const raw = input.steps;
   if (isObject(raw)) return invalid(0, `steps must be a list, even for a single step: ${SHAPE}`);
   if (!Array.isArray(raw) || raw.length === 0) return invalid(0, `steps must be a non-empty list: ${SHAPE}`);
-  if (raw.length > MOST_STEPS) {
-    return invalid(0, `${raw.length} steps is more than ${MOST_STEPS} in one call; split them into calls of at most ${MOST_STEPS} steps`);
+  // Read once: a getter of a step could grow the list while it is being walked, past the limit.
+  const count = raw.length;
+  if (count > MOST_STEPS) {
+    return invalid(0, `${count} steps is more than ${MOST_STEPS} in one call; split them into calls of at most ${MOST_STEPS} steps`);
   }
   const steps: AgentStepCall[] = [];
-  for (let index = 0; index < raw.length; index++) {
+  for (let index = 0; index < count; index++) {
     // A hole would read whatever the prototype holds at that index.
     const step: unknown = Object.hasOwn(raw, index) ? raw[index] : undefined;
     const at = `steps[${index}]`;
@@ -334,6 +336,8 @@ async function runStep(step: AgentStepCall, call: CallContext, env: ActEnvironme
     return texts.needsPerson(step, names, reached, note);
   }
 
+  // The approval may resume after the call was cancelled: a cancelled step never starts.
+  if (signal?.aborted) return texts.cancelledBefore(step);
   const outcome = await wait<AgentRunOutcome>((own) => run.call(component, step, freeze({ signal: own, approved: permission })), signal, env.timeout);
   switch (outcome.kind) {
     case 'cancelled': return texts.cancelledDuring(step);

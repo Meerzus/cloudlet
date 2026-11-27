@@ -250,6 +250,25 @@ describe('the call’s own allow: a second gate', () => {
     expect(target.run).toHaveBeenCalledTimes(1);
   });
 
+  it('never starts a step whose call was cancelled after the gates approved it and before it ran', async () => {
+    const target = box(allowClass);
+    const agent = createAgent();
+    agent.connect(target.component);
+    // The gate's answer is read with the call not yet cancelled; every later look sees it cancelled.
+    let answered = false;
+    let looksAfter = 0;
+    const signal = {
+      get aborted() { return answered && looksAfter++ > 0; },
+      reason: undefined,
+      throwIfAborted: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+    const result = await agent.act(press, { signal, allow: async () => { await null; answered = true; return true; } });
+    expect(errorOf(result)).toBe(CANCELLED);
+    expect(target.run).not.toHaveBeenCalled();
+  });
+
   it('is the call’s own: the next call without it is not narrowed', async () => {
     const target = box(allowClass);
     const agent = createAgent();
