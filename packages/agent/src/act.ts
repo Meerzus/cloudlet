@@ -2,6 +2,7 @@ import type {
   ActResult, ActStepResult, AgentComponent, AgentEntry, AgentRunOutcome, AgentSignal, AgentStepCall,
   AgentStepCheck, AgentStepNames, AgentValue, Allow,
 } from './types.js';
+import { MOST_STEPS } from './tools.js';
 
 // The runtimes the kit supports all have these; the package is typed without DOM or Node globals.
 declare function setTimeout(callback: () => void, ms: number): unknown;
@@ -42,27 +43,49 @@ function isSignal(value: unknown): value is AgentSignal {
     && typeof (value as AgentSignal).removeEventListener === 'function';
 }
 
-/** Checks the whole call before anything runs, and copies what it reads once. */
+const SHAPE = '{"steps": [{"ref": "<ref>", "action": "<verb>"}]}';
+const ARGS = 'arguments go in "args" as a list, like "args": ["<first>", "<second>"]';
+
+/**
+ * Checks the whole call before anything runs, and copies what it reads once. Each message says what
+ * to change, for a model that sends the call again without a person's help.
+ */
 export function parseCall(input: unknown, options: unknown): { readonly steps: readonly AgentStepCall[]; readonly signal: AgentSignal | undefined } | Failure {
   const invalid = (step: number, problem: string): Failure => ({ step, message: `Invalid call: ${problem}. No step ran.` });
-  if (!isObject(input)) return invalid(0, 'expected an object with steps');
-  for (const key of Object.keys(input)) if (key !== 'steps') return invalid(0, `unknown key ${JSON.stringify(key)}`);
+  if (Array.isArray(input)) return invalid(0, `expected an object with steps, not a bare list: ${SHAPE}`);
+  if (!isObject(input)) return invalid(0, `expected an object with steps: ${SHAPE}`);
+  if (!Object.hasOwn(input, 'steps') && (Object.hasOwn(input, 'ref') || Object.hasOwn(input, 'action'))) {
+    return invalid(0, `a step came on its own; steps go in a list under "steps", even a single one: ${SHAPE}`);
+  }
+  for (const key of Object.keys(input)) if (key !== 'steps') return invalid(0, `unknown key ${JSON.stringify(key)}; the call takes only "steps": ${SHAPE}`);
   const raw = input.steps;
-  if (!Array.isArray(raw) || raw.length === 0) return invalid(0, 'steps must be a non-empty array');
+  if (isObject(raw)) return invalid(0, `steps must be a list, even for a single step: ${SHAPE}`);
+  if (!Array.isArray(raw) || raw.length === 0) return invalid(0, `steps must be a non-empty list: ${SHAPE}`);
+  if (raw.length > MOST_STEPS) {
+    return invalid(0, `${raw.length} steps is more than ${MOST_STEPS} in one call; split them into calls of at most ${MOST_STEPS} steps`);
+  }
   const steps: AgentStepCall[] = [];
   for (let index = 0; index < raw.length; index++) {
-    const step: unknown = raw[index];
+    // A hole would read whatever the prototype holds at that index.
+    const step: unknown = Object.hasOwn(raw, index) ? raw[index] : undefined;
     const at = `steps[${index}]`;
-    if (!isObject(step)) return invalid(index, `${at} must be an object`);
-    for (const key of Object.keys(step)) if (!STEP_KEYS.has(key)) return invalid(index, `${at} has an unknown key ${JSON.stringify(key)}`);
+    if (!isObject(step)) return invalid(index, `${at} must be an object like {"ref": "<ref>", "action": "<verb>"}`);
+    for (const key of Object.keys(step)) {
+      if (key === 'value') return invalid(index, `${at} has "value", which a step doesn't take: ${ARGS}`);
+      if (!STEP_KEYS.has(key)) return invalid(index, `${at} has an unknown key ${JSON.stringify(key)}; a step takes only "ref", "action" and "args"`);
+    }
     const { ref, action, args } = step;
-    if (typeof ref !== 'string') return invalid(index, `${at}.ref must be a string`);
-    if (typeof action !== 'string') return invalid(index, `${at}.action must be a string`);
-    if (args !== undefined && !Array.isArray(args)) return invalid(index, `${at}.args must be an array`);
+    if (ref === undefined) return invalid(index, `${at} has no "ref"; give it a ref from cloudlet_snapshot`);
+    if (typeof ref !== 'string') return invalid(index, `${at}.ref must be a string: a ref from cloudlet_snapshot`);
+    if (action === undefined) return invalid(index, `${at} has no "action"; give it a verb from the record's actions`);
+    if (typeof action !== 'string') return invalid(index, `${at}.action must be a string: a verb from the record's actions`);
+    if (args !== undefined && !Array.isArray(args)) return invalid(index, `${at}.args is not a list: ${ARGS}`);
     // A deep frozen copy: what `allow` is asked about is what runs, whatever the caller does to its own objects meanwhile.
     let copied = NO_ARGS;
     if (args !== undefined) {
-      try { copied = cloneValue(args) as readonly unknown[]; } catch { return invalid(index, `${at}.args must hold plain data`); }
+      try { copied = cloneValue(args) as readonly unknown[]; } catch {
+        return invalid(index, `${at}.args must hold plain data: strings, finite numbers, booleans, null, lists and plain objects`);
+      }
     }
     steps.push(freeze({ ref, action, args: copied }));
   }

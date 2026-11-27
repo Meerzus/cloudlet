@@ -324,7 +324,7 @@ test('invalid JSON is reported next to the field and nothing is sent', async ({ 
   await expect(page.getByTestId('agent-log')).toContainText('No calls yet.');
   await callField(page).fill('{ "steps": [{ "ref": "toaster", "action": 7 }] }');
   await button(page, 'Run steps').click();
-  expect((await latest(page)).error?.message).toBe('Invalid call: steps[0].action must be a string. No step ran.');
+  expect((await latest(page)).error?.message).toBe('Invalid call: steps[0].action must be a string: a verb from the record\'s actions. No step ran.');
 });
 
 test('the event log and the Changes list say who closed a notification: the agent, the app, the person and the timer', async ({ page }) => {

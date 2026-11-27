@@ -299,6 +299,75 @@ export interface AgentComponent {
 }
 
 /**
+ * The name of one of the bridge's tools.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export type AgentToolName = 'cloudlet_act' | 'cloudlet_snapshot';
+
+/**
+ * A tool as model SDKs and WebMCP describe one: its name, a text on when and how to call it, and the
+ * JSON Schema of its input. Plain data, frozen.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentTool {
+  readonly name: AgentToolName;
+  readonly description: string;
+  readonly inputSchema: { readonly [key: string]: AgentValue };
+}
+
+/**
+ * What `cloudlet_snapshot` answers: the records of {@link Agent.snapshot} and what the verbs of their
+ * kinds do, once per kind present.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentSnapshotToolResult {
+  readonly entries: readonly AgentEntry[];
+  readonly verbs: AgentVerbs;
+}
+
+/**
+ * What `cloudlet_act` answers: the call's {@link ActResult} and every change {@link Agent.subscribe}
+ * heard from the moment the call started running (after the calls queued before it) until it
+ * answered, whoever made it. An invalid call ran nothing and has no changes.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export type AgentActToolResult = ActResult & { readonly changes: readonly AgentChange[] };
+
+/**
+ * What a tool answers when it could not run: an unknown name, input `cloudlet_snapshot` does not
+ * take, or a snapshot a component failed to give.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentToolError {
+  readonly ok: false;
+  readonly error: { readonly message: string };
+}
+
+/**
+ * Anything {@link Agent.callTool} answers. Plain data: `JSON.stringify` and `structuredClone` keep
+ * the same values.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export type AgentToolResult = AgentSnapshotToolResult | AgentActToolResult | AgentToolError;
+
+/**
+ * Runs one of the bridge's tools by name, the way a model calls it.
+ *
+ * @experimental The protocol may change in any 0.x release.
+ */
+export interface AgentCallTool {
+  (name: 'cloudlet_snapshot', input?: unknown, options?: ActOptions): Promise<AgentSnapshotToolResult | AgentToolError>;
+  (name: 'cloudlet_act', input: unknown, options?: ActOptions): Promise<AgentActToolResult>;
+  (name: string, input?: unknown, options?: ActOptions): Promise<AgentToolResult>;
+}
+
+/**
  * The kit's bridge: one snapshot over every connected component, and steps through them.
  *
  * Its functions are bound, so `useSyncExternalStore(agent.subscribe, agent.snapshot)` works as is.
@@ -338,4 +407,19 @@ export interface Agent {
    * `console.error`.
    */
   readonly act: (input: ActInput, options?: ActOptions) => Promise<ActResult>;
+  /**
+   * The bridge's tools for a model, `cloudlet_act` and `cloudlet_snapshot`, as
+   * `{ name, description, inputSchema }`: the same frozen array for every agent, whatever is
+   * connected. What each component's verbs do comes in the snapshot's `verbs`.
+   */
+  readonly tools: readonly AgentTool[];
+  /**
+   * Runs a tool by name with the input a model sent, and answers plain data. `cloudlet_snapshot`
+   * takes `{}` (or nothing) and answers `{ entries, verbs }`. `cloudlet_act` takes what
+   * {@link Agent.act} takes, waits in the same queue, and answers its result with the `changes`
+   * heard while the call ran; `signal` cancels it as it cancels `act`. An unknown name or input
+   * `cloudlet_snapshot` does not take answer `{ ok: false, error: { message } }`. The promise
+   * never rejects.
+   */
+  readonly callTool: AgentCallTool;
 }

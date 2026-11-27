@@ -1,5 +1,9 @@
 import { cancelledBefore, cloneValue, failed, parseCall, runSteps, type ActEnvironment, type Located } from './act.js';
-import type { ActResult, Agent, AgentChange, AgentComponent, AgentEntry, AgentOptions, AgentVerbs } from './types.js';
+import { ACT, SNAPSHOT, TOOLS } from './tools.js';
+import type {
+  ActResult, Agent, AgentActToolResult, AgentCallTool, AgentChange, AgentComponent, AgentEntry, AgentOptions, AgentSnapshotToolResult,
+  AgentToolError, AgentToolResult, AgentValue, AgentVerbs,
+} from './types.js';
 import { collectVerbs, readVerbs, registerVerbs } from './verbs.js';
 
 const NAME = /^[a-z][a-z0-9-]*$/;
@@ -75,6 +79,36 @@ function readChanges(name: string, input: unknown): readonly AgentChange[] {
     note(error);
   }
   return changes.length ? Object.freeze(changes) : NO_CHANGES;
+}
+
+const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+function toolError(message: string): AgentToolError {
+  return Object.freeze({ ok: false as const, error: Object.freeze({ message }) });
+}
+
+/** Names a value a model sent in a message, without running any of its code. */
+function describe(value: unknown): string {
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (value === null || typeof value === 'number' || typeof value === 'boolean' || value === undefined) return String(value);
+  return Array.isArray(value) ? 'a list' : `a value of type ${typeof value}`;
+}
+
+/**
+ * The records as plain data, so a tool's answer reads the same through JSON and `structuredClone`.
+ * A key whose value is not plain data (a component's mistake) is left out and reported.
+ */
+function plainEntries(entries: readonly AgentEntry[]): readonly AgentEntry[] {
+  return Object.freeze(entries.map((entry) => {
+    const pairs: [string, AgentValue][] = [];
+    for (const key of Object.keys(entry)) {
+      const value: unknown = entry[key];
+      if (value === undefined) continue;
+      try { pairs.push([key, cloneValue(value)]); } catch { note(new TypeError(`Record "${entry.ref}" has a key "${key}" that is not plain data`)); }
+    }
+    // `fromEntries` defines own properties, so a key named `__proto__` stays a key.
+    return Object.freeze(Object.fromEntries(pairs)) as AgentEntry;
+  }));
 }
 
 interface Connection {
@@ -196,7 +230,12 @@ export function createAgent(options?: AgentOptions): Agent {
     report: note,
   });
 
-  const act: Agent['act'] = (input, actOptions) => {
+  /**
+   * Queues a call. `watch` hears when the call's turn starts and when its steps have answered. An
+   * invalid call never gets a turn; one cancelled while it waited has already answered when its turn
+   * comes, and its watch still hears both then.
+   */
+  const perform = (input: unknown, actOptions: unknown, watch?: { readonly start: () => void; readonly stop: () => void }): Promise<ActResult> => {
     let call: ReturnType<typeof parseCall>;
     // A getter on the input may throw: that is an invalid call, not a rejection.
     try { call = parseCall(input, actOptions); } catch { return Promise.resolve(failed(0, 'Invalid call: its input could not be read. No step ran.')); }
@@ -215,10 +254,11 @@ export function createAgent(options?: AgentOptions): Agent {
       // Cancelled while it waits for its turn: answer now; its turn then finds the signal aborted.
       const cancel = (): void => { if (!started) resolve(failed(0, cancelledBefore(first))); };
       try { signal?.addEventListener('abort', cancel, { once: true }); } catch { resolve(unusable); return; }
-      const turn = queue.then(() => {
+      const turn = queue.then(async () => {
         started = true;
         signal?.removeEventListener('abort', cancel);
-        return runSteps(steps, signal, own);
+        watch?.start();
+        try { return await runSteps(steps, signal, own); } finally { watch?.stop(); }
       }).catch((error: unknown) => {
         // Unreachable unless the bridge itself is broken; the call still settles.
         note(error);
@@ -229,10 +269,58 @@ export function createAgent(options?: AgentOptions): Agent {
     });
   };
 
+  const act: Agent['act'] = (input, actOptions) => perform(input, actOptions);
+
   /** The verbs of the kinds of record in the snapshot now, for the tools. */
   const verbs = (): AgentVerbs => collectVerbs(snapshot(), [...connections.values()].map((connection) => connection.verbs));
 
-  const agent: Agent = Object.freeze({ connect, snapshot, subscribe, act });
+  /** `cloudlet_snapshot`: the records as plain data, and the verbs of their kinds. */
+  const snapshotTool = (input: unknown): AgentSnapshotToolResult | AgentToolError => {
+    if (input !== undefined) {
+      const keys = isObject(input) ? Object.keys(input) : undefined;
+      if (keys?.length !== 0) {
+        const got = keys ? `the key ${JSON.stringify(keys[0])}` : describe(input);
+        return toolError(`${SNAPSHOT} takes no input: send {}. It got ${got}.`);
+      }
+    }
+    let entries: readonly AgentEntry[];
+    try { entries = snapshot(); } catch (error) {
+      note(error);
+      return toolError(`${SNAPSHOT} failed: a component could not give its records. Try again later.`);
+    }
+    return Object.freeze({ entries: plainEntries(entries), verbs: verbs() });
+  };
+
+  /** `cloudlet_act`: the result of the call and the changes heard while it ran, and only then. */
+  const actTool = async (input: unknown, options: unknown): Promise<AgentActToolResult> => {
+    const changes: AgentChange[] = [];
+    let answered = false;
+    let stop: (() => void) | undefined;
+    const result = await perform(input, options, {
+      // A call cancelled while it waited answers before its turn comes: it listens to nothing then.
+      start: () => { if (!answered) stop = subscribe((heard) => { if (!answered) changes.push(...heard); }); },
+      stop: () => { stop?.(); stop = undefined; },
+    });
+    answered = true;
+    stop?.();
+    stop = undefined;
+    return Object.freeze({ ...result, changes: changes.length ? Object.freeze(changes) : NO_CHANGES });
+  };
+
+  const callTool = ((name: unknown, input?: unknown, options?: unknown): Promise<AgentToolResult> => {
+    try {
+      if (name === ACT) return actTool(input, options);
+      if (name === SNAPSHOT) return Promise.resolve(snapshotTool(input));
+      return Promise.resolve(toolError(`Unknown tool ${describe(name)}. Tools: ${TOOLS.map((tool) => tool.name).join(', ')}.`));
+    } catch (error) {
+      // Unreachable unless the bridge itself is broken (a getter on the input that throws is read inside
+      // the act's own guard); the call still answers.
+      note(error);
+      return Promise.resolve(toolError('The agent bridge failed. Nothing ran.'));
+    }
+  }) as AgentCallTool;
+
+  const agent: Agent = Object.freeze({ connect, snapshot, subscribe, act, tools: TOOLS, callTool });
   registerVerbs(agent, verbs);
   return agent;
 }

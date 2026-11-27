@@ -98,7 +98,8 @@ describe('verbs of the kinds in the snapshot', () => {
   });
 
   it('answers empty for an object no agent made', () => {
-    expect(verbsOf({ connect: () => () => {}, snapshot: () => [], subscribe: () => () => {}, act: async () => ({ ok: true, steps: [] }) })).toEqual({});
+    // A copy has every function of an agent, but no agent made it.
+    expect(verbsOf({ ...createAgent() })).toEqual({});
   });
 });
 

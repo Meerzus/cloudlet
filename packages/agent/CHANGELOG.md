@@ -50,7 +50,20 @@ Experimental first version: the agent reads and acts under the app's permission.
   so a later change of the object is not seen, and throws a `TypeError` for anything but an object of
   objects of non-empty strings. When two components describe the same kind, the one connected first
   is used.
+- `agent.tools` gives the bridge's two tools for a model, `cloudlet_act` and `cloudlet_snapshot`,
+  as `{ name, description, inputSchema }`: one frozen array of plain data for every agent.
+  `agent.callTool(name, input, { signal }?)` runs one and answers plain data, never rejecting.
+  `cloudlet_snapshot` takes `{}` or nothing and answers `{ entries, verbs }`: the records, with any
+  key that is not plain data left out and reported, and the verbs of the kinds present.
+  `cloudlet_act` takes what `act` takes, waits in the same queue and answers its result with
+  `changes`: what `agent.subscribe` heard from the moment the call started running until it
+  answered, whoever made it. An unknown name or input `cloudlet_snapshot` does not take answers
+  `{ ok: false, error: { message } }`.
+- An invalid call says what to change: a step sent without `steps`, a bare list, `value` in a step
+  (arguments go in `args` as a list), `args` that are not a list, a step without `ref` or `action`.
+  A call takes at most 20 steps; more is an invalid call that asks for smaller calls.
 - Types: `Agent`, `AgentComponent`, `AgentEntry`, `AgentOptions`, `Allow`, `AllowStep`, `AgentStep`,
   `ActInput`, `ActOptions`, `ActResult`, `ActStepResult`, `AgentPermission`, `AgentStepCall`,
   `AgentStepCheck`, `AgentStepNames`, `AgentRunContext`, `AgentRunOutcome`, `AgentSummonOutcome`,
-  `AgentSignal`, `AgentValue`, `AgentVerbs`.
+  `AgentSignal`, `AgentValue`, `AgentVerbs`, `AgentTool`, `AgentToolName`, `AgentCallTool`,
+  `AgentToolResult`, `AgentSnapshotToolResult`, `AgentActToolResult`, `AgentToolError`.
