@@ -5,6 +5,16 @@ installed as source, so they have no versions: a section is named after the day 
 cloudlet.dev. The history of the npm package `@cloudlet/toast` is in the
 [root CHANGELOG](../../CHANGELOG.md).
 
+## Unreleased
+
+### Color picker and Color palette
+
+- The `color-picker` item adds a sixth file, `components/ui/color-picker/color-picker-agent.ts`, and the
+  `color-palette` item a third, `components/ui/color-palette/color-palette-agent.ts`. Their hooks
+  `useColorPickerAgent` and `useColorPaletteAgent` connect the component to the Cloudlet agent bridge
+  from the outside; the components never import them, nothing runs until you do, and neither item adds
+  a dependency.
+
 ## 2026-11-25
 
 ### Website

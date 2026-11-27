@@ -38,28 +38,45 @@ assert(wrapper.content.includes('import "@cloudlet/toast/styles.css"'));
 assert(wrapper.content.includes('import "./toaster.css"'));
 assert(!/createCloudlet|packages\/toast|src\/|singleton/.test(wrapper.content));
 assert(css.content.includes('var(--popover'));
-// The color picker ships the site's own files; it may import only React, its siblings and lib/spring.
+// Static import and re-export specifiers of a source file (multi-line imports included).
+const importsOf = (file) => [...file.content.matchAll(/^(?:import|export) [^'"]*?from ['"]([^'"]+)['"]|^import ['"]([^'"]+)['"]/gm)].map((match) => match[1] ?? match[2]);
+const assertImports = (file, allowed) => {
+  const specifiers = importsOf(file);
+  // No item file reaches for the bridge package: an adapter only mirrors its protocol, so a project
+  // without @cloudlet/agent still installs and builds every item.
+  assert(!specifiers.some((specifier) => specifier.startsWith('@cloudlet/agent')), `${file.path} imports @cloudlet/agent`);
+  assert(specifiers.every((specifier) => allowed.includes(specifier)), `${file.path}: ${specifiers}`);
+};
+// The color picker ships the site's own files. Its component files may import only React, their
+// siblings and lib/spring — not the adapter, so a component that imports it fails the build. The
+// adapter may import React, react-dom (flushSync), ./color and types from the component.
 const picker = await readJSON('registry/r/color-picker.json');
 assert(validateItem(picker), JSON.stringify(validateItem.errors));
-assert.deepEqual(picker.files.map((file) => [file.path.split('/').pop(), file.type]), [['color-picker.tsx', 'registry:ui'], ['color-picker.css', 'registry:ui'], ['color.ts', 'registry:ui'], ['morph.ts', 'registry:ui'], ['spring.ts', 'registry:lib']]);
+assert.deepEqual(picker.files.map((file) => [file.path.split('/').pop(), file.type]), [['color-picker.tsx', 'registry:ui'], ['color-picker.css', 'registry:ui'], ['color.ts', 'registry:ui'], ['morph.ts', 'registry:ui'], ['color-picker-agent.ts', 'registry:ui'], ['spring.ts', 'registry:lib']]);
 const component = picker.files[0].content;
 assert(component.startsWith("'use client';"));
 assert(component.includes("import './color-picker.css';"));
-for (const file of picker.files.filter((entry) => !entry.path.endsWith('.css'))) {
-  const specifiers = [...file.content.matchAll(/^import [^'"]*['"]([^'"]+)['"]/gm)].map((match) => match[1]);
-  assert(specifiers.every((specifier) => ['react', '@/lib/spring', './color', './morph', './color-picker.css'].includes(specifier)), `${file.path}: ${specifiers}`);
+const pickerAdapter = picker.files[4];
+assert(pickerAdapter.content.startsWith("'use client';"));
+assertImports(pickerAdapter, ['react', 'react-dom', './color', './color-picker']);
+for (const file of picker.files.filter((entry) => !entry.path.endsWith('.css') && entry !== pickerAdapter)) {
+  assertImports(file, ['react', '@/lib/spring', './color', './morph', './color-picker.css']);
 }
 assert(picker.files[1].content.includes('var(--ring'));
-// The palette: its component and stylesheet; it may import React, the picker's modules, lib/spring and its CSS.
+// The palette: its component, stylesheet and adapter. The component may import React, the picker's
+// modules, lib/spring and its CSS, not its adapter; the adapter may import React, the picker's adapter
+// and color module, and types from the palette.
 const palette = await readJSON('registry/r/color-palette.json');
 assert(validateItem(palette), JSON.stringify(validateItem.errors));
-assert.deepEqual(palette.files.map((file) => [file.path.split('/').pop(), file.type]), [['color-palette.tsx', 'registry:ui'], ['color-palette.css', 'registry:ui']]);
+assert.deepEqual(palette.files.map((file) => [file.path.split('/').pop(), file.type]), [['color-palette.tsx', 'registry:ui'], ['color-palette.css', 'registry:ui'], ['color-palette-agent.ts', 'registry:ui']]);
 assert.deepEqual(palette.registryDependencies, ['@cloudlet/color-picker']);
 const paletteComponent = palette.files[0].content;
 assert(paletteComponent.startsWith("'use client';"));
 assert(paletteComponent.includes("import './color-palette.css';"));
-const paletteImports = [...paletteComponent.matchAll(/^import [^'"]*['"]([^'"]+)['"]/gm)].map((match) => match[1]);
-assert(paletteImports.every((specifier) => ['react', '@/lib/spring', '@/components/ui/color-picker/color-picker', '@/components/ui/color-picker/color', '@/components/ui/color-picker/morph', './color-palette.css'].includes(specifier)), `color-palette.tsx: ${paletteImports}`);
+assertImports(palette.files[0], ['react', '@/lib/spring', '@/components/ui/color-picker/color-picker', '@/components/ui/color-picker/color', '@/components/ui/color-picker/morph', './color-palette.css']);
+const paletteAdapter = palette.files[2];
+assert(paletteAdapter.content.startsWith("'use client';"));
+assertImports(paletteAdapter, ['react', '@/components/ui/color-picker/color-picker-agent', '@/components/ui/color-picker/color', './color-palette']);
 assert(palette.files[1].content.includes('var(--ring'));
 // The catalog lists items without their source: the CLI reads `content` from `/r/<item>.json`, and the
 // shadcn registry index rejects a catalog whose files carry `content`.
@@ -78,7 +95,7 @@ const evidence = {
     `https://ui.shadcn.com/schema/${name}.json`,
     createHash('sha256').update(await readFile(resolve(root, `registry/schema/${name}.json`))).digest('hex'),
   ]))),
-  checks: { officialCatalogSchema: 'passed', officialItemSchema: 'passed', shadcnBuild: 'passed', clientDirective: 'passed', publicRuntimeOnly: 'passed', explicitCssImports: 'passed', colorPickerFiles: 'passed', colorPickerImports: 'passed', colorPaletteFiles: 'passed', colorPaletteImports: 'passed' },
+  checks: { officialCatalogSchema: 'passed', officialItemSchema: 'passed', shadcnBuild: 'passed', clientDirective: 'passed', publicRuntimeOnly: 'passed', explicitCssImports: 'passed', colorPickerFiles: 'passed', colorPickerImports: 'passed', colorPaletteFiles: 'passed', colorPaletteImports: 'passed', colorPickerAdapterImports: 'passed', colorPaletteAdapterImports: 'passed', noAgentPackageImports: 'passed' },
 };
 await mkdir(resolve(root, 'artifacts/integration/registry'), { recursive: true });
 await writeFile(resolve(root, 'artifacts/integration/registry/build.json'), JSON.stringify(evidence, null, 2) + '\n');

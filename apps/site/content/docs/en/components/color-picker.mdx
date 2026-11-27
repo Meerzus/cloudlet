@@ -15,7 +15,7 @@ The color picker is a shadcn registry item, not an npm package: the CLI copies i
 
 <InstallCommand command="npx shadcn@latest add https://cloudlet.dev/r/color-picker.json" />
 
-It adds five files under your `ui` and `lib` aliases and nothing to `package.json`:
+It adds six files under your `ui` and `lib` aliases and nothing to `package.json`:
 
 | File | What it holds |
 | --- | --- |
@@ -23,6 +23,7 @@ It adds five files under your `ui` and `lib` aliases and nothing to `package.jso
 | `components/ui/color-picker/color-picker.css` | The styles, imported by the component itself |
 | `components/ui/color-picker/color.ts` | Parsing, conversions and the canonical output |
 | `components/ui/color-picker/morph.ts` | The springs of the swatch-to-panel morph |
+| `components/ui/color-picker/color-picker-agent.ts` | `useColorPickerAgent`, which connects the picker to the Cloudlet agent bridge; nothing runs until you import it |
 | `lib/spring.ts` | The spring easing both use |
 
 The stylesheet reads the shadcn tokens `--background`, `--foreground`, `--border`, `--ring` and, if your theme has it, `--muted`. It resets its own buttons, so it does not rely on Tailwind's preflight.

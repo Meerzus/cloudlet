@@ -148,7 +148,7 @@ try {
   assert(installedPalette.includes("import './color-palette.css';"));
   assert(installedPalette.includes("from '@/components/ui/color-picker/color-picker'"));
   report.checks.colorPaletteInstalledWithPickerDependency = 'passed';
-  // The color picker came with it: five source files, no dependencies, its own CSS import, the consumer's lib alias.
+  // The color picker came with it: six source files, no dependencies, its own CSS import, the consumer's lib alias.
   const installedPicker = await readFile(join(consumer, 'components/ui/color-picker/color-picker.tsx'), 'utf8');
   for (const file of ['color-picker.css', 'color.ts', 'morph.ts']) await readFile(join(consumer, 'components/ui/color-picker', file), 'utf8');
   assert((await readFile(join(consumer, 'lib/spring.ts'), 'utf8')).includes('export function springRetarget'));
@@ -156,11 +156,23 @@ try {
   assert(installedPicker.includes("import './color-picker.css';"));
   assert(installedPicker.includes("from '@/lib/spring'"));
   report.checks.colorPickerInstalledWithoutDependencies = 'passed';
+  // Both items bring their agent bridge adapters. The adapters mirror the bridge's protocol instead of
+  // importing @cloudlet/agent, so the consumer has no such package and still builds and typechecks
+  // (tsconfig includes every installed file, the adapters among them).
+  const installedAdapters = await Promise.all(['color-picker/color-picker-agent.ts', 'color-palette/color-palette-agent.ts'].map((file) => readFile(join(consumer, 'components/ui', file), 'utf8')));
+  for (const adapter of installedAdapters) {
+    assert(adapter.startsWith("'use client'"));
+    assert(!/^(?:import|export) [^'"]*?from ['"]@cloudlet\/agent/m.test(adapter));
+  }
+  assert(installedAdapters[1].includes("from '@/components/ui/color-picker/color-picker-agent'"));
+  assert(!(await readJSON(join(consumer, 'package.json'))).dependencies['@cloudlet/agent']);
+  await assert.rejects(realpath(join(consumer, 'node_modules/@cloudlet/agent')));
   report.versions = Object.fromEntries(await Promise.all(['next', 'react', 'react-dom', 'typescript', 'tailwindcss'].map(async (name) => [name, (await readJSON(join(consumer, 'node_modules', name, 'package.json'))).version])));
   await run('npm', ['run', 'build'], consumer, 'consumer-build');
   await run('npm', ['run', 'typecheck'], consumer, 'consumer-types');
   report.checks.productionBuild = 'passed';
   report.checks.types = 'passed';
+  report.checks.agentAdaptersWithoutBridgePackage = 'passed';
   const reservePort = createServer();
   await new Promise((resolveListen) => { reservePort.listen(0, '127.0.0.1', resolveListen); });
   const nextPort = reservePort.address().port;
