@@ -130,7 +130,11 @@ function cloneValue(value: unknown): AgentValue {
   if (Array.isArray(value)) {
     // A fresh array filled by index: the input's own `map` could hand back anything.
     const copy: AgentValue[] = [];
-    for (let index = 0; index < value.length; index += 1) copy.push(cloneValue(value[index]));
+    for (let index = 0; index < value.length; index += 1) {
+      // A hole would read whatever the prototype holds at that index.
+      if (!Object.hasOwn(value, index)) throw new TypeError('Expected plain data: an array with a hole');
+      copy.push(cloneValue(value[index]));
+    }
     return freeze(copy);
   }
   if (typeof value === 'object') {

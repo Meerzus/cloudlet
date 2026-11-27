@@ -861,6 +861,21 @@ describe('act: what the second review of the bridge found', () => {
     expect(Object.isFrozen(((result.ok ? result.steps[0]!.result : null) as unknown[])[0])).toBe(true);
   });
 
+  it('takes an array with a hole as not plain data, and one that holds null as plain', async () => {
+    const reported = captureReports();
+    const results: unknown[] = [[1, , 3], [1, null, 3]];
+    const box = stepper('box', { run: () => ({ status: 'done', result: results.shift() as never }) });
+    const agent = createAgent();
+    agent.connect(box.component);
+    const holed = await agent.act(press);
+    expect(holed.ok && 'result' in holed.steps[0]!).toBe(false);
+    expect(reported).toHaveLength(1);
+    const dense = await agent.act(press);
+    expect(dense.ok && dense.steps[0]!.result).toEqual([1, null, 3]);
+    expect(errorOf(await agent.act({ steps: [{ ref: 'box:1', action: 'press', args: [[1, , 3]] as never }] })).message)
+      .toBe('Invalid call: steps[0].args must hold plain data. No step ran.');
+  });
+
   it('does not call a person to a step that stopped needing one while allow was asked', async () => {
     let permission: 'confirm' | 'allow' = 'confirm';
     const box = stepper('box', { check: () => ({ available: true, permission }) });
