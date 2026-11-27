@@ -41,9 +41,10 @@ function useSession(autoDismiss: boolean, epoch: number) {
   return session;
 }
 
-function Settings({ position, setPosition, theme, setTheme, dir, setDir, motion, setMotion, inset, setInset, long, setLong, auto, setAuto }: {
+function Settings({ position, setPosition, theme, setTheme, dir, setDir, motion, setMotion, appReduced, setAppReduced, ancestorReduced, setAncestorReduced, inset, setInset, long, setLong, auto, setAuto }: {
   position: Position; setPosition: (value: Position) => void; theme: Theme; setTheme: (value: Theme) => void;
   dir: 'ltr' | 'rtl'; setDir: (value: 'ltr' | 'rtl') => void; motion: MotionPreference; setMotion: (value: MotionPreference) => void;
+  appReduced: boolean; setAppReduced: (value: boolean) => void; ancestorReduced: boolean; setAncestorReduced: (value: boolean) => void;
   inset: boolean; setInset: (value: boolean) => void; long: boolean; setLong: (value: boolean) => void; auto: boolean; setAuto: (value: boolean) => void;
 }) {
   return <section className="lab-settings" aria-labelledby="settings-title">
@@ -56,11 +57,13 @@ function Settings({ position, setPosition, theme, setTheme, dir, setDir, motion,
       <Choice label="Motion" value={motion} onChange={setMotion} options={[['system', 'As the system'], ['reduce', 'Reduce · emulated'], ['full', 'Full · explicit']]} />
     </div>
     <div className="lab-checks">
+      <label><input type="checkbox" checked={appReduced} onChange={e => setAppReduced(e.target.checked)} />reducedMotion prop</label>
+      <label><input type="checkbox" checked={ancestorReduced} onChange={e => setAncestorReduced(e.target.checked)} />data-reduced-motion on &lt;html&gt;</label>
       <label><input type="checkbox" checked={auto} onChange={e => setAuto(e.target.checked)} />Auto-dismiss after reset</label>
       <label><input type="checkbox" checked={inset} onChange={e => setInset(e.target.checked)} />Bottom bar · 72px</label>
       <label><input type="checkbox" checked={long} onChange={e => setLong(e.target.checked)} />Long description</label>
     </div>
-    <p className="lab-hint">Auto-dismiss applies on “Recreate main”. Motion emulates the media preference inside the laboratory only. Speed (timeScale) is in the header and in “Motion tuning” (reachable there while the Island is open); springs are in “Motion tuning”.</p>
+    <p className="lab-hint">Auto-dismiss applies on “Recreate main”. Motion emulates the media preference inside the laboratory only; the two reduced-motion boxes are the app's own setting, which can only add calm to it. Speed (timeScale) is in the header and in “Motion tuning” (reachable there while the Island is open); springs are in “Motion tuning”.</p>
   </section>;
 }
 
@@ -131,8 +134,8 @@ function Generators({ session, disabled, long }: { session: LabSession; disabled
   </section>;
 }
 
-function Workspace({ session, position, theme, dir, inset, long, motion, recreate, studio }: {
-  session: LabSession; position: Position; theme: Theme; dir: 'ltr' | 'rtl'; inset: boolean; long: boolean; motion: Motion;
+function Workspace({ session, position, theme, dir, inset, long, motion, reduced, recreate, studio }: {
+  session: LabSession; position: Position; theme: Theme; dir: 'ltr' | 'rtl'; inset: boolean; long: boolean; motion: Motion; reduced: boolean;
   recreate: () => void; studio: ReactNode;
 }) {
   const controller = session.controller;
@@ -196,18 +199,18 @@ function Workspace({ session, position, theme, dir, inset, long, motion, recreat
       </aside>
     </div>
     <CloudletProvider controller={controller}>{attached && !disabled && <Toaster position={position} theme={theme} dir={dir} offsets={inset ? { obstruction: { bottom: 72 } } : {}} labels={labels}
-      motion={motion} classNames={{ host: 'lab-main-host' }} {...(nonce ? { nonce } : {})} />}</CloudletProvider>
+      motion={motion} reducedMotion={reduced} classNames={{ host: 'lab-main-host' }} {...(nonce ? { nonce } : {})} />}</CloudletProvider>
   </>;
 }
 
-function Secondary({ session, reset, position, inset, motion }: { session: LabSession; reset: () => void; position: Position; inset: boolean; motion: Motion }) {
+function Secondary({ session, reset, position, inset, motion, reduced }: { session: LabSession; reset: () => void; position: Position; inset: boolean; motion: Motion; reduced: boolean }) {
   const snapshot = useSyncExternalStore(session.controller.subscribe, session.controller.getSnapshot, session.controller.getServerSnapshot);
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   const [attached, setAttached] = useState(true);
   const disabled = snapshot.disposed;
   return <section className="lab-secondary" aria-labelledby="secondary-title"><h2 id="secondary-title">Second independent controller</h2><p>Dark theme, the opposite edge of the window, its own shared ID. Reset and dispose of the main one leave this instance alone.</p><div className="lab-buttons"><button disabled={disabled} onClick={() => session.controller.show({ id: 'shared', title: 'Second controller', duration: null })}>Show in second</button><button disabled={disabled} onClick={() => session.controller.clear()}>Clear second</button><button disabled={disabled} onClick={() => setAttached(value => !value)}>{attached ? 'Detach second Toaster' : 'Attach second Toaster'}</button><button disabled={disabled} onClick={() => { setAttached(false); session.dispose(); }}>Dispose second</button><button onClick={reset}>Reset second</button></div><p data-testid="secondary-summary" data-count={snapshot.notifications.length} data-disposed={snapshot.disposed}>{snapshot.notifications.length} accepted · {disabled ? 'disposed' : attached ? 'active' : 'no renderer'}</p>
     <details className="lab-secondary-diagnostics"><summary>Second controller diagnostics</summary>{snapshot.notifications.map(item => <p key={item.handle.generation}><code>{item.handle.id} · {item.handle.generation}</code></p>)}<h3>Logical · last 80</h3><ol className="lab-log" tabIndex={0} aria-label="Logical events of the second controller">{state.logical.map(entry => <li key={entry.sequence}>{entry.text}</li>)}</ol><h3>Presentation / diagnostics · last 80</h3><ol className="lab-log" tabIndex={0} aria-label="Presentation of the second controller">{state.presentation.map(entry => <li key={entry.sequence}>{entry.text}</li>)}</ol></details>
-    <CloudletProvider controller={session.controller}>{attached && !disabled && <Toaster position={position} theme="dark" offsets={inset ? { obstruction: { bottom: 72 } } : {}} labels={{ ...labels, region: 'Independent notifications' }} motion={motion} {...(nonce ? { nonce } : {})} />}</CloudletProvider></section>;
+    <CloudletProvider controller={session.controller}>{attached && !disabled && <Toaster position={position} theme="dark" offsets={inset ? { obstruction: { bottom: 72 } } : {}} labels={{ ...labels, region: 'Independent notifications' }} motion={motion} reducedMotion={reduced} {...(nonce ? { nonce } : {})} />}</CloudletProvider></section>;
 }
 
 const fixtures = [
@@ -244,6 +247,13 @@ function Laboratory() {
   const [preference, setPreference] = useState<ReturnType<typeof installMotionPreference>>();
   useEffect(() => { const adapter = installMotionPreference(); setPreference(adapter); return () => adapter.dispose(); }, []);
   useEffect(() => { preference?.set(motionPreference); }, [preference, motionPreference]);
+  // The app's reduced-motion setting, both public paths: the prop and the attribute on an ancestor.
+  const [appReduced, setAppReduced] = useState(false); const [ancestorReduced, setAncestorReduced] = useState(false);
+  useEffect(() => {
+    if (!ancestorReduced) return;
+    document.documentElement.setAttribute('data-reduced-motion', '');
+    return () => document.documentElement.removeAttribute('data-reduced-motion');
+  }, [ancestorReduced]);
   useEffect(() => {
     const media = window.matchMedia('(min-width: 48rem)');
     const update = () => setDesktop(media.matches);
@@ -264,11 +274,11 @@ function Laboratory() {
       <nav aria-label="Sections"><a href="#scenarios">Scenarios</a><a href="#motion">Motion</a><a href="#agent">Agent</a><a href="#fixtures">Environments</a><a href="#notes">Reading the results</a></nav>
     </header>
     <main><div className="lab-intro"><p className="lab-kicker">Stack → Island</p><h1>One stack.<br /><span>One Island.</span></h1><p>Build a stack, open it into the Island, page through notifications and close them. Slow time down to look at the morph, the blur swap and the slide, and tune the springs without a rebuild.</p></div>
-      <Settings {...{ position, setPosition, theme, setTheme, dir, setDir, motion: motionPreference, setMotion: setMotionPreference, inset, setInset, long, setLong, auto, setAuto }} />
-      <div id="scenarios" tabIndex={-1}>{session && preference && <Workspace key={epoch + ':' + String(activeAuto)} {...{ session, position, theme, dir, inset, long, motion }}
+      <Settings {...{ position, setPosition, theme, setTheme, dir, setDir, motion: motionPreference, setMotion: setMotionPreference, appReduced, setAppReduced, ancestorReduced, setAncestorReduced, inset, setInset, long, setLong, auto, setAuto }} />
+      <div id="scenarios" tabIndex={-1}>{session && preference && <Workspace key={epoch + ':' + String(activeAuto)} {...{ session, position, theme, dir, inset, long, motion }} reduced={appReduced}
         recreate={() => { setActiveAuto(auto); setEpoch(value => value + 1); }}
         studio={<MotionPanel overrides={overrides} setOverrides={setOverrides} timeScale={timeScale} setTimeScale={setTimeScale} />} />}</div>
-      {secondary && preference && <Secondary key={secondaryEpoch} session={secondary} reset={() => setSecondaryEpoch(value => value + 1)} position={secondaryPosition} inset={inset} motion={motion} />}
+      {secondary && preference && <Secondary key={secondaryEpoch} session={secondary} reset={() => setSecondaryEpoch(value => value + 1)} position={secondaryPosition} inset={inset} motion={motion} reduced={appReduced} />}
       <LabColors agent={later} />
       <AgentPanel agent={agent} gate={gate} session={session} />
       <section id="fixtures" className="lab-fixtures"><h2>Separate pages</h2><p>Each page loads only its own styles and the package CSS. The main page’s reset does not reach them.</p><div>{fixtures.map(([route, title]) => <a key={route} href={`?fixture=${route}`}>{title}<span aria-hidden="true">↗</span></a>)}</div>

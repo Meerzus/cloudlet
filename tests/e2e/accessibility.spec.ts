@@ -324,3 +324,75 @@ test('axe, RTL, long multilingual text at 320 px and 200 % text, 44 px hit areas
   const transforms = await host(page).locator('.cloudlet-clip > .cloudlet-slide :is(h2, .cloudlet-body, .cloudlet-spinner)').evaluateAll(elements => elements.map(element => getComputedStyle(element).transform));
   expect(transforms.every(value => value === 'none' || value === 'matrix(1, 0, 0, 1, 0, 0)')).toBe(true);
 });
+
+test('reduced motion from the app: the reducedMotion prop and data-reduced-motion on an ancestor calm the Toaster without a remount; the system still wins', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  await page.evaluate(() => window.accessibilityFixture!.reset([{ id: 'loading', title: 'Loading', kind: 'loading' }]));
+  await readable(page);
+  const spinner = host(page).locator('.cloudlet-spinner');
+  const mount = await host(page).elementHandle();
+  // The silhouette's width frame by frame right after the Island opens: springs grow it over many
+  // frames, reduced motion jumps it to the target in the first one.
+  const opening = async () => {
+    const widths = await page.evaluate(async () => {
+      const background = document.querySelector('.cloudlet-host .cloudlet-bg')!;
+      const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      const values: number[] = [];
+      window.accessibilityFixture!.open();
+      for (let index = 0; index < 10; index += 1) { await frame(); values.push(Math.round(Number(background.getAttribute('width')))); }
+      return values;
+    });
+    await expect(island(page)).toBeVisible();
+    expect(await page.evaluate(() => window.accessibilityFixture!.collapse())).toBe(true);
+    await expect(host(page)).toHaveAttribute('data-state', 'stack');
+    // Let the collapse settle before the next opening.
+    await expect.poll(() => page.evaluate(async () => {
+      const background = document.querySelector('.cloudlet-host .cloudlet-bg')!;
+      const read = () => background.getAttribute('width');
+      const before = read();
+      for (let index = 0; index < 5; index += 1) await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      return before === read();
+    })).toBe(true);
+    return new Set(widths.slice(2)).size === 1 ? 'still' : 'moving';
+  };
+  const calm = async (reduced: boolean) => {
+    await expect(host(page)).toHaveAttribute('data-reduced-motion', String(reduced));
+    // The Island keeps a clone of the outgoing slide after a collapse: every spinner must agree.
+    await expect.poll(() => spinner.evaluateAll(elements => [...new Set(elements.map(element => getComputedStyle(element).animationName))])).toEqual([reduced ? 'none' : 'cloudlet-spin']);
+  };
+  const ancestor = (present: boolean) => page.evaluate(present => {
+    if (present) document.documentElement.setAttribute('data-reduced-motion', '');
+    else document.documentElement.removeAttribute('data-reduced-motion');
+  }, present);
+  const prop = (reduced: boolean) => page.evaluate(reduced => window.accessibilityFixture!.reducedMotion(reduced), reduced);
+
+  await calm(false);
+  expect(await opening()).toBe('moving');
+  // The prop.
+  await prop(true);
+  await calm(true);
+  expect(await opening()).toBe('still');
+  await prop(false);
+  await calm(false);
+  expect(await opening()).toBe('moving');
+  // The attribute on an ancestor, by presence.
+  await ancestor(true);
+  await calm(true);
+  expect(await opening()).toBe('still');
+  await ancestor(false);
+  await calm(false);
+  // The system preference is stronger than reducedMotion={false} and an absent attribute.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await calm(true);
+  await prop(true);
+  await ancestor(true);
+  await calm(true);
+  await prop(false);
+  await ancestor(false);
+  await calm(true);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await calm(false);
+  // Every switch went through the mounted host: no remount.
+  expect(await host(page).evaluate((element, mounted) => element === mounted, mount)).toBe(true);
+});

@@ -4,6 +4,13 @@
 
 ### Features
 
+- `Toaster` takes the app's own reduced-motion setting: the `reducedMotion` prop and
+  `data-reduced-motion` on any ancestor of the Toaster (by presence, with any value, as the kit's
+  registry components read it). Either one gives the same calm mode as the system's
+  `prefers-reduced-motion: reduce`, live and without a remount; neither can turn motion on against
+  the system, so `reducedMotion={false}` means "follow the system and the attribute". The host's own
+  `data-reduced-motion` still reports the result. An app that already sets `data-reduced-motion` on
+  an ancestor for another reason now gets a calm Toaster.
 - Experimental: `@cloudlet/toast/agent` exports `toasterAgent(controller, { name? })`, which lets an
   agent read a controller through the kit's agent bridge (`@cloudlet/agent`). Its snapshot lists the
   Toaster (Island, count, overflow, whether a `Toaster` is mounted) and every notification in

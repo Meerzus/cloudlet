@@ -141,6 +141,8 @@ function createHostRuntime(owner: Host) {
     motion?.setConstants(constants);
   };
   let reduced = false;
+  /** Re-resolves reduced motion (system, `reducedMotion`, an ancestor's attribute); set while mounted. */
+  let syncReduced: (() => void) | null = null;
   let hovering = false;
   let observer: ResizeObserver | null = null;
   /** Live layout box of the shell (the target shape); the SVG and clip follow it. */
@@ -692,7 +694,12 @@ function createHostRuntime(owner: Host) {
     announcer.mount(root);
     swipe = createSwipe(root, { begin: beginSwipe, claimsWheel, now: () => view.performance.now() });
     const media = view.matchMedia?.('(prefers-reduced-motion: reduce)');
-    reduced = media?.matches ?? false;
+    // The app's setting can only add calm: the system, the prop or `data-reduced-motion` on any
+    // ancestor (by presence, as the registry components read it). The search starts at the parent,
+    // so the host's own output attribute never feeds back.
+    let fromAncestor = !!root.parentElement?.closest('[data-reduced-motion]');
+    const resolveReduced = () => (media?.matches ?? false) || owner.props.options.reducedMotion === true || fromAncestor;
+    reduced = resolveReduced();
     root.dataset.reducedMotion = String(reduced);
     motion = createShellMotion({
       now: () => view.performance.now(), requestFrame: callback => view.requestAnimationFrame(callback),
@@ -700,11 +707,22 @@ function createHostRuntime(owner: Host) {
       timeScale: owner.props.options.motion?.timeScale, constants,
     });
     const preference = () => {
-      reduced = media?.matches ?? false;
+      const next = resolveReduced();
+      if (next === reduced) return;
+      reduced = next;
       root.dataset.reducedMotion = String(reduced);
       if (reduced) swipe?.cancel();
       motion?.setReducedMotion(reduced);
     };
+    syncReduced = preference;
+    // Only the ancestor chain, only this attribute: the host's own attribute is not observed.
+    const ancestors = view.MutationObserver ? new view.MutationObserver(() => {
+      fromAncestor = !!root.parentElement?.closest('[data-reduced-motion]');
+      preference();
+    }) : null;
+    for (let node = root.parentElement; node && ancestors; node = node.parentElement) {
+      ancestors.observe(node, { attributes: true, attributeFilter: ['data-reduced-motion'] });
+    }
     // `auto` follows the same breakpoint as the stylesheet: re-render when it flips.
     const wide = view.matchMedia?.('(min-width: 48rem)');
     // `data-resolved-theme` follows the system scheme while the theme is `system`.
@@ -737,7 +755,11 @@ function createHostRuntime(owner: Host) {
     if (scheme) listeners.push([scheme, 'change', followScheme]);
     if (view.visualViewport) listeners.push([view.visualViewport, 'resize', relayout], [view.visualViewport, 'scroll', measureViewport]);
     for (const [target, type, listener, capture] of listeners) target.addEventListener(type, listener, capture);
-    cleanup = () => { for (const [target, type, listener, capture] of listeners) target.removeEventListener(type, listener, capture); };
+    cleanup = () => {
+      for (const [target, type, listener, capture] of listeners) target.removeEventListener(type, listener, capture);
+      ancestors?.disconnect();
+      syncReduced = null;
+    };
     // Measure HTML only: the clip's layout box never depends on animated values.
     observer = view.ResizeObserver ? new view.ResizeObserver(() => { measure(); acknowledgePresentation(); }) : null;
     if (clipRef.current) observer?.observe(clipRef.current);
@@ -792,6 +814,7 @@ function createHostRuntime(owner: Host) {
     if (armed && !clearable(owner.props)) disarm(false);
     motion?.setTimeScale(owner.props.options.motion?.timeScale);
     syncConstants();
+    syncReduced?.();
     // A swipe never continues on another record or state (arrival, programmatic dismiss, Escape).
     const next = shellView(owner.props.snapshot);
     if (gestureTarget && (gestureTarget.handle !== next.presented?.handle || gestureTarget.open !== next.open)) swipe?.cancel();
