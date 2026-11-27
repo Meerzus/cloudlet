@@ -306,6 +306,29 @@ describe('useColorPaletteAgent', () => {
     expect(changes).toEqual([change(['#336699'], ['#ff0000', '#00ff00'], 'app')]);
   });
 
+  it('does not hand an agent\'s mark the app ignored to a person\'s change later', async () => {
+    const agent = createAgent();
+    let accept = false;
+    render(<Controlled agent={agent} accept={(colors) => (accept ? colors : null)} />);
+    const changes = recorder(agent);
+    expect((await step(agent, 'add', ['#0000ff'])).ok).toBe(false);
+    accept = true;
+    fireEvent.keyDown(within(group()).getByRole('button', { name: /^Color 2 of 2/ }), { key: 'Delete' });
+    expect(changes).toEqual([change(['#ff0000'], ['#ff0000', '#00ff00'], 'user')]);
+  });
+
+  it('answers done and gone when the app unmounts the palette in answer to a step', async () => {
+    const agent = createAgent();
+    function Owner() {
+      const [shown, setShown] = useState(true);
+      return shown ? <Controlled agent={agent} onChange={() => setShown(false)} /> : <p>Palette closed</p>;
+    }
+    render(<Owner />);
+    expect(await step(agent, 'add', ['#0000ff'])).toEqual({ ok: true, steps: [{ step: 0, ref: 'color-palette', gone: true }] });
+    expect(screen.getByText('Palette closed')).toBeInTheDocument();
+    expect(agent.snapshot()).toEqual([]);
+  });
+
   it.each([null, undefined])('returns the props as they are and connects nothing when the agent is %s', (agent) => {
     const props = { defaultColors: ['#ff0000'], onChange: () => {} };
     let returned: unknown;

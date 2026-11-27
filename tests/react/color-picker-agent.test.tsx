@@ -1,5 +1,5 @@
 import { createAgent, type Agent, type AgentChange } from '@cloudlet/agent';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { StrictMode, useEffect, useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ColorPicker, ColorPickerPanel, type ColorFormat } from '@/components/ui/color-picker/color-picker';
@@ -257,6 +257,47 @@ describe('useColorPickerAgent', () => {
     accept = true;
     fireEvent.click(screen.getByRole('button', { name: 'App sets blue' }));
     expect(changes).toMatchObject([{ value: '#336699', previous: '#007aff', source: 'app' }]);
+  });
+
+  it('does not hand an agent\'s mark the app ignored to a person\'s change later', async () => {
+    const agent = createAgent();
+    let accept = false;
+    render(<Controlled agent={agent} accept={(value) => (accept ? value : null)} />);
+    const changes = recorder(agent);
+    expect((await set(agent, '#ff0000')).ok).toBe(false);
+    accept = true;
+    fireEvent.change(field(), { target: { value: '#123456' } });
+    expect(changes).toMatchObject([{ value: '#123456', previous: '#007aff', source: 'user' }]);
+  });
+
+  it('marks only the picker that started the change when two share the app\'s color', async () => {
+    const agent = createAgent();
+    function Shared() {
+      const [color, setColor] = useState('#007aff');
+      const first = useColorPickerAgent(agent, { color, onChange: setColor }, { name: 'first' });
+      const second = useColorPickerAgent(agent, { color, onChange: setColor }, { name: 'second' });
+      return <><div data-testid="first"><ColorPickerPanel {...first} /></div><ColorPickerPanel {...second} /></>;
+    }
+    render(<Shared />);
+    const changes = recorder(agent);
+    fireEvent.change(within(screen.getByTestId('first')).getByRole('textbox', { name: 'Color value' }), { target: { value: '#123456' } });
+    await set(agent, '#ff0000', 'second');
+    expect(changes.map(({ ref, value, source }) => [ref, value, source])).toEqual([
+      ['first', '#123456', 'user'], ['second', '#123456', 'app'],
+      ['first', '#ff0000', 'app'], ['second', '#ff0000', 'agent'],
+    ]);
+  });
+
+  it('answers done and gone when the app unmounts the picker in answer to a step', async () => {
+    const agent = createAgent();
+    function Owner() {
+      const [shown, setShown] = useState(true);
+      return shown ? <Controlled agent={agent} onChange={() => setShown(false)} /> : <p>Picker closed</p>;
+    }
+    render(<Owner />);
+    expect(await set(agent, '#ff0000')).toEqual({ ok: true, steps: [{ step: 0, ref: 'color-picker', gone: true }] });
+    expect(screen.getByText('Picker closed')).toBeInTheDocument();
+    expect(agent.snapshot()).toEqual([]);
   });
 
   it('keeps the exact string a person emitted, where reading it back would round anew', () => {
