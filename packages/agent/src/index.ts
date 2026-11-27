@@ -1,4 +1,5 @@
 export { createAgent } from './agent.js';
+export { registerTools, type RegisterToolsOptions } from './register-tools.js';
 export type {
   ActInput, ActOptions, ActResult, ActStepResult, Agent, AgentActToolResult, AgentCallTool, AgentChange, AgentComponent, AgentEntry,
   AgentOptions, AgentPermission, AgentRunContext, AgentRunOutcome, AgentSignal, AgentSnapshotToolResult, AgentStep, AgentStepCall,

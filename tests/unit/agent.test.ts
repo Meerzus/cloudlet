@@ -27,11 +27,11 @@ const entry = (ref: string, extra: Record<string, unknown> = {}): AgentEntry => 
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('createAgent', () => {
-  it('starts with an empty frozen snapshot and exports only createAgent', async () => {
+  it('starts with an empty frozen snapshot and exports only createAgent and registerTools', async () => {
     const agent = createAgent();
     expect(agent.snapshot()).toEqual([]);
     expect(Object.isFrozen(agent.snapshot())).toBe(true);
-    expect(Object.keys(await import('@cloudlet/agent'))).toEqual(['createAgent']);
+    expect(Object.keys(await import('@cloudlet/agent'))).toEqual(['createAgent', 'registerTools']);
   });
 
   it('lists the records of every component in connection order', () => {

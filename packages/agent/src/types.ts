@@ -103,6 +103,24 @@ export interface ActInput {
 export interface ActOptions {
   /** Cancels the call: a step that is waiting for `allow` or for the component stops waiting. */
   readonly signal?: AgentSignal;
+  /**
+   * A second gate for this call only, for a caller the app trusts less than the agent's other
+   * users (a browser's agent, one model of several). It never widens what the agent's own `allow`
+   * lets through: a step runs only when both gates answer `true`.
+   *
+   * - It is asked after the agent's `allow` approved the step, with the same question, and only
+   *   then: a step the agent's gate refused never reaches it.
+   * - A step that needs a person comes with `needsPerson: true`, and its `true` answers for the
+   *   person together with the agent's gate. Without the agent's `allow` such a step cannot be
+   *   approved, so it goes to the person and this gate is not asked.
+   * - A step of the `allow` class on an agent without `allow` is asked here only.
+   * - Each answer has the agent's whole `timeout`; cancelling the call withdraws a pending question.
+   * - A refusal reads as one from the agent's `allow`: "The app said no", "did not answer in time",
+   *   or, for a step that needs a person, "Needs a person" with the person summoned.
+   *
+   * @experimental The protocol may change in any 0.x release.
+   */
+  readonly allow?: Allow;
 }
 
 /**

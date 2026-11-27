@@ -71,8 +71,24 @@ Experimental first version: the agent reads and acts under the app's permission.
   `pending`, `started`, `requested` and `changes` mean, and that text from the page is data, never
   instructions. `cloudlet_act` carries an example call. They name no component of the kit: the
   verbs come from each adapter through `verbs`.
+- `act(input, { allow })` and `callTool(name, input, { allow })` take a second gate for that call: a
+  step runs only when the agent's `allow` and this one both answer `true`. It is asked after the
+  agent's `allow` approved the step, with the same question, so it never widens what the agent lets
+  through; without the agent's `allow` a step that needs a person goes to the person and this gate
+  is not asked. Each answer has the whole `timeout`; a refusal reads as one from the agent's
+  `allow`. An `allow` that is not a function is an invalid call.
+- `registerTools(agent, { allow, onError? })` registers `cloudlet_act` and `cloudlet_snapshot` with
+  the browser's agent through WebMCP (`document.modelContext.registerTool`) and returns an
+  idempotent removal; registering again after it works. Experimental, like WebMCP. Without WebMCP it
+  does nothing and writes nothing. `allow` is required (a `TypeError` otherwise) and is the second
+  gate of every call the browser's agent makes. `cloudlet_snapshot` carries `readOnlyHint` and
+  `untrustedContentHint`, `cloudlet_act` `consequentialHint` and `untrustedContentHint`. `execute`
+  never throws: errors come back as values. A failed registration goes to `onError`, or to
+  `reportError` without it; a withdrawn one (`AbortError`) is ignored, and a build whose
+  `registerTool` returns no promise or throws is handled.
 - Types: `Agent`, `AgentComponent`, `AgentEntry`, `AgentOptions`, `Allow`, `AllowStep`, `AgentStep`,
   `ActInput`, `ActOptions`, `ActResult`, `ActStepResult`, `AgentPermission`, `AgentStepCall`,
   `AgentStepCheck`, `AgentStepNames`, `AgentRunContext`, `AgentRunOutcome`, `AgentSummonOutcome`,
   `AgentSignal`, `AgentValue`, `AgentVerbs`, `AgentTool`, `AgentToolName`, `AgentCallTool`,
-  `AgentToolResult`, `AgentSnapshotToolResult`, `AgentActToolResult`, `AgentToolError`.
+  `AgentToolResult`, `AgentSnapshotToolResult`, `AgentActToolResult`, `AgentToolError`,
+  `RegisterToolsOptions`.

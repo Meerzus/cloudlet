@@ -1,6 +1,6 @@
 import type {
   ActResult, ActStepResult, AgentComponent, AgentEntry, AgentRunOutcome, AgentSignal, AgentStepCall,
-  AgentStepCheck, AgentStepNames, AgentValue, Allow,
+  AgentStepCheck, AgentStepNames, AgentValue, Allow, AllowStep,
 } from './types.js';
 import { MOST_STEPS } from './tools.js';
 
@@ -37,7 +37,7 @@ export function failed(step: number, message: string, done: readonly ActStepResu
 
 const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 
-function isSignal(value: unknown): value is AgentSignal {
+export function isSignal(value: unknown): value is AgentSignal {
   return value !== null && typeof value === 'object' && typeof (value as AgentSignal).aborted === 'boolean'
     && typeof (value as AgentSignal).addEventListener === 'function'
     && typeof (value as AgentSignal).removeEventListener === 'function';
@@ -50,7 +50,11 @@ const ARGS = 'arguments go in "args" as a list, like "args": ["<first>", "<secon
  * Checks the whole call before anything runs, and copies what it reads once. Each message says what
  * to change, for a model that sends the call again without a person's help.
  */
-export function parseCall(input: unknown, options: unknown): { readonly steps: readonly AgentStepCall[]; readonly signal: AgentSignal | undefined } | Failure {
+export function parseCall(input: unknown, options: unknown): {
+  readonly steps: readonly AgentStepCall[];
+  readonly signal: AgentSignal | undefined;
+  readonly allow: Allow | undefined;
+} | Failure {
   const invalid = (step: number, problem: string): Failure => ({ step, message: `Invalid call: ${problem}. No step ran.` });
   if (Array.isArray(input)) return invalid(0, `expected an object with steps, not a bare list: ${SHAPE}`);
   if (!isObject(input)) return invalid(0, `expected an object with steps: ${SHAPE}`);
@@ -92,7 +96,9 @@ export function parseCall(input: unknown, options: unknown): { readonly steps: r
   if (options !== undefined && !isObject(options)) return invalid(0, 'options must be an object');
   const signal = options?.signal;
   if (signal !== undefined && !isSignal(signal)) return invalid(0, 'options.signal must be an AbortSignal');
-  return { steps: freeze(steps), signal };
+  const allow = options?.allow;
+  if (allow !== undefined && typeof allow !== 'function') return invalid(0, 'options.allow must be a function');
+  return { steps: freeze(steps), signal, allow: allow as Allow | undefined };
 }
 
 type Settled<T> =
@@ -198,14 +204,21 @@ export function cancelledBefore(step: AgentStepCall): string {
   return texts.cancelledBefore(step);
 }
 
+/** What one call brings besides its steps: its cancellation and its own gate. */
+export interface CallContext {
+  readonly signal: AgentSignal | undefined;
+  /** The call's `allow`, asked after the agent's: it can only narrow what the agent's gate lets through. */
+  readonly allow: Allow | undefined;
+}
+
 /** Runs one call's steps in order; the caller makes sure calls never overlap. Never rejects. */
-export async function runSteps(steps: readonly AgentStepCall[], signal: AgentSignal | undefined, env: ActEnvironment): Promise<ActResult> {
+export async function runSteps(steps: readonly AgentStepCall[], call: CallContext, env: ActEnvironment): Promise<ActResult> {
   const done: ActStepResult[] = [];
   for (let index = 0; index < steps.length; index++) {
     const step = steps[index]!;
     let message: string | undefined;
     try {
-      message = await runStep(step, signal, env, (result) => {
+      message = await runStep(step, call, env, (result) => {
         done.push(freeze({ step: index, ref: step.ref, ...result }));
       });
     } catch (error) {
@@ -220,8 +233,49 @@ export async function runSteps(steps: readonly AgentStepCall[], signal: AgentSig
 
 type Done = { result?: AgentValue; gone?: true };
 
+/**
+ * The gates a step passes, in order: the agent's `allow`, then the call's. A step runs only when
+ * every gate there is answered `true`; the first refusal ends the questions. Without the agent's
+ * gate a step that needs a person cannot be approved, so it goes to the person and the call's gate
+ * is not asked: a call's gate narrows what the agent lets through and never widens it.
+ */
+type Approval =
+  | { readonly kind: 'approved' }
+  | { readonly kind: 'refused'; readonly asked: boolean; readonly timedOut: boolean }
+  | { readonly kind: 'cancelled' }
+  | { readonly kind: 'gone' };
+
+const APPROVED: Approval = freeze({ kind: 'approved' });
+const NOBODY_ASKED: Approval = freeze({ kind: 'refused', asked: false, timedOut: false });
+
+/** Answers at once when no gate is asked, so `run` starts in the same tick as `check`. */
+function approve(
+  step: AgentStepCall, needsPerson: boolean, call: CallContext, env: ActEnvironment, live: () => boolean,
+): Approval | Promise<Approval> {
+  const gates: Allow[] = [];
+  if (env.allow) gates.push(env.allow);
+  else if (needsPerson) return NOBODY_ASKED;
+  if (call.allow) gates.push(call.allow);
+  if (gates.length === 0) return APPROVED;
+  return ask(gates, freeze({ ref: step.ref, action: step.action, args: step.args, needsPerson }), call, env, live);
+}
+
+// Both gates read the same frozen question: what the call's gate approves is what the agent's did.
+async function ask(gates: readonly Allow[], question: AllowStep, call: CallContext, env: ActEnvironment, live: () => boolean): Promise<Approval> {
+  for (const gate of gates) {
+    // Each answer has the whole timeout: a person may be the one answering the second question.
+    const answer = await wait((own) => gate(question, freeze({ signal: own })), call.signal, env.timeout);
+    if (answer.kind === 'cancelled' || call.signal?.aborted) return { kind: 'cancelled' };
+    if (answer.kind === 'error') env.report(answer.error);
+    if (!live()) return { kind: 'gone' };
+    if (answer.kind !== 'value' || answer.value !== true) return { kind: 'refused', asked: true, timedOut: answer.kind === 'timeout' };
+  }
+  return APPROVED;
+}
+
 /** Returns the error message, or undefined after reporting the step as done. */
-async function runStep(step: AgentStepCall, signal: AgentSignal | undefined, env: ActEnvironment, succeed: (result: Done) => void): Promise<string | undefined> {
+async function runStep(step: AgentStepCall, call: CallContext, env: ActEnvironment, succeed: (result: Done) => void): Promise<string | undefined> {
+  const { signal } = call;
   if (signal?.aborted) return texts.cancelledBefore(step);
   const located = env.locate(step.ref);
   if (!located.found) return texts.noEntry(step.ref, env.refs());
@@ -242,22 +296,15 @@ async function runStep(step: AgentStepCall, signal: AgentSignal | undefined, env
   }
   const needsPerson = permission === 'confirm';
 
-  let approved = !needsPerson;
-  let timedOut = false;
-  const { allow } = env;
-  if (allow) {
-    const question = freeze({ ref: step.ref, action: step.action, args: step.args, needsPerson });
-    const answer = await wait((own) => allow(question, freeze({ signal: own })), signal, env.timeout);
-    if (answer.kind === 'cancelled' || signal?.aborted) return texts.cancelledBefore(step);
-    if (answer.kind === 'error') env.report(answer.error);
-    timedOut = answer.kind === 'timeout';
-    approved = answer.kind === 'value' && answer.value === true;
-    if (!live()) return texts.noEntry(step.ref, env.refs());
-  }
-  if (!approved) {
+  const pending = approve(step, needsPerson, call, env, live);
+  const approval = pending instanceof Promise ? await pending : pending;
+  if (approval.kind === 'cancelled') return texts.cancelledBefore(step);
+  if (approval.kind === 'gone') return texts.noEntry(step.ref, env.refs());
+  if (approval.kind === 'refused') {
+    const { asked, timedOut } = approval;
     if (!needsPerson) return timedOut ? texts.noAnswer(step) : texts.saidNo(step);
     // The wait may have been long: the handoff names what the person will find now, not what was there.
-    if (allow) {
+    if (asked) {
       let fresh: AgentStepCheck;
       try { fresh = check.call(component, step); } catch (error) { env.report(error); return texts.broken(step); }
       if (!isObject(fresh)) { env.report(new TypeError('check() must return an object')); return texts.broken(step); }

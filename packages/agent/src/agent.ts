@@ -240,7 +240,7 @@ export function createAgent(options?: AgentOptions): Agent {
     // A getter on the input may throw: that is an invalid call, not a rejection.
     try { call = parseCall(input, actOptions); } catch { return Promise.resolve(failed(0, 'Invalid call: its input could not be read. No step ran.')); }
     if (!('steps' in call)) return Promise.resolve(failed(call.step, call.message));
-    const { steps, signal } = call;
+    const { steps, signal, allow: gate } = call;
     // The components this call could have read its refs from. One connected later may hand out the
     // same ref for another record (a recreated adapter counts from one again), so the call does not see it.
     const known = new Set(connections.values());
@@ -258,7 +258,7 @@ export function createAgent(options?: AgentOptions): Agent {
         started = true;
         signal?.removeEventListener('abort', cancel);
         watch?.start();
-        try { return await runSteps(steps, signal, own); } finally { watch?.stop(); }
+        try { return await runSteps(steps, { signal, allow: gate }, own); } finally { watch?.stop(); }
       }).catch((error: unknown) => {
         // Unreachable unless the bridge itself is broken; the call still settles.
         note(error);
