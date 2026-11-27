@@ -19,7 +19,7 @@ describe('attention automaton', () => {
     clock.advanceBy(599);
     expect(controller.getSnapshot().island.open).toBe(false);
     clock.advanceBy(1);
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: initiator });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: initiator, source: 'system' });
     expect(bridge.getSnapshot().focusRequest).toBeNull();
     expect(clock.pendingCount).toBe(0);
   });
@@ -37,7 +37,7 @@ describe('attention automaton', () => {
     const handle = admit(controller, spec('candidate', extra));
     clock.advanceBy(10_000);
     expect(controller.getSnapshot().island).toEqual(opens
-      ? { open: true, reason: 'attention', current: handle } : { open: false, reason: null, current: null });
+      ? { open: true, reason: 'attention', current: handle, source: 'system' } : { open: false, reason: null, current: null, source: null });
   });
 
   it.each(['hover', 'focus'] as const)('waits for host %s to end, then restarts the delay', (reason) => {
@@ -66,7 +66,7 @@ describe('attention automaton', () => {
     expect(controller.getSnapshot().island.current).toBe(viewed);
     bridge.setPause(lease, { scope: 'notification', handle: viewed, reason: 'gesture', active: false });
     clock.advanceBy(600);
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: initiator });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: initiator, source: 'system' });
   });
 
   it('restarts the delay on Island navigation and drops the candidate reached by hand', () => {
@@ -84,7 +84,7 @@ describe('attention automaton', () => {
     clock.advanceBy(599);
     expect(controller.getSnapshot().island.current).toBe(second);
     clock.advanceBy(1);
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: initiator });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: initiator, source: 'system' });
     const later = admit(controller, spec('later', { action }));
     bridge.navigate(lease, later);
     bridge.navigate(lease, first);
@@ -147,7 +147,7 @@ describe('attention automaton', () => {
     const initiator = admit(controller, spec('initiator', { attention: 'open' }));
     expect(controller.getSnapshot().island.current).toBe(viewed);
     clock.advanceBy(600);
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: initiator });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: initiator, source: 'system' });
   });
 
   it('waits without a timer until a host attaches, then delays from attachment', () => {
@@ -212,7 +212,7 @@ describe('attention automaton', () => {
     await expect(failed.result).rejects.toThrow('Offline');
     clock.advanceBy(600);
     if (failed.admission.status !== 'created') throw new Error('Admission failed');
-    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: failed.admission.handle });
+    expect(controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: failed.admission.handle, source: 'system' });
   });
 
   it('ignores a cancelled timer callback delivered late by the platform', () => {

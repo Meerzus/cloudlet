@@ -470,7 +470,7 @@ describe('the agent draft in the open Island', () => {
     expect(error(result)).toBe(`Needs a person: "Send" on "${TITLE}". The Island is open on it. Ask them to submit "Send" themselves. Step 0 stayed done.`);
     expect(result.steps).toEqual([{ step: 0, ref: t.entry().ref }]);
     expect(run).not.toHaveBeenCalled();
-    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: handle });
+    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: handle, source: 'user' });
     expect(t.values(handle)?.reply).toBe('Agent reply');
     expect(t.focusRequests).toEqual([]);
   });
@@ -480,7 +480,7 @@ describe('the agent draft in the open Island', () => {
     const handle = admit(t.controller, quiet('anna', { title: TITLE, action: form() }));
     const result = await t.act(['fill', ['reply', 'Agent reply']], ['submit']);
     expect(error(result)).toBe(`Needs a person: "Send" on "${TITLE}". The Island is open on it. Ask them to submit "Send" themselves. Step 0 stayed done.`);
-    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: handle });
+    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: handle, source: 'agent' });
     expect(t.focusRequests).toEqual([]);
   });
 

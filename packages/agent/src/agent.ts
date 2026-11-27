@@ -1,5 +1,5 @@
-import { cancelledBefore, failed, parseCall, runSteps, type ActEnvironment, type Located } from './act.js';
-import type { ActResult, Agent, AgentComponent, AgentEntry, AgentOptions } from './types.js';
+import { cancelledBefore, cloneValue, failed, parseCall, runSteps, type ActEnvironment, type Located } from './act.js';
+import type { ActResult, Agent, AgentChange, AgentComponent, AgentEntry, AgentOptions } from './types.js';
 
 const NAME = /^[a-z][a-z0-9-]*$/;
 const DEFAULT_TIMEOUT = 300_000;
@@ -28,6 +28,52 @@ function note(error: unknown): void {
     if (typeof document === 'object' && typeof reportError === 'function') reportError(error);
     else if (typeof console === 'object') console.error(error);
   } catch { /* A broken error channel must not break the call. */ }
+}
+
+const NO_CHANGES: readonly AgentChange[] = Object.freeze([]);
+// One commit of a component changes a handful of records; a longer list is a broken component.
+const MOST_CHANGES = 1_000;
+const SOURCES: readonly unknown[] = ['user', 'agent', 'app', 'system'];
+const optionalText = (value: unknown): value is string | undefined => value === undefined || typeof value === 'string';
+
+/**
+ * Copies what a component said about a change: each record is rebuilt from its known keys and
+ * frozen, so a listener holds plain data the component cannot alter later. A record of another
+ * shape is left out and reported; the rest still reach the listeners.
+ */
+function readChanges(name: string, input: unknown): readonly AgentChange[] {
+  if (input === undefined) return NO_CHANGES;
+  const changes: AgentChange[] = [];
+  try {
+    if (!Array.isArray(input)) throw new TypeError(`Component "${name}" reported changes that are not an array`);
+    // Read once: a getter of a record could grow the array while it is being walked.
+    const count = input.length;
+    if (count > MOST_CHANGES) throw new TypeError(`Component "${name}" reported more than ${MOST_CHANGES} changes at once`);
+    for (let index = 0; index < count; index += 1) {
+      try {
+        // A hole would read whatever the prototype holds at that index.
+        const item: unknown = Object.hasOwn(input, index) ? input[index] : undefined;
+        if (item === null || typeof item !== 'object') throw new TypeError('not an object');
+        const { ref, component, label, key, value, previous, reason, source } = item as Record<string, unknown>;
+        if (typeof ref !== 'string' || typeof component !== 'string' || typeof key !== 'string'
+          || !optionalText(label) || !optionalText(reason) || !SOURCES.includes(source)) throw new TypeError('a field is missing or of another type');
+        changes.push(Object.freeze({
+          ref, component, ...(label === undefined ? {} : { label }), key,
+          value: cloneValue(value), previous: cloneValue(previous),
+          ...(reason === undefined ? {} : { reason }), source: source as AgentChange['source'],
+        }));
+      } catch (error) {
+        // What was thrown may not turn into text at all.
+        let why = 'reading it failed';
+        try { if (error instanceof Error) why = error.message; } catch { /* Keeps the default. */ }
+        note(new TypeError(`Component "${name}" reported a change of an unknown shape at index ${index}: ${why}`));
+      }
+    }
+  } catch (error) {
+    // Reading the array itself failed: the listeners still hear that something changed.
+    note(error);
+  }
+  return changes.length ? Object.freeze(changes) : NO_CHANGES;
 }
 
 interface Connection {
@@ -76,16 +122,16 @@ export function createAgent(options?: AgentOptions): Agent {
   const { allow, timeout } = readOptions(options);
   // A Map keeps insertion order, which is the snapshot's order.
   const connections = new Map<string, Connection>();
-  const listeners = new Set<() => void>();
+  const listeners = new Set<(changes: readonly AgentChange[]) => void>();
   let cached: readonly AgentEntry[] | undefined;
   // The end of the last queued call: calls run one at a time, in the order they were made.
   let queue: Promise<unknown> = Promise.resolve();
 
-  function changed(): void {
+  function changed(changes: readonly AgentChange[] = NO_CHANGES): void {
     cached = undefined;
     for (const listener of [...listeners]) {
       if (!listeners.has(listener)) continue;
-      try { listener(); } catch (error) { report(error); }
+      try { listener(changes); } catch (error) { report(error); }
     }
   }
 
@@ -93,9 +139,9 @@ export function createAgent(options?: AgentOptions): Agent {
     validate(component, connections);
     const { name } = component;
     let connection: Connection | undefined;
-    const unsubscribe = component.subscribe(() => {
+    const unsubscribe = component.subscribe((changes) => {
       // A late call from a component that was already disconnected changes nothing.
-      if (connection && connections.get(name) === connection) changed();
+      if (connection && connections.get(name) === connection) changed(readChanges(name, changes));
     });
     connection = { component, unsubscribe };
     connections.set(name, connection);
@@ -119,7 +165,7 @@ export function createAgent(options?: AgentOptions): Agent {
   };
 
   const subscribe: Agent['subscribe'] = (listener) => {
-    const own = (): void => { listener(); };
+    const own = (changes: readonly AgentChange[]): void => { listener(changes); };
     listeners.add(own);
     return () => { listeners.delete(own); };
   };

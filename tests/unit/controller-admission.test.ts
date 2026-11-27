@@ -62,7 +62,7 @@ describe('controller admission and identity', () => {
     acknowledge(bridge, lease, first);
     clock.advanceBy(3_000);
     expect(controller.getHandle(first.id)).toBeUndefined();
-    expect(originalClose).toHaveBeenCalledExactlyOnceWith({ handle: first, reason: 'timeout' });
+    expect(originalClose).toHaveBeenCalledExactlyOnceWith({ handle: first, reason: 'timeout', source: 'system' });
     expect(ignoredClose).not.toHaveBeenCalled();
     const reused = admit(controller, { title: 'New generation for freed key', dedupeKey: 'job' });
     expect(reused.generation).not.toBe(first.generation);

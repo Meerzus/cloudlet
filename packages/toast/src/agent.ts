@@ -1,10 +1,11 @@
 import type { CloudletController } from './contracts/controller.js';
+import type { ChangeSource } from './contracts/events.js';
 import type { NotificationHandle } from './contracts/identity.js';
 import type { FormErrors } from './contracts/internal.js';
 import type { CommandAction, FormAction, FormFieldKind, FormInputMode, NotificationKind, Priority } from './contracts/notifications.js';
 import type { CancellationSignal, OperationStatus } from './contracts/operations.js';
 import type { NotificationLocation, NotificationSnapshot, PauseReason } from './contracts/snapshots.js';
-import { createToasterPort, type FormReading, type ToasterReading } from './core/agent-port.js';
+import { createToasterPort, type FormReading, type PortCommit, type ToasterReading } from './core/agent-port.js';
 
 // The Toaster's side of the agent bridge. Its protocol types are declared here structurally:
 // this package never imports the bridge package, not even its types.
@@ -107,6 +108,23 @@ export type AgentRunOutcomeShape =
 export type AgentSummonOutcomeShape = boolean | { readonly reached: boolean; readonly note: string };
 
 /**
+ * One change a component reports to the bridge's subscribers: what changed on which record and who
+ * changed it.
+ *
+ * @experimental The protocol may change before the bridge reaches 1.0.
+ */
+export interface AgentChangeShape {
+  readonly ref: string;
+  readonly component: string;
+  readonly label?: string;
+  readonly key: string;
+  readonly value: AgentValueShape;
+  readonly previous: AgentValueShape;
+  readonly reason?: string;
+  readonly source: 'user' | 'agent' | 'app' | 'system';
+}
+
+/**
  * What a component hands to the bridge's `connect`. `check` and `run` come together, `summon` is
  * optional, and a read-only component leaves all three out.
  *
@@ -116,7 +134,7 @@ export interface AgentComponentShape<Entry extends AgentEntryShape = AgentEntryS
   readonly protocol: 1;
   readonly name: string;
   snapshot(): readonly Entry[];
-  subscribe(listener: () => void): () => void;
+  subscribe(listener: (changes?: readonly AgentChangeShape[]) => void): () => void;
   readonly check?: (step: AgentStepCallShape) => AgentStepCheckShape;
   readonly run?: (step: AgentStepCallShape, context: AgentRunContextShape) => AgentRunOutcomeShape | PromiseLike<AgentRunOutcomeShape>;
   readonly summon?: (step: AgentStepCallShape) => AgentSummonOutcomeShape;
@@ -253,6 +271,18 @@ export type ToasterAgentEntry = ToasterEntry | NotificationEntry;
 export interface ToasterAgent extends AgentComponentShape<ToasterAgentEntry> {
   /** The same frozen array until the controller changes; empty after `dispose`. */
   snapshot(): readonly ToasterAgentEntry[];
+  /**
+   * Calls `listener` after every change of the controller with what changed and who changed it.
+   * On a notification's record: `present` (`true` when it appears, `false` when it closes, with
+   * the close reason in `reason`), `content` (the app updated it; both values are null), `action`
+   * (`idle`, `pending`, `failed`), `operation` (`pending`, `cancel-requested`, `fulfilled`,
+   * `rejected`, `cancelled`) and `field:<name>` (who wrote the form field last: `app`, `user`,
+   * `agent` or null; only when the author changes, and never the text). On the Toaster's record:
+   * `island` (the `ref` of the notification it shows, or null) and `overflow` (the missed count
+   * after it was acknowledged). `label` is the notification's title. The array is empty when the
+   * snapshot changed with no author, such as a pause.
+   */
+  subscribe(listener: (changes?: readonly AgentChangeShape[]) => void): () => void;
   /** Whether a step is available now and the class it needs; no side effects. */
   readonly check: (step: AgentStepCallShape) => AgentStepCheckShape;
   /** Reads the controller again and runs the step, unless it changed since it was approved. */
@@ -323,6 +353,7 @@ type Plan =
     readonly perform: (context: AgentRunContextShape) => AgentRunOutcomeShape | Promise<AgentRunOutcomeShape>;
   };
 
+const NO_AUTHORS: FormReading['authors'] = new Map();
 const NOT_AVAILABLE: Plan = freeze({ available: false });
 const refuse = (message: string): Plan => freeze({ available: false, message });
 const allowed = (perform: () => AgentRunOutcomeShape): Plan => freeze({ available: true, permission: 'allow', perform });
@@ -366,6 +397,19 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     if (ref === undefined) refs.set(handle, ref = `${name}:${++issued}`);
     return ref;
   };
+  // What the last change records said about each open notification, kept while someone listens.
+  type Known = {
+    label: string | undefined;
+    action: 'idle' | 'pending' | 'failed';
+    operation: { readonly token: string; value: string } | null;
+    authors: FormReading['authors'];
+  };
+  const known = new Map<NotificationHandle, Known>();
+  let islandRef: string | null = null;
+  // The revision `known` was read at; a commit up to it is already in there.
+  let seeded = 0;
+  const listeners = new Set<(changes?: readonly AgentChangeShape[]) => void>();
+  let stop: (() => void) | undefined;
   let source: ToasterReading<Slot> | undefined;
   let entries: readonly ToasterAgentEntry[] = EMPTY;
   // The notifications of the current snapshot by ref, for steps.
@@ -562,7 +606,158 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     return freeze({ reached: true, note: result.status === 'waiting' ? texts.islandLater : texts.islandOpen });
   };
 
-  return freeze({ protocol: 1 as const, name, snapshot, subscribe: port.subscribe, check, run, summon });
+  /**
+   * The records of one committed change: its events in order, then what only the state shows (an
+   * action back to idle, a field's new author, the Island). A form's values are never read here.
+   */
+  const collect = (commit: PortCommit<Slot>): readonly AgentChangeShape[] => {
+    // The commit's own state, not the latest: a listener before this one may have committed again.
+    const state = commit.controller;
+    // Subscribed while this commit was still queued: what it did was read then.
+    if (state.revision <= seeded) return EMPTY;
+    const { events } = commit;
+    const live = new Map(state.notifications.map((item) => [item.handle, item] as const));
+    for (const [handle, entry] of known) {
+      const item = live.get(handle);
+      if (item) entry.label = item.content.title;
+    }
+    const changes: AgentChangeShape[] = [];
+    // Who changed a notification's content in this commit: the author of what follows from it.
+    const touched = new Map<NotificationHandle, ChangeSource>();
+    const push = (handle: NotificationHandle, key: string, value: AgentValueShape, previous: AgentValueShape, by: ChangeSource, reason?: string): void => {
+      const label = known.get(handle)?.label;
+      changes.push(freeze({
+        ref: refOf(handle), component: 'notification', ...(label === undefined ? {} : { label }), key, value, previous,
+        ...(reason === undefined ? {} : { reason }), source: by,
+      }));
+    };
+    for (const event of events) {
+      switch (event.type) {
+        case 'admitted': {
+          // The number is issued here, so a notification closed before anyone reads still has one.
+          refOf(event.handle);
+          known.set(event.handle, {
+            label: live.get(event.handle)?.content.title, action: 'idle', operation: null,
+            authors: commit.authors.get(event.handle) ?? NO_AUTHORS,
+          });
+          push(event.handle, 'present', true, false, event.source);
+          break;
+        }
+        case 'closed':
+          push(event.handle, 'present', false, true, event.source, event.reason);
+          known.delete(event.handle);
+          break;
+        case 'updated':
+          touched.set(event.handle, event.source);
+          push(event.handle, 'content', null, null, event.source);
+          break;
+        case 'action-started':
+        case 'action-failed': {
+          const entry = known.get(event.handle);
+          if (!entry) break;
+          const next = event.type === 'action-started' ? 'pending' : 'failed';
+          push(event.handle, 'action', next, entry.action, event.source);
+          entry.action = next;
+          break;
+        }
+        case 'operation-started': {
+          const entry = event.handle && known.get(event.handle);
+          if (!entry) break;
+          touched.set(event.handle!, event.source);
+          push(event.handle!, 'operation', 'pending', entry.operation?.value ?? null, event.source);
+          entry.operation = { token: event.token, value: 'pending' };
+          break;
+        }
+        case 'cancellation-requested':
+        case 'operation-settled': {
+          const entry = event.handle && known.get(event.handle);
+          // An attempt that a newer one replaced no longer speaks for the notification.
+          if (!entry || entry.operation?.token !== event.token) break;
+          if (event.type === 'operation-settled') touched.set(event.handle!, event.source);
+          const next = event.type === 'operation-settled' ? event.status : 'cancel-requested';
+          push(event.handle!, 'operation', next, entry.operation.value, event.source);
+          entry.operation.value = next;
+          break;
+        }
+        case 'overflow-acknowledged':
+          changes.push(freeze({ ref: name, component: 'toaster', key: 'overflow', value: 0, previous: event.count, source: event.source }));
+          break;
+      }
+    }
+    for (const [handle, entry] of known) {
+      // A notification missing here closed in a later commit; its own records follow.
+      const item = live.get(handle);
+      if (!item) continue;
+      const by = touched.get(handle);
+      if (item.action.status === 'idle' && entry.action !== 'idle') {
+        push(handle, 'action', 'idle', entry.action, by ?? 'system');
+        entry.action = 'idle';
+      }
+      const authors = commit.authors.get(handle) ?? NO_AUTHORS;
+      if (authors !== entry.authors) {
+        // In the form's own order; a field of the form that was replaced comes after them.
+        const action = item.content.action;
+        const names = action?.kind === 'form' ? action.fields.map((field) => field.name) : [];
+        for (const field of new Set([...names, ...entry.authors.keys(), ...authors.keys()])) {
+          const next = authors.get(field) ?? null;
+          const previous = entry.authors.get(field) ?? null;
+          // A new author is the source; a field emptied with its form was replaced by the app.
+          if (next !== previous) push(handle, `field:${field}`, next, previous, next ?? by ?? 'app');
+        }
+        entry.authors = authors;
+      }
+    }
+    const current = state.island.current ? refOf(state.island.current) : null;
+    if (current !== islandRef) {
+      changes.push(freeze({
+        ref: name, component: 'toaster', key: 'island', value: current, previous: islandRef,
+        source: state.island.source ?? commit.closedBy ?? 'system',
+      }));
+      islandRef = current;
+    }
+    return freeze(changes);
+  };
+
+  const subscribe = (listener: (changes?: readonly AgentChangeShape[]) => void): (() => void) => {
+    // The same function may subscribe twice; each subscription is removed on its own.
+    const own = (changes?: readonly AgentChangeShape[]): void => { listener(changes); };
+    if (!listeners.size) {
+      // Refs of what is already there are issued as a snapshot does, top first.
+      snapshot();
+      const reading = port.read();
+      const state = reading.controller;
+      known.clear();
+      for (const item of state.notifications) {
+        const operation = item.operation;
+        known.set(item.handle, {
+          label: item.content.title, action: item.action.status,
+          operation: operation ? { token: operation.token, value: operation.status === 'pending' && operation.cancelRequested ? 'cancel-requested' : operation.status } : null,
+          authors: reading.forms.get(item.handle)?.authors ?? NO_AUTHORS,
+        });
+      }
+      islandRef = state.island.current ? refOf(state.island.current) : null;
+      seeded = state.revision;
+      stop = port.subscribe((commit) => {
+        const changes = collect(commit);
+        // Every listener hears the change; the first error goes on to the controller's diagnostics.
+        let failure: { readonly error: unknown } | undefined;
+        for (const each of [...listeners]) {
+          if (!listeners.has(each)) continue;
+          try { each(changes); } catch (error) { failure ??= { error }; }
+        }
+        if (failure) throw failure.error;
+      });
+    }
+    listeners.add(own);
+    return () => {
+      if (!listeners.delete(own) || listeners.size) return;
+      stop?.();
+      stop = undefined;
+      known.clear();
+    };
+  };
+
+  return freeze({ protocol: 1 as const, name, snapshot, subscribe, check, run, summon });
 }
 
 /**

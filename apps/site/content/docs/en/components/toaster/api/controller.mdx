@@ -41,7 +41,7 @@ The controller is what `createCloudlet()` and `useCloudlet()` return. Its type i
 | `duration` | `Duration` | by kind | Readable milliseconds ≥ 0, or `null` to stay until closed. By default passive `info` and `success` get 6000 ms; `loading`, `warning`, `error` and any notification with an action stay. |
 | `attention` | `Attention` | `'auto'` | Whether it opens the Island: `'auto'` for an action, a failed retryable operation or a description; `'open'` always; `'stack'` never. |
 | `dedupeKey` | `string` | — | Another live notification with the same key is not added again: its `occurrences` grows instead. |
-| `onClose` | `(notice: CloseNotice) => void` | — | Called once when the notification closes, with the reason. |
+| `onClose` | `(notice: CloseNotice) => void` | — | Called once when the notification closes, with the reason and who closed it. |
 
 With `exactOptionalPropertyTypes`, leave a field out rather than passing `undefined`.
 
@@ -290,7 +290,7 @@ export function NotificationCount() {
 | `disposed` | `boolean` | `true` after `dispose()`; the snapshot is then empty. |
 | `notifications` | `readonly NotificationSnapshot[]` | Every open notification in admission order, oldest first. |
 | `stack` | `readonly NotificationHandle[]` | The same notifications newest first; `stack[0]` is the collapsed pill. |
-| `island` | `IslandSnapshot` | `{ open, reason, current }`: `reason` is `'user'` or `'attention'` and `current` the visible slide, both `null` while collapsed. |
+| `island` | `IslandSnapshot` | `{ open, reason, current, source }`: `reason` is `'user'` or `'attention'`, `current` the visible slide and `source` the [`ChangeSource`](/docs/components/toaster/api/types#changesource) that opened the Island or changed its slide last; all three are `null` while collapsed. |
 | `overflow` | `OverflowSnapshot` | The missed count and whether it is unacknowledged. |
 
 Each `NotificationSnapshot` is described on [Types](/docs/components/toaster/api/types#notificationsnapshot).
@@ -317,6 +317,7 @@ Every `SemanticEvent` has the `EventBase` fields:
 | Field | Type | Description |
 |---|---|---|
 | `controller` | `ControllerIdentity` | The controller that emitted it. |
+| `source` | `ChangeSource` | Who caused it: `'user'`, `'agent'`, `'app'` or `'system'`; see [`ChangeSource`](/docs/components/toaster/api/types#changesource). |
 | `sequence` | `number` | A growing local number. |
 | `at` | `number` | Monotonic milliseconds, not wall-clock time. |
 

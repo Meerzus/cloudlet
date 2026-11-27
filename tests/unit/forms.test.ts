@@ -240,7 +240,7 @@ describe('form submits', () => {
     attempts[1]!.resolve();
     await flushActions();
     expect(controller.getHandle('anna')).toBeUndefined();
-    expect(closed).toHaveBeenCalledWith({ handle, reason: 'action-success' });
+    expect(closed).toHaveBeenCalledWith({ handle, reason: 'action-success', source: 'user' });
     expect(bridge.getSnapshot().forms).toEqual([]);
   });
 

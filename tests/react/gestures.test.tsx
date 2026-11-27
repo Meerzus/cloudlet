@@ -566,7 +566,7 @@ describe('attention while the user interacts', () => {
     act(() => { vi.advanceTimersByTime(299); });
     expect(instance.getSnapshot().island.open).toBe(false);
     act(() => { vi.advanceTimersByTime(1); });
-    expect(instance.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: candidate });
+    expect(instance.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: candidate, source: 'system' });
     expect(application).toHaveFocus();
     application.remove();
   });

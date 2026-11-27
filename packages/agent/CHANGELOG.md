@@ -14,6 +14,14 @@ Experimental first version: the agent reads and acts under the app's permission.
   frozen array that stays the same until something changes.
 - `agent.subscribe(listener)` calls the listener on any change, connection or disconnection. One
   listener's error does not stop the others.
+- The listener of `agent.subscribe` receives what changed and who changed it: a frozen array of
+  `AgentChange` records `{ ref, component, label?, key, value, previous, reason?, source }`, where
+  `source` is `user`, `agent`, `app` or `system`. A component passes the records to the listener it
+  was given in `subscribe`; the array is empty when it passed none, on a connection and on a
+  disconnection. Each record is copied from its known keys and frozen; one of another shape is left
+  out and reported through `reportError` or `console.error`, and the rest still arrive; a list of
+  more than 1 000 records is refused whole. A listener
+  without parameters works as before, and so does a component that calls its listener with nothing.
 - `createAgent({ allow?, timeout? })`: `allow(step, { signal })` is asked before every step a
   component did not deny and approves only with `true`; `timeout` (default 300 000 ms) bounds the
   wait for `allow` and then for the component. Anything else throws a `TypeError`.

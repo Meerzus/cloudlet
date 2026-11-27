@@ -3,6 +3,10 @@ import type { ReactNode } from 'react';
 import type {
   AdmissionResult,
   CancellationSignal,
+  ChangeSource,
+  CloseNotice,
+  IslandSnapshot,
+  SemanticEvent,
   CloudletMotionConstants,
   CloudletMotionOverrides,
   CloudletPart,
@@ -159,6 +163,28 @@ export function verifyRuntimeFactory(slot: ReactNode) {
   controller.dispose();
 }
 
+export function verifyChangeSource(factory: CreateCloudlet) {
+  const controller = factory();
+  // Every event says who caused it, without narrowing by `type`.
+  controller.onEvent((event: SemanticEvent) => {
+    const source: ChangeSource = event.source;
+    // @ts-expect-error There are four sources.
+    const other: ChangeSource = 'timer';
+    void [source, other];
+  });
+  controller.show({ title: 'Saved', onClose: (notice) => {
+    const source: 'user' | 'agent' | 'app' | 'system' = notice.source;
+    void source;
+  } });
+  const island: IslandSnapshot = controller.getSnapshot().island;
+  const opener: ChangeSource | null = island.source;
+  // @ts-expect-error A notice built by hand names its source.
+  const incomplete: CloseNotice = { handle: controller.getHandle('a')!, reason: 'timeout' };
+  // @ts-expect-error So does an Island snapshot.
+  const collapsed: IslandSnapshot = { open: false, reason: null, current: null };
+  void [opener, incomplete, collapsed];
+}
+
 export function verifyAgentSubpath() {
   const controller: ReactCloudletController = createCloudlet();
   const options: ToasterAgentOptions = { name: 'secondary' };
@@ -180,6 +206,11 @@ export function verifyAgentSubpath() {
     }
   }
   const unsubscribe: () => void = component.subscribe(() => undefined);
+  const stop: () => void = component.subscribe((changes) => {
+    const source: 'user' | 'agent' | 'app' | 'system' | undefined = changes?.[0]?.source;
+    void source;
+  });
+  void stop;
   void [projected, unsubscribe];
 }
 

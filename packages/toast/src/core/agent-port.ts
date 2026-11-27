@@ -1,9 +1,10 @@
+import type { ChangeSource } from '../contracts/events.js';
 import type { NotificationHandle } from '../contracts/identity.js';
 import type { FormErrors, RendererSnapshot } from '../contracts/internal.js';
 import type { CancellationSignal, CancelResult } from '../contracts/operations.js';
 import type { ControllerSnapshot } from '../contracts/snapshots.js';
 import { fillFormValue, invokeAction } from './actions.js';
-import { UNCHANGED, getControllerKernel, reject, type ControllerKernel, type FieldAuthor, type RecordState } from './controller.js';
+import { UNCHANGED, getControllerKernel, reject, type ControllerKernel, type EventPayload, type FieldAuthor, type RecordState } from './controller.js';
 
 // The agent adapter's way into a controller. Only the `agent` entry imports it, so the root entry
 // and the renderer chunk never carry it. It hands out no lease: a step that needs a screen only
@@ -32,6 +33,22 @@ export interface ToasterReading<Slot> {
   readonly forms: ReadonlyMap<NotificationHandle, FormReading>;
 }
 
+/** An event as the commit queued it: its type, source and fields, before it is stamped and delivered. */
+export type PortEvent = EventPayload;
+
+/**
+ * One committed change: its events and the state it left. A listener of an earlier commit may have
+ * committed again, so `read()` can be ahead of this state.
+ */
+export interface PortCommit<Slot> {
+  readonly events: readonly PortEvent[];
+  readonly controller: ControllerSnapshot<Slot>;
+  /** Who wrote each field of each form last; never a value. */
+  readonly authors: ReadonlyMap<NotificationHandle, ReadonlyMap<string, FieldAuthor>>;
+  /** Who closed the Island last; null before the first close. */
+  readonly closedBy: ChangeSource | null;
+}
+
 /** The grant a step was approved under; a marker stricter than it stops the step. */
 export type StepGrant = 'allow' | 'confirm';
 
@@ -55,7 +72,12 @@ export type PressOutcome =
 export interface ToasterPort<Slot> {
   /** The same object until the controller publishes again. */
   readonly read: () => ToasterReading<Slot>;
-  readonly subscribe: (listener: () => void) => () => void;
+  /**
+   * Calls `listener` after every committed change with that commit's events and state, so a reader
+   * learns what happened and who did it together with the new state. The controller delivers the
+   * events themselves only after its state listeners.
+   */
+  readonly subscribe: (listener: (commit: PortCommit<Slot>) => void) => () => void;
   /** Opens the Island on the top notification, unless a person is busy with the Toaster. */
   readonly open: () => Changed | Rejection<'disposed' | 'no-host' | 'empty' | 'busy'>;
   /** Collapses the Island, unless it holds a draft. */
@@ -112,7 +134,16 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
 
   return freeze<ToasterPort<Slot>>({
     read,
-    subscribe: k.subscribe,
+    subscribe: (listener) => k.subscribe(() => {
+      const commit = k.announced;
+      if (!commit) return;
+      listener({
+        events: commit.deliveries.filter((delivery): delivery is PortEvent => !('callback' in delivery)),
+        controller: commit.snapshot,
+        authors: new Map(commit.snapshot.forms.map((form) => [form.handle, new Map(Object.entries(form.authors))])),
+        closedBy: commit.closedBy,
+      });
+    }),
     open() {
       if (k.disposed) return reject('disposed');
       if (k.lease === null) return reject('no-host');
@@ -120,14 +151,14 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
       if (!record) return reject('empty');
       if (k.island) return UNCHANGED;
       if (k.interacting()) return reject('busy');
-      return k.mutate(() => { k.island = { reason: 'attention', current: record }; });
+      return k.mutate(() => { k.island = { reason: 'attention', current: record, source: 'agent' }; });
     },
     close() {
       if (k.disposed) return reject('disposed');
       if (!k.island) return UNCHANGED;
       // A person's Escape collapses an Island with a draft; an agent is not that person.
       if (k.dirty(k.island.current)) return reject('busy');
-      return k.mutate(() => { k.island = null; });
+      return k.mutate(() => { k.collapse('agent'); });
     },
     show: withRecord((record) => {
       if (k.lease === null) return reject('no-host');
@@ -135,17 +166,17 @@ export function createToasterPort<Slot>(controller: object): ToasterPort<Slot> {
       if (k.interacting()) return reject('busy');
       // Showing is navigation, as in the renderer: reaching the pending auto-open's record fulfils
       // it, and any other pending auto-open restarts its delay.
-      return k.mutate(() => k.reach(record));
+      return k.mutate(() => k.reach(record, 'agent'));
     }),
     summon: withRecord((record) => k.lease === null ? reject('no-host') : freeze({ status: k.summon(record) })),
-    dismiss: (handle) => k.dismiss(handle, 'programmatic'),
-    clear: () => k.clear('clear'),
-    acknowledge: () => k.acknowledgeOverflow(),
+    dismiss: (handle) => k.dismiss(handle, 'programmatic', 'agent'),
+    clear: () => k.clear('clear', 'agent'),
+    acknowledge: () => k.acknowledgeOverflow('agent'),
     // The current attempt's own capability: no token leaves the port.
-    cancel: withRecord((record) => record.operation ? record.operation.cancel() : reject('no-operation')),
+    cancel: withRecord((record) => record.operation ? record.operation.cancel(undefined, 'agent') : reject('no-operation')),
     retry: withRecord((record) => {
       if (!record.operation) return reject('no-operation');
-      const result = record.operation.retry();
+      const result = record.operation.retry('agent');
       return result.status === 'started' ? freeze({ status: 'started' as const }) : reject(result.reason);
     }),
     fill: withRecord((record, name: string, value: string) => fillFormValue(k, record, name, value)),
@@ -189,7 +220,7 @@ function press<Slot>(k: ControllerKernel<Slot>, record: RecordState<Slot>, grant
     });
     signal.addEventListener('abort', abort, { once: true });
     // Listeners first: the command may close or replace its notification synchronously.
-    const started = invokeAction(k, record);
+    const started = invokeAction(k, record, 'agent');
     if (started.status === 'invalid') { finish({ status: 'invalid', errors: started.errors }); return; }
     if (started.status !== 'started') {
       finish(started.reason === 'action-replaced' ? { status: 'replaced' } : { status: 'pending', gone: k.records.get(handle.id) !== record });

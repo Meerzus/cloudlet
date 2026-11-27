@@ -122,8 +122,8 @@ function wait<T>(work: (signal: AgentSignal) => T | PromiseLike<T>, outer: Agent
   });
 }
 
-/** Copies a step's result as plain data, so the call's result stays frozen and cloneable. */
-function cloneValue(value: unknown): AgentValue {
+/** Copies a value a component produced as plain data, frozen and cloneable; throws for anything else. */
+export function cloneValue(value: unknown): AgentValue {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
   // JSON turns NaN and the infinities into null, so they are not plain data here.
   if (typeof value === 'number' && Number.isFinite(value)) return value;

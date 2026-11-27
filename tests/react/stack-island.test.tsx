@@ -153,7 +153,7 @@ describe('Island', () => {
     expect(instance.getSnapshot().island.current).toBe(b);
     act(() => screen.getByRole('heading', { name: 'B' }).focus());
     await user.keyboard('{Escape}');
-    expect(instance.getSnapshot().island).toEqual({ open: false, reason: null, current: null });
+    expect(instance.getSnapshot().island).toEqual({ open: false, reason: null, current: null, source: null });
     expect(screen.getByRole('button', { name: 'C, 3 notifications' })).toHaveFocus();
   });
 
@@ -249,7 +249,7 @@ describe('Island', () => {
     act(() => { vi.advanceTimersByTime(249); });
     expect(instance.getSnapshot().island.open).toBe(false);
     act(() => { vi.advanceTimersByTime(1); });
-    expect(instance.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: handle });
+    expect(instance.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: handle, source: 'system' });
     expect(screen.getByRole('region', { name: 'Notifications' })).toHaveAttribute('data-island-reason', 'attention');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeVisible();
     expect(application).toHaveFocus();

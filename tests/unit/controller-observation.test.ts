@@ -41,7 +41,7 @@ describe('controller snapshots, events and renderer observations', () => {
     expect(controller.getSnapshot().notifications[0]?.content.title).toBe('New');
     expect(controller.getServerSnapshot()).toBe(server);
     expect(server).toEqual({ controller: null, revision: 0, disposed: false, notifications: [], stack: [],
-      island: { open: false, reason: null, current: null }, overflow: { count: 0, pending: false } });
+      island: { open: false, reason: null, current: null, source: null }, overflow: { count: 0, pending: false } });
     expect(getRendererBridge(controller)).toBe(bridge);
     expect(bridge.getSnapshot()).toBe(bridge.getSnapshot());
     expect(() => getRendererBridge({} as Core)).toThrow(TypeError);

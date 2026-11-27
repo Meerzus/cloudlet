@@ -93,6 +93,8 @@ export class LabSession {
     if (event.type === 'operation-settled') text += ` ${event.status} uiApplied=${event.uiApplied}`;
     if (event.type === 'closed') text += ` ${event.reason}`;
     if (event.type === 'diagnostic') text += ` ${event.diagnostic.code}`;
+    // Who caused it closes the line: user, agent, app or system.
+    text += ` · ${event.source}`;
     const entry = { sequence: ++this.serial, text };
     if (event.type === 'presented' || event.type === 'diagnostic') this.presentation = [...this.presentation, entry].slice(-LOG_LIMIT);
     else this.logical = [...this.logical, entry].slice(-LOG_LIMIT);

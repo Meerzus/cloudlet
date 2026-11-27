@@ -50,7 +50,7 @@ describe('Toaster steps', () => {
     attach(t.bridge);
     expect(t.toaster().actions).toContain('open');
     expect(done(await t.act('toaster', 'open'))).toEqual({ step: 0, ref: 'toaster' });
-    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: b });
+    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: b, source: 'agent' });
     expect(t.toaster().island.current).toBe(t.entry('b').ref);
     expect(error(await t.act('toaster', 'open'))).toBe('"open" is not available on "toaster" now. Available: close, clear.');
   });
@@ -112,13 +112,13 @@ describe('notification steps', () => {
     const a = admit(t.controller, quiet('a'));
     const b = admit(t.controller, quiet('b'));
     expect(done(await t.act(t.entry('a').ref, 'show'))).toEqual({ step: 0, ref: t.entry('a').ref });
-    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: a });
+    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: a, source: 'agent' });
     expect(error(await t.act(t.entry('a').ref, 'show'))).toMatch(/^"show" is not available on "toaster:\d+" now\. Available: dismiss\.$/);
 
     t.bridge.collapseIsland(lease);
     t.bridge.openIsland(lease, 'user', a);
     done(await t.act(t.entry('b').ref, 'show'));
-    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: b });
+    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'user', current: b, source: 'agent' });
   });
 
   it('show needs a Toaster on screen and is not listed without one', async () => {
@@ -136,7 +136,7 @@ describe('notification steps', () => {
     const initiator = admit(t.controller, quiet('initiator', { attention: 'open' }));
     done(await t.act(t.entry('initiator').ref, 'show'));
     t.clock.advanceBy(10_000);
-    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: initiator });
+    expect(t.controller.getSnapshot().island).toEqual({ open: true, reason: 'attention', current: initiator, source: 'agent' });
 
     const other = admit(t.controller, quiet('other'));
     const late = admit(t.controller, quiet('late', { attention: 'open' }));

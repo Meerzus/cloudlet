@@ -233,7 +233,7 @@ describe('controller remaining-time scheduler', () => {
     expect(controller.getHandle(a.id)).toBe(a);
     controller.dispose();
     controller.dispose();
-    expect(onClose).toHaveBeenCalledExactlyOnceWith({ handle: a, reason: 'dispose' });
+    expect(onClose).toHaveBeenCalledExactlyOnceWith({ handle: a, reason: 'dispose', source: 'system' });
     expect(clock.pendingCount).toBe(0);
     expect(controller.getSnapshot()).toMatchObject({ disposed: true, notifications: [], stack: [], island: { open: false }, overflow: { count: 0, pending: false } });
     expect(controller.show({ title: 'late' })).toEqual({ status: 'rejected', reason: 'disposed' });

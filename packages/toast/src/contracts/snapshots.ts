@@ -1,3 +1,4 @@
+import type { ChangeSource } from './events.js';
 import type { ActionAttemptToken, ControllerIdentity, NotificationHandle } from './identity.js';
 import type { NotificationContent, NotificationKind, OverflowSnapshot, Priority } from './notifications.js';
 import type { OperationSnapshot } from './operations.js';
@@ -47,6 +48,13 @@ export interface IslandSnapshot {
   readonly reason: IslandReason | null;
   /** Null exactly when the Island is closed. */
   readonly current: NotificationHandle | null;
+  /**
+   * Who opened the Island or moved it to its current notification last: `user` by hand, `system`
+   * when it opened for attention on its own, `agent` for an agent's step or its request for a
+   * person. When the current notification closed and the Island moved on, whoever closed it.
+   * Null exactly when the Island is closed.
+   */
+  readonly source: ChangeSource | null;
 }
 
 export interface ControllerSnapshot<Slot = never> {
