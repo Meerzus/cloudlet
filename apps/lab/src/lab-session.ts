@@ -277,7 +277,8 @@ export class LabSession {
       id: `task-${name}`, pending: { title: title ?? (mode === 'manual' ? `Preparing ${name}` : mode === 'ignore' ? 'Exporting archive' : 'Syncing files'), attention: 'stack' },
       success: value => ({ title: `${name}: done`, description: { kind: 'text', text: value }, attention: 'stack' }),
       error: { title: `${name}: error`, description: { kind: 'text', text: 'The data is saved. Retry when you are ready.' }, attention: 'stack' },
-      cancelled: { title: 'Sync cancelled' },
+      // A caller that named the operation sees that name cancelled, not the fixtures' sync.
+      cancelled: { title: title === undefined ? 'Sync cancelled' : `${title}: cancelled` },
     });
     this.observe(name, operation, item);
   }
