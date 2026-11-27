@@ -73,6 +73,15 @@ export interface AttentionCandidate<Slot> {
   waiting: boolean;
 }
 
+/** One committed change as it was when it was made. */
+export interface Announcement<Slot> {
+  /** What the commit queued, events and callbacks alike. */
+  readonly deliveries: readonly Delivery[];
+  readonly snapshot: RendererSnapshot<Slot>;
+  /** Who closed the Island last, as of this commit; null before the first close. */
+  readonly closedBy: ChangeSource | null;
+}
+
 export const ATTENTION_DELAY = 600;
 
 const freeze = Object.freeze;
@@ -122,13 +131,12 @@ export interface ControllerKernel<Slot> {
   island: IslandState<Slot> | null;
   /** Closes the Island and remembers who closed it. */
   readonly collapse: (source: ChangeSource) => void;
-  /** Who closed the Island last; null before the first close. */
-  readonly islandClosedBy: ChangeSource | null;
   /**
-   * What the commit being announced to `subscribe` listeners queued, events and callbacks alike;
-   * empty outside such a call. The events themselves are delivered after the listeners.
+   * The commit being announced to `subscribe` listeners; null outside such a call. A listener may
+   * have committed again since, so the current snapshot can be ahead of this one. The events
+   * themselves are delivered after the listeners.
    */
-  readonly announced: readonly Delivery[];
+  readonly announced: Announcement<Slot> | null;
   attention: AttentionCandidate<Slot> | null;
   /** A person is on the Toaster: hover, focus, a gesture, or a draft in the open Island. */
   readonly interacting: () => boolean;
@@ -201,7 +209,7 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
   let eventSequence = 0;
   let island: IslandState<Slot> | null = null;
   let islandClosedBy: ChangeSource | null = null;
-  let announced: readonly Delivery[] = EMPTY;
+  let announced: Announcement<Slot> | null = null;
   // The presented record: Island current when open, otherwise the newest record.
   let presented: RecordState<Slot> | null = null;
   let hostDelay: number | undefined;
@@ -304,11 +312,13 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     }
   }
   function enqueue(deliveries: readonly Delivery[], notify = false, at = clock.now(), final = false, release = false): void {
+    // Taken now: by the time a queued batch runs, a listener may have committed again.
+    const announcement = notify ? { deliveries, snapshot: rendererSnapshot, closedBy: islandClosedBy } : null;
     batches.push(() => {
-      if (notify) {
-        announced = deliveries;
+      if (announcement) {
+        announced = announcement;
         notifyListeners(listeners, 'subscribe');
-        announced = EMPTY;
+        announced = null;
       }
       for (const delivery of deliveries) {
         if ('callback' in delivery) {
@@ -992,7 +1002,6 @@ export function createCloudletCore<Slot = never, Signal extends CancellationSign
     get hostDelay() { return hostDelay; }, set hostDelay(value) { hostDelay = value; },
     get hostAutoDismiss() { return hostAutoDismiss; }, set hostAutoDismiss(value) { hostAutoDismiss = value; },
     get island() { return island; }, set island(value) { island = value; },
-    get islandClosedBy() { return islandClosedBy; },
     get announced() { return announced; },
     collapse,
     get attention() { return attention; }, set attention(value) { attention = value; },

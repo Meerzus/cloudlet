@@ -5,7 +5,7 @@ import type { FormErrors } from './contracts/internal.js';
 import type { CommandAction, FormAction, FormFieldKind, FormInputMode, NotificationKind, Priority } from './contracts/notifications.js';
 import type { CancellationSignal, OperationStatus } from './contracts/operations.js';
 import type { NotificationLocation, NotificationSnapshot, PauseReason } from './contracts/snapshots.js';
-import { createToasterPort, type FormReading, type PortEvent, type ToasterReading } from './core/agent-port.js';
+import { createToasterPort, type FormReading, type PortCommit, type ToasterReading } from './core/agent-port.js';
 
 // The Toaster's side of the agent bridge. Its protocol types are declared here structurally:
 // this package never imports the bridge package, not even its types.
@@ -406,6 +406,8 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
   };
   const known = new Map<NotificationHandle, Known>();
   let islandRef: string | null = null;
+  // The revision `known` was read at; a commit up to it is already in there.
+  let seeded = 0;
   const listeners = new Set<(changes?: readonly AgentChangeShape[]) => void>();
   let stop: (() => void) | undefined;
   let source: ToasterReading<Slot> | undefined;
@@ -608,9 +610,12 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
    * The records of one committed change: its events in order, then what only the state shows (an
    * action back to idle, a field's new author, the Island). A form's values are never read here.
    */
-  const collect = (events: readonly PortEvent[]): readonly AgentChangeShape[] => {
-    const reading = port.read();
-    const state = reading.controller;
+  const collect = (commit: PortCommit<Slot>): readonly AgentChangeShape[] => {
+    // The commit's own state, not the latest: a listener before this one may have committed again.
+    const state = commit.controller;
+    // Subscribed while this commit was still queued: what it did was read then.
+    if (state.revision <= seeded) return EMPTY;
+    const { events } = commit;
     const live = new Map(state.notifications.map((item) => [item.handle, item] as const));
     for (const [handle, entry] of known) {
       const item = live.get(handle);
@@ -633,7 +638,7 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
           refOf(event.handle);
           known.set(event.handle, {
             label: live.get(event.handle)?.content.title, action: 'idle', operation: null,
-            authors: reading.forms.get(event.handle)?.authors ?? NO_AUTHORS,
+            authors: commit.authors.get(event.handle) ?? NO_AUTHORS,
           });
           push(event.handle, 'present', true, false, event.source);
           break;
@@ -688,7 +693,7 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
         push(handle, 'action', 'idle', entry.action, by ?? 'system');
         entry.action = 'idle';
       }
-      const authors = reading.forms.get(handle)?.authors ?? NO_AUTHORS;
+      const authors = commit.authors.get(handle) ?? NO_AUTHORS;
       if (authors !== entry.authors) {
         // In the form's own order; a field of the form that was replaced comes after them.
         const action = item.content.action;
@@ -706,7 +711,7 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
     if (current !== islandRef) {
       changes.push(freeze({
         ref: name, component: 'toaster', key: 'island', value: current, previous: islandRef,
-        source: state.island.source ?? reading.closedBy ?? 'system',
+        source: state.island.source ?? commit.closedBy ?? 'system',
       }));
       islandRef = current;
     }
@@ -731,9 +736,16 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
         });
       }
       islandRef = state.island.current ? refOf(state.island.current) : null;
-      stop = port.subscribe((events) => {
-        const changes = collect(events);
-        for (const each of [...listeners]) if (listeners.has(each)) each(changes);
+      seeded = state.revision;
+      stop = port.subscribe((commit) => {
+        const changes = collect(commit);
+        // Every listener hears the change; the first error goes on to the controller's diagnostics.
+        let failure: { readonly error: unknown } | undefined;
+        for (const each of [...listeners]) {
+          if (!listeners.has(each)) continue;
+          try { each(changes); } catch (error) { failure ??= { error }; }
+        }
+        if (failure) throw failure.error;
       });
     }
     listeners.add(own);

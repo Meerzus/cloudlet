@@ -149,12 +149,23 @@ describe('createAgent', () => {
     expect(reported).toHaveLength(bad.length);
     expect(String(reported[2])).toBe('TypeError: Component "one" reported a change of an unknown shape at index 2: a field is missing or of another type');
 
+    // What a getter throws may not turn into text; the records after it still arrive.
+    reported.length = 0;
+    component.emit([good, { get ref(): string { throw Object.create(null); } }, good] as never);
+    expect(listener).toHaveBeenLastCalledWith([good, good]);
+    expect(String(reported[0])).toMatch(/at index 1: reading it failed$/u);
+    // A list no commit could produce is refused whole, in one report.
+    component.emit(new Array(1_001).fill(good) as never);
+    expect(listener).toHaveBeenLastCalledWith([]);
+    expect(reported).toHaveLength(2);
+    reported.length = bad.length;
+
     component.emit(sparse as never);
     expect(listener).toHaveBeenLastCalledWith([good, good]);
     // Not an array at all: the listeners still hear that something changed.
     component.emit({ length: 1, 0: good } as never);
     expect(listener).toHaveBeenLastCalledWith([]);
-    expect(listener).toHaveBeenCalledTimes(3);
+    expect(listener).toHaveBeenCalledTimes(5);
     expect(reported).toHaveLength(bad.length + 2);
   });
 

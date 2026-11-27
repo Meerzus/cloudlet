@@ -314,6 +314,93 @@ describe('Toaster change records', () => {
     expect(seen).toEqual(['true true', 'false false']);
   });
 
+  describe('when a listener of the app commits again before the adapter hears the first commit', () => {
+    /** The app listens first, so its nested commit is already published when the adapter is told. */
+    function early(react: (t: ReturnType<typeof harness>) => void) {
+      const t = harness();
+      const lease = attach(t.bridge);
+      t.controller.subscribe(() => { react(t); });
+      const agent = createAgent();
+      agent.connect(toasterAgent(t.controller));
+      const batches: (readonly AgentChange[])[] = [];
+      agent.subscribe((changes) => { batches.push(changes); });
+      const lines = () => batches.map((batch) => batch.map((change) =>
+        `${change.label ?? '-'} ${change.key} ${JSON.stringify(change.previous)}>${JSON.stringify(change.value)} ${change.source}`));
+      return { ...t, lease, lines };
+    }
+
+    it('an action the app replaces as soon as it fails goes back to idle as the app, in the app\'s commit', async () => {
+      const t = early(({ controller }) => {
+        const item = controller.getSnapshot().notifications[0];
+        if (item?.action.status === 'failed') controller.update(item.handle, { action: command('Try again') });
+      });
+      const handle = admit(t.controller, quiet('save', { action: command('Save', { run: () => Promise.reject(new Error('No')) }) }));
+      t.bridge.invokeAction(t.lease, handle);
+      await flush();
+      expect(t.lines()).toEqual([
+        ['save present false>true app'],
+        ['save action "idle">"pending" user'],
+        ['save action "pending">"failed" user'],
+        ['save content null>null app', 'save action "failed">"idle" app'],
+      ]);
+    });
+
+    it('an Island the person opened on a notification the app then closes is opened by the person first', () => {
+      let closing = false;
+      const t = early(({ controller }) => {
+        const { island } = controller.getSnapshot();
+        if (island.current?.id === 'b' && !closing) { closing = true; controller.dismiss(island.current); }
+      });
+      admit(t.controller, quiet('a'));
+      const b = admit(t.controller, quiet('b'));
+      t.bridge.openIsland(t.lease, 'user', b);
+      expect(t.lines().slice(2)).toEqual([
+        ['- island null>"toaster:2" user'],
+        ['b present true>false app', '- island "toaster:2">"toaster:1" app'],
+      ]);
+    });
+
+    it('a notification the app closes the moment it appears keeps its title in both records', () => {
+      const t = early(({ controller }) => {
+        const handle = controller.getHandle('spam');
+        if (handle) controller.dismiss(handle);
+      });
+      t.controller.show(quiet('spam', { title: 'Spam' }));
+      expect(t.lines()).toEqual([['Spam present false>true app'], ['Spam present true>false app']]);
+    });
+
+    it('an adapter connected while a commit is still queued does not repeat what it read on connecting', () => {
+      const { controller } = harness();
+      const agent = createAgent();
+      const seen: string[] = [];
+      let connected = false;
+      controller.onEvent((event) => {
+        if (event.type !== 'admitted' || connected) return;
+        connected = true;
+        controller.show(quiet('second'));
+        agent.connect(toasterAgent(controller));
+        agent.subscribe((changes) => { seen.push(...changes.map((change) => `${change.label} ${change.key}`)); });
+      });
+      controller.show(quiet('first'));
+      expect(agent.snapshot().map((item) => item.label)).toEqual([undefined, 'second', 'first']);
+      controller.show(quiet('third'));
+      expect(seen).toEqual(['third present']);
+    });
+  });
+
+  it('a listener that throws does not keep the records from the others', () => {
+    const diagnostics: string[] = [];
+    const { controller } = harness({ onDiagnostic: (diagnostic) => { diagnostics.push(diagnostic.code); } });
+    const component = toasterAgent(controller);
+    const after = vi.fn();
+    component.subscribe(() => { throw new Error('listener failed'); });
+    component.subscribe(after);
+    admit(controller, quiet('a'));
+    admit(controller, quiet('b'));
+    expect(after.mock.calls.map(([changes]) => (changes as readonly AgentChange[]).map((change) => change.label))).toEqual([['a'], ['b']]);
+    expect(diagnostics).toEqual(['listener-error', 'listener-error']);
+  });
+
   it('dispose closes everything as the system, and nothing arrives afterwards', () => {
     const t = setup();
     admit(t.controller, quiet('a'));

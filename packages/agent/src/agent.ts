@@ -31,6 +31,8 @@ function note(error: unknown): void {
 }
 
 const NO_CHANGES: readonly AgentChange[] = Object.freeze([]);
+// One commit of a component changes a handful of records; a longer list is a broken component.
+const MOST_CHANGES = 1_000;
 const SOURCES: readonly unknown[] = ['user', 'agent', 'app', 'system'];
 const optionalText = (value: unknown): value is string | undefined => value === undefined || typeof value === 'string';
 
@@ -44,6 +46,7 @@ function readChanges(name: string, input: unknown): readonly AgentChange[] {
   const changes: AgentChange[] = [];
   try {
     if (!Array.isArray(input)) throw new TypeError(`Component "${name}" reported changes that are not an array`);
+    if (input.length > MOST_CHANGES) throw new TypeError(`Component "${name}" reported more than ${MOST_CHANGES} changes at once`);
     for (let index = 0; index < input.length; index += 1) {
       try {
         // A hole would read whatever the prototype holds at that index.
@@ -58,7 +61,10 @@ function readChanges(name: string, input: unknown): readonly AgentChange[] {
           ...(reason === undefined ? {} : { reason }), source: source as AgentChange['source'],
         }));
       } catch (error) {
-        note(new TypeError(`Component "${name}" reported a change of an unknown shape at index ${index}: ${error instanceof Error ? error.message : String(error)}`));
+        // What was thrown may not turn into text at all.
+        let why = 'reading it failed';
+        try { if (error instanceof Error) why = error.message; } catch { /* Keeps the default. */ }
+        note(new TypeError(`Component "${name}" reported a change of an unknown shape at index ${index}: ${why}`));
       }
     }
   } catch (error) {
