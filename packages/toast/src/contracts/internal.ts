@@ -84,6 +84,11 @@ export type AnnouncementAcknowledgement =
 export interface FormErrors {
   readonly form: string | null;
   readonly fields: Readonly<Record<string, string>>;
+  /**
+   * The messages are what the app's `validate` returned, so they may quote what the person typed;
+   * absent for the built-in messages, which never hold a value.
+   */
+  readonly authored?: true;
 }
 
 /** The values a form action holds for one record; only the renderer sees them. */

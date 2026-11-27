@@ -29,11 +29,11 @@ export function checkForm<Slot>(k: ControllerKernel<Slot>, form: FormState, hand
     return freeze({ form: messages?.actionError ?? 'Action failed', fields: freeze({}) });
   }
   if (result === true) return null;
-  if (typeof result === 'string' && result.trim()) return freeze({ form: result, fields: freeze({}) });
+  if (typeof result === 'string' && result.trim()) return freeze({ form: result, fields: freeze({}), authored: true as const });
   const names = form.action.fields.map((field) => field.name);
   if (result !== null && typeof result === 'object' && Object.getPrototypeOf(result) === Object.prototype &&
       Object.entries(result).every(([name, message]) => names.includes(name) && typeof message === 'string' && message.trim())) {
-    return Object.keys(result).length ? freeze({ form: null, fields: freeze({ ...result as Record<string, string> }) }) : null;
+    return Object.keys(result).length ? freeze({ form: null, fields: freeze({ ...result as Record<string, string> }), authored: true as const }) : null;
   }
   k.diagnostic({ code: 'callback-error', source: 'action.validate', handle,
     message: 'validate must return true, a message, or messages keyed by field name' });

@@ -232,14 +232,14 @@ describe('form records', () => {
     expect(() => structuredClone(toasterAgent(controller).snapshot())).not.toThrow();
   });
 
-  it('carries a form-wide message from validate', () => {
+  it("says the form's own validate did not accept it, without its text", () => {
     const { controller, bridge } = harness();
     const lease = attach(bridge);
     const handle = admit(controller, quiet('anna', { title: 'Reply', action: form({ validate: () => 'Try again later' }) }));
     bridge.openIsland(lease, 'user', handle);
     bridge.setFormValue(lease, handle, 'reply', 'Yes');
     expect(bridge.invokeAction(lease, handle)).toMatchObject({ status: 'invalid' });
-    expect(byLabel(toasterAgent(controller).snapshot(), 'Reply').action).toMatchObject({ error: 'Try again later' });
+    expect(byLabel(toasterAgent(controller).snapshot(), 'Reply').action).toMatchObject({ error: "Not accepted by the form's own check" });
   });
 });
 

@@ -164,7 +164,11 @@ export type FormFieldEntry = {
    * while nobody has and there is no default. An agent can't `fill` a field the person wrote.
    */
   readonly filledBy: 'app' | 'user' | 'agent' | null;
-  /** The message from the last submit, if any. */
+  /**
+   * Why the last submit stopped at this field, if it did: the built-in message for a required or
+   * too long field, and a fixed phrase when the form's own `validate` did not accept it, because
+   * that text may quote what the person typed.
+   */
   readonly error: string | null;
 };
 
@@ -178,7 +182,10 @@ export type ActionEntry = {
   /** The label the application gave the action. */
   readonly label: string;
   readonly status: 'idle' | 'pending' | 'failed';
-  /** Why the last attempt failed; null unless `status` is `failed`. */
+  /**
+   * Why the last attempt failed; null unless `status` is `failed`. For a form it is always
+   * `Action failed`: the app's own text may quote what the person typed.
+   */
   readonly message: string | null;
   /**
    * What the app lets an agent do with a command or a form: `allow`, `confirm` (a person approves)
@@ -189,7 +196,10 @@ export type ActionEntry = {
   readonly href?: string;
   /** Only for a form. */
   readonly fields?: readonly FormFieldEntry[];
-  /** The form-wide message from the last submit; only for a form. */
+  /**
+   * Set when the last submit stopped on the form as a whole; only for a form. A fixed phrase when
+   * the form's own `validate` said so, for the same reason as a field's `error`.
+   */
   readonly error?: string | null;
 };
 
@@ -270,6 +280,11 @@ const DONE: AgentRunOutcomeShape = freeze({ status: 'done' });
 const GONE: AgentRunOutcomeShape = freeze({ status: 'done', gone: true });
 const STALE: AgentRunOutcomeShape = freeze({ status: 'stale' });
 const UNAVAILABLE: AgentRunOutcomeShape = freeze({ status: 'unavailable' });
+
+// A form's `validate` and `errorMessage` see what the person typed and may quote it, so their
+// text stays with the person in the Island: an agent reads these instead.
+const FORM_REJECTED = "Not accepted by the form's own check";
+const FORM_FAILED = 'Action failed';
 
 // Refusals the adapter words itself; the bridge words the rest from the record's `actions`.
 // Labels and titles come from the app, so they are quoted.
@@ -507,7 +522,7 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
         const ended = await started;
         if (ended.status === 'done') return GONE;
         if (ended.status === 'replaced') return STALE;
-        if (ended.status === 'failed') return freeze({ status: 'failed', message: texts.failed(label, ended.message) });
+        if (ended.status === 'failed') return freeze({ status: 'failed', message: texts.failed(label, action.kind === 'form' ? FORM_FAILED : ended.message) });
         if (ended.status === 'invalid') return freeze({ status: 'failed', message: texts.notSent(label, describe(action as FormAction, ended.errors)) });
         return freeze({ status: 'done', result: 'pending', ...(ended.gone ? { gone: true } : {}) });
       },
@@ -550,8 +565,16 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
   return freeze({ protocol: 1 as const, name, snapshot, subscribe: port.subscribe, check, run, summon });
 }
 
-/** The messages a failed form check shows the person, by field label: never a value. */
+/**
+ * Why a form was not sent, by field label and never with a value: the built-in messages as the
+ * person sees them, and for the app's own `validate` only which fields it did not accept.
+ */
 function describe(form: FormAction, errors: FormErrors): string {
+  if (errors.authored) {
+    // Own keys only, as below.
+    const labels = form.fields.flatMap((field) => Object.hasOwn(errors.fields, field.name) ? [quote(field.label)] : []);
+    return `The form's own check did not accept ${labels.length ? labels.join(', ') : 'it'}.`;
+  }
   const sentence = (message: string) => /[.!?]$/.test(message.trim()) ? message.trim() : `${message.trim()}.`;
   return [
     // Own keys only: a field named `constructor` must not read `Object.prototype`.
@@ -608,7 +631,7 @@ function actionEntry<Slot>(item: NotificationSnapshot<Slot>, form: FormReading |
   const state = item.action;
   const common = {
     kind: action.kind, label: action.label, status: state.status,
-    message: state.status === 'failed' ? state.message : null,
+    message: state.status !== 'failed' ? null : action.kind === 'form' ? FORM_FAILED : state.message,
   };
   if (action.kind === 'link') return freeze({ ...common, href: action.href });
   if (action.kind === 'command') return freeze({ ...common, agent: action.agent ?? 'confirm' });
@@ -622,8 +645,8 @@ function actionEntry<Slot>(item: NotificationSnapshot<Slot>, form: FormReading |
       filled: form?.filled.has(field.name) ?? false,
       filledBy: form?.authors.get(field.name) ?? null,
       // Own keys only: a field named `constructor` must not read `Object.prototype`.
-      error: errors && Object.hasOwn(errors.fields, field.name) ? errors.fields[field.name]! : null,
+      error: errors && Object.hasOwn(errors.fields, field.name) ? errors.authored ? FORM_REJECTED : errors.fields[field.name]! : null,
     }))),
-    error: errors?.form ?? null,
+    error: errors?.form ? errors.authored ? FORM_REJECTED : errors.form : null,
   });
 }

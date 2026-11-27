@@ -287,24 +287,48 @@ describe('submit', () => {
     expect(t.values(handle)?.reply).toBe('Yes');
   });
 
-  it('words a form-wide message and field messages from validate', async () => {
+  it("names the fields the form's own validate did not accept, without its text", async () => {
     const t = setup({ allow: () => true });
     let verdict: true | string | Record<string, string> = 'Try again later';
     admit(t.controller, quiet('anna', { title: TITLE, action: form({ validate: () => verdict }) }));
     expect((await t.act(['fill', ['reply', 'Yes']])).ok).toBe(true);
-    expect(error(await t.act(['submit']))).toBe('"Send" was not sent. Try again later.');
+    expect(error(await t.act(['submit']))).toBe('"Send" was not sent. The form\'s own check did not accept it.');
+    expect(t.entry().action).toMatchObject({ error: "Not accepted by the form's own check" });
     verdict = { note: 'Too vague!', reply: 'Say more' };
-    expect(error(await t.act(['submit']))).toBe('"Send" was not sent. "Reply": Say more. "Note": Too vague!');
+    expect(error(await t.act(['submit']))).toBe('"Send" was not sent. The form\'s own check did not accept "Reply", "Note".');
+    expect(t.fields().map((field) => field.error)).toEqual(["Not accepted by the form's own check", "Not accepted by the form's own check"]);
+    expect(t.entry().action).toMatchObject({ error: null });
   });
 
-  it('a failed run returns the message the person sees', async () => {
+  it('keeps what the person typed out of the result and the snapshot when the app quotes it', async () => {
+    const t = setup({ allow: () => true });
+    const TYPED = 'PERSON-TYPED-7Q';
+    let fails = false;
+    const handle = admit(t.controller, quiet('anna', { title: TITLE, action: form({
+      validate: (values) => fails ? true : { reply: `"${values.reply}" is not a time` },
+      run: (context) => Promise.reject(new Error(context.values.reply)),
+      errorMessage: (reason) => `Could not send ${(reason as Error).message}`,
+    }) }));
+    t.bridge.openIsland(t.lease, 'user', handle);
+    t.type(handle, 'reply', TYPED);
+    const seen: unknown[] = [await t.act(['submit']), t.agent.snapshot()];
+    expect(t.bridge.getSnapshot().forms.find((item) => item.handle === handle)?.errors.fields.reply).toBe(`"${TYPED}" is not a time`);
+    fails = true;
+    seen.push(await t.act(['submit']), t.agent.snapshot());
+    expect(error(seen[2] as never)).toBe('"Send" failed: Action failed');
+    expect(t.entry().action).toMatchObject({ status: 'failed', message: 'Action failed' });
+    expect(t.controller.getSnapshot().notifications.find((item) => item.handle === handle)?.action).toMatchObject({ message: `Could not send ${TYPED}` });
+    expect(JSON.stringify(seen)).not.toContain(TYPED);
+  });
+
+  it("a failed run says so without the app's own message", async () => {
     const t = setup({ allow: () => true });
     admit(t.controller, quiet('anna', { title: TITLE, action: form({
       run: () => Promise.reject(new Error('raw failure')), errorMessage: () => 'Server said no',
     }) }));
     expect((await t.act(['fill', ['reply', 'Yes']])).ok).toBe(true);
-    expect(error(await t.act(['submit']))).toBe('"Send" failed: Server said no');
-    expect(t.entry().action).toMatchObject({ status: 'failed', message: 'Server said no' });
+    expect(error(await t.act(['submit']))).toBe('"Send" failed: Action failed');
+    expect(t.entry().action).toMatchObject({ status: 'failed', message: 'Action failed' });
     expect(t.entry().actions).toContain('submit');
   });
 

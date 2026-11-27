@@ -41,8 +41,11 @@
   typing does (the `draft` pause, the open Island stays open), and a person who submits sends it.
   `submit` follows the form's `agent` marker like `press`, and a submit that needs a person opens the
   Island on the form for them; a form that fails its checks is not sent, the person sees the
-  messages, and the agent gets them by field label (`"Send" was not sent. "Reply": This field is
-  required.`). Each field in the agent snapshot now has `kind`, `maxLength`, `inputMode` and
+  messages, and the agent gets the built-in ones by field label (`"Send" was not sent. "Reply": This
+  field is required.`). What the form's own `validate` and `errorMessage` say may quote what the
+  person typed, so the agent never gets that text, in a result or in the snapshot: it reads which
+  fields were not accepted (`The form's own check did not accept "Reply".`) or `"Send" failed:
+  Action failed`. Each field in the agent snapshot now has `kind`, `maxLength`, `inputMode` and
   `filledBy` (`app` for the default, `user`, `agent` or null); values, defaults and placeholders
   still never leave Cloudlet.
 
