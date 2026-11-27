@@ -12,6 +12,7 @@ import { Choice } from './choice.js';
 import { AgentPanel, useLabAgent } from './agent-panel.js';
 import { LabColors } from './lab-colors.js';
 import { createAllowGate } from './agent-allow.js';
+import { installLabHook } from './lab-hook.js';
 import { observeHostInput } from './debug-log.js';
 import './styles.css';
 
@@ -224,6 +225,7 @@ function Laboratory() {
   const [gate] = useState(createAllowGate);
   const [agent] = useState(() => createAgent({ allow: gate.allow }));
   const later = useLabAgent(agent, session, secondary);
+  useEffect(() => installLabHook(window, agent), [agent]);
   useEffect(() => {
     const pageHide = () => session?.stopStress();
     const visibility = () => { if (document.hidden) pageHide(); };
@@ -268,7 +270,7 @@ function Laboratory() {
         studio={<MotionPanel overrides={overrides} setOverrides={setOverrides} timeScale={timeScale} setTimeScale={setTimeScale} />} />}</div>
       {secondary && preference && <Secondary key={secondaryEpoch} session={secondary} reset={() => setSecondaryEpoch(value => value + 1)} position={secondaryPosition} inset={inset} motion={motion} />}
       <LabColors agent={later} />
-      <AgentPanel agent={agent} gate={gate} />
+      <AgentPanel agent={agent} gate={gate} session={session} />
       <section id="fixtures" className="lab-fixtures"><h2>Separate pages</h2><p>Each page loads only its own styles and the package CSS. The main page’s reset does not reach them.</p><div>{fixtures.map(([route, title]) => <a key={route} href={`?fixture=${route}`}>{title}<span aria-hidden="true">↗</span></a>)}</div>
         <p className="lab-hint">QA pages: <a href="?surface">surface</a> · <a href="?fixture=accessibility">accessibility</a> · <a href="?fixture=mobile">mobile gestures</a>.</p></section>
       <section id="notes" className="lab-notes"><h2>Reading the results</h2><p>Cloudlet works inside the browser window and PWAs. The hardware Island and system notifications are not part of this page.</p><p>timeScale stretches the time of every transition; 0.1 is ten times slower. The motion panel writes into the debug <code>motion.overrides</code>: new values apply to the next transition, a running one finishes with the old ones. “Copy JSON” gives the full set of values.</p><p>Dismiss and clear remove the UI, and cancellation is cooperative. At capacity=100 the business operation still runs: admission and result are independent.</p><p>Reset releases intervals, timers and abort listeners, settles the deferred promises this page owns and recreates both controllers. The logs are local and bounded; nothing is sent to a server.</p><p>Automated checks do not replace VoiceOver/NVDA, a physical Safari/PWA, pinch zoom and the on-screen keyboard.</p></section>

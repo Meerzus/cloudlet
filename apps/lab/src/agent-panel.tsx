@@ -1,12 +1,16 @@
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { registerTools } from '@cloudlet/agent';
 import type { ActResult, Agent, AgentChange, AgentComponent, AgentEntry } from '@cloudlet/agent';
 import { toasterAgent } from '@cloudlet/toast/agent';
 import type { NotificationEntry, ToasterEntry } from '@cloudlet/toast/agent';
 import type { ColorPickerEntry } from '@/components/ui/color-picker/color-picker-agent';
 import type { ColorPaletteEntry } from '@/components/ui/color-palette/color-palette-agent';
 import type { LabSession } from './lab-session.js';
+import { createAllowGate } from './agent-allow.js';
 import type { AllowGate, AllowMode } from './agent-allow.js';
 import { Choice } from './choice.js';
+import { runScenario } from './scenario-agent.js';
+import type { ScenarioCall, ScenarioOutcome } from './scenario-agent.js';
 
 /** The adapter of one session, kept while the session lives so its refs stay stable. */
 function useToasterComponent(session: LabSession | undefined, name?: string) {
@@ -134,7 +138,7 @@ const ALLOW_OPTIONS: readonly (readonly [AllowMode, string])[] = [['none', 'No c
 
 /** The steps half of the panel: compose an `act` call, answer `allow`, read the results. */
 function AgentSteps({ agent, gate, entries }: { agent: Agent; gate: AllowGate; entries: readonly AgentEntry[] }) {
-  const { mode, pending } = useSyncExternalStore(gate.subscribe, gate.getState, gate.getState);
+  const { mode } = useSyncExternalStore(gate.subscribe, gate.getState, gate.getState);
   const [text, setText] = useState(() => preset('open', entries));
   const [invalid, setInvalid] = useState<string | null>(null);
   const [log, setLog] = useState<readonly LogEntry[]>([]);
@@ -186,12 +190,7 @@ function AgentSteps({ agent, gate, entries }: { agent: Agent; gate: AllowGate; e
         <button type="button" disabled={running === 0} onClick={cancel}>Cancel running{running > 0 ? ` · ${running}` : ''}</button>
         <button type="button" disabled={log.length === 0} onClick={() => { setLog([]); setAnnouncement('Log cleared.'); }}>Clear log</button>
       </div>
-      <div className="lab-agent-pending" data-testid="agent-pending" aria-live="polite">
-        {pending ? <>
-          <p><b>allow</b> asks about <code>{JSON.stringify({ ref: pending.step.ref, action: pending.step.action, args: pending.step.args, needsPerson: pending.step.needsPerson })}</code></p>
-          <div className="lab-buttons"><button type="button" onClick={gate.approve}>Approve</button><button type="button" onClick={gate.deny}>Deny</button></div>
-        </> : mode === 'ask' ? <p className="lab-hint">No step is waiting for an answer.</p> : null}
-      </div>
+      <GatePending gate={gate} name="allow" testId="agent-pending" />
     </div>
     <div className="lab-agent-results">
       <h3>Results · newest first</h3>
@@ -210,8 +209,109 @@ function AgentSteps({ agent, gate, entries }: { agent: Agent; gate: AllowGate; e
   </div>;
 }
 
+/** The step a gate in “Ask” waits on, with Approve and Deny. */
+function GatePending({ gate, name, testId }: { gate: AllowGate; name: string; testId: string }) {
+  const { mode, pending } = useSyncExternalStore(gate.subscribe, gate.getState, gate.getState);
+  return <div className="lab-agent-pending" data-testid={testId} aria-live="polite">
+    {pending ? <>
+      <p><b>{name}</b> asks about <code>{JSON.stringify({ ref: pending.step.ref, action: pending.step.action, args: pending.step.args, needsPerson: pending.step.needsPerson })}</code></p>
+      <div className="lab-buttons"><button type="button" onClick={gate.approve}>Approve</button><button type="button" onClick={gate.deny}>Deny</button></div>
+    </> : mode === 'ask' ? <p className="lab-hint">No step is waiting for an answer.</p> : null}
+  </div>;
+}
+
+/** Long enough to see each call change the screen. */
+const SCENARIO_PAUSE = 700;
+const wait = (ms: number, signal: AbortSignal) => new Promise<void>(resolve => {
+  const timer = setTimeout(done, ms);
+  function done() { clearTimeout(timer); signal.removeEventListener('abort', done); resolve(); }
+  signal.addEventListener('abort', done, { once: true });
+});
+type ScenarioLine = { id: number; call: ScenarioCall };
+const callStatus = (call: ScenarioCall) => 'ok' in call.output ? (call.output.ok ? 'ok' : 'error') : 'error' in call.output ? 'error' : 'ok';
+
+/**
+ * Run prepares the page the way an app would, then hands the page agent's `callTool` to the
+ * scripted agent, which sees only what the tools answer. One run at a time.
+ */
+function ScenarioAgent({ agent, session }: { agent: Agent; session: LabSession | undefined }) {
+  const [lines, setLines] = useState<readonly ScenarioLine[]>([]);
+  const [outcome, setOutcome] = useState<ScenarioOutcome | 'running' | null>(null);
+  const current = useRef<AbortController | null>(null);
+  useEffect(() => () => current.current?.abort(), []);
+  const running = outcome === 'running';
+
+  const run = async () => {
+    if (current.current || !session) return;
+    const controller = new AbortController();
+    current.current = controller;
+    setLines([]);
+    setOutcome('running');
+    session.prepareAgentScenario();
+    let serial = 0;
+    await wait(SCENARIO_PAUSE, controller.signal);
+    const result = await runScenario(agent.callTool, {
+      signal: controller.signal,
+      pause: () => wait(SCENARIO_PAUSE, controller.signal),
+      onCall: call => { const line = { id: ++serial, call }; setLines(previous => [...previous, line]); },
+    });
+    if (current.current !== controller) return;
+    current.current = null;
+    setOutcome(result);
+  };
+
+  const status = outcome === null ? 'idle' : outcome === 'running' ? 'running' : outcome.ok ? 'ok' : 'error';
+  return <div className="lab-agent-scenario">
+    <h3>Scenario agent</h3>
+    <p className="lab-hint">Run puts three notifications on the main controller the way an app would: “Email archived” with an “Undo” marked <code>agent: 'allow'</code>, “Link copied” and a cancellable “Uploading photos”. Then a script that sees only the tools reads <code>cloudlet_snapshot</code>, picks refs by the labels in the JSON and plans <code>cloudlet_act</code> calls: press “Undo”, dismiss, open the Island, cancel the upload, set the accent color, add a brand color. It answers to the <b>allow</b> switch above. Pressing anything outside the Island while it runs collapses it and fails the check.</p>
+    <div className="lab-buttons"><button type="button" className="lab-primary" data-testid="scenario-run" disabled={running || !session} onClick={() => void run()}>{running ? 'Running…' : 'Run'}</button></div>
+    <ol className="lab-agent-log" data-testid="scenario-log" tabIndex={0} aria-label="Scenario agent calls and results">
+      {lines.length === 0 ? <li className="lab-empty">{running ? 'Preparing the page…' : 'No run yet.'}</li> : lines.map(({ id, call }) => {
+        const callState = callStatus(call);
+        return <li key={id} data-status={callState} data-tool={call.tool}>
+          <span className="lab-agent-badge">#{id} · {call.tool} · {callState}</span>
+          <pre>{JSON.stringify(call.input)}</pre>
+          <details><summary>Result</summary><pre data-testid="scenario-result">{JSON.stringify(call.output, null, 2)}</pre></details>
+        </li>;
+      })}
+    </ol>
+    <p className="lab-agent-outcome" role="status" data-testid="scenario-summary" data-status={status}>
+      {outcome === null ? '' : outcome === 'running' ? 'Running…' : outcome.summary}
+    </p>
+  </div>;
+}
+
+const WEB_ALLOW_OPTIONS: readonly (readonly [AllowMode, string])[] = [['true', 'Agent’s allow decides'], ['false', 'Always false'], ['ask', 'Ask'], ['none', 'Not for a person']];
+const hasWebMcp = () => typeof document !== 'undefined' && typeof (document as Document & { modelContext?: { registerTool?: unknown } }).modelContext?.registerTool === 'function';
+
+/**
+ * Registers the page agent's tools with the browser's agent through WebMCP, behind a second gate of
+ * its own: the agent's `allow` answers first, then this one. Off removes them; so does unmounting.
+ */
+function WebMcpTools({ agent }: { agent: Agent }) {
+  const [gate] = useState(() => createAllowGate('true'));
+  const { mode } = useSyncExternalStore(gate.subscribe, gate.getState, gate.getState);
+  const [expose, setExpose] = useState(true);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [supported] = useState(hasWebMcp);
+  useEffect(() => {
+    if (!expose) return;
+    setFailure(null);
+    return registerTools(agent, { allow: gate.allow, onError: error => setFailure(error instanceof Error ? `${error.name}: ${error.message}` : String(error)) });
+  }, [agent, gate, expose]);
+  const state = !supported ? 'This browser has no WebMCP: nothing is registered.' : failure ? `Registration failed: ${failure}` : expose ? 'cloudlet_act and cloudlet_snapshot are registered.' : 'Removed.';
+  return <div className="lab-agent-webmcp">
+    <h3>WebMCP</h3>
+    <p className="lab-hint">The browser’s agent calls the same tools. A step it asks for runs only when both gates say yes: the <b>allow</b> switch above, then this one.</p>
+    <div className="lab-checks"><label><input type="checkbox" data-testid="webmcp-expose" checked={expose} onChange={event => setExpose(event.target.checked)} />Expose to WebMCP</label></div>
+    <div className="lab-fields lab-fields-inline"><Choice label="WebMCP allow" value={mode} onChange={gate.setMode} options={WEB_ALLOW_OPTIONS} /></div>
+    <p className="lab-hint" data-testid="webmcp-state" data-supported={supported} data-exposed={expose}>{state}</p>
+    <GatePending gate={gate} name="WebMCP allow" testId="webmcp-pending" />
+  </div>;
+}
+
 /** What an agent sees and does: the bridge's live snapshot of both controllers and the colors, and `act` on them, used the way an app would. */
-export function AgentPanel({ agent, gate }: { agent: Agent; gate: AllowGate }) {
+export function AgentPanel({ agent, gate, session }: { agent: Agent; gate: AllowGate; session: LabSession | undefined }) {
   const entries = useSyncExternalStore(agent.subscribe, agent.snapshot, agent.snapshot);
   const changes = useAgentChanges(agent);
   const toaster = entries.find(isMainToaster);
@@ -220,7 +320,12 @@ export function AgentPanel({ agent, gate }: { agent: Agent; gate: AllowGate }) {
     <div className="lab-diagnostic-head"><h2 id="agent-title">Agent</h2><span className="lab-mono">@cloudlet/agent · experimental</span></div>
     <p>One <code>createAgent()</code> sees three components: the Toaster with both controllers (the main one as <code>toaster</code>, the second as <code>secondary</code>), the color picker as <code>color-picker</code> and the palette as <code>color-palette</code>. This is the snapshot an agent gets: no React nodes, no functions, no form values.</p>
     <p>Presets put one step into the call: the first row for the main controller, the second for the colors, with a ref and arguments from the current snapshot. Pressing an action or submitting a form needs a person unless the action says <code>agent: 'allow'</code>; <code>agent: 'deny'</code> never runs. Steps never move focus.</p>
+    <p>A model gets the same agent as two tools, <code>cloudlet_snapshot</code> and <code>cloudlet_act</code>: the scenario agent below walks the whole path through them, and the WebMCP block hands them to the browser’s agent. Tests call them as <code>window.__cloudletLab.callTool</code>.</p>
     <AgentSteps agent={agent} gate={gate} entries={entries} />
+    <div className="lab-agent-tools">
+      <ScenarioAgent agent={agent} session={session} />
+      <WebMcpTools agent={agent} />
+    </div>
     <details open className="lab-agent-changes"><summary>Changes · newest first · last {CHANGE_LIMIT}</summary>
       <p className="lab-hint">What <code>agent.subscribe</code> receives: what changed and who changed it (<code>user</code>, <code>agent</code>, <code>app</code>, <code>system</code>). A form field reports its author, never its text.</p>
       <ol className="lab-log" data-testid="agent-changes" tabIndex={0} aria-label="Agent change records">

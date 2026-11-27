@@ -9,15 +9,17 @@ export type PendingStep = { readonly id: number; readonly step: AllowStep };
 export type AllowGateState = { readonly mode: AllowMode; readonly pending: PendingStep | null };
 
 /**
- * The one `allow` the laboratory's agent is created with. It reads the switch on every question,
+ * An `allow` the laboratory answers from a switch: the one its agent is created with, and the
+ * second gate it registers the WebMCP tools with (`createAllowGate('true')`: the agent's own
+ * `allow` decides). It reads the switch on every question,
  * so changing the switch never recreates the agent (and never drops its queue).
  *
  * “No callback” answers exactly as the bridge does without `allow`: a step of the `allow` class
  * runs, a step that needs a person does not (and the bridge summons the person). A plain
  * `() => false` would differ: the bridge would refuse `allow`-class steps with “The app said no”.
  */
-export function createAllowGate() {
-  let state: AllowGateState = { mode: 'none', pending: null };
+export function createAllowGate(initial: AllowMode = 'none') {
+  let state: AllowGateState = { mode: initial, pending: null };
   let answer: ((value: boolean) => void) | undefined;
   let serial = 0;
   const listeners = new Set<() => void>();

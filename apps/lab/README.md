@@ -32,6 +32,14 @@ npx playwright test tests/e2e/lab.spec.ts tests/e2e/island.spec.ts tests/e2e/age
 - **Agent:** one `createAgent()` from `@cloudlet/agent` reads both controllers (`toasterAgent` from
   `@cloudlet/toast/agent`, the second named `secondary`): a summary line and the live snapshot as
   JSON, exactly what an agent gets. Form values never appear in it.
+- **Scenario agent:** Run puts three notifications on the main controller and hands the agent's
+  `callTool` to a script (`src/scenario-agent.ts`) that sees only the tools: it reads
+  `cloudlet_snapshot`, picks refs by labels and walks press "Undo", dismiss, open the Island, cancel,
+  set the picker and add to the palette. The log shows every call; the last line says how it ended.
+- **WebMCP:** the tools are registered with `registerTools` behind a second gate of their own
+  ("WebMCP allow", by default the agent's `allow` decides); "Expose to WebMCP" removes and returns
+  them. Without WebMCP nothing happens. `window.__cloudletLab.callTool` is the same agent's
+  `callTool`, for end-to-end tests (laboratory only).
 - **Environment, identity and time, operations, capacity and stress, observation, a second
   controller, full reset:** the rest of the public API, each with its expected result on screen.
 

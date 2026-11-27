@@ -188,5 +188,15 @@ body:has(.lab), body:has(.lab-unmounted) { margin: 0; background: #f5f6f8; color
 .lab-agent-log > li[data-status="error"] .lab-agent-badge { color: #b0233c; }
 .lab[data-theme="dark"] .lab-agent-log > li[data-status="ok"] .lab-agent-badge { color: #7fd8a4; }
 .lab[data-theme="dark"] .lab-agent-log > li[data-status="error"] .lab-agent-badge { color: #ff9cad; }
-@media (max-width: 60rem) { .lab-agent-steps { grid-template-columns: minmax(0, 1fr); } }
+.lab-agent-tools { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--lab-line); }
+.lab-agent-tools h3 { margin-top: 0; }
+.lab-agent-scenario .lab-buttons { margin-bottom: 12px; }
+.lab-agent-log details summary { cursor: pointer; font-size: 12px; color: var(--lab-muted); margin-top: 6px; }
+.lab .lab-agent-outcome { min-height: 1.5em; margin-top: 10px; font-size: 13px; font-weight: 600; }
+.lab-agent-outcome[data-status="ok"] { color: #1d7a45; }
+.lab-agent-outcome[data-status="error"] { color: #b0233c; }
+.lab[data-theme="dark"] .lab-agent-outcome[data-status="ok"] { color: #7fd8a4; }
+.lab[data-theme="dark"] .lab-agent-outcome[data-status="error"] { color: #ff9cad; }
+.lab-agent-log > li[data-status="running"] .lab-agent-badge { color: var(--lab-muted); }
+@media (max-width: 60rem) { .lab-agent-steps, .lab-agent-tools { grid-template-columns: minmax(0, 1fr); } }
 .lab-agent-snapshot { margin: 0; max-height: 420px; overflow: auto; scrollbar-gutter: stable; padding: 14px; border: 1px solid var(--lab-line); border-radius: 10px; background: var(--lab-soft); font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--lab-ink); white-space: pre; tab-size: 2; }
