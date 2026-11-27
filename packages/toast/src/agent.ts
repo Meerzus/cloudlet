@@ -570,6 +570,7 @@ export function toasterAgent<Slot, Signal extends CancellationSignal>(
  * person sees them, and for the app's own `validate` only which fields it did not accept.
  */
 function describe(form: FormAction, errors: FormErrors): string {
+  if (errors.broken) return `${FORM_FAILED}.`;
   if (errors.authored) {
     // Own keys only, as below.
     const labels = form.fields.flatMap((field) => Object.hasOwn(errors.fields, field.name) ? [quote(field.label)] : []);
@@ -647,6 +648,6 @@ function actionEntry<Slot>(item: NotificationSnapshot<Slot>, form: FormReading |
       // Own keys only: a field named `constructor` must not read `Object.prototype`.
       error: errors && Object.hasOwn(errors.fields, field.name) ? errors.authored ? FORM_REJECTED : errors.fields[field.name]! : null,
     }))),
-    error: errors?.form ? errors.authored ? FORM_REJECTED : errors.form : null,
+    error: errors?.form ? errors.broken ? FORM_FAILED : errors.authored ? FORM_REJECTED : errors.form : null,
   });
 }

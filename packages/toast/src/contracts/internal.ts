@@ -89,6 +89,11 @@ export interface FormErrors {
    * absent for the built-in messages, which never hold a value.
    */
   readonly authored?: true;
+  /**
+   * `validate` threw or answered nonsense: `form` is the app's configured failure message, which
+   * stays with the person.
+   */
+  readonly broken?: true;
 }
 
 /** The values a form action holds for one record; only the renderer sees them. */

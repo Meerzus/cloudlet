@@ -22,8 +22,8 @@ const form = (extra: Partial<FormAction> = {}): FormAction => ({
 });
 const quiet = (id: string, extra: object = {}) => ({ id, title: id, duration: null, attention: 'stack' as const, ...extra });
 
-function setup(options: AgentOptions = {}) {
-  const { controller, bridge, clock } = harness();
+function setup(options: AgentOptions = {}, app: Parameters<typeof harness>[0] = {}) {
+  const { controller, bridge, clock } = harness(app);
   const lease = attach(bridge);
   const agent = createAgent(options);
   agent.connect(toasterAgent(controller));
@@ -354,6 +354,20 @@ describe('submit', () => {
     expect(error(await t.act(['submit']))).toBe('"Send" failed: Action failed');
     expect(t.entry().action).toMatchObject({ status: 'failed', message: 'Action failed' });
     expect(t.entry().actions).toContain('submit');
+  });
+
+  it("says Action failed, not the app's configured message, when validate breaks", async () => {
+    const t = setup({ allow: () => true }, { messages: { actionError: 'Nicht gesendet' } });
+    let verdict: unknown = false;
+    const handle = admit(t.controller, quiet('anna', { title: TITLE, action: form({ validate: () => { if (verdict === 'throw') throw new Error('boom'); return verdict as never; } }) }));
+    expect((await t.act(['fill', ['reply', 'Yes']])).ok).toBe(true);
+    for (const next of [false, 'throw']) {
+      verdict = next;
+      expect(error(await t.act(['submit']))).toBe('"Send" was not sent. Action failed.');
+      expect(t.entry().action).toMatchObject({ error: 'Action failed' });
+      expect(t.bridge.getSnapshot().forms.find((item) => item.handle === handle)?.errors.form).toBe('Nicht gesendet');
+      expect(JSON.stringify(t.agent.snapshot())).not.toContain('Nicht gesendet');
+    }
   });
 
   it('a submit already running is refused', async () => {

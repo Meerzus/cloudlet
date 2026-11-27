@@ -45,12 +45,15 @@
   field is required.`). What the form's own `validate` and `errorMessage` say may quote what the
   person typed, so the agent never gets that text, in a result or in the snapshot: it reads which
   fields were not accepted (`The form's own check did not accept "Reply".`) or `"Send" failed:
-  Action failed`. Each field in the agent snapshot now has `kind`, `maxLength`, `inputMode` and
+  Action failed`; a `validate` that throws answers `Action failed` too. Each field in the agent snapshot now has `kind`, `maxLength`, `inputMode` and
   `filledBy` (`app` for the default, `user`, `agent` or null); values, defaults and placeholders
   still never leave Cloudlet.
 
 ### Fixes
 
+- A command or a form is not run when a listener of its `action-started` event dismissed or
+  replaced the notification: the attempt ended before it began. An app that closes a notification
+  from that event and still wants the action to run closes it from `run` instead.
 - A form field named like an `Object` method (`constructor`, `toString`, …) no longer opens as
   invalid. The form used to read such a name from `Object.prototype`, so the field was marked
   `aria-invalid` and showed a function as its message before any submit. Messages and values are now

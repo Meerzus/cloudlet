@@ -209,7 +209,7 @@ describe('form submits', () => {
     const lease = attach(bridge);
     const handle = admit(controller, spec({ action: reply({ run, validate: validate as never }) }));
     bridge.setFormValue(lease, handle, 'reply', 'Yes');
-    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'invalid', errors: { form: 'Not sent', fields: {} } });
+    expect(bridge.invokeAction(lease, handle)).toEqual({ status: 'invalid', errors: { form: 'Not sent', fields: {}, broken: true } });
     expect(run).not.toHaveBeenCalled();
     return Promise.resolve().then(() => {
       expect(diagnostics.map((diagnostic) => [diagnostic.code, diagnostic.source])).toEqual([['callback-error', 'action.validate']]);

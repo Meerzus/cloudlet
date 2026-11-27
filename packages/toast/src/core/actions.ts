@@ -26,7 +26,7 @@ export function checkForm<Slot>(k: ControllerKernel<Slot>, form: FormState, hand
     result = form.action.validate(form.values);
   } catch (error) {
     k.failure('callback-error', 'action.validate', error, handle);
-    return freeze({ form: messages?.actionError ?? 'Action failed', fields: freeze({}) });
+    return freeze({ form: messages?.actionError ?? 'Action failed', fields: freeze({}), broken: true as const });
   }
   if (result === true) return null;
   if (typeof result === 'string' && result.trim()) return freeze({ form: result, fields: freeze({}), authored: true as const });
@@ -37,7 +37,7 @@ export function checkForm<Slot>(k: ControllerKernel<Slot>, form: FormState, hand
   }
   k.diagnostic({ code: 'callback-error', source: 'action.validate', handle,
     message: 'validate must return true, a message, or messages keyed by field name' });
-  return freeze({ form: messages?.actionError ?? 'Action failed', fields: freeze({}) });
+  return freeze({ form: messages?.actionError ?? 'Action failed', fields: freeze({}), broken: true as const });
 }
 
 /** Starts a command action or submits a form; an invalid form records its errors and does not run. */
@@ -64,6 +64,9 @@ export function invokeAction<Slot>(k: ControllerKernel<Slot>, record: RecordStat
   record.action = freeze({ status: 'pending', token: actionToken });
   if (form) form.errors = NO_FORM_ERRORS;
   k.commit([{ type: 'action-started', handle, token: actionToken }], now);
+  // A listener of `action-started` may have dismissed or replaced the record: the attempt is over
+  // before it began, and running the action now would act for a notification that is gone.
+  if (!live()) return { status: 'started' as const, token: actionToken };
   function failed(reason: unknown): void {
     if (!live()) return;
     let message = k.options.messages?.actionError ?? 'Action failed';
@@ -134,8 +137,8 @@ function write<Slot>(k: ControllerKernel<Slot>, form: FormState, name: string, v
     // Editing a field clears its own message; the rest wait for the next submit.
     if (Object.hasOwn(form.errors.fields, name)) {
       const { [name]: _, ...fields } = form.errors.fields;
-      // `authored` stays: the messages left are still the app's own.
-      form.errors = freeze({ form: form.errors.form, fields: freeze(fields), ...(form.errors.authored ? { authored: true as const } : {}) });
+      // The marks stay: the messages left are still the app's own.
+      form.errors = freeze({ ...form.errors, fields: freeze(fields) });
     }
   });
 }
