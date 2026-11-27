@@ -10,6 +10,7 @@ import { MotionPanel, timeScales, useMotionOverrides } from './motion-panel.js';
 import { closeCurrent, collapseIsland, keepIslandOnLabControls, openIsland } from './pilot.js';
 import { Choice } from './choice.js';
 import { AgentPanel, useLabAgent } from './agent-panel.js';
+import { LabColors } from './lab-colors.js';
 import { createAllowGate } from './agent-allow.js';
 import { observeHostInput } from './debug-log.js';
 import './styles.css';
@@ -222,7 +223,7 @@ function Laboratory() {
   // Its `allow` reads the panel's switch on every question, so the switch never recreates it.
   const [gate] = useState(createAllowGate);
   const [agent] = useState(() => createAgent({ allow: gate.allow }));
-  useLabAgent(agent, session, secondary);
+  const later = useLabAgent(agent, session, secondary);
   useEffect(() => {
     const pageHide = () => session?.stopStress();
     const visibility = () => { if (document.hidden) pageHide(); };
@@ -266,6 +267,7 @@ function Laboratory() {
         recreate={() => { setActiveAuto(auto); setEpoch(value => value + 1); }}
         studio={<MotionPanel overrides={overrides} setOverrides={setOverrides} timeScale={timeScale} setTimeScale={setTimeScale} />} />}</div>
       {secondary && preference && <Secondary key={secondaryEpoch} session={secondary} reset={() => setSecondaryEpoch(value => value + 1)} position={secondaryPosition} inset={inset} motion={motion} />}
+      <LabColors agent={later} />
       <AgentPanel agent={agent} gate={gate} />
       <section id="fixtures" className="lab-fixtures"><h2>Separate pages</h2><p>Each page loads only its own styles and the package CSS. The main page’s reset does not reach them.</p><div>{fixtures.map(([route, title]) => <a key={route} href={`?fixture=${route}`}>{title}<span aria-hidden="true">↗</span></a>)}</div>
         <p className="lab-hint">QA pages: <a href="?surface">surface</a> · <a href="?fixture=accessibility">accessibility</a> · <a href="?fixture=mobile">mobile gestures</a>.</p></section>

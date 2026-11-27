@@ -21,6 +21,8 @@ type NotificationEntry = Entry & { label: string; action: { kind: string; fields
 const button = (page: Page, name: string) => page.getByRole('button', { name, exact: true });
 const host = (page: Page) => page.locator('.lab-main-host');
 const summary = (page: Page) => page.getByTestId('agent-summary');
+// The color picker and palette next to the panel: connected after both controllers, so always last.
+const COLORS = ['color-picker', 'color-palette'] as const;
 
 async function entries(page: Page): Promise<Entry[]> {
   return JSON.parse(await page.getByTestId('agent-snapshot').textContent() ?? '[]') as Entry[];
@@ -46,7 +48,7 @@ test('the panel shows the toaster entry right after load', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Agent snapshot, JSON' })).toBeVisible();
   await expect.poll(() => toaster(page)).toMatchObject({ ref: 'toaster', count: 0, island: { open: false, current: null }, mounted: true });
   await expect.poll(() => toaster(page, 'secondary')).toMatchObject({ ref: 'secondary', count: 0 });
-  await expect(summary(page)).toHaveAttribute('data-entries', '2');
+  await expect(summary(page)).toHaveAttribute('data-entries', '4');
   await expect(summary(page)).toContainText('Island closed');
 });
 
@@ -54,7 +56,7 @@ test('a shown notification appears with its title', async ({ page }) => {
   await button(page, 'Show notification').click();
   await expect.poll(async () => (await notifications(page)).map(entry => [entry.ref, entry.label])).toEqual([['toaster:1', 'Changes saved']]);
   await expect.poll(() => toaster(page).then(entry => entry?.count)).toBe(1);
-  await expect(summary(page)).toHaveAttribute('data-entries', '3');
+  await expect(summary(page)).toHaveAttribute('data-entries', '5');
 });
 
 test('opening the Island shows in the toaster entry, with its current notification', async ({ page }) => {
@@ -105,21 +107,21 @@ test('a form notification shows its fields and whether they are filled, never th
 test('Recreate main, Reset second and Full reset reconnect without errors and show the new state', async ({ page }) => {
   await button(page, 'Show notification').click();
   await button(page, 'Show in second').click();
-  await expect(summary(page)).toHaveAttribute('data-entries', '4');
+  await expect(summary(page)).toHaveAttribute('data-entries', '6');
   await button(page, 'Recreate main').click();
-  await expect.poll(async () => (await entries(page)).map(entry => entry.ref)).toEqual(['toaster', 'secondary', 'secondary:1']);
+  await expect.poll(async () => (await entries(page)).map(entry => entry.ref)).toEqual(['toaster', 'secondary', 'secondary:1', ...COLORS]);
   await button(page, 'Reset second').click();
-  await expect.poll(async () => (await entries(page)).map(entry => entry.ref)).toEqual(['toaster', 'secondary']);
+  await expect.poll(async () => (await entries(page)).map(entry => entry.ref)).toEqual(['toaster', 'secondary', ...COLORS]);
   await button(page, 'Show notification').click();
   await button(page, 'Show in second').click();
-  await expect(summary(page)).toHaveAttribute('data-entries', '4');
+  await expect(summary(page)).toHaveAttribute('data-entries', '6');
   await button(page, 'Full reset').click();
-  await expect.poll(async () => (await entries(page)).map(entry => entry.ref)).toEqual(['toaster', 'secondary']);
+  await expect.poll(async () => (await entries(page)).map(entry => entry.ref)).toEqual(['toaster', 'secondary', ...COLORS]);
   await button(page, 'Dispose main').click();
-  await expect.poll(async () => (await entries(page)).map(entry => entry.ref)).toEqual(['secondary']);
+  await expect.poll(async () => (await entries(page)).map(entry => entry.ref)).toEqual(['secondary', ...COLORS]);
   await button(page, 'Unmount laboratory').click();
   await button(page, 'Mount laboratory').click();
-  await expect.poll(async () => (await entries(page)).map(entry => entry.ref)).toEqual(['toaster', 'secondary']);
+  await expect.poll(async () => (await entries(page)).map(entry => entry.ref)).toEqual(['toaster', 'secondary', ...COLORS]);
 });
 
 // Steps: the panel sends `act` calls through the same agent and answers `allow` from its switch.
@@ -372,4 +374,137 @@ test('a press that needs a person shows in Changes as the Island opened by the a
   expect(pressed.result.ok).toBe(false);
   await expect(host(page)).toHaveAttribute('data-state', 'island');
   await expect(page.getByTestId('agent-changes')).toContainText(`"key":"island","value":"${pressed.ref}","previous":null,"source":"agent"`);
+});
+
+// The color picker and palette next to the panel, on the same agent: controlled by the app, which
+// shows what it holds and can be switched to take no changes.
+
+type PickerEntry = Entry & { label: string; value: string; format: string; formats: string[]; alpha: boolean };
+type PaletteEntry = Entry & { label: string; colors: string[]; max: number; format: string; formats: string[]; alpha: boolean };
+
+const colorsBlock = (page: Page) => page.locator('#agent-colors');
+const accentSwatch = (page: Page) => colorsBlock(page).getByRole('button', { name: 'Accent color', exact: true });
+const appAccent = (page: Page) => page.getByTestId('colors-accent');
+const appPalette = (page: Page) => page.getByTestId('colors-palette');
+async function picker(page: Page) {
+  return (await entries(page)).find(item => item.component === 'color-picker') as PickerEntry | undefined;
+}
+async function palette(page: Page) {
+  return (await entries(page)).find(item => item.component === 'color-palette') as PaletteEntry | undefined;
+}
+/** Sends one call typed into the panel and returns its settled result. */
+async function act(page: Page, steps: { ref: string; action: string; args?: unknown[] }[]) {
+  await callField(page).fill(JSON.stringify({ steps }));
+  await button(page, 'Run steps').click();
+  return latest(page);
+}
+/** Puts a color preset into the call, runs it with Enter on “Run steps” and returns the step it ran with its result. */
+async function runColor(page: Page, name: string) {
+  await agentPanel(page).getByRole('group', { name: 'Color step presets' }).getByRole('button', { name, exact: true }).click();
+  const step = (JSON.parse(await callField(page).inputValue()) as { steps: { ref: string; action: string; args: unknown[] }[] }).steps[0];
+  // From the keyboard: WebKit does not focus a clicked button, and the tests check that focus stays.
+  await button(page, 'Run steps').focus();
+  await page.keyboard.press('Enter');
+  return { step, result: await latest(page) };
+}
+
+test('the snapshot shows the picker and the palette after the Toaster, with their current colors', async ({ page }) => {
+  await expect.poll(async () => (await entries(page)).map(item => item.ref)).toEqual(['toaster', 'secondary', ...COLORS]);
+  expect(await picker(page)).toEqual({ ref: 'color-picker', component: 'color-picker', actions: ['set'], label: 'Accent color', value: '#007aff', format: 'hex', formats: ['hex', 'rgb', 'hsl', 'oklch'], alpha: false });
+  expect(await palette(page)).toEqual({ ref: 'color-palette', component: 'color-palette', actions: ['set', 'add', 'remove'], label: 'Brand palette', colors: ['#ff6a3d', '#2f8f9d'], max: 4, format: 'hex', formats: ['hex', 'rgb', 'hsl', 'oklch'], alpha: false });
+  await expect(appAccent(page)).toHaveText('#007aff');
+  await expect(appPalette(page)).toHaveText('["#ff6a3d","#2f8f9d"]');
+});
+
+test('set from the panel changes the picker on screen, without opening it or moving focus', async ({ page }) => {
+  const { step, result } = await runColor(page, 'color-picker · set');
+  const color = step?.args[0] as string;
+  expect(result).toEqual({ ok: true, steps: [{ step: 0, ref: 'color-picker', result: color }] });
+  await expect(appAccent(page)).toHaveText(color);
+  await expect.poll(() => picker(page).then(item => item?.value)).toBe(color);
+  await expect(accentSwatch(page)).toHaveAttribute('aria-expanded', 'false');
+  await expect(colorsBlock(page).getByRole('dialog')).toHaveCount(0);
+  await expect(button(page, 'Run steps')).toBeFocused();
+});
+
+test('set, add and remove change the palette and answer with its colors', async ({ page }) => {
+  const set = await runColor(page, 'color-palette · set');
+  const changed = ['#ff6a3d', set.step?.args[1] as string];
+  expect(set.step?.args[0]).toBe(1);
+  expect(set.result.steps[0]?.result).toEqual(changed);
+  await expect(appPalette(page)).toHaveText(JSON.stringify(changed));
+
+  const added = await runColor(page, 'color-palette · add');
+  const grown = [...changed, added.step?.args[0] as string];
+  expect(added.result.steps[0]?.result).toEqual(grown);
+  await expect(appPalette(page)).toHaveText(JSON.stringify(grown));
+  await expect.poll(() => palette(page).then(item => item?.colors)).toEqual(grown);
+
+  const removed = await runColor(page, 'color-palette · remove');
+  expect(removed.step?.args).toEqual([2]);
+  expect(removed.result.steps[0]?.result).toEqual(changed);
+  await expect(appPalette(page)).toHaveText(JSON.stringify(changed));
+  await expect(colorsBlock(page).getByRole('dialog')).toHaveCount(0);
+  await expect(button(page, 'Run steps')).toBeFocused();
+});
+
+test('a string that is not a color and add at max are refused, and nothing changes on screen', async ({ page }) => {
+  const banana = await act(page, [{ ref: 'color-picker', action: 'set', args: ['banana'] }]);
+  expect(banana.ok).toBe(false);
+  expect(banana.error?.message).toContain('"banana" is not a color "Accent color" can read.');
+  await expect(appAccent(page)).toHaveText('#007aff');
+
+  // Two more colors reach the palette's max of 4; the third add is refused.
+  const full = await act(page, [{ ref: 'color-palette', action: 'add', args: ['#34c759'] }, { ref: 'color-palette', action: 'add', args: ['#af52de'] }]);
+  expect(full.ok).toBe(true);
+  await expect.poll(() => palette(page).then(item => item?.actions)).toEqual(['set', 'remove']);
+  const held = JSON.stringify(['#ff6a3d', '#2f8f9d', '#34c759', '#af52de']);
+  await expect(appPalette(page)).toHaveText(held);
+  const over = await act(page, [{ ref: 'color-palette', action: 'add', args: ['#ffcc00'] }]);
+  expect(over.ok).toBe(false);
+  expect(over.error?.message).toContain('"Brand palette" already holds 4 colors, its most.');
+  await expect(appPalette(page)).toHaveText(held);
+  await expect(colorsBlock(page).locator('.color-palette-add')).toHaveCount(0);
+});
+
+test('when the app takes no changes, a step answers “The app did not take”', async ({ page }) => {
+  await colorsBlock(page).getByRole('checkbox', { name: 'The app takes no changes' }).check();
+  const accent = await act(page, [{ ref: 'color-picker', action: 'set', args: ['#ff0000'] }]);
+  expect(accent.ok).toBe(false);
+  expect(accent.error?.message).toBe('The app did not take "#ff0000": "Accent color" is still "#007aff".');
+  const brand = await act(page, [{ ref: 'color-palette', action: 'add', args: ['#0000ff'] }]);
+  expect(brand.ok).toBe(false);
+  expect(brand.error?.message).toContain('The app did not take "#0000ff"');
+  await expect(appAccent(page)).toHaveText('#007aff');
+  await expect(appPalette(page)).toHaveText('["#ff6a3d","#2f8f9d"]');
+  await expect(page.getByTestId('agent-changes')).toContainText('No changes yet.');
+});
+
+test('Changes says who changed a color: the person by hand, the agent by a step', async ({ page }) => {
+  const changes = page.getByTestId('agent-changes');
+  const set = await runColor(page, 'color-picker · set');
+  const color = set.step?.args[0] as string;
+  await expect(changes.locator('li').first()).toHaveText(JSON.stringify({
+    ref: 'color-picker', component: 'color-picker', label: 'Accent color', key: 'color', value: color, previous: '#007aff', source: 'agent',
+  }));
+
+  // By hand: the value field of the picker.
+  await accentSwatch(page).click();
+  const field = colorsBlock(page).getByRole('textbox', { name: 'Color value' });
+  await field.fill('#00c7be');
+  await field.press('Enter');
+  await expect(appAccent(page)).toHaveText('#00c7be');
+  await expect(changes.locator('li').first()).toHaveText(JSON.stringify({
+    ref: 'color-picker', component: 'color-picker', label: 'Accent color', key: 'color', value: '#00c7be', previous: color, source: 'user',
+  }));
+  await page.keyboard.press('Escape');
+
+  // By hand in the palette: Delete on its second swatch.
+  const second = colorsBlock(page).getByRole('button', { name: /^Color 2 of 2/u });
+  await second.focus();
+  await second.press('Delete');
+  await expect(appPalette(page)).toHaveText('["#ff6a3d"]');
+  await expect(changes.locator('li').first()).toHaveText(JSON.stringify({
+    ref: 'color-palette', component: 'color-palette', label: 'Brand palette', key: 'colors', value: ['#ff6a3d'], previous: ['#ff6a3d', '#2f8f9d'], source: 'user',
+  }));
 });
