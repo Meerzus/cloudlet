@@ -120,7 +120,7 @@ A component's adapter takes steps through three optional methods of `AgentCompon
 (bring it in front of a person, and say where they find it). A component without them stays
 read-only, and its steps are refused.
 
-The Toaster's adapter will ship as `@cloudlet/toast/agent` together with this package.
+The Toaster's adapter is `@cloudlet/toast/agent`, in `@cloudlet/toast` from 1.4.0-rc.1.
 
 **Compatibility.** Every adapter declares the protocol it speaks, and `connect` throws a `TypeError`
 for any protocol number other than 1, so the bridge and the components do not depend on each other
