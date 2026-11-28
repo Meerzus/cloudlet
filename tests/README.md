@@ -60,3 +60,8 @@ high contrast and the minimum browser versions are checked by hand.
 - `npm run release:verify` — the whole chain from a clean install, with input fingerprints, into
   `artifacts/release/toast-<version>+agent-<version>/<timestamp>/`; both archives are packed, checked
   and repacked byte for byte.
+- `npm run smoke:published -- --tag next` — after a release, not in CI: both packages from the real
+  npm registry in a clean project under `artifacts/smoke-published/`, the bridge reads and dismisses a
+  Toaster notification, the dist-tags point to the expected versions, `npm audit signatures` and the
+  SLSA provenance of each package pass, and with `--evidence <dir>` the registry shasum equals
+  `<key>-evidence.json`. `--toast-only` checks the Toaster alone. Options are in the script's header.

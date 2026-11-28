@@ -122,6 +122,11 @@ read-only, and its steps are refused.
 
 The Toaster's adapter will ship as `@cloudlet/toast/agent` together with this package.
 
+**Compatibility.** Every adapter declares the protocol it speaks, and `connect` throws a `TypeError`
+for any protocol number other than 1, so the bridge and the components do not depend on each other
+as packages. The Toaster's adapter speaks protocol 1: any `@cloudlet/agent` 0.x that understands
+protocol 1 works with it.
+
 ## Tools for a model
 
 The bridge never calls a model. It gives you two tools to hand to one, and runs them when the model

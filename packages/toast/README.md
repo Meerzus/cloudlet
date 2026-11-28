@@ -72,7 +72,9 @@ Full documentation: **https://cloudlet.dev/docs/components/toaster**
 - Reference: `createCloudlet`, the controller, Toaster props, labels & announcements, types.
 - Experimental: `@cloudlet/toast/agent` exports `toasterAgent(controller)`, which lets the kit's agent
   bridge, `@cloudlet/agent`, read the controller and run steps on it under the app's permission. It
-  may change in any minor release.
+  may change in any minor release. The adapter speaks agent protocol 1, and the bridge refuses an
+  adapter with another protocol number with a `TypeError` at `connect`, so neither package depends on
+  the other: any `@cloudlet/agent` 0.x that understands protocol 1 works with it.
 - The [changelog](CHANGELOG.md) lists every change, including migration from `1.0.0-rc.0`.
 
 ## Contributing and security
