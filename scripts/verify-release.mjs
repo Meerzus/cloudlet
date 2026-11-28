@@ -66,7 +66,7 @@ try {
   await npm('01-clean-install', ['ci', '--no-audit', '--no-fund', '--prefer-offline']);
   await npm('02-typecheck', ['run', 'typecheck']);
   await npm('03-unit-react', ['test']);
-  await run('04-tooling', process.execPath, ['--test', 'tests/tooling/local-candidate.test.mjs']);
+  await npm('04-tooling', ['run', 'test:tooling']);
   await run('05-doc-examples', process.execPath, ['scripts/check-doc-examples.mjs']);
   await npm('06-notices', ['run', 'notices']);
   await run('07-notice-diff', 'git', ['-c', 'core.autocrlf=false', 'diff', '--exit-code', '--', 'packages/toast/LICENSE', 'packages/toast/THIRD_PARTY_NOTICES.md']);
