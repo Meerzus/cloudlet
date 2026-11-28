@@ -290,7 +290,14 @@ async function switchCheck(page) {
   const iframe = page.locator('iframe.kt-frame');
   await iframe.waitFor({ state: 'attached', timeout: 15_000 });
   const frame = await (await iframe.elementHandle()).contentFrame();
-  if (!frame || !FRAME_URL.test(frame.url())) return { error: 'the scene frame did not load' };
+  if (!frame) return { error: 'the scene frame did not load' };
+  // The frame may still be on its first blank document while it navigates to the scene.
+  try {
+    await frame.waitForURL(FRAME_URL, { timeout: 15_000 });
+  } catch (error) {
+    if (error?.name !== 'TimeoutError') throw error;
+    return { error: 'the scene frame did not load' };
+  }
   await frame.waitForSelector('.cloudlet-host[data-reduced-motion]', { state: 'attached', timeout: 15_000 });
   const before = { page: await hostValue(page), frame: await hostValue(frame) };
   const toggle = page.getByRole('switch', { name: SWITCH_CHECK });
