@@ -100,6 +100,16 @@ Do not call it when a notification arrives: that is the move the focus policy fo
 
 Under `prefers-reduced-motion`, every transition of the stack and the Island becomes a short crossfade: no movement, no scaling, no slide. Spinners stop and swipes are turned off; the keyboard and the buttons still do everything. Cloudlet follows the setting live, without a remount, and marks the host with `data-reduced-motion="true"`.
 
+An app with its own motion setting can ask for the same calm. Pass `reducedMotion` to the [Toaster](/docs/components/toaster/api/toaster), or put `data-reduced-motion` on any ancestor of it (it counts by presence, with any value). One attribute on `<html>` calms every Cloudlet component on the page. The system setting and the app's setting add up: either one is enough, and the app cannot turn motion on against `prefers-reduced-motion: reduce`. Changes apply live, without a remount.
+
+```tsx title="app.tsx"
+import { Toaster } from "@cloudlet/toast";
+
+export function AppToaster({ reduceMotion }: { reduceMotion: boolean }) {
+  return <Toaster reducedMotion={reduceMotion} />;
+}
+```
+
 In forced-colours mode Cloudlet uses system colours with visible borders and a solid focus ring ([Theme](/docs/components/toaster/styling#theme)).
 
 ## Localization

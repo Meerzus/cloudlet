@@ -68,6 +68,7 @@ function scrollsItself(target: EventTarget | null, deltaY: number) {
 export function FrameApp() {
   const [controller, setController] = useState<ReactCloudletController | null>(null);
   const [theme, setTheme] = useState<FrameTheme>('light');
+  const [reducedMotion, setReducedMotion] = useState(false);
   const [device, setDevice] = useState<DeviceId>('laptop');
   const [wide, setWide] = useState(true);
 
@@ -134,6 +135,9 @@ export function FrameApp() {
           applyTheme(message.theme);
           setTheme(message.theme);
           break;
+        case 'set-reduced-motion':
+          setReducedMotion(message.reduced);
+          break;
         case 'toast-show': {
           const { title, kind, duration } = message.toast;
           controller.show({ id: message.id, title, kind, duration, attention: 'stack' });
@@ -185,7 +189,13 @@ export function FrameApp() {
   if (!controller) return null;
   return (
     <CloudletProvider controller={controller}>
-      <Toaster theme={theme} position="auto" offsets={OFFSETS[skeletonFor(device, wide)]} labels={LABELS} />
+      <Toaster
+        theme={theme}
+        reducedMotion={reducedMotion}
+        position="auto"
+        offsets={OFFSETS[skeletonFor(device, wide)]}
+        labels={LABELS}
+      />
     </CloudletProvider>
   );
 }

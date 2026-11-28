@@ -20,6 +20,8 @@ export type ParentMessage =
   /** Ends a running intro where it is (any input in the hero outside the frame). */
   | { readonly type: 'stop-intro' }
   | { readonly type: 'set-theme'; readonly theme: FrameTheme }
+  /** The parent page's own reduce-motion switch (not the system preference, which the frame reads itself). */
+  | { readonly type: 'set-reduced-motion'; readonly reduced: boolean }
   /** Stops the intro and clears every notification. */
   | { readonly type: 'reset' }
   /** The kit's Toaster scene: the same notification the plain stack beside the screen gets. */
@@ -91,6 +93,8 @@ export function parseParentMessage(data: unknown): ParentMessage | null {
       return { type: value['type'] };
     case 'set-theme':
       return value['theme'] === 'light' || value['theme'] === 'dark' ? { type: 'set-theme', theme: value['theme'] } : null;
+    case 'set-reduced-motion':
+      return typeof value['reduced'] === 'boolean' ? { type: 'set-reduced-motion', reduced: value['reduced'] } : null;
     case 'toast-show':
     case 'toast-update': {
       const id = parseId(value['id']);

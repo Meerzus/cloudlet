@@ -38,6 +38,18 @@ describe('site frame protocol', () => {
     expect(parseParentMessage(null)).toBeNull();
   });
 
+  it("parses the page switch's reduced motion and rejects anything but a boolean", () => {
+    const tag = { channel: FRAME_CHANNEL };
+    expect(parseParentMessage({ ...tag, type: 'set-reduced-motion', reduced: true })).toEqual({ type: 'set-reduced-motion', reduced: true });
+    expect(parseParentMessage({ ...tag, type: 'set-reduced-motion', reduced: false })).toEqual({ type: 'set-reduced-motion', reduced: false });
+
+    expect(parseParentMessage({ ...tag, type: 'set-reduced-motion' })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'set-reduced-motion', reduced: 'true' })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'set-reduced-motion', reduced: 1 })).toBeNull();
+    expect(parseParentMessage({ ...tag, type: 'set-reduced-motion', reduced: null })).toBeNull();
+    expect(parseParentMessage({ type: 'set-reduced-motion', reduced: true })).toBeNull();
+  });
+
   it('parses the Toaster scene messages and rejects malformed ones', () => {
     const tag = { channel: FRAME_CHANNEL };
     const toast = { title: 'Synced to the cloud', kind: 'success', duration: 4000 };

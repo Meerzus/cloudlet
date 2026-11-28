@@ -25,6 +25,7 @@ import {
   postToFrame,
   type ParentMessage,
 } from '@/lib/frame-protocol';
+import { switchedStill, watchStill } from '@/lib/reduced-motion';
 import { springEasing } from '@/lib/spring';
 import { PlainStack, usePlainStack } from './plain-stack';
 
@@ -185,6 +186,7 @@ export function ToasterCompare() {
       const message = parseFrameMessage(event.data);
       if (message?.type === 'ready') {
         postToFrame(source, { type: 'set-theme', theme: state.current.resolved }, origin);
+        postToFrame(source, { type: 'set-reduced-motion', reduced: switchedStill() }, origin);
         link.connect(source);
         ready.current = true;
         const waiting = pending.current;
@@ -200,6 +202,19 @@ export function ToasterCompare() {
   useEffect(() => {
     link?.send({ type: 'set-theme', theme: resolved });
   }, [link, resolved]);
+
+  // The page's own switch only (the frame reads the system preference itself). Before \`ready\` nothing
+  // is queued: the frame gets the switch's value of that moment when it reports in.
+  useEffect(() => {
+    if (!link) return;
+    let last = switchedStill();
+    return watchStill(() => {
+      const reduced = switchedStill();
+      if (reduced === last) return;
+      last = reduced;
+      if (link.connected) link.send({ type: 'set-reduced-motion', reduced });
+    });
+  }, [link]);
 
   const style = fit ? ({ '--kt-scale': fit.scale, '--kt-shown': fit.shown } as CSSProperties) : undefined;
 

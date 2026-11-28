@@ -59,19 +59,22 @@ function landing(report) {
     };
     const skipped = entry.skipped ?? [];
     const still = verdict(entry.still, 2, (layout) => !layout.lenis && !layout.pinSpacers && !layout.moved);
+    // The reduce-motion switch on `/` (scenarios without reduced motion): both Toasters report "true", then "false".
+    const sw = entry.switch ? !entry.switch.error && ['on', 'off'].every((state) => ['page', 'frame'].every((host) => entry.switch[state][host] === String(state === 'on'))) : null;
     const narrow = verdict(entry.narrow, 5 - skipped.filter((path) => path !== '/toaster/frame').length, (width) => width <= 320);
     if (skipped.length) notes.push(`${scenario}: ${skipped.join(', ')} left out on this engine (see audit-landing.mjs)`);
     // A scenario cut short (the audit threw) is not green, whatever it had checked so far.
     const complete = entry.complete === true;
-    const ok = complete && !bad.length && !keyFailures && !entry.errors.length && still !== false && still !== 'partial' && narrow !== false && narrow !== 'partial';
+    const ok = complete && !bad.length && !keyFailures && !entry.errors.length && still !== false && still !== 'partial' && sw !== false && narrow !== false && narrow !== 'partial';
     if (!complete) problems.push(`${scenario}: interrupted before it finished — partial results`);
-    rows.push([mark(ok) + ' ' + scenario + (complete ? '' : ' (interrupted)'), entry.checks.length, bad.length, keyboard.map(([path, pass]) => `${path} ${pass.stops}`).join(', '), keyFailures, entry.errors.length, layoutCell(still), layoutCell(narrow)]);
+    rows.push([mark(ok) + ' ' + scenario + (complete ? '' : ' (interrupted)'), entry.checks.length, bad.length, keyboard.map(([path, pass]) => `${path} ${pass.stops}`).join(', '), keyFailures, entry.errors.length, layoutCell(still), layoutCell(sw), layoutCell(narrow)]);
+    if (sw === false) problems.push(`${scenario} switch on \`/\`: ${JSON.stringify(entry.switch)}`);
     for (const check of bad) for (const violation of check.violations) problems.push(`${scenario} \`${check.path}\` ${check.at}: **${violation.id}** — ${violation.nodes.map((node) => node.target).join(', ')}`);
     for (const [path, pass] of keyboard) for (const stop of pass.failures) problems.push(`${scenario} keyboard \`${path}\`: ${JSON.stringify(stop)}`);
     for (const error of entry.errors) problems.push(`${scenario} console: ${error}`);
   }
   return [
-    table(['Scenario', 'axe checks', 'with violations', 'Tab stops', 'keyboard failures', 'console errors', 'still (reduced)', '320 px'], rows),
+    table(['Scenario', 'axe checks', 'with violations', 'Tab stops', 'keyboard failures', 'console errors', 'still (reduced)', 'switch', '320 px'], rows),
     notes.length ? `\n${notes.map((note) => `_${note}_`).join('  \n')}` : '',
     problems.length ? `\n**Problems**\n\n${list(problems)}` : '',
   ].join('\n');

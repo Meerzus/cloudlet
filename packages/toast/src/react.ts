@@ -185,6 +185,13 @@ export interface ToasterProps {
   readonly clearAll?: boolean;
   /** Read on every render. */
   readonly motion?: ToasterMotion;
+  /**
+   * The app's own reduced-motion setting. `true` removes motion whatever the system says; `false`
+   * and omitting it follow the system and `data-reduced-motion` on an ancestor (that attribute
+   * counts by presence, with any value). An app cannot turn motion on against the system's
+   * `prefers-reduced-motion: reduce`. Read on every render.
+   */
+  readonly reducedMotion?: boolean;
   /** Extra classes per part, added to the own `cloudlet-*` classes (never replacing them). Read on every render. */
   readonly classNames?: Partial<Record<CloudletPart, string>>;
 }

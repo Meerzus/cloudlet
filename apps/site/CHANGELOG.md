@@ -7,6 +7,13 @@ cloudlet.dev. The history of the npm package `@cloudlet/toast` is in the
 
 ## Unreleased
 
+### Website
+
+- The "Reduce motion on this page" switch in the kit's Accessibility principle now calms the Toaster
+  too: the Island of the page and the Toaster on the scene's phones change state without motion while
+  the switch is on, and move again when it is off. The note under the switch no longer says the
+  Toaster only follows the system setting.
+
 ### Color picker and Color palette
 
 - The `color-picker` item adds a sixth file, `components/ui/color-picker/color-picker-agent.ts`, and the

@@ -16,6 +16,8 @@ export interface AccessibilityFixtureApi {
   theme: (theme: 'light' | 'dark' | 'system') => void;
   dir: (dir: 'ltr' | 'rtl') => void;
   attach: (attached: boolean) => void;
+  /** The Toaster's `reducedMotion` prop. */
+  reducedMotion: (reduced: boolean) => void;
   command: () => void;
   settleAction: (success: boolean) => void;
   operation: () => void;
@@ -67,6 +69,7 @@ export function AccessibilityFixture() {
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
   const [dir, setDir] = useState<'ltr' | 'rtl'>('ltr');
   const [attached, setAttached] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const nonce = document.querySelector<HTMLMetaElement>('meta[name="csp-nonce"]')?.content;
 
   useEffect(() => keepIslandOnLabControls(window), []);
@@ -92,7 +95,7 @@ export function AccessibilityFixture() {
       dismiss: id => { controller.dismiss(handle(id)); },
       open: () => openIsland(host()),
       collapse: () => collapseIsland(host()),
-      theme: setTheme, dir: setDir, attach: setAttached,
+      theme: setTheme, dir: setDir, attach: setAttached, reducedMotion: setReducedMotion,
       command: () => {
         controller.clear();
         actionAttempts = 0;
@@ -160,6 +163,6 @@ export function AccessibilityFixture() {
       <output data-testid="accessibility-state">{snapshot.notifications.length} notifications; {snapshot.island.open ? `island · ${snapshot.island.reason}` : 'stack'}</output>
       <p id="accessibility-destination" tabIndex={-1}>Target of a real link</p>
     </main>
-    {attached && <Toaster theme={theme} dir={dir} position="bottom-center" labels={labels} announcements={announcements} {...(nonce ? { nonce } : {})} />}
+    {attached && <Toaster theme={theme} dir={dir} position="bottom-center" reducedMotion={reducedMotion} labels={labels} announcements={announcements} {...(nonce ? { nonce } : {})} />}
   </>;
 }

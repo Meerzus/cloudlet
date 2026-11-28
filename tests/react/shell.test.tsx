@@ -338,6 +338,50 @@ describe('one shell for the pill and the Island', () => {
     expect(media.removeEventListener.mock.calls.map(call => call.slice(0, 2))).toEqual([['change', listener]]);
   });
 
+  it('takes the reducedMotion prop and data-reduced-motion on an ancestor of a custom container, live; the system still wins; the observer is disconnected on unmount', async () => {
+    let listener: (() => void) | null = null;
+    const media = { matches: false, addEventListener: (_: string, callback: () => void) => { listener = callback; }, removeEventListener: vi.fn() };
+    const width = { matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    vi.stubGlobal('matchMedia', vi.fn((query: string) => query.includes('reduced-motion') ? media : width));
+    const wrapper = document.createElement('section');
+    const target = document.createElement('div');
+    wrapper.append(target);
+    document.body.append(wrapper);
+    external.push(wrapper);
+    const instance = controller();
+    admit(instance, 'Only');
+    const view = render(tree(instance, { container: target }));
+    // MutationObserver records arrive in a microtask.
+    const observed = () => act(async () => { await Promise.resolve(); });
+    const reducedCalls = () => motionControl.calls.filter(call => call.startsWith('reduced:'));
+    expect(target.contains(host())).toBe(true);
+    expect(host()).toHaveAttribute('data-reduced-motion', 'false');
+    // An ancestor above the container, by presence; the host's own attribute changing does not loop.
+    wrapper.setAttribute('data-reduced-motion', 'off');
+    await observed();
+    expect(host()).toHaveAttribute('data-reduced-motion', 'true');
+    expect(reducedCalls()).toEqual(['reduced:true']);
+    wrapper.removeAttribute('data-reduced-motion');
+    await observed();
+    expect(host()).toHaveAttribute('data-reduced-motion', 'false');
+    // The prop, on every render; unchanged renders do not call the motion again.
+    view.rerender(tree(instance, { container: target, reducedMotion: true }));
+    view.rerender(tree(instance, { container: target, reducedMotion: true }));
+    expect(host()).toHaveAttribute('data-reduced-motion', 'true');
+    view.rerender(tree(instance, { container: target, reducedMotion: false }));
+    expect(host()).toHaveAttribute('data-reduced-motion', 'false');
+    expect(reducedCalls()).toEqual(['reduced:true', 'reduced:false', 'reduced:true', 'reduced:false']);
+    // The system's reduce is stronger than reducedMotion={false}.
+    media.matches = true;
+    act(() => listener!());
+    expect(host()).toHaveAttribute('data-reduced-motion', 'true');
+    media.matches = false;
+    act(() => listener!());
+    const disconnect = vi.spyOn(MutationObserver.prototype, 'disconnect');
+    view.unmount();
+    expect(disconnect).toHaveBeenCalled();
+  });
+
   it('releases the sampler, observers and CSSOM rules on unmount', () => {
     const observers: { disconnect: ReturnType<typeof vi.fn>; targets: Element[] }[] = [];
     vi.stubGlobal('ResizeObserver', class {

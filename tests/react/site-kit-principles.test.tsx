@@ -95,9 +95,10 @@ describe('the page’s own reduce-motion switch', () => {
     expect(screen.getByText(/Your system already asks for reduced motion/)).toBeInTheDocument();
   });
 
-  it('says honestly that the Toaster follows the system setting', () => {
+  it('says the Toaster follows the switch too', () => {
     render(<AccessProof />);
-    expect(screen.getByText(/the Toaster, in the Island and on the phones, follows your system setting/)).toBeInTheDocument();
+    expect(screen.getByText(/the Toaster, in the Island and on the phones, follow it too/)).toBeInTheDocument();
+    expect(screen.queryByText(/follows your system setting/)).not.toBeInTheDocument();
   });
 
   it('lines up the stops Tab reaches in the picker', () => {
