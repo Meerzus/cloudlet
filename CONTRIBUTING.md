@@ -68,8 +68,10 @@ Run `npm run check` and `npm run check:docs`. Changes to rendering or motion sho
 browser suite (`npm run test:e2e`).
 
 - Keep a pull request to one change, and describe what it changes and why.
-- A change to the public API or to behaviour gets an entry in [CHANGELOG](CHANGELOG.md) and an update
-  of the documentation in `apps/site/content/docs`.
+- A change to the public API or to behaviour gets an entry under `## Unreleased` in the changelog of
+  the package it changes ([`@cloudlet/toast`](packages/toast/CHANGELOG.md),
+  [`@cloudlet/agent`](packages/agent/CHANGELOG.md); the website and registry items:
+  [apps/site](apps/site/CHANGELOG.md)) and an update of the documentation in `apps/site/content/docs`.
 - Open the pull request against `main`; CI runs there.
 
 By contributing you agree that your work is licensed under the [MIT License](LICENSE) and that you

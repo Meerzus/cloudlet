@@ -58,4 +58,5 @@ through [SECURITY](SECURITY.md), not public issues. Everyone taking part follows
 ## License
 
 [MIT](LICENSE). Third-party notices: [packages/toast](packages/toast/THIRD_PARTY_NOTICES.md),
-[apps/site](apps/site/THIRD_PARTY_NOTICES.md). The [changelog](CHANGELOG.md) lists every release.
+[apps/site](apps/site/THIRD_PARTY_NOTICES.md). Each package keeps its own changelog:
+[`@cloudlet/toast`](packages/toast/CHANGELOG.md), [`@cloudlet/agent`](packages/agent/CHANGELOG.md).

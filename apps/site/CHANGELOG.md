@@ -2,8 +2,8 @@
 
 Changes to the website and to the shadcn registry items that have no npm package. Registry items are
 installed as source, so they have no versions: a section is named after the day it reached
-cloudlet.dev. The history of the npm package `@cloudlet/toast` is in the
-[root CHANGELOG](../../CHANGELOG.md).
+cloudlet.dev. The history of the npm packages is in their own changelogs:
+[`@cloudlet/toast`](../../packages/toast/CHANGELOG.md), [`@cloudlet/agent`](../../packages/agent/CHANGELOG.md).
 
 ## Unreleased
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## Unreleased
 
 Experimental first version: the agent reads and acts under the app's permission.
 
