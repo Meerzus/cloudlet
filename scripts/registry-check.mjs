@@ -10,20 +10,30 @@ import { chromium, firefox, webkit } from '@playwright/test';
 import { defaultCandidateTarball, packageTarballFilename, readPackedManifest } from './local-candidate.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const tarballOption = process.argv.indexOf('--tarball');
-const tarball = tarballOption >= 0 ? resolve(root, process.argv[tarballOption + 1]) : await defaultCandidateTarball(root);
+const option = (name) => { const index = process.argv.indexOf(name); return index >= 0 ? resolve(root, process.argv[index + 1]) : undefined; };
 const evidencePath = resolve(root, 'artifacts/integration/registry');
 await mkdir(evidencePath, { recursive: true });
 const readJSON = async (path) => JSON.parse(await readFile(path, 'utf8'));
-const tarBytes = await readFile(tarball);
-const packageManifest = readPackedManifest(tarball);
-const localManifest = await readJSON(resolve(root, 'packages/toast/package.json'));
-assert.equal(packageManifest.name, '@cloudlet/toast');
-assert.equal(packageManifest.version, localManifest.version, 'Repack the current candidate before registry verification');
-assert.equal(packageManifest.private, undefined);
-const archivePath = `/npm/${packageTarballFilename(packageManifest)}`;
-const tarSha256 = createHash('sha256').update(tarBytes).digest('hex');
-const integrity = `sha512-${createHash('sha512').update(tarBytes).digest('base64')}`;
+// The loopback npm registry serves both candidate archives: the Toaster that `shadcn add toaster`
+// installs and the bridge the consumer installs next to the color adapters.
+const candidate = async (key, name, directory, tarball) => {
+  const bytes = await readFile(tarball);
+  const manifest = readPackedManifest(tarball);
+  assert.equal(manifest.name, name);
+  assert.equal(manifest.version, (await readJSON(resolve(root, directory, 'package.json'))).version, 'Repack the current candidates before registry verification');
+  assert.equal(manifest.private, undefined);
+  return {
+    key, tarball, bytes, manifest,
+    metadataPath: `/${name}`,
+    archivePath: `/npm/${packageTarballFilename(manifest)}`,
+    sha256: createHash('sha256').update(bytes).digest('hex'),
+    integrity: `sha512-${createHash('sha512').update(bytes).digest('base64')}`,
+  };
+};
+const toast = await candidate('toast', '@cloudlet/toast', 'packages/toast', option('--tarball') ?? await defaultCandidateTarball(root, 'toast'));
+const bridge = await candidate('agent', '@cloudlet/agent', 'packages/agent', option('--agent-tarball') ?? await defaultCandidateTarball(root, 'agent'));
+const candidates = [toast, bridge];
+const { tarball, manifest: packageManifest, archivePath, sha256: tarSha256, integrity } = toast;
 const temporary = await mkdtemp(join(tmpdir(), 'cloudlet-registry-'));
 const consumer = join(temporary, 'consumer');
 const userNpmrc = join(temporary, 'user.npmrc');
@@ -57,22 +67,25 @@ let origin;
 const registryServer = createServer(async (request, response) => {
   const path = decodeURIComponent(new URL(request.url, origin).pathname);
   requests.push({ method: request.method, path });
-  if (path === '/@cloudlet/toast') {
+  const metadata = candidates.find((item) => item.metadataPath === path);
+  if (metadata) {
+    const { manifest } = metadata;
     const version = {
-      ...packageManifest,
+      ...manifest,
       dist: {
-        tarball: `${origin}${archivePath}`,
-        integrity,
-        shasum: createHash('sha1').update(tarBytes).digest('hex'),
+        tarball: `${origin}${metadata.archivePath}`,
+        integrity: metadata.integrity,
+        shasum: createHash('sha1').update(metadata.bytes).digest('hex'),
       },
     };
     response.setHeader('Content-Type', 'application/json');
-    response.end(JSON.stringify({ name: packageManifest.name, 'dist-tags': { latest: packageManifest.version }, versions: { [packageManifest.version]: version } }));
+    response.end(JSON.stringify({ name: manifest.name, 'dist-tags': { latest: manifest.version }, versions: { [manifest.version]: version } }));
     return;
   }
-  if (path === archivePath) {
+  const archive = candidates.find((item) => item.archivePath === path);
+  if (archive) {
     response.setHeader('Content-Type', 'application/octet-stream');
-    response.end(tarBytes);
+    response.end(archive.bytes);
     return;
   }
   if (['/r/toaster.json', '/r/color-picker.json', '/r/color-palette.json', '/r/registry.json'].includes(path)) {
@@ -90,6 +103,7 @@ const report = {
   node: process.version,
   npm: spawnSync('npm', ['--version'], { encoding: 'utf8' }).stdout.trim(),
   tarball, tarSha256, integrity,
+  agentTarball: bridge.tarball, agentTarSha256: bridge.sha256, agentIntegrity: bridge.integrity,
   consumer,
   shadcn: (await readJSON(resolve(root, 'registry/tooling/node_modules/shadcn/package.json'))).version,
   checks: {}, browsers: [], commands,
@@ -157,7 +171,7 @@ try {
   assert(installedPicker.includes("from '@/lib/spring'"));
   report.checks.colorPickerInstalledWithoutDependencies = 'passed';
   // Both items bring their agent bridge adapters. The adapters mirror the bridge's protocol instead of
-  // importing @cloudlet/agent, so the consumer has no such package and still builds and typechecks
+  // importing @cloudlet/agent, so the consumer has no such package and still typechecks
   // (tsconfig includes every installed file, the adapters among them).
   const installedAdapters = await Promise.all(['color-picker/color-picker-agent.ts', 'color-palette/color-palette-agent.ts'].map((file) => readFile(join(consumer, 'components/ui', file), 'utf8')));
   for (const adapter of installedAdapters) {
@@ -167,12 +181,27 @@ try {
   assert(installedAdapters[1].includes("from '@/components/ui/color-picker/color-picker-agent'"));
   assert(!(await readJSON(join(consumer, 'package.json'))).dependencies['@cloudlet/agent']);
   await assert.rejects(realpath(join(consumer, 'node_modules/@cloudlet/agent')));
+  await run('npm', ['run', 'typecheck'], consumer, 'consumer-types-without-bridge');
+  report.checks.agentAdaptersWithoutBridgePackage = 'passed';
+  // Then the app installs the bridge from its archive and adds a route that connects the installed
+  // picker and palette to it through their adapters (registry/consumer-bridge, copied over the consumer).
+  const requestsBeforeBridge = requests.length;
+  await run('npm', ['install', `${bridge.manifest.name}@${bridge.manifest.version}`, '--save-exact', '--ignore-scripts', '--no-audit', '--no-fund'], consumer, 'consumer-install-bridge');
+  const bridgeLock = (await readJSON(join(consumer, 'package-lock.json'))).packages['node_modules/@cloudlet/agent'];
+  assert.equal((await readJSON(join(consumer, 'node_modules/@cloudlet/agent/package.json'))).version, bridge.manifest.version);
+  assert.equal(bridgeLock.integrity, bridge.integrity);
+  assert.equal(bridgeLock.resolved, `${origin}${bridge.archivePath}`);
+  assert(requests.slice(requestsBeforeBridge).some((request) => request.path === bridge.archivePath));
+  assert(!(await realpath(join(consumer, 'node_modules/@cloudlet/agent'))).startsWith(root));
+  assert.equal((await readJSON(join(consumer, 'package.json'))).dependencies['@cloudlet/agent'], bridge.manifest.version);
+  assert.equal((await readJSON(join(consumer, 'package.json'))).dependencies['@cloudlet/toast'], packageManifest.version);
+  await cp(resolve(root, 'registry/consumer-bridge'), consumer, { recursive: true });
+  report.checks.bridgeInstalledFromExactTarball = 'passed';
   report.versions = Object.fromEntries(await Promise.all(['next', 'react', 'react-dom', 'typescript', 'tailwindcss'].map(async (name) => [name, (await readJSON(join(consumer, 'node_modules', name, 'package.json'))).version])));
   await run('npm', ['run', 'build'], consumer, 'consumer-build');
   await run('npm', ['run', 'typecheck'], consumer, 'consumer-types');
   report.checks.productionBuild = 'passed';
   report.checks.types = 'passed';
-  report.checks.agentAdaptersWithoutBridgePackage = 'passed';
   const reservePort = createServer();
   await new Promise((resolveListen) => { reservePort.listen(0, '127.0.0.1', resolveListen); });
   const nextPort = reservePort.address().port;
@@ -285,13 +314,45 @@ try {
       assert.equal(await page.locator('form[aria-label="Palette form"] input[type="hidden"][name="palette"]').count(), 2);
       assert.deepEqual(errors, []);
       await page.screenshot({ path: resolve(evidencePath, `${name}-dark.png`), fullPage: true });
-      report.browsers.push({ name, version: browser.version(), browserReactVersion, status: 'passed', beforeMount: 'passed', hydrationErrors: errors, explicitRuntimeCss: 'passed', light, dark, wrapperContext: 'passed', settledTransition: 'passed', colorPicker: { pickerBackground, fieldBackground, picked, inlineBefore, inlineAfter }, colorPalette: { added: paletteAdded, after: paletteAfter } });
+      // The bridge route: the installed adapters put the picker and the palette into the snapshot of
+      // the bridge installed from its archive, and steps through the bridge change what they show.
+      await page.goto(`${baseURL}/bridge`);
+      await page.waitForFunction(() => window.cloudletAgent?.snapshot().length === 2);
+      const bridgeSnapshot = await page.evaluate(() => {
+        const changes = [];
+        window.cloudletAgent.subscribe((batch) => { changes.push(...batch); });
+        window.registryBridgeChanges = changes;
+        return window.cloudletAgent.snapshot();
+      });
+      const pickerEntry = bridgeSnapshot.find((entry) => entry.ref === 'accent');
+      assert.deepEqual({ ...pickerEntry, formats: [...pickerEntry.formats], actions: [...pickerEntry.actions] }, { ref: 'accent', component: 'color-picker', actions: ['set'], label: 'Accent color', value: '#245cdb', format: 'hex', formats: ['hex', 'rgb', 'hsl', 'oklch'], alpha: false });
+      const paletteEntry = bridgeSnapshot.find((entry) => entry.ref === 'palette');
+      assert.equal(paletteEntry.component, 'color-palette');
+      assert.deepEqual([...paletteEntry.colors], ['#ff6a3d', '#2f8f9d']);
+      const pickerStep = await page.evaluate(() => window.cloudletAgent.act({ steps: [{ ref: 'accent', action: 'set', args: ['rgb(255 0 0)'] }] }));
+      assert.deepEqual(pickerStep, { ok: true, steps: [{ step: 0, ref: 'accent', result: '#ff0000' }] });
+      await page.waitForFunction(() => document.querySelector('[data-bridge-color]')?.textContent === '#ff0000');
+      const paletteStep = await page.evaluate(() => window.cloudletAgent.act({ steps: [{ ref: 'palette', action: 'add', args: ['#00ff00'] }] }));
+      assert.deepEqual(paletteStep, { ok: true, steps: [{ step: 0, ref: 'palette', result: ['#ff6a3d', '#2f8f9d', '#00ff00'] }] });
+      await page.waitForFunction(() => document.querySelector('[data-bridge-palette]')?.textContent === '#ff6a3d #2f8f9d #00ff00');
+      const bridgeAfter = await page.evaluate(() => ({
+        picker: window.cloudletAgent.snapshot().find((entry) => entry.ref === 'accent').value,
+        palette: [...window.cloudletAgent.snapshot().find((entry) => entry.ref === 'palette').colors],
+        changes: window.registryBridgeChanges.map(({ ref, key, value, previous, source }) => ({ ref, key, value, previous, source })),
+      }));
+      assert.equal(bridgeAfter.picker, '#ff0000');
+      assert.deepEqual(bridgeAfter.palette, ['#ff6a3d', '#2f8f9d', '#00ff00']);
+      assert.deepEqual(bridgeAfter.changes.map(({ ref, source }) => ({ ref, source })), [{ ref: 'accent', source: 'agent' }, { ref: 'palette', source: 'agent' }]);
+      assert.deepEqual(errors, []);
+      await page.screenshot({ path: resolve(evidencePath, `${name}-bridge.png`), fullPage: true });
+      report.browsers.push({ name, version: browser.version(), browserReactVersion, status: 'passed', beforeMount: 'passed', hydrationErrors: errors, explicitRuntimeCss: 'passed', light, dark, wrapperContext: 'passed', settledTransition: 'passed', colorPicker: { pickerBackground, fieldBackground, picked, inlineBefore, inlineAfter }, colorPalette: { added: paletteAdded, after: paletteAfter }, bridge: { snapshot: bridgeSnapshot, pickerStep, paletteStep, after: bridgeAfter } });
       await page.close();
     } finally { await browser.close(); }
   }
   report.checks.browserThemeHydration = 'passed';
   report.checks.colorPickerInBrowsers = 'passed';
   report.checks.colorPaletteInBrowsers = 'passed';
+  report.checks.colorAdaptersOnBridgeInBrowsers = 'passed';
   await cp(join(consumer, 'package-lock.json'), resolve(evidencePath, 'installed-package-lock.json'));
   await cp(join(consumer, 'package.json'), resolve(evidencePath, 'installed-package.json'));
   await cp(join(consumer, 'components'), resolve(evidencePath, 'installed-components'), { recursive: true });
@@ -309,7 +370,7 @@ try {
   report.registryRequests = requests;
   report.status = failure ? 'failed' : 'passed';
   await writeFile(resolve(evidencePath, 'check.json'), JSON.stringify(report, null, 2) + '\n');
-  console.log(JSON.stringify({ status: report.status, tarSha256, checks: report.checks, browsers: report.browsers, consumer, evidence: resolve(evidencePath, 'check.json') }, null, 2));
+  console.log(JSON.stringify({ status: report.status, tarSha256, agentTarSha256: bridge.sha256, checks: report.checks, browsers: report.browsers, consumer, evidence: resolve(evidencePath, 'check.json') }, null, 2));
   if (!failure && !process.argv.includes('--keep')) await rm(temporary, { recursive: true, force: true });
 }
 if (failure) throw failure;

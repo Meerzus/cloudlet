@@ -55,7 +55,7 @@ high contrast and the minimum browser versions are checked by hand.
 - `npm run test:managers` — both packed archives installed with npm, pnpm, yarn (node_modules and
   Plug'n'Play) and bun, then imported with the stylesheet resolved through `exports` and a Toaster
   read and dismissed through the bridge (`--tarball` and `--agent-tarball` take ready archives).
-- `npm run test:registry` — `shadcn add` from a loopback registry into a Next consumer, in three engines.
+- `npm run test:registry` — `shadcn add` from a loopback registry into a Next consumer, in three engines; the consumer then installs the bridge archive and drives the installed color adapters through it.
 - `npm run check:docs` — every TS/TSX example of the READMEs and the documentation compiles.
 - `npm run release:verify` — the whole chain from a clean install, with input fingerprints, into
   `artifacts/release/toast-<version>+agent-<version>/<timestamp>/`; both archives are packed, checked

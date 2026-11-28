@@ -77,7 +77,7 @@ try {
     archives[key] = { path, sha256: sha(await readFile(path)) };
     await copyFile(path, join(output, `${key}-candidate.tgz`));
   }
-  const archiveHash = archives.toast.sha256; // what consumers and the registry install
+  const archiveHash = archives.toast.sha256; // the Toaster archive consumers and the registry install
   await run('09-package', process.execPath, ['scripts/check-package.mjs', '--tarball', archives.toast.path, '--agent-tarball', archives.agent.path]);
   await npm('10-runtime-browser', ['run', 'test:e2e', '--', '--workers=3']);
   await cp(join(root, 'playwright-report'), join(output, 'runtime-playwright-report'), { recursive: true });
@@ -101,10 +101,11 @@ try {
   }
   const consumers = JSON.parse(await readFile(join(output, 'consumers.json'), 'utf8'));
   const registry = JSON.parse(await readFile(join(output, 'registry-check.json'), 'utf8'));
-  // Consumers install both archives (the bridge only where a consumer depends on it); the registry the Toaster's.
+  // Consumers install both archives (the bridge only where a consumer depends on it), and so does the registry consumer.
   assert.equal(consumers.tarballSha256, archiveHash);
   assert.equal(consumers.agentTarballSha256, archives.agent.sha256, 'Consumers installed the checked bridge archive');
   assert.equal(registry.tarSha256, archiveHash);
+  assert.equal(registry.agentTarSha256, archives.agent.sha256, 'The registry consumer installed the checked bridge archive');
   report.inputsAfter = await inputs();
   assert.equal(report.inputsAfter.sha256, report.inputsBefore.sha256, 'Release inputs changed during verification');
   await run('15-diff-check', 'git', ['diff', '--check']);
