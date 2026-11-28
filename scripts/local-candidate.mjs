@@ -7,9 +7,22 @@ export function packageTarballFilename(manifest) {
   return `${manifest.name.replace(/^@/u, '').replaceAll('/', '-')}-${manifest.version}.tgz`;
 }
 
-export async function defaultCandidateTarball(root) {
-  const manifest = JSON.parse(await readFile(resolve(root, 'packages/toast/package.json'), 'utf8'));
+/**
+ * The archive `npm run pack:local` retains for a package of `PACKAGES` (`toast` or `agent`) at the
+ * version of its manifest. `release-target.mjs` is imported lazily: it imports this module.
+ */
+export async function defaultCandidateTarball(root, key = 'toast') {
+  const { PACKAGES } = await import('./release-target.mjs');
+  const entry = PACKAGES.find((candidate) => candidate.key === key);
+  assert.ok(entry, `Unknown package "${key}"; expected one of ${PACKAGES.map((candidate) => candidate.key).join(', ')}`);
+  const manifest = JSON.parse(await readFile(resolve(root, entry.dir, 'package.json'), 'utf8'));
   return resolve(root, 'artifacts/integration', packageTarballFilename(manifest));
+}
+
+/** The evidence `npm run pack:local` writes next to a package's archive. */
+export function candidateEvidencePath(root, key) {
+  assert.match(key, /^[a-z]+$/u, `Package keys are lowercase words, got "${key}"`);
+  return resolve(root, 'artifacts/integration', `${key}-evidence.json`);
 }
 
 export function readPackedManifest(tarball) {

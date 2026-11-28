@@ -56,4 +56,5 @@ high contrast and the minimum browser versions are checked by hand.
 - `npm run test:registry` — `shadcn add` from a loopback registry into a Next consumer, in three engines.
 - `npm run check:docs` — every TS/TSX example of the READMEs and the documentation compiles.
 - `npm run release:verify` — the whole chain from a clean install, with input fingerprints, into
-  `artifacts/release/<version>/<timestamp>/`.
+  `artifacts/release/toast-<version>+agent-<version>/<timestamp>/`; both archives are packed, checked
+  and repacked byte for byte.

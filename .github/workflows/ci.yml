@@ -32,7 +32,12 @@ jobs:
       - run: npm run test:tooling
       - run: npm run check:docs
       - run: npm run pack:local
-      - run: npm run check:package -- --tarball "artifacts/integration/cloudlet-toast-$(node -p "require('./packages/toast/package.json').version").tgz"
+      # Both archives pack:local retained, checked alone and installed together; the upload below keeps
+      # them with their evidence.
+      - run: >-
+          npm run check:package --
+          --tarball "artifacts/integration/cloudlet-toast-$(node -p "require('./packages/toast/package.json').version").tgz"
+          --agent-tarball "artifacts/integration/cloudlet-agent-$(node -p "require('./packages/agent/package.json').version").tgz"
       # The landing consumes the built package dist, so it builds after pack:local.
       - run: npm run build:site
       - run: npm run notices && git diff --exit-code -- packages/toast/LICENSE packages/toast/THIRD_PARTY_NOTICES.md

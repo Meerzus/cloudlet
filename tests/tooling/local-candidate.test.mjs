@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { bindCandidateLock, packageTarballFilename, readConsumerLock } from '../../scripts/local-candidate.mjs';
+import { bindCandidateLock, candidateEvidencePath, defaultCandidateTarball, packageTarballFilename, readConsumerLock } from '../../scripts/local-candidate.mjs';
 
 const manifest = { name: '@cloudlet/toast', version: '1.0.0-rc.0', dependencies: { motion: '14.3.0' }, peerDependencies: { react: '^18.2.0 || ^19.0.0' } };
 const fixture = () => ({ lockfileVersion: 3, packages: {
@@ -52,4 +52,22 @@ test('a missing candidate entry requires explicit lock resolution', () => {
     resolved: 'file:cloudlet-toast.tgz', version: manifest.version, integrity: 'sha512-candidate',
     dependencies: manifest.dependencies, peerDependencies: manifest.peerDependencies,
   });
+});
+
+test('every package has its own archive and evidence path under artifacts/integration', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'cloudlet-candidate-'));
+  try {
+    for (const [dir, name, version] of [['packages/toast', '@cloudlet/toast', '1.4.0-rc.1'], ['packages/agent', '@cloudlet/agent', '0.1.0-rc.1']]) {
+      await mkdir(join(directory, dir), { recursive: true });
+      await writeFile(join(directory, dir, 'package.json'), JSON.stringify({ name, version }));
+    }
+    const integration = join(directory, 'artifacts/integration');
+    assert.equal(await defaultCandidateTarball(directory), join(integration, 'cloudlet-toast-1.4.0-rc.1.tgz'));
+    assert.equal(await defaultCandidateTarball(directory, 'toast'), join(integration, 'cloudlet-toast-1.4.0-rc.1.tgz'));
+    assert.equal(await defaultCandidateTarball(directory, 'agent'), join(integration, 'cloudlet-agent-0.1.0-rc.1.tgz'));
+    await assert.rejects(defaultCandidateTarball(directory, 'kit'), /Unknown package "kit"; expected one of toast, agent/u);
+    assert.equal(candidateEvidencePath(directory, 'toast'), join(integration, 'toast-evidence.json'));
+    assert.equal(candidateEvidencePath(directory, 'agent'), join(integration, 'agent-evidence.json'));
+    assert.throws(() => candidateEvidencePath(directory, '../toast'), /lowercase words/u);
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });
