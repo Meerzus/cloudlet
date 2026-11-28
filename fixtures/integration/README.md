@@ -1,14 +1,18 @@
 # Installed tarball consumers
 
-These fixtures install one retained `npm pack` artifact in fresh temporary directories **outside** this workspace. The package is an extracted `node_modules/@cloudlet/toast` directory, never a workspace symlink or source alias. Node probes assert the resolution path and CSS export. Vite/Next read the package exports without a `paths`, bundler alias or `transpilePackages` override.
+These fixtures install the retained `npm pack` artifacts in fresh temporary directories **outside** this workspace. Every consumer installs `@cloudlet/toast`; the Vite React 19 consumer also installs `@cloudlet/agent`. Each package is an extracted `node_modules/@cloudlet/...` directory, never a workspace symlink or source alias. Node probes assert the resolution path and CSS export. Vite/Next read the package exports without a `paths`, bundler alias or `transpilePackages` override.
 
 ```sh
 npm run pack:local
 npm run test:consumers
 # Or split the same pipeline:
-node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.3.0.tgz --prepare-only
-node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.3.0.tgz --browser-only
+node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.4.0-rc.1.tgz --agent-tarball artifacts/integration/cloudlet-agent-0.1.0-rc.1.tgz --prepare-only
+node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.4.0-rc.1.tgz --agent-tarball artifacts/integration/cloudlet-agent-0.1.0-rc.1.tgz --browser-only
 ```
+
+Without `--tarball`/`--agent-tarball` the runner takes the archives `npm run pack:local` retained for the current manifest versions.
+
+A consumer receives a package's archive when its `package.json` depends on that package as `file:./<name>.tgz` (`cloudlet-toast.tgz`, `cloudlet-agent.tgz`); the runner copies the archive under that name and binds the matching lockfile entry (`resolved: file:<name>.tgz`) to the archive's version and integrity, the same way for both packages. Adding a package to a consumer therefore takes one explicit `--update-locks` run, which writes its entry into the tracked lockfile; keep only that consumer's new entry and revert the other lockfiles, whose only change is the candidate version/integrity every ordinary run rebinds in the temporary copy anyway. `vite19` holds the `@cloudlet/agent` entry this way. Its `main.tsx` connects `createAgent()` to the primary controller with `toasterAgent` from `@cloudlet/toast/agent` (through the shared `Consumer`'s `connect` prop) and exposes the bridge as `window.cloudletAgent`; a Playwright test reads the shown notification from the snapshot, closes it with a `dismiss` step and requires a clean console and audit. `vite18` and `next` do not install the bridge.
 
 `--prepare-only` copies templates/shared files and the archive, refreshes only its local-file candidate version/integrity in each tracked consumer lockfile, then performs clean `npm ci`, `npm ls`, cold no-DOM Node import, strict TypeScript and production build. Transitive public dependency versions/integrities remain locked. Missing locks/entries fail by default. `--update-locks` bootstraps them intentionally; ordinary runs never resolve a new dependency tree. The runner uses the workspace npm CLI with its current Node executable to avoid a Volta fallback after changing into `/tmp`. It rejects a different npm version from the workspace `packageManager`.
 
@@ -20,4 +24,4 @@ Every production HTML response enforces external styles plus `style-src-attr 'no
 
 The React19 stress test repeats100 real Toaster detach/remount cycles per engine with persistent application-owned controllers, then explicitly disposes both controllers. At each detach, observed ResizeObserver targets/timeouts/intervals return to zero, and listeners on window/document/VisualViewport/fonts/MediaQueryList return to the first-detach baseline. It then checks idle RAF stability and sends100 arrivals with30 progress updates over approximately1second. This proves instrumented resource cleanup and bounded test behavior; it is not physical heap, CPU/battery, touch-device or minimum-browser-version certification. DOM listeners on collectible elements are outside the global listener probe. Screenshots are taken in Chromium only because the installed WebKit screenshot helper itself injects a nonce-less style.
 
-Evidence is written to `artifacts/integration`: consumer directories/dependency versions/lockfile hashes/tarball hash in `consumers.json`, individual build/install/types/Node logs and lockfile copies, raw browser report and decoded runtime/stress audit summary. Temporary consumer directories remain available for inspection for the lifetime of the host's temporary storage. Regenerate them with the prepare command when removed. Nothing here publishes packages, hosts a registry, calls GitHub or deploys a site.
+Evidence is written to `artifacts/integration`: consumer directories/dependency versions/lockfile hashes and the hashes of both archives (`tarballSha256`, `agentTarballSha256`) in `consumers.json`, individual build/install/types/Node logs and lockfile copies, raw browser report and decoded runtime/stress audit summary. Temporary consumer directories remain available for inspection for the lifetime of the host's temporary storage. Regenerate them with the prepare command when removed. Nothing here publishes packages, hosts a registry, calls GitHub or deploys a site.

@@ -52,20 +52,14 @@ export async function createPackedFixtures(prefix, archives) {
   }
 }
 
-/** The Toaster's archive alone; `measure-size.mjs` reads `manifest`, `tarball` and `cleanup`. */
-export async function createPackedFixture(prefix, { tarballPath } = {}) {
-  const fixture = await createPackedFixtures(prefix, [{ packageDir: 'packages/toast', tarballPath }]);
-  return { directory: fixture.directory, ...fixture.packages[0], cleanup: fixture.cleanup };
-}
-
 const run = (directory, type, code) => execFileSync(process.execPath, [`--input-type=${type}`, '--eval', code], {
   cwd: directory, encoding: 'utf8', timeout: 20_000,
 });
 
-/** Strict consumer typecheck of `fixtures/size/<file>` against the archives in `directory`. */
+/** Strict consumer typecheck of `fixtures/contracts/<file>` against the archives in `directory`. */
 async function typecheckConsumer(directory, file, lib) {
   const name = `consumer-${basename(file, '.ts')}`;
-  await copyFile(join(root, 'fixtures/size', file), join(directory, `${name}.ts`));
+  await copyFile(join(root, 'fixtures/contracts', file), join(directory, `${name}.ts`));
   await writeFile(join(directory, `${name}.tsconfig.json`), JSON.stringify({
     compilerOptions: {
       target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true,

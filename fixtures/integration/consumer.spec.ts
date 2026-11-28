@@ -1,13 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
+import type { Agent } from '@cloudlet/agent';
 import type { IntegrationApi } from './shared/consumer';
 
 // Installed-tarball consumers (Vite React 18.2/19, Next App/Pages) under strict production CSP:
 // the stack → Island model of 1.0.0-rc.1 driven only through the public API and the rendered DOM.
 
 type Audit = { violations: unknown[]; errors: string[]; rejections: string[]; resizeTargets: number; rafScheduled: number; rafPending: number; globalListeners: number; timeouts: number; intervals: number };
-declare global { interface Window { integration?: IntegrationApi; __integrationAudit: Audit; } }
+declare global { interface Window { integration?: IntegrationApi; cloudletAgent?: Agent; __integrationAudit: Audit; } }
 const auditCode = readFileSync('fixtures/integration/shared/audit.js', 'utf8');
 const matrix = [ ['Vite React 18.2', 'http://127.0.0.1:4280/'], ['Vite React 19', 'http://127.0.0.1:4281/'], ['Next App Router', 'http://127.0.0.1:4282/'], ['Next Pages', 'http://127.0.0.1:4282/pages-smoke'] ];
 const primary = (page: Page) => page.getByRole('region', { name: 'Primary notifications', exact: true });
@@ -123,6 +124,34 @@ for (const [label, url] of matrix) test(`${label}: production tarball SSR, stack
   await expect(page.locator('.cloudlet-host [style]')).toHaveCount(0);
   const audit = await page.evaluate(() => window.__integrationAudit);
   await info.attach('tarball-runtime-audit', { body: JSON.stringify({ url, browser: info.project.name, browserVersion: browser.version(), reactVersion: await page.evaluate(() => window.integration!.reactVersion), audit, consoleErrors, pageErrors }), contentType: 'application/json' });
+  expect(audit.violations).toEqual([]); expect(audit.errors).toEqual([]); expect(audit.rejections).toEqual([]);
+  expect(consoleErrors).toEqual([]); expect(pageErrors).toEqual([]);
+});
+
+// Only the Vite React 19 consumer installs the bridge archive: it connects the mounted Toaster to `@cloudlet/agent`.
+test('Vite React 19: the bridge from its own archive reads the mounted Toaster and dismisses through a step', async ({ page, browser }, info) => {
+  const consoleErrors: string[] = [], pageErrors: string[] = [];
+  page.on('console', event => { if (event.type() === 'error') consoleErrors.push(event.text()); });
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await page.addInitScript(auditCode);
+  await page.goto('http://127.0.0.1:4281/');
+  await expect.poll(() => page.evaluate(() => Boolean(window.integration && window.cloudletAgent))).toBe(true);
+  await readable(page);
+  await page.evaluate(() => window.integration!.show({ id: 'bridge', title: 'Bridge notification', duration: null, attention: 'stack' }));
+  await expect(pill(page)).toHaveAccessibleName('Bridge notification, 2 notifications');
+  const read = () => page.evaluate(() => window.cloudletAgent!.snapshot().map(entry => ({ ref: entry.ref, component: entry.component, label: entry['label'], mounted: entry['mounted'], actions: [...entry.actions] })));
+  const before = await read();
+  expect(before[0]).toMatchObject({ component: 'toaster', mounted: true });
+  const shown = before.find(entry => entry.label === 'Bridge notification');
+  expect(shown).toMatchObject({ component: 'notification' });
+  expect(shown!.actions).toContain('dismiss');
+  const result = await page.evaluate(ref => window.cloudletAgent!.act({ steps: [{ ref, action: 'dismiss' }] }), shown!.ref);
+  expect(result).toEqual({ ok: true, steps: [{ step: 0, ref: shown!.ref, gone: true }] });
+  await expect(pill(page)).toHaveAccessibleName('Pre-mount notification');
+  expect(await page.evaluate(() => window.integration!.first.getHandle('bridge'))).toBeUndefined();
+  expect((await read()).some(entry => entry.label === 'Bridge notification')).toBe(false);
+  const audit = await page.evaluate(() => window.__integrationAudit);
+  await info.attach('tarball-bridge-audit', { body: JSON.stringify({ browser: info.project.name, browserVersion: browser.version(), before, result, audit, consoleErrors, pageErrors }), contentType: 'application/json' });
   expect(audit.violations).toEqual([]); expect(audit.errors).toEqual([]); expect(audit.rejections).toEqual([]);
   expect(consoleErrors).toEqual([]); expect(pageErrors).toEqual([]);
 });

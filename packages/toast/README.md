@@ -8,7 +8,6 @@
 # Cloudlet — React notifications and operations
 
 [![npm](https://img.shields.io/npm/v/@cloudlet/toast?color=245cdb)](https://www.npmjs.com/package/@cloudlet/toast)
-[![min+gzip](https://img.shields.io/badge/min%2Bgzip-9.3%20KB%20first%20load-245cdb)](https://cloudlet.dev/toaster#faq)
 [![CI](https://github.com/Meerzus/cloudlet/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Meerzus/cloudlet/actions/workflows/ci.yml)
 [![types](https://img.shields.io/npm/types/@cloudlet/toast)](https://www.npmjs.com/package/@cloudlet/toast)
 [![license](https://img.shields.io/npm/l/@cloudlet/toast)](https://github.com/Meerzus/cloudlet/blob/main/LICENSE)
@@ -73,7 +72,9 @@ Full documentation: **https://cloudlet.dev/docs/components/toaster**
 - Reference: `createCloudlet`, the controller, Toaster props, labels & announcements, types.
 - Experimental: `@cloudlet/toast/agent` exports `toasterAgent(controller)`, which lets the kit's agent
   bridge, `@cloudlet/agent`, read the controller and run steps on it under the app's permission. It
-  may change in any minor release.
+  may change in any minor release. The adapter speaks agent protocol 1, and the bridge refuses an
+  adapter with another protocol number with a `TypeError` at `connect`, so neither package depends on
+  the other: any `@cloudlet/agent` 0.x that understands protocol 1 works with it.
 - The [changelog](CHANGELOG.md) lists every change, including migration from `1.0.0-rc.0`.
 
 ## Contributing and security

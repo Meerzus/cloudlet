@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@cloudlet/agent": "file:./cloudlet-agent.tgz",
     "@cloudlet/toast": "file:./cloudlet-toast.tgz",
     "react": "19.3.1",
     "react-dom": "19.3.1"

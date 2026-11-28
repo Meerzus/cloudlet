@@ -3,13 +3,33 @@ import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
+const archiveStem = (manifest) => manifest.name.replace(/^@/u, '').replaceAll('/', '-');
+
 export function packageTarballFilename(manifest) {
-  return `${manifest.name.replace(/^@/u, '').replaceAll('/', '-')}-${manifest.version}.tgz`;
+  return `${archiveStem(manifest)}-${manifest.version}.tgz`;
 }
 
-export async function defaultCandidateTarball(root) {
-  const manifest = JSON.parse(await readFile(resolve(root, 'packages/toast/package.json'), 'utf8'));
+/** The version-free name a consumer fixture copies a package's archive to (`cloudlet-toast.tgz`). */
+export function consumerArchiveFilename(manifest) {
+  return `${archiveStem(manifest)}.tgz`;
+}
+
+/**
+ * The archive `npm run pack:local` retains for a package of `PACKAGES` (`toast` or `agent`) at the
+ * version of its manifest. `release-target.mjs` is imported lazily: it imports this module.
+ */
+export async function defaultCandidateTarball(root, key = 'toast') {
+  const { PACKAGES } = await import('./release-target.mjs');
+  const entry = PACKAGES.find((candidate) => candidate.key === key);
+  assert.ok(entry, `Unknown package "${key}"; expected one of ${PACKAGES.map((candidate) => candidate.key).join(', ')}`);
+  const manifest = JSON.parse(await readFile(resolve(root, entry.dir, 'package.json'), 'utf8'));
   return resolve(root, 'artifacts/integration', packageTarballFilename(manifest));
+}
+
+/** The evidence `npm run pack:local` writes next to a package's archive. */
+export function candidateEvidencePath(root, key) {
+  assert.match(key, /^[a-z]+$/u, `Package keys are lowercase words, got "${key}"`);
+  return resolve(root, 'artifacts/integration', `${key}-evidence.json`);
 }
 
 export function readPackedManifest(tarball) {
@@ -25,15 +45,19 @@ export async function readConsumerLock(path, { updateLocks = false } = {}) {
   }
 }
 
-/** Ordinary verification changes only the exact local archive's version/integrity. */
+/**
+ * Ordinary verification changes only the exact local archive's version/integrity. The package's
+ * entry must resolve the archive the fixture holds under `consumerArchiveFilename(manifest)`.
+ */
 export function bindCandidateLock(lock, manifest, integrity, { updateLocks = false } = {}) {
+  const resolved = `file:${consumerArchiveFilename(manifest)}`;
   let entry = lock.packages?.[`node_modules/${manifest.name}`];
   if (!entry) {
     assert.ok(updateLocks, `Consumer lockfile must contain ${manifest.name}; explicitly use --update-locks to resolve dependencies`);
     lock.packages ??= {};
-    entry = lock.packages[`node_modules/${manifest.name}`] = { resolved: 'file:cloudlet-toast.tgz' };
+    entry = lock.packages[`node_modules/${manifest.name}`] = { resolved };
   }
-  assert.equal(entry.resolved, 'file:cloudlet-toast.tgz', 'Consumer must resolve the local candidate archive');
+  assert.equal(entry.resolved, resolved, `Consumer must resolve the local ${manifest.name} candidate archive`);
   for (const key of ['dependencies', 'optionalDependencies', 'peerDependencies', 'peerDependenciesMeta']) {
     if (updateLocks) {
       if (manifest[key] === undefined) delete entry[key];

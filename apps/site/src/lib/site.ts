@@ -124,16 +124,3 @@ export const SHADCN_COMMAND = registryUrlCommand('toaster');
 export const COLOR_PICKER_COMMAND = registryUrlCommand('color-picker');
 /** The color palette's registry item: it lists the color picker as a registry dependency (COLOR_PALETTE §1). */
 export const COLOR_PALETTE_COMMAND = registryUrlCommand('color-palette');
-/**
- * What the published package adds to an app, min+gzip bytes (`release:verify` of the
- * `1.3.0` tarball, `artifacts/size/report.json`): its own JavaScript on first load (`start`, before
- * the lazy renderer) and the renderer chunk that follows (`lazy`), all of its JavaScript, its CSS,
- * and the whole delta over a React-only app. The landing leads with `start`, always named as
- * JavaScript on first load; tests/unit/site-drift.test.ts holds them to the latest size report.
- */
-export const PACKAGE_SIZE = { version: '1.3.0', start: 9336, lazy: 23240, javascript: 32576, css: 4079, total: 37062 } as const;
-/** Bytes as the landing prints them: whole kilobytes, one decimal under ten. */
-export function formatKB(bytes: number): string {
-  const kb = bytes / 1000;
-  return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB`;
-}

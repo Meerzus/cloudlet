@@ -1,14 +1,22 @@
 name: release
-# A tag v<version> on main publishes @cloudlet/toast to npm and creates the GitHub Release.
-# npm accepts the publish through Trusted Publishing (OIDC, no token in secrets) and adds a provenance
-# attestation; the `npm` environment waits for the owner's approval before anything is published.
+# A tag on main publishes one package of this repository to npm and creates its GitHub Release:
+#   toast-v1.4.0, toast-v1.4.0-rc.1 → @cloudlet/toast (packages/toast)
+#   agent-v0.1.0, agent-v0.1.0-rc.1 → @cloudlet/agent (packages/agent)
+# scripts/release-target.mjs reads the tag; a tag of any other form, the Toaster's old vX.Y.Z included,
+# fails the first step of `verify`. Both archives are packed and checked together, but only the tagged
+# package's archive is uploaded, published and attached; the other package is not released.
+# npm accepts the publish through Trusted Publishing (OIDC) and adds a provenance attestation; the `npm`
+# environment waits for the owner's approval before anything is published.
 on:
   push:
-    tags: ['v*']
+    tags: ['toast-v*', 'agent-v*']
 permissions:
   contents: read
 concurrency:
-  group: release
+  # One queue per package (release-toast, release-agent), never cancelling a release in progress. Step
+  # outputs are not available here, so the key comes from the tag name; the trigger admits only the
+  # two prefixes.
+  group: release-${{ startsWith(github.ref_name, 'agent-v') && 'agent' || 'toast' }}
   cancel-in-progress: false
 jobs:
   verify:
@@ -17,8 +25,12 @@ jobs:
       contents: read
       actions: read
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      dist-tag: ${{ steps.version.outputs.dist-tag }}
+      package: ${{ steps.target.outputs.package }}
+      version: ${{ steps.target.outputs.version }}
+      dist-tag: ${{ steps.target.outputs.dist-tag }}
+      prerelease: ${{ steps.target.outputs.prerelease }}
+      latest: ${{ steps.target.outputs.latest }}
+      tarball: ${{ steps.target.outputs.tarball }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -29,14 +41,13 @@ jobs:
           # Release builds never restore a cache.
           package-manager-cache: false
       - run: npm install --global npm@11.12.1
-      # The tag names the package version and that version has a CHANGELOG section.
+      # The tag names a package and the version of its manifest: package, name, dir, version, dist-tag,
+      # prerelease, latest, tarball and changelog become this step's outputs. Any other tag stops here,
+      # before the install and the build.
+      - id: target
+        run: node scripts/release-target.mjs "$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+      # That version has a section in the package's CHANGELOG.
       - run: node scripts/release-notes.mjs "$GITHUB_REF_NAME" > /dev/null
-      - id: version
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          # Prereleases go to `next`, stable versions to `latest`.
-          if [[ "$version" == *-* ]]; then echo "dist-tag=next" >> "$GITHUB_OUTPUT"; else echo "dist-tag=latest" >> "$GITHUB_OUTPUT"; fi
       - name: The tagged commit is on main
         run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       # A tag pushed right after the merge waits for that commit's CI run instead of failing.
@@ -53,14 +64,21 @@ jobs:
       - run: npm run test:tooling
       - run: npm run check:docs
       - run: npm run pack:local
-      - run: npm run check:package -- --tarball "artifacts/integration/cloudlet-toast-${{ steps.version.outputs.version }}.tgz"
+      # Both archives pack:local retained, checked alone and installed together. The tagged package's
+      # archive is one of them: release-target.mjs checked the tag against its manifest.
+      - run: >-
+          npm run check:package --
+          --tarball "artifacts/integration/cloudlet-toast-$(node -p "require('./packages/toast/package.json').version").tgz"
+          --agent-tarball "artifacts/integration/cloudlet-agent-$(node -p "require('./packages/agent/package.json').version").tgz"
+      # Only the tagged package's archive and its evidence travel to `publish`.
       - uses: actions/upload-artifact@v7
         with:
           name: package
           retention-days: 30
+          if-no-files-found: error
           path: |
-            artifacts/integration/cloudlet-toast-${{ steps.version.outputs.version }}.tgz
-            artifacts/integration/package-evidence.json
+            artifacts/integration/${{ steps.target.outputs.tarball }}
+            artifacts/integration/${{ steps.target.outputs.package }}-evidence.json
   publish:
     needs: verify
     runs-on: ubuntu-24.04
@@ -69,7 +87,8 @@ jobs:
       contents: write
       id-token: write
     env:
-      VERSION: ${{ needs.verify.outputs.version }}
+      TARBALL: ${{ needs.verify.outputs.tarball }}
+      DIST_TAG: ${{ needs.verify.outputs.dist-tag }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -85,13 +104,28 @@ jobs:
           path: package
       # The archive that passed the checks above is the one published, byte for byte. The leading ./
       # keeps npm from reading `package/<file>` as a GitHub `owner/repo` shorthand.
-      - run: npm publish "./package/cloudlet-toast-$VERSION.tgz" --access public --tag "${{ needs.verify.outputs.dist-tag }}" --provenance --ignore-scripts
+      #
+      # NODE_AUTH_TOKEN is for one bootstrap only. npm attaches a trusted publisher only to a package
+      # that already exists, so the first version of a new package cannot come through OIDC. For that
+      # one release the owner stores a short-lived granular token as the `npm` environment's NPM_TOKEN
+      # secret. npm publish tries the OIDC exchange first and falls back to the token from .npmrc only
+      # when the exchange fails (npm 11.12.1, lib/commands/publish.js and lib/utils/oidc.js), and
+      # --provenance works with a token as well. After the bootstrap the package gets its trusted
+      # publisher, the secret and the token are deleted and the package disallows tokens, so this
+      # line resolves to an empty value and OIDC is the only way in.
+      - run: npm publish "./package/$TARBALL" --access public --tag "$DIST_TAG" --provenance --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Only a stable toast-v… release takes the repository's Latest mark; agent-v… releases (an
+      # experimental 0.x) and prereleases never do.
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+          LATEST: ${{ needs.verify.outputs.latest }}
         run: |
           node scripts/release-notes.mjs "$GITHUB_REF_NAME" > release-notes.md
-          prerelease=""
-          if [ "${{ needs.verify.outputs.dist-tag }}" = "next" ]; then prerelease="--prerelease"; fi
-          gh release create "$GITHUB_REF_NAME" "package/cloudlet-toast-$VERSION.tgz" \
-            --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md $prerelease
+          flags=("--latest=$LATEST")
+          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" "./package/$TARBALL" \
+            --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md "${flags[@]}"

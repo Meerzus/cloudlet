@@ -32,7 +32,12 @@ jobs:
       - run: npm run test:tooling
       - run: npm run check:docs
       - run: npm run pack:local
-      - run: npm run check:package -- --tarball "artifacts/integration/cloudlet-toast-$(node -p "require('./packages/toast/package.json').version").tgz"
+      # Both archives pack:local retained, checked alone and installed together; the upload below keeps
+      # them with their evidence.
+      - run: >-
+          npm run check:package --
+          --tarball "artifacts/integration/cloudlet-toast-$(node -p "require('./packages/toast/package.json').version").tgz"
+          --agent-tarball "artifacts/integration/cloudlet-agent-$(node -p "require('./packages/agent/package.json').version").tgz"
       # The landing consumes the built package dist, so it builds after pack:local.
       - run: npm run build:site
       - run: npm run notices && git diff --exit-code -- packages/toast/LICENSE packages/toast/THIRD_PARTY_NOTICES.md
@@ -68,8 +73,9 @@ jobs:
           retention-days: 7
           path: artifacts/integration/
   package-managers:
-    # The packed archive installs and resolves with npm, pnpm, yarn (node_modules and Plug'n'Play) and
-    # bun; pnpm and yarn come through corepack at the versions the script pins.
+    # Both packed archives install and resolve together with npm, pnpm, yarn (node_modules and
+    # Plug'n'Play) and bun, and the bridge drives a Toaster through @cloudlet/toast/agent; pnpm and
+    # yarn come through corepack at the versions the script pins.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -104,23 +110,3 @@ jobs:
           name: shadcn-registry
           retention-days: 7
           path: artifacts/integration/registry/
-  size:
-    # Size comparisons remain informational; build/measurement errors still fail.
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm install --global npm@11.12.1
-      - run: npm ci
-      - run: npm run pack:local
-      - run: node scripts/measure-size.mjs --tarball "artifacts/integration/cloudlet-toast-$(node -p "require('./packages/toast/package.json').version").tgz"
-      - run: npm run size:color-picker
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: size-evidence
-          retention-days: 7
-          path: artifacts/size/

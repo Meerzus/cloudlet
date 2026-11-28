@@ -6,5 +6,5 @@
 
 - [ ] `npm run check` passes
 - [ ] `npm run check:docs` passes
-- [ ] Public API or behaviour changed: CHANGELOG and documentation updated
+- [ ] Public API or behaviour changed: the changed package's CHANGELOG and the documentation updated
 - [ ] Rendering or motion changed: `npm run test:e2e` passes

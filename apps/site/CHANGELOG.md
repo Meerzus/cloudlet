@@ -2,8 +2,8 @@
 
 Changes to the website and to the shadcn registry items that have no npm package. Registry items are
 installed as source, so they have no versions: a section is named after the day it reached
-cloudlet.dev. The history of the npm package `@cloudlet/toast` is in the
-[root CHANGELOG](../../CHANGELOG.md).
+cloudlet.dev. The history of the npm packages is in their own changelogs:
+[`@cloudlet/toast`](../../packages/toast/CHANGELOG.md), [`@cloudlet/agent`](../../packages/agent/CHANGELOG.md).
 
 ## Unreleased
 
@@ -13,6 +13,14 @@ cloudlet.dev. The history of the npm package `@cloudlet/toast` is in the
   too: the Island of the page and the Toaster on the scene's phones change state without motion while
   the switch is on, and move again when it is off. The note under the switch no longer says the
   Toaster only follows the system setting.
+- The site no longer shows the package size: the Toaster's FAQ drops "How big is it?" (and its
+  subtitle no longer promises answers about size), and the "Fits your stack" benefit says there are
+  no runtime dependencies instead of a first-load figure.
+
+### Toaster
+
+- The `toaster` item installs `@cloudlet/toast@1.4.0-rc.1`, the prerelease under the npm `next`
+  dist-tag; what changed in the package is in [its changelog](../../packages/toast/CHANGELOG.md).
 
 ### Color picker and Color palette
 

@@ -4,24 +4,29 @@ import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { defaultCandidateTarball } from './local-candidate.mjs';
 
 /**
- * Installs the packed archive with npm, pnpm, yarn (node_modules and Plug'n'Play) and bun into a
- * minimal consumer each, then imports the package and resolves its stylesheet through `exports` the
- * way that manager's runtime does. Every manager installs from the npm registry, so this is what
- * "works with pnpm, yarn and bun" rests on.
+ * Installs both packed archives (`@cloudlet/toast` and `@cloudlet/agent`) with npm, pnpm, yarn
+ * (node_modules and Plug'n'Play) and bun into a minimal consumer each, then, the way that manager's
+ * runtime resolves `exports`: imports the Toaster, resolves its stylesheet, and drives a Toaster
+ * through the bridge from the `@cloudlet/toast/agent` subpath (snapshot, then a `dismiss` step).
+ * Every manager installs React from the npm registry, so this is what "works with pnpm, yarn and
+ * bun" rests on.
  *
- * Usage: node scripts/package-managers.mjs [--tarball <archive>] [--only pnpm,bun]
- * Without --tarball it checks the archive `npm run pack:local` made for the current version.
+ * Usage: node scripts/package-managers.mjs [--tarball <toast.tgz>] [--agent-tarball <agent.tgz>] [--only pnpm,bun]
+ * Without a flag it checks the archive `npm run pack:local` made for that package's current version.
  */
 const args = process.argv.slice(2);
 const option = (name) => {
   const index = args.indexOf(name);
   return index < 0 ? undefined : args[index + 1];
 };
-const { version } = JSON.parse(await readFile(new URL('../packages/toast/package.json', import.meta.url), 'utf8'));
-const archive = resolve(option('--tarball') ?? `artifacts/integration/cloudlet-toast-${version}.tgz`);
-assert.ok(existsSync(archive), `${archive} does not exist: run npm run pack:local first`);
+const root = fileURLToPath(new URL('..', import.meta.url));
+const archive = resolve(option('--tarball') ?? await defaultCandidateTarball(root, 'toast'));
+const agentArchive = resolve(option('--agent-tarball') ?? await defaultCandidateTarball(root, 'agent'));
+for (const file of [archive, agentArchive]) assert.ok(existsSync(file), `${file} does not exist: run npm run pack:local first`);
 
 const CHECK = `import { createRequire } from 'node:module';
 const toast = await import('@cloudlet/toast');
@@ -30,7 +35,22 @@ for (const name of ['createCloudlet', 'CloudletProvider', 'Toaster', 'useCloudle
 }
 const css = createRequire(import.meta.url).resolve('@cloudlet/toast/styles.css');
 if (!css.endsWith('styles.css')) throw new Error('styles.css resolved to ' + css);
-console.log('ok', Object.keys(toast).length, 'exports;', 'styles.css resolved');
+
+// The bridge from its own archive, the adapter from the Toaster's subpath: read, then act.
+const { createAgent } = await import('@cloudlet/agent');
+const { toasterAgent } = await import('@cloudlet/toast/agent');
+const agent = createAgent();
+const controller = toast.createCloudlet();
+agent.connect(toasterAgent(controller));
+controller.show({ title: 'Through the bridge', duration: null });
+const shown = agent.snapshot().find((entry) => entry.component === 'notification');
+if (!shown || shown.label !== 'Through the bridge' || !shown.actions.includes('dismiss')) throw new Error('The snapshot misses the shown notification: ' + JSON.stringify(agent.snapshot()));
+const result = await agent.act({ steps: [{ ref: shown.ref, action: 'dismiss' }] });
+if (!result.ok || result.steps[0]?.gone !== true) throw new Error('The dismiss step failed: ' + JSON.stringify(result));
+if (controller.getSnapshot().notifications.length !== 0) throw new Error('The notification is still in the Toaster');
+if (agent.snapshot().some((entry) => entry.component === 'notification')) throw new Error('The snapshot still lists the notification');
+controller.dispose();
+console.log('ok', Object.keys(toast).length, 'exports;', 'styles.css resolved;', 'bridge read ' + shown.ref + ' and dismissed it');
 `;
 
 // pnpm and yarn come through corepack at these versions, so the check needs no global installs.
@@ -46,16 +66,16 @@ const MANAGERS = {
 const only = option('--only')?.split(',');
 const selected = Object.entries(MANAGERS).filter(([name]) => !only || only.includes(name) || only.includes(name.split('-')[0]));
 
-const root = await mkdtemp(join(tmpdir(), 'cloudlet-managers-'));
+const workspace = await mkdtemp(join(tmpdir(), 'cloudlet-managers-'));
 const failures = [];
 for (const [name, manager] of selected) {
-  const dir = join(root, name);
+  const dir = join(workspace, name);
   await mkdir(dir, { recursive: true });
   const manifest = {
     name: `consumer-${name}`,
     private: true,
     type: 'module',
-    dependencies: { '@cloudlet/toast': `file:${archive}`, react: '^19.0.0', 'react-dom': '^19.0.0' },
+    dependencies: { '@cloudlet/toast': `file:${archive}`, '@cloudlet/agent': `file:${agentArchive}`, react: '^19.0.0', 'react-dom': '^19.0.0' },
     ...(manager.packageManager ? { packageManager: manager.packageManager } : {}),
   };
   await writeFile(join(dir, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
@@ -72,7 +92,7 @@ for (const [name, manager] of selected) {
     if (command === manager.run[0] && commandArgs === manager.run[1]) console.log(`${name}: ${result.stdout.trim()}`);
   }
 }
-await rm(root, { recursive: true, force: true });
+await rm(workspace, { recursive: true, force: true });
 if (failures.length) {
   console.error(failures.join('\n\n'));
   process.exit(1);

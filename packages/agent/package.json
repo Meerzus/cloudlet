@@ -1,13 +1,13 @@
 {
   "name": "@cloudlet/agent",
-  "version": "0.1.0",
+  "version": "0.1.0-rc.1",
   "description": "Experimental bridge that lets an agent read and act on Cloudlet components under the app's permission",
   "license": "MIT",
   "homepage": "https://cloudlet.dev",
   "repository": { "type": "git", "url": "git+https://github.com/Meerzus/cloudlet.git", "directory": "packages/agent" },
   "bugs": "https://github.com/Meerzus/cloudlet/issues",
   "keywords": ["agent", "ai", "snapshot", "cloudlet", "ui-kit"],
-  "publishConfig": { "access": "public", "tag": "latest" },
+  "publishConfig": { "access": "public", "tag": "next" },
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {

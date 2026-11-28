@@ -34,9 +34,14 @@ function HookProbe({ expected }: { expected: ReactCloudletController }) {
   return null;
 }
 
-/** Controller creation is client-local; only serializable nonce crosses the RSC boundary. */
-export function Consumer({ nonce }: { nonce: string }) {
+/**
+ * Controller creation is client-local; only serializable nonce crosses the RSC boundary.
+ * `connect` lets a consumer attach something to the primary controller for as long as it lives
+ * (the Vite 19 consumer connects `@cloudlet/agent`); it must be a stable function.
+ */
+export function Consumer({ nonce, connect }: { nonce: string; connect?: (controller: ReactCloudletController) => () => void }) {
   const [owned] = useState(session);
+  useEffect(() => connect?.(owned.first), [owned, connect]);
   const [mounted, setMounted] = useState(true);
   const [dark, setDark] = useState(false);
   const [rtl, setRtl] = useState(false);

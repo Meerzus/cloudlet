@@ -7,7 +7,7 @@
 - `tests/unit/` — the DOM-free controller (identity, admission, dedupe, the cap, the stack and
   `current`, `attention` on injected time, timers, snapshots, events, cleanup, seeded generated
   sequences), operations and actions with their races, the shell sampler and transition plan, swipe
-  physics, SSR, and the website's data (Get started, FAQ, sizes, indexing, READMEs).
+  physics, SSR, and the website's data (Get started, FAQ, indexing, READMEs).
 - `tests/react/` — jsdom and Testing Library on the public API: Provider and leases, Strict Mode, the
   queue before mount, the stack and the Island, focus, gestures, `classNames`, progress,
   announcements, the lazy renderer. jsdom proves state, focus and leases, not physics or speech.
@@ -45,16 +45,23 @@ Reports go to `playwright-report/`, failure traces to `test-results/`. Device pr
 VisualViewport, CDP touch and `emulateMedia` are emulation: screen readers, physical phones, real
 high contrast and the minimum browser versions are checked by hand.
 
-## Package, consumers, registry, size
+## Package, consumers, registry
 
 - `npm run check` — typecheck, unit and React tests, build, the tarball guards for `@cloudlet/toast`, `@cloudlet/agent`
-  and both together (`check:package`; `--tarball` and `--agent-tarball` take ready archives) and the
-  size report.
-- `npm run test:consumers` — the packed archive installed into Vite React 18.2/19 and Next App/Pages
-  under a strict CSP (`fixtures/integration`).
-- `npm run test:managers` — the packed archive installed with npm, pnpm, yarn (node_modules and
-  Plug'n'Play) and bun, then imported with its stylesheet resolved through `exports`.
-- `npm run test:registry` — `shadcn add` from a loopback registry into a Next consumer, in three engines.
+  and both together (`check:package`; `--tarball` and `--agent-tarball` take ready archives).
+- `npm run test:consumers` — the packed Toaster archive installed into Vite React 18.2/19 and Next
+  App/Pages under a strict CSP (`fixtures/integration`); Vite React 19 also installs the bridge archive
+  and drives its mounted Toaster through `@cloudlet/agent`.
+- `npm run test:managers` — both packed archives installed with npm, pnpm, yarn (node_modules and
+  Plug'n'Play) and bun, then imported with the stylesheet resolved through `exports` and a Toaster
+  read and dismissed through the bridge (`--tarball` and `--agent-tarball` take ready archives).
+- `npm run test:registry` — `shadcn add` from a loopback registry into a Next consumer, in three engines; the consumer then installs the bridge archive and drives the installed color adapters through it.
 - `npm run check:docs` — every TS/TSX example of the READMEs and the documentation compiles.
 - `npm run release:verify` — the whole chain from a clean install, with input fingerprints, into
-  `artifacts/release/<version>/<timestamp>/`.
+  `artifacts/release/toast-<version>+agent-<version>/<timestamp>/`; both archives are packed, checked
+  and repacked byte for byte.
+- `npm run smoke:published -- --tag next` — after a release, not in CI: both packages from the real
+  npm registry in a clean project under `artifacts/smoke-published/`, the bridge reads and dismisses a
+  Toaster notification, the dist-tags point to the expected versions, `npm audit signatures` and the
+  SLSA provenance of each package pass, and with `--evidence <dir>` the registry shasum equals
+  `<key>-evidence.json`. `--toast-only` checks the Toaster alone. Options are in the script's header.

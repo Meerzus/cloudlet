@@ -1,8 +1,13 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.0-rc.1 — 2026-11-28
 
-Experimental first version: the agent reads and acts under the app's permission.
+The first version of the kit's agent bridge, a trial prerelease under the npm `next` dist-tag
+(`npm install @cloudlet/agent@next`). Experimental and 0.x: the API may change before 1.0, and
+nothing breaks, because there was no earlier version. An agent reads the connected Cloudlet
+components and acts on them under the app's permission; `@cloudlet/toast/agent` (from
+`@cloudlet/toast` 1.4.0-rc.1) and the registry items' `useColorPickerAgent` and
+`useColorPaletteAgent` connect to it through protocol 1.
 
 ### Features
 

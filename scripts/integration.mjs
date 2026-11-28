@@ -6,11 +6,15 @@ import { tmpdir } from 'node:os';
 import { dirname, resolve, delimiter } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
-import { bindCandidateLock, defaultCandidateTarball, readConsumerLock, readPackedManifest } from './local-candidate.mjs';
+import { bindCandidateLock, consumerArchiveFilename, defaultCandidateTarball, readConsumerLock, readPackedManifest } from './local-candidate.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
-const tarball = args.includes('--tarball') ? resolve(root, args[args.indexOf('--tarball') + 1]) : await defaultCandidateTarball(root);
+const option = (name) => args.includes(name) ? resolve(root, args[args.indexOf(name) + 1]) : undefined;
+// The Toaster's archive goes to every consumer; the bridge's only to those whose manifest depends on it.
+const tarball = option('--tarball') ?? await defaultCandidateTarball(root, 'toast');
+const agentTarball = option('--agent-tarball') ?? await defaultCandidateTarball(root, 'agent');
+const sha256 = (buffer) => createHash('sha256').update(buffer).digest('hex');
 const evidence = resolve(root, 'artifacts/integration');
 await mkdir(evidence, { recursive: true });
 let npmCli = process.env.npm_execpath;
@@ -36,12 +40,15 @@ const run = async (cmd, argv, cwd, log) => {
   return output;
 };
 if (!args.includes('--browser-only')) {
-  const archive = await readFile(tarball);
-  const packedManifest = readPackedManifest(tarball);
-  const localManifest = JSON.parse(await readFile(resolve(root, 'packages/toast/package.json'), 'utf8'));
-  assert.equal(packedManifest.name, localManifest.name, 'Consumer archive must be the current local candidate');
-  assert.equal(packedManifest.version, localManifest.version, 'Repack the current candidate before integrating');
-  const sha512 = `sha512-${createHash('sha512').update(archive).digest('base64')}`;
+  const candidates = [];
+  for (const [path, packageDir] of [[tarball, 'packages/toast'], [agentTarball, 'packages/agent']]) {
+    const archive = await readFile(path);
+    const manifest = readPackedManifest(path);
+    const localManifest = JSON.parse(await readFile(resolve(root, packageDir, 'package.json'), 'utf8'));
+    assert.equal(manifest.name, localManifest.name, `${path} must be the current local ${localManifest.name} candidate`);
+    assert.equal(manifest.version, localManifest.version, `Repack the current ${localManifest.name} candidate before integrating`);
+    candidates.push({ path, manifest, sha256: sha256(archive), integrity: `sha512-${createHash('sha512').update(archive).digest('base64')}` });
+  }
   const npmVersion = (await run('npm', ['--version'], root)).trim();
   const expectedNpm = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8')).packageManager.replace('npm@', '');
   if (npmVersion !== expectedNpm) throw new Error(`Expected npm${expectedNpm}, got npm${npmVersion}; select the workspace toolchain before integrating`);
@@ -55,11 +62,17 @@ if (!args.includes('--browser-only')) {
     for (const file of ['consumer.tsx', 'consumer.css', 'types.tsx', 'node-import.mjs', 'env.d.ts']) await copyFile(resolve(root, 'fixtures/integration/shared', file), resolve(path, file));
     await mkdir(resolve(path, 'public'), { recursive: true });
     await copyFile(resolve(root, 'fixtures/integration/shared/audit.js'), resolve(path, 'public/audit.js'));
-    await copyFile(tarball, resolve(path, 'cloudlet-toast.tgz'));
+    const consumerManifest = JSON.parse(await readFile(resolve(template, 'package.json'), 'utf8'));
+    const installed = candidates.filter(({ manifest }) => manifest.name in consumerManifest.dependencies);
+    assert.ok(installed.some(({ path: archive }) => archive === tarball), `${name} must depend on the Toaster archive`);
+    for (const { path: archive, manifest } of installed) {
+      assert.equal(consumerManifest.dependencies[manifest.name], `file:./${consumerArchiveFilename(manifest)}`, `${name} must install ${manifest.name} from its local archive`);
+      await copyFile(archive, resolve(path, consumerArchiveFilename(manifest)));
+    }
     const updateLocks = args.includes('--update-locks');
     const lock = await readConsumerLock(resolve(template, 'package-lock.json'), { updateLocks });
     if (lock) {
-      bindCandidateLock(lock, packedManifest, sha512, { updateLocks });
+      for (const { manifest, integrity } of installed) bindCandidateLock(lock, manifest, integrity, { updateLocks });
       await writeFile(resolve(path, 'package-lock.json'), JSON.stringify(lock, null, 2) + '\n');
     }
     if (updateLocks) {
@@ -76,14 +89,20 @@ if (!args.includes('--browser-only')) {
     await copyFile(resolve(path, 'package-lock.json'), resolve(evidence, `${name}-package-lock.json`));
     consumers.push({ name, path, port, dependencies: Object.fromEntries(Object.entries(tree.dependencies).map(([key, value]) => [key, value.version])), lockSha256: createHash('sha256').update(await readFile(resolve(path, 'package-lock.json'))).digest('hex') });
   }
-  const report = { tarball, tarballSha256: createHash('sha256').update(archive).digest('hex'), tarballIntegrity: sha512, node: process.version, npm: npmVersion, consumers };
+  const [toaster, bridge] = candidates;
+  const report = {
+    tarball, tarballSha256: toaster.sha256, tarballIntegrity: toaster.integrity,
+    agentTarball, agentTarballSha256: bridge.sha256, agentTarballIntegrity: bridge.integrity,
+    node: process.version, npm: npmVersion, consumers,
+  };
   await writeFile(resolve(evidence, 'consumers.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(`Prepared isolated tarball matrix: ${resolve(evidence, 'consumers.json')}`);
 }
 if (!args.includes('--prepare-only')) {
   const prepared = JSON.parse(await readFile(resolve(evidence, 'consumers.json'), 'utf8'));
-  const requestedHash = createHash('sha256').update(await readFile(tarball)).digest('hex');
-  if (prepared.tarballSha256 !== requestedHash) throw new Error('Prepared consumers use another tarball; run --prepare-only again');
+  if (prepared.tarballSha256 !== sha256(await readFile(tarball)) || prepared.agentTarballSha256 !== sha256(await readFile(agentTarball))) {
+    throw new Error('Prepared consumers use other archives; run --prepare-only again');
+  }
   await run(resolve(root, 'node_modules/.bin/playwright'), ['test', '--config', 'fixtures/integration/playwright.config.ts'], root, 'consumer-browser.log');
   const report = JSON.parse(await readFile(resolve(evidence, 'consumer-browser-results.json'), 'utf8'));
   const audits = [];
@@ -99,5 +118,5 @@ if (!args.includes('--prepare-only')) {
     for (const child of suite.suites ?? []) await visit(child);
   };
   for (const suite of report.suites) await visit(suite);
-  await writeFile(resolve(evidence, 'consumer-browser-summary.json'), JSON.stringify({ tarballSha256: prepared.tarballSha256, stats: report.stats, audits }, null, 2) + '\n');
+  await writeFile(resolve(evidence, 'consumer-browser-summary.json'), JSON.stringify({ tarballSha256: prepared.tarballSha256, agentTarballSha256: prepared.agentTarballSha256, stats: report.stats, audits }, null, 2) + '\n');
 }
