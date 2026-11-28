@@ -6,8 +6,8 @@ These fixtures install the retained `npm pack` artifacts in fresh temporary dire
 npm run pack:local
 npm run test:consumers
 # Or split the same pipeline:
-node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.3.0.tgz --agent-tarball artifacts/integration/cloudlet-agent-0.1.0.tgz --prepare-only
-node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.3.0.tgz --agent-tarball artifacts/integration/cloudlet-agent-0.1.0.tgz --browser-only
+node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.4.0-rc.1.tgz --agent-tarball artifacts/integration/cloudlet-agent-0.1.0-rc.1.tgz --prepare-only
+node scripts/integration.mjs --tarball artifacts/integration/cloudlet-toast-1.4.0-rc.1.tgz --agent-tarball artifacts/integration/cloudlet-agent-0.1.0-rc.1.tgz --browser-only
 ```
 
 Without `--tarball`/`--agent-tarball` the runner takes the archives `npm run pack:local` retained for the current manifest versions.

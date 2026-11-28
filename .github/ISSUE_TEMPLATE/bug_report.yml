@@ -25,7 +25,8 @@ body:
     id: version
     attributes:
       label: Cloudlet version
-      placeholder: "1.3.0"
+      description: The package and its version, for example `@cloudlet/toast 1.4.0-rc.1` or `@cloudlet/agent 0.1.0-rc.1`; for a registry item, the date you added it.
+      placeholder: "@cloudlet/toast 1.4.0-rc.1"
     validations:
       required: true
   - type: input

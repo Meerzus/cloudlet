@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.4.0-rc.1 — 2026-11-28
+
+A trial prerelease under the npm `next` dist-tag (`npm install @cloudlet/toast@next`); `latest` stays
+at 1.3.0. New: the `reducedMotion` prop, `source` on every event and close notice, and the
+experimental `@cloudlet/toast/agent` subpath that connects a controller to the kit's agent bridge
+`@cloudlet/agent`; the root entry does not load it. Two things to check when you upgrade: an
+ancestor with `data-reduced-motion` now calms the Toaster, and code that builds an event, a close
+notice or an Island snapshot by hand now adds `source` (see API).
 
 ### Features
 

@@ -1,13 +1,13 @@
 {
   "name": "@cloudlet/toast",
-  "version": "1.3.0",
+  "version": "1.4.0-rc.1",
   "description": "Cloudlet notifications and async operations with an SSR-safe React renderer",
   "license": "MIT",
   "homepage": "https://cloudlet.dev/toaster",
   "repository": { "type": "git", "url": "git+https://github.com/Meerzus/cloudlet.git", "directory": "packages/toast" },
   "bugs": "https://github.com/Meerzus/cloudlet/issues",
   "keywords": ["react", "notifications", "toast", "snackbar", "accessibility", "async", "operations", "ssr"],
-  "publishConfig": { "access": "public", "tag": "latest" },
+  "publishConfig": { "access": "public", "tag": "next" },
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {

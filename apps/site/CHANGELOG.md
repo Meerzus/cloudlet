@@ -16,6 +16,11 @@ cloudlet.dev. The history of the npm packages is in their own changelogs:
 - The site no longer shows the package size: the Toaster's FAQ drops "How big is it?", and the
   "Fits your stack" benefit says there are no runtime dependencies instead of a first-load figure.
 
+### Toaster
+
+- The `toaster` item installs `@cloudlet/toast@1.4.0-rc.1`, the prerelease under the npm `next`
+  dist-tag; what changed in the package is in [its changelog](../../packages/toast/CHANGELOG.md).
+
 ### Color picker and Color palette
 
 - The `color-picker` item adds a sixth file, `components/ui/color-picker/color-picker-agent.ts`, and the

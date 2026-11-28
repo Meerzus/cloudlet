@@ -4,7 +4,7 @@
   "title": "Cloudlet Toaster",
   "description": "Client Provider/Toaster adapter with shadcn theme tokens. The application explicitly owns its @cloudlet/toast controller.",
   "dependencies": [
-    "@cloudlet/toast@1.3.0"
+    "@cloudlet/toast@1.4.0-rc.1"
   ],
   "files": [
     {
