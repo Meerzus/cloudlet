@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { candidateEvidencePath } from './local-candidate.mjs';
@@ -48,8 +48,7 @@ async function packPackage({ key, dir }, { npm, lockfileSha256 }) {
  * Retains the actual npm archive of every published package with its evidence
  * (`artifacts/integration/<key>-evidence.json`); this never builds, publishes, or runs lifecycle
  * scripts. `npm-pack.json` holds the raw `npm pack --json` entries of all packages, in `PACKAGES`
- * order. `package-evidence.json` stays a copy of the Toaster's evidence for readers that predate
- * the second package.
+ * order.
  */
 export async function packLocal() {
   await mkdir(directory, { recursive: true });
@@ -60,7 +59,6 @@ export async function packLocal() {
   const results = [];
   for (const entry of PACKAGES) results.push(await packPackage(entry, context));
   await writeFile(join(directory, 'npm-pack.json'), `${JSON.stringify(results.map(({ packed }) => packed), null, 2)}\n`);
-  await copyFile(candidateEvidencePath(root, 'toast'), join(directory, 'package-evidence.json'));
   return results;
 }
 

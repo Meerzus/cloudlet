@@ -26,7 +26,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p packages/toast/tsconfig.core.json --noEmit && tsc -p packages/agent/tsconfig.json --noEmit && tsc -p apps/site/tsconfig.typecheck.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:tooling": "node --test tests/tooling/local-candidate.test.mjs tests/tooling/doc-coverage.test.mjs tests/tooling/release-notes.test.mjs tests/tooling/release-target.test.mjs",
+    "test:tooling": "node --test tests/tooling/local-candidate.test.mjs tests/tooling/doc-coverage.test.mjs tests/tooling/release-notes.test.mjs tests/tooling/release-target.test.mjs tests/tooling/release-workflow.test.mjs",
     "check:docs": "node scripts/check-doc-examples.mjs && node scripts/check-doc-coverage.mjs && node scripts/check-doc-coverage.mjs apps/site/src/components/ui/color-picker/color-picker.tsx apps/site/content/docs/en/components/color-picker.mdx && node scripts/check-doc-coverage.mjs apps/site/src/components/ui/color-palette/color-palette.tsx apps/site/content/docs/en/components/color-palette.mdx",
     "release:verify": "node scripts/verify-release.mjs",
     "test:e2e": "playwright test",
