@@ -10,7 +10,7 @@ export function Faq() {
           Questions
         </h2>
         <p className="mt-4 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-          Short answers about SSR, styling, accessibility and size.
+          Short answers about SSR, styling, accessibility and stability.
         </p>
         <div className="faq-list">
           {FAQ.map((item) => (

@@ -13,8 +13,9 @@ cloudlet.dev. The history of the npm packages is in their own changelogs:
   too: the Island of the page and the Toaster on the scene's phones change state without motion while
   the switch is on, and move again when it is off. The note under the switch no longer says the
   Toaster only follows the system setting.
-- The site no longer shows the package size: the Toaster's FAQ drops "How big is it?", and the
-  "Fits your stack" benefit says there are no runtime dependencies instead of a first-load figure.
+- The site no longer shows the package size: the Toaster's FAQ drops "How big is it?" (and its
+  subtitle no longer promises answers about size), and the "Fits your stack" benefit says there are
+  no runtime dependencies instead of a first-load figure.
 
 ### Toaster
 
