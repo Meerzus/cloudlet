@@ -101,8 +101,9 @@ try {
   }
   const consumers = JSON.parse(await readFile(join(output, 'consumers.json'), 'utf8'));
   const registry = JSON.parse(await readFile(join(output, 'registry-check.json'), 'utf8'));
-  // Consumers and the registry still install the Toaster's archive only.
+  // Consumers install both archives (the bridge only where a consumer depends on it); the registry the Toaster's.
   assert.equal(consumers.tarballSha256, archiveHash);
+  assert.equal(consumers.agentTarballSha256, archives.agent.sha256, 'Consumers installed the checked bridge archive');
   assert.equal(registry.tarSha256, archiveHash);
   report.inputsAfter = await inputs();
   assert.equal(report.inputsAfter.sha256, report.inputsBefore.sha256, 'Release inputs changed during verification');

@@ -73,8 +73,9 @@ jobs:
           retention-days: 7
           path: artifacts/integration/
   package-managers:
-    # The packed archive installs and resolves with npm, pnpm, yarn (node_modules and Plug'n'Play) and
-    # bun; pnpm and yarn come through corepack at the versions the script pins.
+    # Both packed archives install and resolve together with npm, pnpm, yarn (node_modules and
+    # Plug'n'Play) and bun, and the bridge drives a Toaster through @cloudlet/toast/agent; pnpm and
+    # yarn come through corepack at the versions the script pins.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7

@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { bindCandidateLock, candidateEvidencePath, defaultCandidateTarball, packageTarballFilename, readConsumerLock } from '../../scripts/local-candidate.mjs';
+import { bindCandidateLock, candidateEvidencePath, consumerArchiveFilename, defaultCandidateTarball, packageTarballFilename, readConsumerLock } from '../../scripts/local-candidate.mjs';
 
 const manifest = { name: '@cloudlet/toast', version: '1.0.0-rc.0', dependencies: { motion: '14.3.0' }, peerDependencies: { react: '^18.2.0 || ^19.0.0' } };
 const fixture = () => ({ lockfileVersion: 3, packages: {
@@ -70,4 +70,18 @@ test('every package has its own archive and evidence path under artifacts/integr
     assert.equal(candidateEvidencePath(directory, 'agent'), join(integration, 'agent-evidence.json'));
     assert.throws(() => candidateEvidencePath(directory, '../toast'), /lowercase words/u);
   } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('a second package in the same consumer lock binds its own archive entry', () => {
+  const agent = { name: '@cloudlet/agent', version: '0.1.0' };
+  assert.equal(consumerArchiveFilename(agent), 'cloudlet-agent.tgz');
+  assert.equal(consumerArchiveFilename(manifest), 'cloudlet-toast.tgz');
+  const lock = fixture();
+  lock.packages['node_modules/@cloudlet/agent'] = { version: '0.0.0', resolved: 'file:cloudlet-agent.tgz', integrity: 'sha512-old' };
+  bindCandidateLock(lock, manifest, 'sha512-toast');
+  bindCandidateLock(lock, agent, 'sha512-agent');
+  assert.deepEqual(lock.packages['node_modules/@cloudlet/agent'], { version: '0.1.0', resolved: 'file:cloudlet-agent.tgz', integrity: 'sha512-agent' });
+  assert.equal(lock.packages['node_modules/@cloudlet/toast'].integrity, 'sha512-toast');
+  lock.packages['node_modules/@cloudlet/agent'].resolved = 'file:cloudlet-toast.tgz';
+  assert.throws(() => bindCandidateLock(lock, agent, 'sha512-agent'), /local @cloudlet\/agent candidate archive/u);
 });

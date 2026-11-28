@@ -3,8 +3,15 @@ import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
+const archiveStem = (manifest) => manifest.name.replace(/^@/u, '').replaceAll('/', '-');
+
 export function packageTarballFilename(manifest) {
-  return `${manifest.name.replace(/^@/u, '').replaceAll('/', '-')}-${manifest.version}.tgz`;
+  return `${archiveStem(manifest)}-${manifest.version}.tgz`;
+}
+
+/** The version-free name a consumer fixture copies a package's archive to (`cloudlet-toast.tgz`). */
+export function consumerArchiveFilename(manifest) {
+  return `${archiveStem(manifest)}.tgz`;
 }
 
 /**
@@ -38,15 +45,19 @@ export async function readConsumerLock(path, { updateLocks = false } = {}) {
   }
 }
 
-/** Ordinary verification changes only the exact local archive's version/integrity. */
+/**
+ * Ordinary verification changes only the exact local archive's version/integrity. The package's
+ * entry must resolve the archive the fixture holds under `consumerArchiveFilename(manifest)`.
+ */
 export function bindCandidateLock(lock, manifest, integrity, { updateLocks = false } = {}) {
+  const resolved = `file:${consumerArchiveFilename(manifest)}`;
   let entry = lock.packages?.[`node_modules/${manifest.name}`];
   if (!entry) {
     assert.ok(updateLocks, `Consumer lockfile must contain ${manifest.name}; explicitly use --update-locks to resolve dependencies`);
     lock.packages ??= {};
-    entry = lock.packages[`node_modules/${manifest.name}`] = { resolved: 'file:cloudlet-toast.tgz' };
+    entry = lock.packages[`node_modules/${manifest.name}`] = { resolved };
   }
-  assert.equal(entry.resolved, 'file:cloudlet-toast.tgz', 'Consumer must resolve the local candidate archive');
+  assert.equal(entry.resolved, resolved, `Consumer must resolve the local ${manifest.name} candidate archive`);
   for (const key of ['dependencies', 'optionalDependencies', 'peerDependencies', 'peerDependenciesMeta']) {
     if (updateLocks) {
       if (manifest[key] === undefined) delete entry[key];
