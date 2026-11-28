@@ -1,5 +1,4 @@
 import type { PuppetFace, PuppetState } from './puppet-model';
-import { formatKB, PACKAGE_SIZE } from './site';
 
 /**
  * Scene 3, "Drifting by": a volley of puppets flies in from
@@ -165,7 +164,7 @@ export const BENEFITS: readonly Benefit[] = [
   { id: 'forms', title: 'Replies in place', text: 'A form right in the Island: up to three fields, checks before sending, and a draft that waits for you.' },
   { id: 'attention', title: 'Speaks up when it matters', text: 'attention opens what is important on its own, and never steals focus.' },
   { id: 'a11y', title: 'Accessible by default', text: 'Native controls, calm announcements, full keyboard, reduced motion and RTL.' },
-  { id: 'stack', title: 'Fits your stack', text: `A shadcn registry item, tokens and classNames, SSR and Next.js, strict CSP. ${formatKB(PACKAGE_SIZE.start)} of JavaScript on first load.` },
+  { id: 'stack', title: 'Fits your stack', text: 'A shadcn registry item, tokens and classNames, SSR and Next.js, strict CSP. No runtime dependencies.' },
 ];
 
 /* ---------- Stories: one per benefit, acted by puppets of the crowd ---------- */

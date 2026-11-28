@@ -71,9 +71,7 @@ try {
   await npm('11-consumers', ['run', 'test:consumers']);
   await npm('12-registry-install', ['ci', '--prefix', 'registry/tooling', '--ignore-scripts', '--no-audit', '--no-fund', '--prefer-offline']);
   await npm('13-registry', ['run', 'test:registry']);
-  await run('14-size', process.execPath, ['scripts/measure-size.mjs', '--tarball', tarball]);
-  await copyFile(join(root, 'artifacts/size/report.json'), join(output, 'size-report.json'));
-  await run('15-repeat-pack', process.execPath, ['scripts/pack.mjs']);
+  await run('14-repeat-pack', process.execPath, ['scripts/pack.mjs']);
   assert.equal(sha(await readFile(tarball)), archiveHash, 'Repeated pack must be byte-identical');
   for (const [from, to] of [
     ['artifacts/integration/package-evidence.json', 'package-evidence.json'],
@@ -84,14 +82,12 @@ try {
   const packageEvidence = JSON.parse(await readFile(join(output, 'package-evidence.json'), 'utf8'));
   const consumers = JSON.parse(await readFile(join(output, 'consumers.json'), 'utf8'));
   const registry = JSON.parse(await readFile(join(output, 'registry-check.json'), 'utf8'));
-  const size = JSON.parse(await readFile(join(output, 'size-report.json'), 'utf8'));
   assert.equal(packageEvidence.sha256, archiveHash);
   assert.equal(consumers.tarballSha256, archiveHash);
   assert.equal(registry.tarSha256, archiveHash);
-  assert.equal(size.package.tarballSha256, archiveHash);
   report.inputsAfter = await inputs();
   assert.equal(report.inputsAfter.sha256, report.inputsBefore.sha256, 'Release inputs changed during verification');
-  await run('16-diff-check', 'git', ['diff', '--check']);
+  await run('15-diff-check', 'git', ['diff', '--check']);
   report.archive = { path: tarball, sha256: archiveHash, integrity: packageEvidence.integrity, bytes: packageEvidence.bytes, entries: packageEvidence.entryCount, repeatIdentical: true };
   report.result = 'passed: available local CI-equivalent checks only';
 } catch (error) {

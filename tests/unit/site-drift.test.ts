@@ -1,4 +1,3 @@
-import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   BENEFITS,
@@ -13,9 +12,6 @@ import {
 } from '../../apps/site/src/lib/drift-scene';
 import { STORY_TIMING, VOLLEY_LEAD, buildDriftTimeline, dimAt, placeAt, puppetAt, storyCast, volleyLeftAt } from '../../apps/site/src/lib/drift-story';
 import { FAQ } from '../../apps/site/src/lib/faq';
-import { formatKB, PACKAGE_SIZE } from '../../apps/site/src/lib/site';
-
-const manifest = JSON.parse(readFileSync(new URL('../../packages/toast/package.json', import.meta.url), 'utf8')) as { version: string };
 
 const PHONE = DRIFT_PUPPETS.filter((puppet) => puppet.phone);
 const byId = new Map(DRIFT_PUPPETS.map((puppet) => [puppet.id, puppet]));
@@ -205,41 +201,5 @@ describe('site scene 3: benefits and FAQ', () => {
     expect(FAQ.length).toBeLessThanOrEqual(7);
     const mentions = FAQ.filter((item) => /sonner/i.test(`${item.question} ${item.answer}`));
     expect(mentions.map((item) => item.id)).toEqual(['sonner']);
-  });
-
-  it('prints the package size from PACKAGE_SIZE, and PACKAGE_SIZE matches the latest size report', () => {
-    const size = FAQ.find((item) => item.id === 'size')?.answer ?? '';
-    // The first-load figure is always named as JavaScript on first load, never as the whole package.
-    expect(size).toContain(`${formatKB(PACKAGE_SIZE.start)} of JavaScript on first load, min+gzip`);
-    expect(size).toContain(formatKB(PACKAGE_SIZE.lazy));
-    expect(size).toContain(formatKB(PACKAGE_SIZE.css));
-    expect(size).not.toMatch(/motion/i);
-    expect(BENEFITS.find((benefit) => benefit.id === 'stack')?.text).toContain(`${formatKB(PACKAGE_SIZE.start)} of JavaScript on first load.`);
-    expect(PACKAGE_SIZE.start + PACKAGE_SIZE.lazy).toBe(PACKAGE_SIZE.javascript);
-    expect(PACKAGE_SIZE.version).toBe(manifest.version);
-
-    // The report is a local artifact (gitignored); CI without it still checks the texts above.
-    const report = new URL('../../artifacts/size/report.json', import.meta.url);
-    if (!existsSync(report)) return;
-    const measured = JSON.parse(readFileSync(report, 'utf8')) as {
-      package: { version: string };
-      ownJavaScript: { jsGzipBytes: number; startJsGzipBytes: number; lazyJsGzipBytes: number };
-      packedCss: { gzipBytes: number };
-      deltas: { fullConsumerGzipBytes: number };
-    };
-    if (measured.package.version !== PACKAGE_SIZE.version) return;
-    expect({
-      start: measured.ownJavaScript.startJsGzipBytes,
-      lazy: measured.ownJavaScript.lazyJsGzipBytes,
-      javascript: measured.ownJavaScript.jsGzipBytes,
-      css: measured.packedCss.gzipBytes,
-      total: measured.deltas.fullConsumerGzipBytes,
-    }).toEqual({
-      start: PACKAGE_SIZE.start,
-      lazy: PACKAGE_SIZE.lazy,
-      javascript: PACKAGE_SIZE.javascript,
-      css: PACKAGE_SIZE.css,
-      total: PACKAGE_SIZE.total,
-    });
   });
 });

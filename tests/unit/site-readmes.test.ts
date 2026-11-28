@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { COMPONENTS, DOCS_URL, formatKB, PACKAGE_SIZE, registryCommand, SITE_URL, TOASTER_DOCS_PATH } from '../../apps/site/src/lib/site';
+import { COMPONENTS, DOCS_URL, registryCommand, SITE_URL, TOASTER_DOCS_PATH } from '../../apps/site/src/lib/site';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
@@ -22,11 +22,6 @@ describe('READMEs and changelog', () => {
 
   it('ship the same changelog in the package as in the repository', () => {
     expect(read('packages/toast/CHANGELOG.md')).toBe(read('CHANGELOG.md'));
-  });
-
-  it('print the measured first-load size in the package README size badge', () => {
-    const badge = `min%2Bgzip-${encodeURIComponent(`${formatKB(PACKAGE_SIZE.start)} first load`)}-`;
-    expect(read('packages/toast/README.md')).toContain(badge);
   });
 
   it('introduce every component of the kit in the root README: its landing, its docs and its install command', () => {

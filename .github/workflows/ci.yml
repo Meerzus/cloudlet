@@ -104,23 +104,3 @@ jobs:
           name: shadcn-registry
           retention-days: 7
           path: artifacts/integration/registry/
-  size:
-    # Size comparisons remain informational; build/measurement errors still fail.
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm install --global npm@11.12.1
-      - run: npm ci
-      - run: npm run pack:local
-      - run: node scripts/measure-size.mjs --tarball "artifacts/integration/cloudlet-toast-$(node -p "require('./packages/toast/package.json').version").tgz"
-      - run: npm run size:color-picker
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: size-evidence
-          retention-days: 7
-          path: artifacts/size/

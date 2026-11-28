@@ -1,6 +1,4 @@
-import { formatKB, PACKAGE_SIZE } from './site';
-
-/** FAQ: draft copy for the owner's review. Size figures: `PACKAGE_SIZE`, min+gzip. */
+/** FAQ: draft copy for the owner's review. */
 export const FAQ = [
   {
     id: 'sonner',
@@ -25,11 +23,6 @@ export const FAQ = [
     question: 'Is it accessible?',
     answer:
       'The pill is a native button and the Island a labelled carousel. Arrivals never take focus, announcements are calm and coalesced, the keyboard reaches everything, and reduced motion and RTL are respected.',
-  },
-  {
-    id: 'size',
-    question: 'How big is it?',
-    answer: `${formatKB(PACKAGE_SIZE.start)} of JavaScript on first load, min+gzip. The renderer (${formatKB(PACKAGE_SIZE.lazy)}) follows right after the page mounts, the CSS is ${formatKB(PACKAGE_SIZE.css)}. There are no runtime dependencies; the springs are its own.`,
   },
   {
     id: 'stable',

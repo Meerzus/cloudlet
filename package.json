@@ -31,17 +31,13 @@
     "release:verify": "node scripts/verify-release.mjs",
     "test:e2e": "playwright test",
     "check:package": "node scripts/check-package.mjs",
-    "size": "npm run build && node scripts/measure-size.mjs",
-    "size:baseline": "npm run build && node scripts/measure-size.mjs --write-baseline",
     "notices": "node scripts/generate-notices.mjs",
-    "check": "npm run typecheck && npm test && npm run build && npm run check:package && node scripts/measure-size.mjs",
+    "check": "npm run typecheck && npm test && npm run build && npm run check:package",
     "pack:local": "npm run build && node scripts/pack.mjs",
     "test:consumers": "node scripts/integration.mjs",
     "test:managers": "node scripts/package-managers.mjs",
     "registry:build": "node scripts/registry-build.mjs",
-    "test:registry": "node scripts/registry-check.mjs",
-    "size:color-picker": "node scripts/measure-color-picker.mjs",
-    "size:color-palette": "node scripts/measure-color-palette.mjs"
+    "test:registry": "node scripts/registry-check.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

@@ -7,7 +7,7 @@
 - `tests/unit/` — the DOM-free controller (identity, admission, dedupe, the cap, the stack and
   `current`, `attention` on injected time, timers, snapshots, events, cleanup, seeded generated
   sequences), operations and actions with their races, the shell sampler and transition plan, swipe
-  physics, SSR, and the website's data (Get started, FAQ, sizes, indexing, READMEs).
+  physics, SSR, and the website's data (Get started, FAQ, indexing, READMEs).
 - `tests/react/` — jsdom and Testing Library on the public API: Provider and leases, Strict Mode, the
   queue before mount, the stack and the Island, focus, gestures, `classNames`, progress,
   announcements, the lazy renderer. jsdom proves state, focus and leases, not physics or speech.
@@ -45,11 +45,10 @@ Reports go to `playwright-report/`, failure traces to `test-results/`. Device pr
 VisualViewport, CDP touch and `emulateMedia` are emulation: screen readers, physical phones, real
 high contrast and the minimum browser versions are checked by hand.
 
-## Package, consumers, registry, size
+## Package, consumers, registry
 
 - `npm run check` — typecheck, unit and React tests, build, the tarball guards for `@cloudlet/toast`, `@cloudlet/agent`
-  and both together (`check:package`; `--tarball` and `--agent-tarball` take ready archives) and the
-  size report.
+  and both together (`check:package`; `--tarball` and `--agent-tarball` take ready archives).
 - `npm run test:consumers` — the packed archive installed into Vite React 18.2/19 and Next App/Pages
   under a strict CSP (`fixtures/integration`).
 - `npm run test:managers` — the packed archive installed with npm, pnpm, yarn (node_modules and

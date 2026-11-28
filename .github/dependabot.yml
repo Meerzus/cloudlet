@@ -1,5 +1,5 @@
 # Only the GitHub Actions of the workflows are kept current: npm dependencies change by hand, with the
-# lockfile, size report and notices reviewed together.
+# lockfile and notices reviewed together.
 version: 2
 updates:
   - package-ecosystem: github-actions

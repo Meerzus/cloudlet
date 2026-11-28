@@ -17,9 +17,9 @@ This repository holds the kit's components, their website and their tests.
 | `apps/site` | The website at cloudlet.dev: landing pages and the documentation at `/docs`. The Color picker and the Color palette live here, in `apps/site/src/components/ui/color-picker` and `apps/site/src/components/ui/color-palette` |
 | `apps/lab` | The interactive laboratory and the isolated fixtures the browser tests run on ([README](apps/lab/README.md)) |
 | `registry` | The shadcn registry: `registry.json` lists the Toaster (a thin client wrapper and a CSS theme bridge in `registry/cloudlet`), the Color picker and the Color palette (their source files in `apps/site`) ([README](registry/README.md)) |
-| `fixtures` | Installed-archive consumers: Vite/React 18.2 and 19, Next App/Pages, size measurement |
+| `fixtures` | Installed-archive consumers: Vite/React 18.2 and 19, Next App/Pages, and the strict type contracts `check:package` compiles against the packed archives |
 | `tests` | Unit, React, contract, tooling and Playwright browser suites ([README](tests/README.md)) |
-| `scripts` | Packing, documentation checks, size reports, notices and release verification |
+| `scripts` | Packing, documentation checks, notices and release verification |
 
 ## Setup
 
@@ -36,7 +36,7 @@ npm run dev:site   # the website and documentation
 ## Commands
 
 ```sh
-npm run check       # strict typecheck, unit tests, library build, tarball checks, size report
+npm run check       # strict typecheck, unit tests, library build, tarball checks
 npm run check:docs  # every documentation example typechecks; every public export is documented
 ```
 
